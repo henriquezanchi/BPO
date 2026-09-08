@@ -1,0 +1,163 @@
+// Schema inicial do MVP - Portal do Membro & BPO Financeiro
+// Referência: protótipos demo-whatsapp.html, portal (visão do diretor).html, portal (visão do membro).html
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MemberStatus {
+  em_dia
+  atrasado
+  negociando
+  isento
+}
+
+enum ContributionStatus {
+  pendente
+  pago
+  atrasado
+}
+
+enum ChargeTriggerType {
+  inicio_mes
+  vencimento
+  fim_mes
+  atraso_30
+  atraso_60
+}
+
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  city      String?
+  createdAt DateTime @default(now())
+
+  members       Member[]
+  events        Event[]
+  payables      Payable[]
+  chargingRules ChargingRule[]
+}
+
+model Member {
+  id             String       @id @default(cuid())
+  schoolId       String
+  school         School       @relation(fields: [schoolId], references: [id])
+  registrationNo String? // "Matrícula #21596"
+  name           String
+  whatsapp       String
+  email          String?
+  status         MemberStatus @default(em_dia)
+  createdAt      DateTime     @default(now())
+
+  contributions   Contribution[]
+  fortunaTx       FortunaTransaction[]
+  crmContacts     CrmContact[]
+  eventRegistr    EventRegistration[]
+
+  @@index([schoolId])
+}
+
+model Contribution {
+  id         String              @id @default(cuid())
+  memberId   String
+  member     Member              @relation(fields: [memberId], references: [id])
+  amount     Decimal             @db.Decimal(10, 2)
+  dueDate    DateTime
+  paidAt     DateTime?
+  status     ContributionStatus  @default(pendente)
+  gatewayRef String? // id da cobrança no Asaas
+  createdAt  DateTime            @default(now())
+
+  @@index([memberId])
+}
+
+model FortunaTransaction {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  amount    Decimal  @db.Decimal(10, 2) // positivo = recarga, negativo = consumo
+  type      String // recarga | consumo
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+}
+
+model CrmContact {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  channel   String // whatsapp | telefone | presencial
+  hadReply  Boolean  @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+}
+
+model ChargingRule {
+  id       String  @id @default(cuid())
+  schoolId String
+  school   School  @relation(fields: [schoolId], references: [id])
+  name     String // "Régua Padrão", "Régua Suave", "Régua de Resgate"
+  triggers ChargeTrigger[]
+
+  @@index([schoolId])
+}
+
+model ChargeTrigger {
+  id             String            @id @default(cuid())
+  chargingRuleId String
+  chargingRule   ChargingRule      @relation(fields: [chargingRuleId], references: [id])
+  type           ChargeTriggerType
+  active         Boolean           @default(true)
+  messageTemplate String           @db.Text
+
+  @@index([chargingRuleId])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+  title       String
+  startsAt    DateTime
+  price       Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+
+  registrations EventRegistration[]
+
+  @@index([schoolId])
+}
+
+model EventRegistration {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  paid      Boolean  @default(false)
+  checkedIn Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([memberId])
+}
+
+model Payable {
+  id         String    @id @default(cuid())
+  schoolId   String
+  school     School    @relation(fields: [schoolId], references: [id])
+  vendor     String
+  amount     Decimal   @db.Decimal(10, 2)
+  dueDate    DateTime
+  hasInvoice Boolean   @default(false)
+  paidAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([schoolId])
+}
