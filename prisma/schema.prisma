@@ -30,33 +30,71 @@ enum ChargeTriggerType {
   atraso_60
 }
 
+enum ClassRole {
+  aluno
+  professor
+}
+
+enum ActivityType {
+  prova
+  trabalho
+  leitura
+  atividade_turma
+}
+
+enum NotificationChannel {
+  whatsapp
+  push
+}
+
+enum NotificationStatus {
+  pendente
+  enviado
+  falhou
+}
+
+enum MercurioSyncStatus {
+  pendente
+  sincronizado
+  falhou
+}
+
 model School {
   id        String   @id @default(cuid())
   name      String
   city      String?
+  whatsapp  String? // número da secretaria/economia, usado no botão de ajuda do Portal
   createdAt DateTime @default(now())
 
   members       Member[]
   events        Event[]
   payables      Payable[]
   chargingRules ChargingRule[]
+  classGroups   ClassGroup[]
 }
 
 model Member {
   id             String       @id @default(cuid())
   schoolId       String
   school         School       @relation(fields: [schoolId], references: [id])
+  mercurioId     String?      @unique // id do cadastro no Mercúrio, quando conhecido
   registrationNo String? // "Matrícula #21596"
   name           String
   whatsapp       String
   email          String?
+  address        String?
   status         MemberStatus @default(em_dia)
   createdAt      DateTime     @default(now())
 
-  contributions   Contribution[]
-  fortunaTx       FortunaTransaction[]
-  crmContacts     CrmContact[]
-  eventRegistr    EventRegistration[]
+  contributions      Contribution[]
+  fortunaTx          FortunaTransaction[]
+  crmContacts        CrmContact[]
+  eventRegistr       EventRegistration[]
+  classMemberships   ClassMembership[]
+  createdActivities  Activity[]             @relation("ActivityCreator")
+  activityNotifs     ActivityNotification[]
+  contactChangeLogs  ContactChangeLog[]
+  mercurioSyncTasks  MercurioSyncTask[]
 
   @@index([schoolId])
 }
@@ -160,4 +198,113 @@ model Payable {
   createdAt  DateTime  @default(now())
 
   @@index([schoolId])
+}
+
+// ===================== Turmas, Professores e Agenda =====================
+// Fonte de verdade da matrícula/papel (aluno x professor) é o Mercúrio;
+// aqui replicamos o necessário para orientar a UI e permitir o cadastro
+// de atividades mesmo antes de fechar o formato exato da integração.
+
+model ClassGroup {
+  id              String   @id @default(cuid())
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id])
+  name            String // "Curso de Filosofia - Turma A"
+  mercurioClassId String? // id da turma no Mercúrio, quando soubermos o formato
+  createdAt       DateTime @default(now())
+
+  memberships ClassMembership[]
+  activities  Activity[]
+
+  @@index([schoolId])
+}
+
+model ClassMembership {
+  id           String     @id @default(cuid())
+  classGroupId String
+  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id])
+  memberId     String
+  member       Member     @relation(fields: [memberId], references: [id])
+  role         ClassRole // aluno | professor nesta turma
+  createdAt    DateTime   @default(now())
+
+  @@unique([classGroupId, memberId, role])
+  @@index([memberId])
+}
+
+// Atividade cadastrada pelo professor (prova, trabalho, leitura...) e
+// exibida para os alunos da turma dentro de "Agenda & Eventos" no Portal
+// do Membro (não é uma seção nova — reaproveita a caixinha existente).
+model Activity {
+  id           String       @id @default(cuid())
+  classGroupId String
+  classGroup   ClassGroup   @relation(fields: [classGroupId], references: [id])
+  createdById  String
+  createdBy    Member       @relation("ActivityCreator", fields: [createdById], references: [id])
+  type         ActivityType
+  title        String
+  studyItems   String?      @db.Text // itens/conteúdo a estudar
+  description  String?      @db.Text
+  dueDate      DateTime
+  createdAt    DateTime     @default(now())
+
+  notifications ActivityNotification[]
+
+  @@index([classGroupId])
+}
+
+// Registro de envio de notificação por aluno (WhatsApp hoje; push como
+// evolução futura via PWA). Permite reenviar e auditar quem foi avisado.
+model ActivityNotification {
+  id         String              @id @default(cuid())
+  activityId String
+  activity   Activity            @relation(fields: [activityId], references: [id])
+  memberId   String
+  member     Member              @relation(fields: [memberId], references: [id])
+  channel    NotificationChannel @default(whatsapp)
+  status     NotificationStatus  @default(pendente)
+  sentAt     DateTime?
+  createdAt  DateTime            @default(now())
+
+  @@index([activityId])
+  @@index([memberId])
+}
+
+// ===================== Auditoria de Cadastro =====================
+// Toda alteração de contato feita pelo aluno no Portal gera um registro
+// com o antes/depois. Se o aluno estiver com contribuição em atraso no
+// momento da alteração, a secretaria de economia é alertada (alertedEconomia).
+model ContactChangeLog {
+  id               String   @id @default(cuid())
+  memberId         String
+  member           Member   @relation(fields: [memberId], references: [id])
+  oldValues        Json
+  newValues        Json
+  memberWasOverdue Boolean  @default(false)
+  alertedEconomia  Boolean  @default(false)
+  acknowledgedAt   DateTime?
+  createdAt        DateTime @default(now())
+
+  @@index([memberId])
+}
+
+// ===================== Fila de Sincronização com o Mercúrio =====================
+// Abstração de transporte: cada alteração feita no Portal que precisa
+// refletir no Mercúrio vira uma tarefa aqui. O worker que efetivamente
+// escreve no Mercúrio (API, acesso a banco ou RPA — a definir) consome
+// esta fila, então trocar de transporte não muda o resto do sistema.
+model MercurioSyncTask {
+  id        String             @id @default(cuid())
+  memberId  String
+  member    Member             @relation(fields: [memberId], references: [id])
+  taskType  String // "atualizar_contato" | outros no futuro
+  payload   Json
+  status    MercurioSyncStatus @default(pendente)
+  attempts  Int                @default(0)
+  lastError String?
+  createdAt DateTime           @default(now())
+  syncedAt  DateTime?
+
+  @@index([memberId])
+  @@index([status])
 }
