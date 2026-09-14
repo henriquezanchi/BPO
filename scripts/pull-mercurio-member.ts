@@ -32,6 +32,8 @@ async function main() {
       whatsappAlt: dados.whatsappAlt || null,
       email: dados.email || member.email,
       addressStreet: dados.addressStreet || null,
+      addressNumber: dados.addressNumber || null,
+      addressComplement: dados.addressComplement || null,
       addressNeighborhood: dados.addressNeighborhood || null,
       addressCity: dados.addressCity || null,
       addressState: dados.addressState || null,

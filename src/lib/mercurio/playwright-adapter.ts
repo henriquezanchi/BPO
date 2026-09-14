@@ -8,6 +8,7 @@ import type {
   MercurioWriteResult,
 } from "./adapter";
 import { abrirFichaDaListaAtivos, abrirListaAtivos, abrirSessaoMercurio, lerAbaEnderecos, escreverAbaEnderecos } from "./browser-session";
+import { parseLogradouro } from "./parse-logradouro";
 import type { Page } from "playwright";
 
 async function abrirFichaEmEnderecos(page: Page, filialLabelRegex: RegExp, nomeRegex: RegExp) {
@@ -37,11 +38,14 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
     try {
       const frame = await abrirFichaEmEnderecos(page, new RegExp(member.filialLabel, "i"), new RegExp(member.name, "i"));
       const dados = await lerAbaEnderecos(frame);
+      const { street, number, complement } = parseLogradouro(dados.logradouro);
       return {
         whatsapp: dados.celularDdd && dados.celularNumero ? `${dados.celularDdd}${dados.celularNumero}` : "",
         whatsappAlt: dados.alternativoDdd && dados.alternativoNumero ? `${dados.alternativoDdd}${dados.alternativoNumero}` : "",
         email: dados.email,
-        addressStreet: dados.logradouro,
+        addressStreet: street,
+        addressNumber: number,
+        addressComplement: complement,
         addressNeighborhood: dados.bairro,
         addressCity: dados.cidade,
         addressState: dados.uf,

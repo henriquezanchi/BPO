@@ -33,6 +33,8 @@ export class MockMercurioAdapter implements MercurioAdapter {
       whatsappAlt: "",
       email: "",
       addressStreet: "",
+      addressNumber: "",
+      addressComplement: "",
       addressNeighborhood: "",
       addressCity: "",
       addressState: "",

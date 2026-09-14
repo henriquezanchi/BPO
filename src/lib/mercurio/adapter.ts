@@ -46,12 +46,13 @@ export interface MercurioContactData {
   whatsapp: string;
   whatsappAlt: string;
   email: string;
-  // Mercúrio não separa rua/número/complemento — vem tudo junto num
-  // "Logradouro" só. addressStreet aqui carrega o texto completo desse
-  // campo; separar em rua/número/complemento de verdade exigiria heurística
-  // de parsing (fora de escopo por ora — quem edita pelo Portal já grava
-  // estruturado daí em diante).
+  // Mercúrio guarda rua+número+complemento como 1 campo de texto livre só
+  // ("Logradouro") — já vem separado aqui via heurística best-effort (ver
+  // parse-logradouro.ts). Endereços por quadra/lote ou fora do padrão
+  // comum caem inteiros em addressStreet, com number/complement vazios.
   addressStreet: string;
+  addressNumber: string;
+  addressComplement: string;
   addressNeighborhood: string;
   addressCity: string;
   addressState: string;

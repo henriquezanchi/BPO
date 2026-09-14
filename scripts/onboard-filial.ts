@@ -20,6 +20,7 @@ import {
   lerAbaEnderecos,
   listarNomesDaListaAtivos,
 } from "../src/lib/mercurio/browser-session";
+import { parseLogradouro } from "../src/lib/mercurio/parse-logradouro";
 
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -48,6 +49,7 @@ async function main() {
     const frame = await abrirFichaDaListaAtivos(page, frameAtivos, new RegExp(escapeRegex(nomeAlvo), "i"));
     const dados = await lerAbaEnderecos(frame);
     console.log("Dados lidos:", dados);
+    const { street, number, complement } = parseLogradouro(dados.logradouro);
 
     const member = await db.member.upsert({
       where: { mercurioId: dados.matricula },
@@ -57,7 +59,9 @@ async function main() {
         whatsapp: `${dados.celularDdd}${dados.celularNumero}` || "",
         whatsappAlt: dados.alternativoDdd && dados.alternativoNumero ? `${dados.alternativoDdd}${dados.alternativoNumero}` : null,
         email: dados.email || null,
-        addressStreet: dados.logradouro || null,
+        addressStreet: street || null,
+        addressNumber: number || null,
+        addressComplement: complement || null,
         addressNeighborhood: dados.bairro || null,
         addressCity: dados.cidade || null,
         addressState: dados.uf || null,
@@ -71,7 +75,9 @@ async function main() {
         whatsapp: `${dados.celularDdd}${dados.celularNumero}` || "",
         whatsappAlt: dados.alternativoDdd && dados.alternativoNumero ? `${dados.alternativoDdd}${dados.alternativoNumero}` : null,
         email: dados.email || null,
-        addressStreet: dados.logradouro || null,
+        addressStreet: street || null,
+        addressNumber: number || null,
+        addressComplement: complement || null,
         addressNeighborhood: dados.bairro || null,
         addressCity: dados.cidade || null,
         addressState: dados.uf || null,
