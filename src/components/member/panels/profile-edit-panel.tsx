@@ -1,7 +1,8 @@
 "use client";
 
 import { updateMemberContact } from "@/lib/actions/member-actions";
-import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 
 interface ProfileEditPanelProps {
@@ -167,6 +168,14 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
           />
         </div>
       </div>
+
+      <Link
+        href={`/portal/mais-dados?memberId=${memberId}`}
+        className="mb-5 flex items-center justify-between rounded-xl border border-gray-200 p-3 text-[13px] font-medium text-gray-800 transition hover:border-na-gold"
+      >
+        Mais Dados
+        <ChevronRight size={16} className="text-gray-400" />
+      </Link>
 
       <button
         type="submit"

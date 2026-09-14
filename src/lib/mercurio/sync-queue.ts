@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import type { MercurioContactChanges } from "./adapter";
+import type { MercurioContactChanges, MercurioPersonalChanges } from "./adapter";
 import { mercurioAdapter } from "./index";
 
 /**
@@ -22,12 +22,36 @@ export async function enqueueMercurioContactUpdate(
   });
 }
 
+// Datas não são um tipo JSON válido — serializa pra ISO string (ou null)
+// antes de gravar na fila, e desserializa de volta na hora de processar.
+type MercurioPersonalChangesJson = Omit<MercurioPersonalChanges, "birthDate" | "rgDataEmissao"> & {
+  birthDate?: string | null;
+  rgDataEmissao?: string | null;
+};
+
+/** Enfileira uma atualização de "Mais Dados" (RG, nascimento, profissão...) pra propagação ao Mercúrio. */
+export async function enqueueMercurioPersonalUpdate(memberId: string, changes: MercurioPersonalChanges) {
+  const payload: MercurioPersonalChangesJson = {
+    ...changes,
+    birthDate: changes.birthDate === undefined ? undefined : changes.birthDate?.toISOString() ?? null,
+    rgDataEmissao: changes.rgDataEmissao === undefined ? undefined : changes.rgDataEmissao?.toISOString() ?? null,
+  };
+  return db.mercurioSyncTask.create({
+    data: {
+      memberId,
+      taskType: "atualizar_dados_pessoais",
+      payload: payload as Prisma.InputJsonValue,
+    },
+  });
+}
+
 /**
  * Processa tarefas pendentes da fila, escrevendo de verdade no Mercúrio
  * (mercurioAdapter é o real quando as credenciais estão configuradas — ver
- * mercurio/index.ts). Chamada hoje síncrona, ao fim de updateMemberContact
- * — aceitável na escala do MVP (1 filial, poucas edições), mas deve virar
- * um worker/cron separado antes de produção com mais filiais, pra:
+ * mercurio/index.ts). Chamada hoje síncrona, ao fim de updateMemberContact/
+ * updatePersonalData — aceitável na escala do MVP (1 filial, poucas
+ * edições), mas deve virar um worker/cron separado antes de produção com
+ * mais filiais, pra:
  *   (a) não segurar a resposta HTTP pelos ~5-10s de uma sessão de navegador,
  *   (b) coordenar direito com o scraper agendado via a MESMA trava
  *       (scraper_progresso — já respeitada aqui, ver abrirSessaoMercurio).
@@ -59,10 +83,19 @@ export async function processMercurioSyncQueue(limit = 20) {
       continue;
     }
 
-    const result = await mercurioAdapter.pushContactUpdate(
-      { matricula: member.mercurioId, name: member.name, filialLabel: member.school.mercurioFilialLabel },
-      task.payload as MercurioContactChanges,
-    );
+    const identidade = { matricula: member.mercurioId, name: member.name, filialLabel: member.school.mercurioFilialLabel };
+
+    let result;
+    if (task.taskType === "atualizar_dados_pessoais") {
+      const payload = task.payload as MercurioPersonalChangesJson;
+      result = await mercurioAdapter.pushPersonalUpdate(identidade, {
+        ...payload,
+        birthDate: payload.birthDate === undefined ? undefined : payload.birthDate ? new Date(payload.birthDate) : null,
+        rgDataEmissao: payload.rgDataEmissao === undefined ? undefined : payload.rgDataEmissao ? new Date(payload.rgDataEmissao) : null,
+      });
+    } else {
+      result = await mercurioAdapter.pushContactUpdate(identidade, task.payload as MercurioContactChanges);
+    }
 
     results.push(
       await db.mercurioSyncTask.update({

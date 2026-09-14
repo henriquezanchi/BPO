@@ -59,6 +59,30 @@ export interface MercurioContactData {
   addressZip: string;
 }
 
+// "Mais Dados" (abas PESSOAIS + IDENTIFICAÇÃO). estadoCivil/escolaridade
+// usam os CÓDIGOS do Mercúrio (ver personal-data-options.ts), não texto.
+export interface MercurioPersonalChanges {
+  birthDate?: Date | null;
+  naturalidade?: string;
+  profession?: string;
+  estadoCivil?: string;
+  escolaridade?: string;
+  rgNumero?: string;
+  rgOrgaoEmissor?: string;
+  rgDataEmissao?: Date | null;
+}
+
+export interface MercurioPersonalData {
+  birthDate: Date | null;
+  naturalidade: string;
+  profession: string;
+  estadoCivil: string;
+  escolaridade: string;
+  rgNumero: string;
+  rgOrgaoEmissor: string;
+  rgDataEmissao: Date | null;
+}
+
 export interface MercurioWriteResult {
   ok: boolean;
   error?: string;
@@ -76,4 +100,10 @@ export interface MercurioAdapter {
 
   /** Envia uma atualização de contato para o Mercúrio. */
   pushContactUpdate(member: MercurioMemberIdentity, changes: MercurioContactChanges): Promise<MercurioWriteResult>;
+
+  /** Lê RG/nascimento/profissão/naturalidade/escolaridade/estado civil ("Mais Dados"). */
+  pullPersonalData(member: MercurioMemberIdentity): Promise<MercurioPersonalData>;
+
+  /** Envia uma atualização de "Mais Dados" para o Mercúrio. */
+  pushPersonalUpdate(member: MercurioMemberIdentity, changes: MercurioPersonalChanges): Promise<MercurioWriteResult>;
 }

@@ -41,8 +41,33 @@ async function main() {
     },
   });
 
-  console.log("\n✅ Membro atualizado com dado real do Mercúrio:");
+  console.log("\n✅ Contato/endereço atualizado com dado real do Mercúrio:");
   console.log(JSON.stringify(atualizado, null, 2));
+
+  console.log("\nPuxando 'Mais Dados' (RG, nascimento, profissão...)...");
+  const pessoais = await mercurioAdapter.pullPersonalData({
+    matricula: mercurioId,
+    name: member.name,
+    filialLabel: member.school.mercurioFilialLabel,
+  });
+  console.log("Dados recebidos:", pessoais);
+
+  const atualizadoPessoais = await db.member.update({
+    where: { id: member.id },
+    data: {
+      birthDate: pessoais.birthDate,
+      naturalidade: pessoais.naturalidade || null,
+      profession: pessoais.profession || null,
+      estadoCivil: pessoais.estadoCivil || null,
+      escolaridade: pessoais.escolaridade || null,
+      rgNumero: pessoais.rgNumero || null,
+      rgOrgaoEmissor: pessoais.rgOrgaoEmissor || null,
+      rgDataEmissao: pessoais.rgDataEmissao,
+    },
+  });
+
+  console.log("\n✅ Mais Dados atualizado com dado real do Mercúrio:");
+  console.log(JSON.stringify(atualizadoPessoais, null, 2));
 }
 
 main()

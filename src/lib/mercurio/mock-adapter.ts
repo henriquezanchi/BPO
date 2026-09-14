@@ -4,6 +4,8 @@ import type {
   MercurioContactChanges,
   MercurioContactData,
   MercurioMemberIdentity,
+  MercurioPersonalChanges,
+  MercurioPersonalData,
   MercurioRosterEntry,
   MercurioWriteResult,
 } from "./adapter";
@@ -44,6 +46,25 @@ export class MockMercurioAdapter implements MercurioAdapter {
 
   async pushContactUpdate(member: MercurioMemberIdentity, changes: MercurioContactChanges): Promise<MercurioWriteResult> {
     console.warn(`[MockMercurioAdapter] pushContactUpdate(${member.matricula}) — simulado, nada foi escrito no Mercúrio de verdade.`, changes);
+    return { ok: true };
+  }
+
+  async pullPersonalData(member: MercurioMemberIdentity): Promise<MercurioPersonalData> {
+    console.warn(`[MockMercurioAdapter] pullPersonalData(${member.matricula}) — credenciais do Mercúrio não configuradas, devolvendo vazio.`);
+    return {
+      birthDate: null,
+      naturalidade: "",
+      profession: "",
+      estadoCivil: "",
+      escolaridade: "",
+      rgNumero: "",
+      rgOrgaoEmissor: "",
+      rgDataEmissao: null,
+    };
+  }
+
+  async pushPersonalUpdate(member: MercurioMemberIdentity, changes: MercurioPersonalChanges): Promise<MercurioWriteResult> {
+    console.warn(`[MockMercurioAdapter] pushPersonalUpdate(${member.matricula}) — simulado, nada foi escrito no Mercúrio de verdade.`, changes);
     return { ok: true };
   }
 }

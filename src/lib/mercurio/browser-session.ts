@@ -244,3 +244,109 @@ export async function escreverAbaEnderecos(frame: Frame, dados: Partial<DadosEnd
   await frame.getByRole("button", { name: /gravar/i }).first().click();
   await frame.page().waitForTimeout(1500);
 }
+
+// ===================== Aba PESSOAIS =====================
+// Campos confirmados ao vivo (2026-09-14): txtnatu (naturalidade), txtnaci
+// (nacionalidade — não exposta na Portal por ora), txtdia/txtmes/txtano
+// (nascimento), cmbsexo, cmbcivi (código — ver personal-data-options.ts),
+// cmbesco (código, idem), txtprof (profissão).
+
+export interface DadosPessoaisMercurio {
+  naturalidade: string;
+  nascimentoDia: string;
+  nascimentoMes: string;
+  nascimentoAno: string;
+  estadoCivil: string; // código (SOL, CAS...)
+  escolaridade: string; // código (GR1, GRP...)
+  profissao: string;
+}
+
+async function abrirAbaPessoais(frame: Frame): Promise<void> {
+  await frame.getByText(/^PESSOAIS$/i).first().click();
+  await frame.page().waitForTimeout(800);
+}
+
+export async function lerAbaPessoais(frame: Frame): Promise<DadosPessoaisMercurio> {
+  await abrirAbaPessoais(frame);
+  const valor = async (nome: string) => (await frame.locator(`[name="${nome}"]`).first().inputValue().catch(() => "")).trim();
+  return {
+    naturalidade: await valor("txtnatu"),
+    nascimentoDia: await valor("txtdia"),
+    nascimentoMes: await valor("txtmes"),
+    nascimentoAno: await valor("txtano"),
+    estadoCivil: await valor("cmbcivi"),
+    escolaridade: await valor("cmbesco"),
+    profissao: await valor("txtprof"),
+  };
+}
+
+export async function escreverAbaPessoais(frame: Frame, dados: Partial<DadosPessoaisMercurio>) {
+  await abrirAbaPessoais(frame);
+  const preencherSe = async (nome: string, valor: string | undefined) => {
+    if (valor === undefined) return;
+    await frame.locator(`[name="${nome}"]`).first().fill(valor);
+  };
+  const selecionarSe = async (nome: string, valor: string | undefined) => {
+    if (valor === undefined) return;
+    await frame.locator(`[name="${nome}"]`).first().selectOption(valor);
+  };
+
+  await preencherSe("txtnatu", dados.naturalidade);
+  await preencherSe("txtdia", dados.nascimentoDia);
+  await preencherSe("txtmes", dados.nascimentoMes);
+  await preencherSe("txtano", dados.nascimentoAno);
+  await selecionarSe("cmbcivi", dados.estadoCivil);
+  await selecionarSe("cmbesco", dados.escolaridade);
+  await preencherSe("txtprof", dados.profissao);
+
+  await frame.getByRole("button", { name: /gravar/i }).first().click();
+  await frame.page().waitForTimeout(1500);
+}
+
+// ===================== Aba IDENTIFICAÇÃO =====================
+// Campos confirmados ao vivo: txtrg (número), txtexped (órgão expedidor),
+// txtdia/txtmes/txtano (emissão — "00/00/0000" quando não preenchido, não
+// é uma data válida). CPF (txtcpf) e Passaporte existem na mesma aba mas
+// não são expostos na Portal por ora (fora do pedido original).
+
+export interface DadosIdentificacaoMercurio {
+  rgNumero: string;
+  rgOrgaoEmissor: string;
+  rgEmissaoDia: string;
+  rgEmissaoMes: string;
+  rgEmissaoAno: string;
+}
+
+async function abrirAbaIdentificacao(frame: Frame): Promise<void> {
+  await frame.getByText(/^IDENTIFICA[ÇC][ÃA]O$/i).first().click();
+  await frame.page().waitForTimeout(800);
+}
+
+export async function lerAbaIdentificacao(frame: Frame): Promise<DadosIdentificacaoMercurio> {
+  await abrirAbaIdentificacao(frame);
+  const valor = async (nome: string) => (await frame.locator(`[name="${nome}"]`).first().inputValue().catch(() => "")).trim();
+  return {
+    rgNumero: await valor("txtrg"),
+    rgOrgaoEmissor: await valor("txtexped"),
+    rgEmissaoDia: await valor("txtdia"),
+    rgEmissaoMes: await valor("txtmes"),
+    rgEmissaoAno: await valor("txtano"),
+  };
+}
+
+export async function escreverAbaIdentificacao(frame: Frame, dados: Partial<DadosIdentificacaoMercurio>) {
+  await abrirAbaIdentificacao(frame);
+  const preencherSe = async (nome: string, valor: string | undefined) => {
+    if (valor === undefined) return;
+    await frame.locator(`[name="${nome}"]`).first().fill(valor);
+  };
+
+  await preencherSe("txtrg", dados.rgNumero);
+  await preencherSe("txtexped", dados.rgOrgaoEmissor);
+  await preencherSe("txtdia", dados.rgEmissaoDia);
+  await preencherSe("txtmes", dados.rgEmissaoMes);
+  await preencherSe("txtano", dados.rgEmissaoAno);
+
+  await frame.getByRole("button", { name: /gravar/i }).first().click();
+  await frame.page().waitForTimeout(1500);
+}

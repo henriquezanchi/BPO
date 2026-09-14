@@ -97,6 +97,18 @@ model Member {
   addressCity         String?
   addressState        String? // UF, 2 letras
   addressZip          String?
+  // "Mais Dados" (aba PESSOAIS + IDENTIFICAÇÃO do Mercúrio) — ver
+  // src/app/(member)/portal/mais-dados. escolaridade/estadoCivil guardam o
+  // CÓDIGO que o Mercúrio usa (ex: "GRP", "SOL"), não o texto — ver
+  // src/lib/mercurio/personal-data-options.ts.
+  birthDate      DateTime?
+  naturalidade   String? // "cidade/UF" (formato livre, como o Mercúrio grava)
+  profession     String?
+  escolaridade   String?
+  estadoCivil    String?
+  rgNumero       String?
+  rgOrgaoEmissor String?
+  rgDataEmissao  DateTime?
   status         MemberStatus @default(em_dia)
   createdAt      DateTime     @default(now())
 

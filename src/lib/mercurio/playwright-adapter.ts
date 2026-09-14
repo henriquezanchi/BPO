@@ -4,10 +4,22 @@ import type {
   MercurioContactChanges,
   MercurioContactData,
   MercurioMemberIdentity,
+  MercurioPersonalChanges,
+  MercurioPersonalData,
   MercurioRosterEntry,
   MercurioWriteResult,
 } from "./adapter";
-import { abrirFichaDaListaAtivos, abrirListaAtivos, abrirSessaoMercurio, lerAbaEnderecos, escreverAbaEnderecos } from "./browser-session";
+import {
+  abrirFichaDaListaAtivos,
+  abrirListaAtivos,
+  abrirSessaoMercurio,
+  escreverAbaEnderecos,
+  escreverAbaIdentificacao,
+  escreverAbaPessoais,
+  lerAbaEnderecos,
+  lerAbaIdentificacao,
+  lerAbaPessoais,
+} from "./browser-session";
 import { parseLogradouro } from "./parse-logradouro";
 import type { Page } from "playwright";
 
@@ -96,6 +108,100 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
       return { ok: false, error: (e as Error).message };
     }
   }
+
+  async pullPersonalData(member: MercurioMemberIdentity): Promise<MercurioPersonalData> {
+    const { browser, page } = await abrirSessaoMercurio();
+    try {
+      const frame = await abrirFichaEmEnderecos(page, new RegExp(member.filialLabel, "i"), new RegExp(member.name, "i"));
+      const pessoais = await lerAbaPessoais(frame);
+      const identificacao = await lerAbaIdentificacao(frame);
+      return {
+        birthDate: diaMesAnoParaData(pessoais.nascimentoDia, pessoais.nascimentoMes, pessoais.nascimentoAno),
+        naturalidade: pessoais.naturalidade,
+        profession: pessoais.profissao,
+        estadoCivil: pessoais.estadoCivil,
+        escolaridade: pessoais.escolaridade,
+        rgNumero: identificacao.rgNumero,
+        rgOrgaoEmissor: identificacao.rgOrgaoEmissor,
+        rgDataEmissao: diaMesAnoParaData(identificacao.rgEmissaoDia, identificacao.rgEmissaoMes, identificacao.rgEmissaoAno),
+      };
+    } finally {
+      await browser.close();
+    }
+  }
+
+  async pushPersonalUpdate(member: MercurioMemberIdentity, changes: MercurioPersonalChanges): Promise<MercurioWriteResult> {
+    try {
+      const { browser, page } = await abrirSessaoMercurio();
+      try {
+        const frame = await abrirFichaEmEnderecos(page, new RegExp(member.filialLabel, "i"), new RegExp(member.name, "i"));
+
+        const pessoaisMudou =
+          changes.birthDate !== undefined ||
+          changes.naturalidade !== undefined ||
+          changes.profession !== undefined ||
+          changes.estadoCivil !== undefined ||
+          changes.escolaridade !== undefined;
+        if (pessoaisMudou) {
+          const [nascimentoDia, nascimentoMes, nascimentoAno] = dataParaDiaMesAno(changes.birthDate);
+          await escreverAbaPessoais(frame, {
+            naturalidade: changes.naturalidade,
+            nascimentoDia,
+            nascimentoMes,
+            nascimentoAno,
+            estadoCivil: changes.estadoCivil,
+            escolaridade: changes.escolaridade,
+            profissao: changes.profession,
+          });
+        }
+
+        const identificacaoMudou = changes.rgNumero !== undefined || changes.rgOrgaoEmissor !== undefined || changes.rgDataEmissao !== undefined;
+        if (identificacaoMudou) {
+          const [rgEmissaoDia, rgEmissaoMes, rgEmissaoAno] = dataParaDiaMesAno(changes.rgDataEmissao);
+          await escreverAbaIdentificacao(frame, {
+            rgNumero: changes.rgNumero,
+            rgOrgaoEmissor: changes.rgOrgaoEmissor,
+            rgEmissaoDia,
+            rgEmissaoMes,
+            rgEmissaoAno,
+          });
+        }
+
+        return { ok: true };
+      } finally {
+        await browser.close();
+      }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
+    }
+  }
+}
+
+/**
+ * "00"/"00"/"0000" é o jeito do Mercúrio dizer "data não preenchida" — não
+ * é uma data válida. Devolve null nesse caso.
+ */
+function diaMesAnoParaData(dia: string, mes: string, ano: string): Date | null {
+  const d = parseInt(dia, 10);
+  const m = parseInt(mes, 10);
+  const a = parseInt(ano, 10);
+  if (!d || !m || !a) return null;
+  return new Date(Date.UTC(a, m - 1, d));
+}
+
+/**
+ * undefined = campo não mudou (não escreve nada nessa data). null = usuário
+ * quer limpar a data (grava "00/00/0000", o sentinel do Mercúrio). Date =
+ * grava normalmente.
+ */
+function dataParaDiaMesAno(data: Date | null | undefined): [string | undefined, string | undefined, string | undefined] {
+  if (data === undefined) return [undefined, undefined, undefined];
+  if (data === null) return ["00", "00", "0000"];
+  return [
+    String(data.getUTCDate()).padStart(2, "0"),
+    String(data.getUTCMonth() + 1).padStart(2, "0"),
+    String(data.getUTCFullYear()).padStart(4, "0"),
+  ];
 }
 
 /** "62991729783" -> ["62", "991729783"]. undefined se não vier número. */
