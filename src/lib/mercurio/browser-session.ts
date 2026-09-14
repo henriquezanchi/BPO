@@ -128,14 +128,13 @@ export async function abrirSessaoMercurio(): Promise<SessaoMercurio> {
 }
 
 /**
- * Navega até a ficha de um aluno (aba ENDEREÇOS já aberta), a partir de
- * uma sessão logada. `filialLabelRegex` identifica a filial (School.
- * mercurioFilialLabel) e `nomeRegex` identifica o aluno na lista de Ativos
- * — o Mercúrio não permite navegação direta por URL com matrícula (URL
- * fixa exige ter entrado pela filial certa primeiro, confirmado ao vivo:
- * "File not found" ao tentar direto).
+ * Navega até a lista de Ativos de uma filial (dentro de "PROGRAMA BRANCO"
+ * — a mesma navegação usada em toda leitura/escrita de contato). O
+ * Mercúrio não permite navegação direta por URL com matrícula (URL fixa
+ * exige ter entrado pela filial certa primeiro, confirmado ao vivo: "File
+ * not found" ao tentar direto).
  */
-export async function abrirFichaEmEnderecos(page: Page, filialLabelRegex: RegExp, nomeRegex: RegExp): Promise<Frame> {
+export async function abrirListaAtivos(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
   const cadastros = await listarLinksCadastro(page);
   const filial = cadastros.find((c) => filialLabelRegex.test(c.label));
   if (!filial) {
@@ -147,9 +146,36 @@ export async function abrirFichaEmEnderecos(page: Page, filialLabelRegex: RegExp
 
   const frameIndice = await esperarFrame(page, "indice", /uni_indice\.php/, 15000);
   await frameIndice.getByText("Ativos", { exact: true }).click();
-  const framePrincipalAtivos = await esperarFrame(page, "principal", /uni_newati\.php/, 15000);
+  return esperarFrame(page, "principal", /uni_newati\.php/, 15000);
+}
 
-  const linkNome = framePrincipalAtivos.getByRole("link", { name: nomeRegex }).first();
+/**
+ * Lê a coluna "Nome" da tabela de Ativos (achando a posição certa pelo
+ * cabeçalho, não por índice fixo) e devolve o texto de cada link — usado
+ * pra escolher um aluno real pra teste sem precisar saber o nome de
+ * antemão (ver scripts/onboard-filial.ts).
+ */
+export async function listarNomesDaListaAtivos(frame: Frame, limite = 10): Promise<string[]> {
+  const cabecalhos = await frame.locator("table").first().locator("tr").first().locator("td, th").allInnerTexts();
+  const colNome = cabecalhos.findIndex((c) => /^nome$/i.test(c.trim()));
+  if (colNome === -1) throw new Error(`Coluna "Nome" não encontrada no cabeçalho: ${cabecalhos.join(" | ")}`);
+
+  const linhas = frame.locator("table").first().locator("tr");
+  const total = Math.min(await linhas.count(), limite + 1); // +1 pela linha de cabeçalho
+  const nomes: string[] = [];
+  for (let i = 1; i < total; i++) {
+    const texto = (await linhas.nth(i).locator("td").nth(colNome).innerText()).trim();
+    if (texto) nomes.push(texto);
+  }
+  return nomes;
+}
+
+/**
+ * A partir da lista de Ativos JÁ ABERTA (ver abrirListaAtivos), clica no
+ * aluno que bate com `nomeRegex` e abre a aba ENDEREÇOS da ficha dele.
+ */
+export async function abrirFichaDaListaAtivos(page: Page, frameAtivos: Frame, nomeRegex: RegExp): Promise<Frame> {
+  const linkNome = frameAtivos.getByRole("link", { name: nomeRegex }).first();
   await linkNome.waitFor({ timeout: 10000 });
   await linkNome.click();
 
@@ -161,6 +187,8 @@ export async function abrirFichaEmEnderecos(page: Page, filialLabelRegex: RegExp
 }
 
 export interface DadosEnderecoMercurio {
+  matricula: string;
+  nomeCompleto: string;
   logradouro: string;
   bairro: string;
   cidade: string;
@@ -176,6 +204,8 @@ export interface DadosEnderecoMercurio {
 export async function lerAbaEnderecos(frame: Frame): Promise<DadosEnderecoMercurio> {
   const valor = async (nome: string) => (await frame.locator(`[name="${nome}"]`).first().inputValue().catch(() => "")).trim();
   return {
+    matricula: await valor("matr"),
+    nomeCompleto: await valor("txtnome"),
     logradouro: await valor("txtlog"),
     bairro: await valor("txtbai"),
     cidade: await valor("txtcida"),

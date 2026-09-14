@@ -7,7 +7,13 @@ import type {
   MercurioRosterEntry,
   MercurioWriteResult,
 } from "./adapter";
-import { abrirFichaEmEnderecos, abrirSessaoMercurio, lerAbaEnderecos, escreverAbaEnderecos } from "./browser-session";
+import { abrirFichaDaListaAtivos, abrirListaAtivos, abrirSessaoMercurio, lerAbaEnderecos, escreverAbaEnderecos } from "./browser-session";
+import type { Page } from "playwright";
+
+async function abrirFichaEmEnderecos(page: Page, filialLabelRegex: RegExp, nomeRegex: RegExp) {
+  const frameAtivos = await abrirListaAtivos(page, filialLabelRegex);
+  return abrirFichaDaListaAtivos(page, frameAtivos, nomeRegex);
+}
 
 /**
  * Implementação REAL — loga no Mercúrio de verdade via Playwright.
