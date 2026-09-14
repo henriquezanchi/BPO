@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import type { MercurioContactChanges } from "./adapter";
-import { mercurioAdapter } from "./mock-adapter";
+import { mercurioAdapter } from "./index";
 
 /**
  * Enfileira uma atualização de contato para ser propagada ao Mercúrio.
@@ -23,32 +23,36 @@ export async function enqueueMercurioContactUpdate(
 }
 
 /**
- * Processa tarefas pendentes da fila. Hoje usa o MockMercurioAdapter, então
- * as tarefas são marcadas como sincronizadas sem de fato alterar o Mercúrio.
- * Trocar para o adapter real (API/RPA) aqui é a única mudança necessária
- * quando a integração de escrita for confirmada e implementada.
- *
- * Pensado para rodar via cron (ex: a cada poucos minutos) uma vez que
- * exista um adapter real; hoje pode ser chamado manualmente para depuração.
+ * Processa tarefas pendentes da fila, escrevendo de verdade no Mercúrio
+ * (mercurioAdapter é o real quando as credenciais estão configuradas — ver
+ * mercurio/index.ts). Chamada hoje síncrona, ao fim de updateMemberContact
+ * — aceitável na escala do MVP (1 filial, poucas edições), mas deve virar
+ * um worker/cron separado antes de produção com mais filiais, pra:
+ *   (a) não segurar a resposta HTTP pelos ~5-10s de uma sessão de navegador,
+ *   (b) coordenar direito com o scraper agendado via a MESMA trava
+ *       (scraper_progresso — já respeitada aqui, ver abrirSessaoMercurio).
  */
 export async function processMercurioSyncQueue(limit = 20) {
   const pending = await db.mercurioSyncTask.findMany({
     where: { status: "pendente" },
-    include: { member: true },
+    include: { member: { include: { school: true } } },
     take: limit,
     orderBy: { createdAt: "asc" },
   });
 
   const results = [];
   for (const task of pending) {
-    if (!task.member.mercurioId) {
+    const { member } = task;
+    if (!member.mercurioId || !member.school.mercurioFilialLabel) {
       results.push(
         await db.mercurioSyncTask.update({
           where: { id: task.id },
           data: {
             status: "falhou",
             attempts: { increment: 1 },
-            lastError: "Membro sem mercurioId vinculado — não sabemos qual cadastro atualizar no Mercúrio.",
+            lastError: !member.mercurioId
+              ? "Membro sem mercurioId (matrícula) vinculado — não sabemos qual cadastro atualizar no Mercúrio."
+              : "Escola sem mercurioFilialLabel configurado — não sabemos qual filial navegar no Mercúrio.",
           },
         }),
       );
@@ -56,7 +60,7 @@ export async function processMercurioSyncQueue(limit = 20) {
     }
 
     const result = await mercurioAdapter.pushContactUpdate(
-      task.member.mercurioId,
+      { matricula: member.mercurioId, name: member.name, filialLabel: member.school.mercurioFilialLabel },
       task.payload as MercurioContactChanges,
     );
 

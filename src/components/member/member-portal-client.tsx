@@ -192,7 +192,13 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               name={member.name}
               whatsapp={member.whatsapp}
               email={member.email}
-              address={member.address}
+              addressStreet={member.addressStreet}
+              addressNumber={member.addressNumber}
+              addressComplement={member.addressComplement}
+              addressNeighborhood={member.addressNeighborhood}
+              addressCity={member.addressCity}
+              addressState={member.addressState}
+              addressZip={member.addressZip}
             />
           )}
           {modal === "contribuicao" && <ContributionPanel contributions={member.contributions} />}

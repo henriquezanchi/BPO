@@ -60,11 +60,12 @@ enum MercurioSyncStatus {
 }
 
 model School {
-  id        String   @id @default(cuid())
-  name      String
-  city      String?
-  whatsapp  String? // número da secretaria/economia, usado no botão de ajuda do Portal
-  createdAt DateTime @default(now())
+  id                  String   @id @default(cuid())
+  name                String
+  city                String?
+  whatsapp            String? // número da secretaria/economia, usado no botão de ajuda do Portal
+  mercurioFilialLabel String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
+  createdAt           DateTime @default(now())
 
   members       Member[]
   events        Event[]
@@ -77,12 +78,25 @@ model Member {
   id             String       @id @default(cuid())
   schoolId       String
   school         School       @relation(fields: [schoolId], references: [id])
-  mercurioId     String?      @unique // id do cadastro no Mercúrio, quando conhecido
+  mercurioId     String?      @unique // matrícula no Mercúrio (ex: "21596"), quando conhecida
   registrationNo String? // "Matrícula #21596"
   name           String
   whatsapp       String
+  whatsappAlt    String? // "Telefone Alternativo" do Mercúrio (2º par Celular/Alternativo)
   email          String?
-  address        String?
+  // Endereço estruturado (não um campo único de texto) pra permitir
+  // autopreenchimento nativo do celular/Google no formulário do Portal —
+  // ver src/components/member/panels/profile-edit-panel.tsx. Composto de
+  // volta num Logradouro único só na hora de escrever no Mercúrio (que usa
+  // 1 campo de texto livre pra rua+número+complemento), em
+  // src/lib/mercurio/playwright-adapter.ts.
+  addressStreet       String?
+  addressNumber       String?
+  addressComplement   String?
+  addressNeighborhood String?
+  addressCity         String?
+  addressState        String? // UF, 2 letras
+  addressZip          String?
   status         MemberStatus @default(em_dia)
   createdAt      DateTime     @default(now())
 

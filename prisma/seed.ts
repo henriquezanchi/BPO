@@ -10,12 +10,14 @@ async function main() {
       name: "Nova Acrópole - Barra do Garças",
       city: "Barra do Garças",
       whatsapp: "5562991729783",
+      mercurioFilialLabel: "barra do gar", // bate com "GOIÂNIA UNIVERSITARIO: BARRA DO GARÇAS" no Mercúrio
     },
   });
 
   const aluno = await db.member.create({
     data: {
       schoolId: school.id,
+      mercurioId: "21596", // matrícula real no Mercúrio — habilita leitura/escrita real
       registrationNo: "21596",
       name: "Luiz Henrique Zanchi Borges",
       whatsapp: "5562991729783",

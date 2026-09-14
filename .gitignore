@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# saídas de scripts exploratórios (podem conter PII/screenshots reais)
+scripts/.mercurio-test-output/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

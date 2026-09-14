@@ -1,14 +1,32 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { enqueueMercurioContactUpdate } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioContactUpdate, processMercurioSyncQueue } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
 export interface ContactChangeInput {
   whatsapp?: string;
   email?: string;
-  address?: string;
+  addressStreet?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  addressNeighborhood?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressZip?: string;
 }
+
+const CAMPOS_EDITAVEIS = [
+  "whatsapp",
+  "email",
+  "addressStreet",
+  "addressNumber",
+  "addressComplement",
+  "addressNeighborhood",
+  "addressCity",
+  "addressState",
+  "addressZip",
+] as const;
 
 const OVERDUE_STATUSES = new Set(["atrasado", "negociando"]);
 
@@ -20,18 +38,18 @@ const OVERDUE_STATUSES = new Set(["atrasado", "negociando"]);
  * antes/depois dos dados — pedido explícito para evitar que inadimplentes
  * troquem contato "por baixo do pano" sem a economia perceber.
  *
- * Também enfileira a mudança para propagação ao Mercúrio (ver
- * src/lib/mercurio/sync-queue.ts) — o Mercúrio segue sendo a fonte de
- * verdade cadastral da escola.
+ * Também propaga a mudança pro Mercúrio (fonte de verdade cadastral da
+ * escola): enfileira em MercurioSyncTask (histórico/retry) e processa a
+ * fila na hora (ver nota de escala em mercurio/sync-queue.ts) — o aluno vê
+ * na mesma tela se a escrita no Mercúrio deu certo.
  */
 export async function updateMemberContact(memberId: string, changes: ContactChangeInput) {
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
 
-  const fields = ["whatsapp", "email", "address"] as const;
   const oldValues: Record<string, string | null> = {};
   const newValues: Record<string, string | null> = {};
 
-  for (const field of fields) {
+  for (const field of CAMPOS_EDITAVEIS) {
     const incoming = changes[field];
     const current = member[field] ?? null;
     if (incoming !== undefined && incoming !== current) {
@@ -41,7 +59,7 @@ export async function updateMemberContact(memberId: string, changes: ContactChan
   }
 
   if (Object.keys(newValues).length === 0) {
-    return { changed: false, alerted: false };
+    return { changed: false, alerted: false, mercurioSynced: false };
   }
 
   const wasOverdue = OVERDUE_STATUSES.has(member.status);
@@ -61,7 +79,19 @@ export async function updateMemberContact(memberId: string, changes: ContactChan
 
   await enqueueMercurioContactUpdate(memberId, newValues);
 
+  // Processa a fila na hora pra dar feedback imediato no Portal. Uma falha
+  // aqui (ex: Mercúrio fora do ar, trava de concorrência ativa) não deve
+  // impedir o salvamento local — a tarefa já está na fila e será
+  // retentada; só reportamos que a sincronização não confirmou ainda.
+  let mercurioSynced = false;
+  try {
+    const resultados = await processMercurioSyncQueue();
+    mercurioSynced = resultados.some((r) => r.memberId === memberId && r.status === "sincronizado");
+  } catch (e) {
+    console.error("Falha ao processar fila de sincronização com o Mercúrio:", e);
+  }
+
   revalidatePath("/portal");
 
-  return { changed: true, alerted: wasOverdue };
+  return { changed: true, alerted: wasOverdue, mercurioSynced };
 }
