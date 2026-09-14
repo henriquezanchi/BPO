@@ -1,5 +1,5 @@
 import { formatBRL, formatDateBR } from "@/lib/format";
-import type { Contribution } from "@prisma/client";
+import type { SerializedContribution } from "@/lib/member-data";
 import { CheckCircle2 } from "lucide-react";
 
 /**
@@ -7,7 +7,7 @@ import { CheckCircle2 } from "lucide-react";
  * o modelo de composição itemizada (contribuição + Fortuna + doações etc.)
  * for definido, este painel passa a listar os itens em vez do total único.
  */
-export function ContributionPanel({ contributions }: { contributions: Contribution[] }) {
+export function ContributionPanel({ contributions }: { contributions: SerializedContribution[] }) {
   const latest = contributions[0];
 
   return (

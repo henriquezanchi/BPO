@@ -1,5 +1,15 @@
 import { db } from "@/lib/db";
-import type { ActivityType } from "@prisma/client";
+import type { ActivityType, Contribution } from "@prisma/client";
+
+// Server Components só podem passar objetos "planos" para Client Components
+// — instâncias de Decimal (retornadas pelo Prisma para campos @db.Decimal)
+// não são suportadas e quebram a serialização. Convertemos para number aqui,
+// na borda dos dados, em vez de em cada componente que consome Contribution.
+export type SerializedContribution = Omit<Contribution, "amount"> & { amount: number };
+
+function serializeContribution(c: Contribution): SerializedContribution {
+  return { ...c, amount: Number(c.amount) };
+}
 
 export type AgendaItem =
   | {
@@ -85,7 +95,10 @@ export async function getMemberDashboard(memberId: string) {
   const isTeacher = member.classMemberships.some((cm) => cm.role === "professor");
 
   return {
-    member,
+    member: {
+      ...member,
+      contributions: member.contributions.map(serializeContribution),
+    },
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     agendaItems,
     isTeacher,
