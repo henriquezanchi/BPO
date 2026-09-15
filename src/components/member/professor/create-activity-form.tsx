@@ -12,7 +12,7 @@ const TYPES: { value: ActivityType; label: string }[] = [
   { value: "atividade_turma", label: "Atividade de turma" },
 ];
 
-export function CreateActivityForm({ classGroupId, createdById }: { classGroupId: string; createdById: string }) {
+export function CreateActivityForm({ classGroupId }: { classGroupId: string }) {
   const [isPending, startTransition] = useTransition();
   const [done, setDone] = useState(false);
 
@@ -20,7 +20,6 @@ export function CreateActivityForm({ classGroupId, createdById }: { classGroupId
     startTransition(async () => {
       await createActivity({
         classGroupId,
-        createdById,
         type: formData.get("type") as ActivityType,
         title: String(formData.get("title") ?? ""),
         studyItems: String(formData.get("studyItems") ?? "") || undefined,

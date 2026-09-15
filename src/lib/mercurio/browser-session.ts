@@ -683,3 +683,55 @@ export async function editarValorItemComposicao(frame: Frame, matricula: string,
   await frame.getByRole("button", { name: /gravar/i }).click();
   await frame.page().waitForTimeout(1000);
 }
+
+// ===================== Integração > Pedagogos =====================
+// Módulo diferente de novo (não Cadastro/Tesouraria) — confirmado ao vivo
+// (2026-09-15): clicar em "INTEGRAÇÃO" no menu de topo troca a página
+// inteira (não só o frame "principal" de ger_frame.php) pra um novo
+// frameset em integra/int_frame.php, com um frame "indice"
+// (integra/int_indice.php, o submenu à esquerda) e um frame "principal"
+// (começa em unidade/uni_contato.html, igual TESOURARIA). O link
+// "Pedagogos" dentro do frame "indice" navega o "principal" pra
+// integra/int_pedlis.php — uma tabela simples (Matr./Nome/Formação/Grau
+// Acadêmico) com todo pedagogo (INSTRUTOR ou EM FORMAÇÃO) daquela filial.
+
+/** Entra no módulo INTEGRAÇÃO de uma filial e devolve o frame "indice" (submenu à esquerda). */
+async function abrirIntegracao(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  const integracoes = await listarLinksMenu(page, "INTEGRAÇÃO");
+  const filial = integracoes.find((i) => filialLabelRegex.test(i.label));
+  if (!filial) {
+    throw new Error(`Filial batendo com ${filialLabelRegex} sem link de INTEGRAÇÃO entre: ${integracoes.map((i) => i.label).join(", ")}`);
+  }
+
+  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
+  await framePrincipal0.getByRole("link", { name: "INTEGRAÇÃO", exact: true }).nth(filial.indice).click();
+  return esperarFrame(page, "indice", /int_indice\.php/, 15000);
+}
+
+export interface PedagogoMercurio {
+  matricula: string;
+  nome: string;
+  formacao: string; // texto livre do Mercúrio, ex: "INSTRUTOR", "EM FORMAÇÃO"
+}
+
+/** Abre "Integração > Pedagogos" de uma filial e devolve o frame "principal" com a listagem. */
+export async function abrirListaPedagogos(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  const frameIndice = await abrirIntegracao(page, filialLabelRegex);
+  await frameIndice.getByRole("link", { name: "Pedagogos", exact: true }).click();
+  return esperarFrame(page, "principal", /int_pedlis\.php/, 15000);
+}
+
+/** Lê a listagem de Pedagogos já aberta (ver abrirListaPedagogos). */
+export async function lerListaPedagogos(frame: Frame): Promise<PedagogoMercurio[]> {
+  return frame.evaluate(() => {
+    const tabela = document.querySelector("table");
+    if (!tabela) return [];
+    return Array.from(tabela.querySelectorAll("tr"))
+      .filter((tr) => tr.querySelector("td"))
+      .map((tr) => {
+        const celulas = Array.from(tr.querySelectorAll("td")).map((td) => (td as HTMLElement).innerText.trim());
+        return { matricula: celulas[0] ?? "", nome: celulas[1] ?? "", formacao: celulas[2] ?? "" };
+      })
+      .filter((p) => p.matricula);
+  });
+}

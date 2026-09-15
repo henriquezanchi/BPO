@@ -1,28 +1,29 @@
 import { CreateActivityForm } from "@/components/member/professor/create-activity-form";
 import { formatDateBR } from "@/lib/format";
+import { getAuthenticatedMember } from "@/lib/auth";
 import { getTeacherClasses } from "@/lib/teacher-data";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-// TODO: mesma ressalva do Portal do Membro — trocar `?memberId=` por sessão
-// real (Supabase Auth) assim que o papel de professor puder ser resolvido
-// via Mercúrio.
-export default async function ProfessorPage(props: PageProps<"/professor">) {
-  const searchParams = await props.searchParams;
-  const memberId = typeof searchParams.memberId === "string" ? searchParams.memberId : undefined;
+export default async function ProfessorPage() {
+  const member = await getAuthenticatedMember();
+  if (!member) redirect("/login?next=/professor");
+  // isPedagogo vem da sincronização real de "Integração > Pedagogos" do
+  // Mercúrio (scripts/sync-pedagogos.ts) — quem não está lá não deveria
+  // nem ver o botão "Área do Professor" no Portal, e não deveria conseguir
+  // entrar direto pela URL também (defesa em profundidade).
+  if (!member.isPedagogo) redirect("/portal");
 
-  if (!memberId) {
-    return (
-      <main className="p-6 text-center text-sm text-gray-500">
-        Acesse com <code className="rounded bg-gray-100 px-1.5 py-0.5">?memberId=ID_DO_PROFESSOR</code>.
-      </main>
-    );
-  }
-
-  const classes = await getTeacherClasses(memberId);
+  const classes = await getTeacherClasses(member.id);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+      <Link href="/portal" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700">
+        <ArrowLeft size={14} /> Voltar ao Portal
+      </Link>
       <h1 className="text-xl font-bold text-na-green-dark">Minhas Turmas</h1>
 
       {classes.length === 0 && (
@@ -36,7 +37,7 @@ export default async function ProfessorPage(props: PageProps<"/professor">) {
             <span className="text-xs text-gray-500">{c._count.memberships} alunos</span>
           </div>
 
-          <CreateActivityForm classGroupId={c.id} createdById={memberId} />
+          <CreateActivityForm classGroupId={c.id} />
 
           {c.activities.length > 0 && (
             <div>

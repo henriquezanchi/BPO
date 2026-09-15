@@ -1,5 +1,6 @@
 "use server";
 
+import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 import { revalidatePath } from "next/cache";
@@ -7,7 +8,6 @@ import type { ActivityType } from "@prisma/client";
 
 export interface CreateActivityInput {
   classGroupId: string;
-  createdById: string; // membro professor logado
   type: ActivityType;
   title: string;
   studyItems?: string;
@@ -25,10 +25,12 @@ export interface CreateActivityInput {
  * evolução futura quando tivermos esse canal.
  */
 export async function createActivity(input: CreateActivityInput) {
+  const professor = await requireTeacherOfClass(input.classGroupId);
+
   const activity = await db.activity.create({
     data: {
       classGroupId: input.classGroupId,
-      createdById: input.createdById,
+      createdById: professor.id,
       type: input.type,
       title: input.title,
       studyItems: input.studyItems,

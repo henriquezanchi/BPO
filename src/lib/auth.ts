@@ -37,3 +37,21 @@ export async function requireAuthenticatedMember(expectedMemberId: string) {
   }
   return member;
 }
+
+/**
+ * Confirma que o membro logado é professor da turma informada — nunca
+ * confiar num createdById vindo do client (mesma lógica de defesa em
+ * profundidade de requireAuthenticatedMember, aplicada ao papel de
+ * professor em vez de "é o próprio membro").
+ */
+export async function requireTeacherOfClass(classGroupId: string) {
+  const member = await getAuthenticatedMember();
+  if (!member) throw new Error("Não autenticado.");
+
+  const membership = await db.classMembership.findFirst({
+    where: { classGroupId, memberId: member.id, role: "professor" },
+  });
+  if (!membership) throw new Error("Você não é professor desta turma.");
+
+  return member;
+}

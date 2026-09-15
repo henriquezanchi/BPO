@@ -130,6 +130,12 @@ model Member {
   // velocidade, então pode ficar desatualizado até a próxima sincronização.
   mercurioAtivo     Boolean   @default(true)
   mercurioAtivoSync DateTime? // última vez que este campo foi sincronizado de verdade
+  // Aparece na lista "Pedagogos" (Integração > Pedagogos) de alguma filial
+  // no Mercúrio — quem dá aula lá também é aluno em outras turmas, então
+  // não é um papel separado no Portal, só libera o botão "Área do
+  // Professor" (ver scripts/sync-pedagogos.ts e member-portal-client.tsx).
+  isPedagogo       Boolean   @default(false)
+  pedagogoSyncedAt DateTime?
   // Id do cliente na carteira digital Fortuna (oinabnfortuna.acropolebrasil.com.br)
   // — numeração própria, SEM relação com mercurioId. Resolvido 1x por
   // e-mail/telefone (scripts/link-fortuna-client.ts), não por nome (mais

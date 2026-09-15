@@ -173,8 +173,6 @@ export async function getMemberDashboard(memberId: string) {
     ),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const isTeacher = member.classMemberships.some((cm) => cm.role === "professor");
-
   return {
     member: {
       ...member,
@@ -184,7 +182,6 @@ export async function getMemberDashboard(memberId: string) {
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     fortunaBalances,
     agendaItems,
-    isTeacher,
     availableToAdd,
   };
 }

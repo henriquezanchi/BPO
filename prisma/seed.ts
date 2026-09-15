@@ -44,6 +44,10 @@ async function main() {
       whatsapp: "5562990001111",
       email: "marcos.ferreira@email.com.br",
       status: "em_dia",
+      // Sem mercurioId (membro de seed, não existe no Mercúrio de verdade)
+      // então nunca vai aparecer em scripts/sync-pedagogos.ts — marcado
+      // manualmente aqui só pra dar acesso de teste à Área do Professor.
+      isPedagogo: true,
     },
   });
 
@@ -84,8 +88,8 @@ async function main() {
   console.log(`  Aluno de teste: ${aluno.id} (${aluno.name})`);
   console.log(`  Professor de teste: ${professor.id} (${professor.name})`);
   console.log(`  Portal do Membro agora usa login real (Supabase Auth) — não dá mais pra acessar por /portal?memberId=...`);
-  console.log(`  Rode "npx tsx --env-file=.env scripts/provision-member-auth.ts ${aluno.mercurioId}" pra criar/vincular o login, depois entre em /login com o e-mail do membro.`);
-  console.log(`  Acesse o painel do professor (ainda sem login real) em /professor?memberId=${professor.id}`);
+  console.log(`  Rode "npx tsx --env-file=.env scripts/provision-member-auth.ts ${aluno.mercurioId}" pra criar/vincular o login do aluno, depois entre em /login com o e-mail do membro.`);
+  console.log(`  Pro professor (sem mercurioId, não dá pra usar o script acima): "npx tsx --env-file=.env scripts/provision-test-member-auth.ts ${professor.id} <senha>", depois /login?next=/professor.`);
 }
 
 main()
