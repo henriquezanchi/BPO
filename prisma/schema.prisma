@@ -119,6 +119,13 @@ model Member {
   // velocidade, então pode ficar desatualizado até a próxima sincronização.
   mercurioAtivo     Boolean   @default(true)
   mercurioAtivoSync DateTime? // última vez que este campo foi sincronizado de verdade
+  // Id do cliente na carteira digital Fortuna (oinabnfortuna.acropolebrasil.com.br)
+  // — numeração própria, SEM relação com mercurioId. Resolvido 1x por
+  // e-mail/telefone (scripts/link-fortuna-client.ts), não por nome (mais
+  // confiável que o casamento por nome que o Mercúrio exige). Diferente do
+  // Mercúrio, a API do Fortuna é rápida (REST normal, sem RPA) — o saldo é
+  // lido ao vivo a cada carregamento do Portal, não sincronizado/cacheado.
+  fortunaClientId Int? @unique
   status         MemberStatus @default(em_dia)
   createdAt      DateTime     @default(now())
 

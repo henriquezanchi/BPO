@@ -1,5 +1,13 @@
 import { db } from "@/lib/db";
 import type { ActivityType, Contribution, ContributionCompositionItem, ContributionReceipt } from "@prisma/client";
+import { fortunaGetBranches, fortunaGetClient } from "@/lib/fortuna/client";
+
+export interface FortunaBalanceView {
+  branchId: number;
+  branchTitle: string;
+  amount: number;
+  isHome: boolean;
+}
 
 // Server Components só podem passar objetos "planos" para Client Components
 // — instâncias de Decimal (retornadas pelo Prisma para campos @db.Decimal)
@@ -94,6 +102,28 @@ export async function getMemberDashboard(memberId: string) {
     _sum: { amount: true },
   });
 
+  // Saldo real do Fortuna (carteira digital da lanchonete) — lido AO VIVO
+  // a cada carregamento, diferente do Mercúrio: é uma API REST normal,
+  // rápida, sem trava de sessão única, então não precisa de sync/cache.
+  // Sem fortunaClientId ainda (membro não vinculado — ver
+  // scripts/link-fortuna-clients.ts) ou API fora do ar: fica lista vazia,
+  // não quebra o resto do dashboard.
+  let fortunaBalances: FortunaBalanceView[] = [];
+  if (member.fortunaClientId) {
+    try {
+      const [client, branches] = await Promise.all([fortunaGetClient(member.fortunaClientId), fortunaGetBranches()]);
+      const tituloPorFilial = new Map(branches.map((b) => [b.id, b.title]));
+      fortunaBalances = client.balance.map((b) => ({
+        branchId: b.branchId,
+        branchTitle: tituloPorFilial.get(b.branchId) ?? `Filial ${b.branchId}`,
+        amount: Number(b.amount),
+        isHome: b.branchId === client.branch.id,
+      }));
+    } catch (e) {
+      console.error("Falha ao buscar saldo Fortuna:", (e as Error).message);
+    }
+  }
+
   const studentClassGroupIds = member.classMemberships
     .filter((cm) => cm.role === "aluno")
     .map((cm) => cm.classGroupId);
@@ -146,6 +176,7 @@ export async function getMemberDashboard(memberId: string) {
       receipts: member.receipts.map(serializeReceipt),
     },
     walletBalance: Number(walletAgg._sum.amount ?? 0),
+    fortunaBalances,
     agendaItems,
     isTeacher,
     availableToAdd,
