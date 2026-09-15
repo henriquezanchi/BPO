@@ -67,11 +67,12 @@ model School {
   mercurioFilialLabel String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
   createdAt           DateTime @default(now())
 
-  members       Member[]
-  events        Event[]
-  payables      Payable[]
-  chargingRules ChargingRule[]
-  classGroups   ClassGroup[]
+  members            Member[]
+  events             Event[]
+  payables           Payable[]
+  chargingRules      ChargingRule[]
+  classGroups        ClassGroup[]
+  compositionCatalog SchoolCompositionCatalogItem[]
 }
 
 model Member {
@@ -171,6 +172,24 @@ model ContributionCompositionItem {
 
   @@unique([memberId, mercurioGroupId])
   @@index([memberId])
+}
+
+// Catálogo de tipos de rubrica ("Itens de Contribuição") de uma filial,
+// sincronizado periodicamente (scripts/sync-composition.ts) em vez de lido
+// ao vivo a cada clique no Portal — na prática são poucos tipos fixos por
+// filial (ex: CONTRIBUIÇÃO BIBLIOTECA, CC FILIAL, DIRIGENTE) que quase nunca
+// mudam. "Disponível pra incluir" pra um membro específico = este catálogo
+// menos os mercurioGroupId que ele já tem em ContributionCompositionItem.
+model SchoolCompositionCatalogItem {
+  id              String   @id @default(cuid())
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id])
+  mercurioGroupId String
+  label           String
+  syncedAt        DateTime @default(now())
+
+  @@unique([schoolId, mercurioGroupId])
+  @@index([schoolId])
 }
 
 model FortunaTransaction {

@@ -2,88 +2,36 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { mercurioAdapter } from "@/lib/mercurio";
+import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionRemove, processMercurioSyncQueue } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
-async function identidadeMercurio(memberId: string) {
-  const member = await db.member.findUniqueOrThrow({ where: { id: memberId }, include: { school: true } });
-  if (!member.mercurioId) throw new Error("Membro sem matrícula do Mercúrio vinculada.");
-  if (!member.school.mercurioFilialLabel) throw new Error(`Escola "${member.school.name}" sem mercurioFilialLabel configurado.`);
-  return { matricula: member.mercurioId, name: member.name, filialLabel: member.school.mercurioFilialLabel };
-}
-
 /**
- * Puxa a composição real do Mercúrio (leitura ao vivo, ~5-10s — sessão de
- * navegador de verdade) e sincroniza com o banco local: itens que já
- * existiam localmente como "addedViaPortal" continuam marcados assim;
- * qualquer item vindo do Mercúrio é gravado/atualizado como NÃO
- * addedViaPortal (fonte de verdade é sempre o Mercúrio pra esse flag,
- * exceto quando o próprio addCompositionItem acabou de criar um).
- * Devolve também o catálogo de itens disponíveis pra incluir.
+ * Inclui um item novo (categoria escolhida pelo membro, do catálogo já
+ * sincronizado da escola — ver scripts/sync-composition.ts). A escrita real
+ * no Mercúrio passa pela mesma fila (MercurioSyncTask) usada pra
+ * contato/dados pessoais, processada na hora pra dar feedback imediato —
+ * mas se a trava de concorrência do Mercúrio estiver ativa (rodada
+ * agendada em andamento), a tarefa fica pendente em vez de falhar de
+ * verdade: o membro vê "solicitado, aplicando em breve" e a próxima
+ * chamada à fila (de qualquer membro) resolve. Importante pra escala —
+ * ver discussão de concorrência com múltiplas filiais/membros.
  */
-export async function refreshMemberComposition(memberId: string) {
-  await requireAuthenticatedMember(memberId);
-  const identidade = await identidadeMercurio(memberId);
-
-  const { items, availableToAdd } = await mercurioAdapter.pullComposition(identidade);
-
-  const existentes = await db.contributionCompositionItem.findMany({ where: { memberId } });
-  const existentesPorGrupo = new Map(existentes.map((e) => [e.mercurioGroupId, e]));
-  const gruposAtuais = new Set(items.map((i) => i.mercurioGroupId));
-
-  await db.$transaction([
-    ...items.map((item) =>
-      db.contributionCompositionItem.upsert({
-        where: { memberId_mercurioGroupId: { memberId, mercurioGroupId: item.mercurioGroupId } },
-        update: { label: item.label, amount: item.amount },
-        create: {
-          memberId,
-          mercurioGroupId: item.mercurioGroupId,
-          label: item.label,
-          amount: item.amount,
-          addedViaPortal: existentesPorGrupo.get(item.mercurioGroupId)?.addedViaPortal ?? false,
-        },
-      }),
-    ),
-    // Itens que sumiram do Mercúrio (excluídos por lá, fora do Portal) não fazem mais sentido localmente.
-    db.contributionCompositionItem.deleteMany({
-      where: { memberId, mercurioGroupId: { notIn: [...gruposAtuais] } },
-    }),
-  ]);
-
-  const itensLocais = await db.contributionCompositionItem.findMany({ where: { memberId }, orderBy: { createdAt: "asc" } });
-
-  revalidatePath("/portal");
-
-  return {
-    availableToAdd,
-    items: itensLocais.map((i) => ({ ...i, amount: Number(i.amount) })),
-  };
-}
-
-/** Inclui um item novo (categoria escolhida pelo membro) — grava direto no Mercúrio, marcado como incluído pelo Portal. */
 export async function addContributionItem(memberId: string, mercurioGroupId: string, label: string) {
   await requireAuthenticatedMember(memberId);
-  const identidade = await identidadeMercurio(memberId);
 
-  const result = await mercurioAdapter.addCompositionItem(identidade, mercurioGroupId);
-  if (!result.ok) return { ok: false as const, error: result.error ?? "Falha ao incluir no Mercúrio." };
+  const task = await enqueueMercurioCompositionAdd(memberId, mercurioGroupId, label);
+  await processMercurioSyncQueue();
 
-  // Relê a composição pra pegar o valor padrão que o Mercúrio aplicou pro
-  // item — não é escolhido pelo Portal, vem do catálogo de lá.
-  const { items } = await mercurioAdapter.pullComposition(identidade);
-  const itemIncluido = items.find((i) => i.mercurioGroupId === mercurioGroupId);
+  const atualizada = await db.mercurioSyncTask.findUniqueOrThrow({ where: { id: task.id } });
+  if (atualizada.status === "falhou") {
+    return { ok: false as const, error: atualizada.lastError ?? "Falha ao incluir no Mercúrio." };
+  }
+  if (atualizada.status === "pendente") {
+    return { ok: false as const, pending: true as const, error: "Mercúrio ocupado agora — sua inclusão foi registrada e será aplicada em breve." };
+  }
 
-  const salvo = await db.contributionCompositionItem.upsert({
+  const salvo = await db.contributionCompositionItem.findUniqueOrThrow({
     where: { memberId_mercurioGroupId: { memberId, mercurioGroupId } },
-    update: { label: itemIncluido?.label ?? label, amount: itemIncluido?.amount ?? 0, addedViaPortal: true },
-    create: {
-      memberId,
-      mercurioGroupId,
-      label: itemIncluido?.label ?? label,
-      amount: itemIncluido?.amount ?? 0,
-      addedViaPortal: true,
-    },
   });
 
   revalidatePath("/portal");
@@ -93,7 +41,8 @@ export async function addContributionItem(memberId: string, mercurioGroupId: str
 /**
  * Remove um item — só permitido se o PRÓPRIO membro o incluiu pelo Portal
  * (addedViaPortal). Itens lançados pela tesouraria no Mercúrio são
- * somente leitura aqui, por regra de negócio explícita.
+ * somente leitura aqui, por regra de negócio explícita. Mesma fila/mesma
+ * lógica de "pendente por concorrência" do addContributionItem.
  */
 export async function removeContributionItem(memberId: string, compositionItemId: string) {
   await requireAuthenticatedMember(memberId);
@@ -104,11 +53,17 @@ export async function removeContributionItem(memberId: string, compositionItemId
     return { ok: false as const, error: "Este item foi lançado pela secretaria e não pode ser removido pelo Portal." };
   }
 
-  const identidade = await identidadeMercurio(memberId);
-  const result = await mercurioAdapter.removeCompositionItem(identidade, item.mercurioGroupId);
-  if (!result.ok) return { ok: false as const, error: result.error ?? "Falha ao excluir no Mercúrio." };
+  const task = await enqueueMercurioCompositionRemove(memberId, item.mercurioGroupId);
+  await processMercurioSyncQueue();
 
-  await db.contributionCompositionItem.delete({ where: { id: compositionItemId } });
+  const atualizada = await db.mercurioSyncTask.findUniqueOrThrow({ where: { id: task.id } });
+  if (atualizada.status === "falhou") {
+    return { ok: false as const, error: atualizada.lastError ?? "Falha ao excluir no Mercúrio." };
+  }
+  if (atualizada.status === "pendente") {
+    return { ok: false as const, pending: true as const, error: "Mercúrio ocupado agora — sua exclusão foi registrada e será aplicada em breve." };
+  }
+
   revalidatePath("/portal");
-  return { ok: true };
+  return { ok: true as const };
 }

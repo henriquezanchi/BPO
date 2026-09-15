@@ -45,6 +45,20 @@ export async function enqueueMercurioPersonalUpdate(memberId: string, changes: M
   });
 }
 
+/** Enfileira a inclusão de um item de composição escolhido pelo membro (catálogo escolar já sincronizado — ver sync-composition.ts). */
+export async function enqueueMercurioCompositionAdd(memberId: string, mercurioGroupId: string, label: string) {
+  return db.mercurioSyncTask.create({
+    data: { memberId, taskType: "incluir_item_composicao", payload: { mercurioGroupId, label } },
+  });
+}
+
+/** Enfileira a exclusão de um item de composição incluído pelo próprio membro pelo Portal. */
+export async function enqueueMercurioCompositionRemove(memberId: string, mercurioGroupId: string) {
+  return db.mercurioSyncTask.create({
+    data: { memberId, taskType: "excluir_item_composicao", payload: { mercurioGroupId } },
+  });
+}
+
 /**
  * Processa tarefas pendentes da fila, escrevendo de verdade no Mercúrio
  * (mercurioAdapter é o real quando as credenciais estão configuradas — ver
@@ -93,16 +107,48 @@ export async function processMercurioSyncQueue(limit = 20) {
         birthDate: payload.birthDate === undefined ? undefined : payload.birthDate ? new Date(payload.birthDate) : null,
         rgDataEmissao: payload.rgDataEmissao === undefined ? undefined : payload.rgDataEmissao ? new Date(payload.rgDataEmissao) : null,
       });
+    } else if (task.taskType === "incluir_item_composicao") {
+      const payload = task.payload as { mercurioGroupId: string; label: string };
+      result = await mercurioAdapter.addCompositionItem(identidade, payload.mercurioGroupId);
+      if (result.ok) {
+        // O valor é o padrão que o Mercúrio aplica pro item — não escolhido
+        // pelo Portal, então relê a composição pra saber quanto ficou.
+        const { items } = await mercurioAdapter.pullComposition(identidade);
+        const incluido = items.find((i) => i.mercurioGroupId === payload.mercurioGroupId);
+        await db.contributionCompositionItem.upsert({
+          where: { memberId_mercurioGroupId: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } },
+          update: { label: incluido?.label ?? payload.label, amount: incluido?.amount ?? 0, addedViaPortal: true },
+          create: {
+            memberId: task.memberId,
+            mercurioGroupId: payload.mercurioGroupId,
+            label: incluido?.label ?? payload.label,
+            amount: incluido?.amount ?? 0,
+            addedViaPortal: true,
+          },
+        });
+      }
+    } else if (task.taskType === "excluir_item_composicao") {
+      const payload = task.payload as { mercurioGroupId: string };
+      result = await mercurioAdapter.removeCompositionItem(identidade, payload.mercurioGroupId);
+      if (result.ok) {
+        await db.contributionCompositionItem.deleteMany({ where: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } });
+      }
     } else {
       result = await mercurioAdapter.pushContactUpdate(identidade, task.payload as MercurioContactChanges);
     }
 
+    // `retryable` = falhou só por trava de concorrência (rodada agendada do
+    // scraper em andamento), não por erro real — mantém "pendente" (sem
+    // marcar "falhou") pra ser retentada na próxima vez que a fila for
+    // processada, em vez de virar um erro definitivo pro membro.
     results.push(
       await db.mercurioSyncTask.update({
         where: { id: task.id },
         data: result.ok
           ? { status: "sincronizado", syncedAt: new Date(), attempts: { increment: 1 } }
-          : { status: "falhou", attempts: { increment: 1 }, lastError: result.error ?? "Erro desconhecido" },
+          : result.retryable
+            ? { attempts: { increment: 1 }, lastError: result.error ?? "Trava de concorrência ativa — retentando em breve." }
+            : { status: "falhou", attempts: { increment: 1 }, lastError: result.error ?? "Erro desconhecido" },
       }),
     );
   }

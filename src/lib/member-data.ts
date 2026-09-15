@@ -44,12 +44,20 @@ export async function getMemberDashboard(memberId: string) {
   const member = await db.member.findUniqueOrThrow({
     where: { id: memberId },
     include: {
-      school: true,
+      school: { include: { compositionCatalog: true } },
       contributions: { orderBy: { dueDate: "desc" }, take: 6 },
       compositionItems: { orderBy: { createdAt: "asc" } },
       classMemberships: { include: { classGroup: true } },
     },
   });
+
+  // Catálogo sincronizado da filial (scripts/sync-composition.ts) menos o
+  // que o membro já tem — não é mais lido ao vivo do Mercúrio a cada
+  // carregamento do Portal (ver discussão de escala em CLAUDE.md/histórico).
+  const gruposJaTidos = new Set(member.compositionItems.map((i) => i.mercurioGroupId));
+  const availableToAdd = member.school.compositionCatalog
+    .filter((c) => !gruposJaTidos.has(c.mercurioGroupId))
+    .map((c) => ({ value: c.mercurioGroupId, label: c.label }));
 
   const walletAgg = await db.fortunaTransaction.aggregate({
     where: { memberId },
@@ -109,6 +117,7 @@ export async function getMemberDashboard(memberId: string) {
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     agendaItems,
     isTeacher,
+    availableToAdd,
   };
 }
 

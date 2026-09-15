@@ -25,6 +25,7 @@ import {
   lerAbaPessoais,
   lerCatalogoItensDisponiveis,
   lerComposicao,
+  RodadaEmAndamentoError,
 } from "./browser-session";
 import { parseLogradouro } from "./parse-logradouro";
 import type { Page } from "playwright";
@@ -32,6 +33,16 @@ import type { Page } from "playwright";
 async function abrirFichaEmEnderecos(page: Page, filialLabelRegex: RegExp, nomeRegex: RegExp) {
   const frameAtivos = await abrirListaAtivos(page, filialLabelRegex);
   return abrirFichaDaListaAtivos(page, frameAtivos, nomeRegex);
+}
+
+/**
+ * RodadaEmAndamentoError = trava de concorrência (rodada agendada do
+ * scraper em andamento), não um erro real de escrita — marca `retryable`
+ * pra quem chama (sync-queue.ts) saber que vale reenfileirar em vez de
+ * reportar falha definitiva pro usuário.
+ */
+function erroDeEscrita(e: unknown): MercurioWriteResult {
+  return { ok: false, error: (e as Error).message, retryable: e instanceof RodadaEmAndamentoError };
 }
 
 /**
@@ -111,7 +122,7 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
         await browser.close();
       }
     } catch (e) {
-      return { ok: false, error: (e as Error).message };
+      return erroDeEscrita(e);
     }
   }
 
@@ -178,7 +189,7 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
         await browser.close();
       }
     } catch (e) {
-      return { ok: false, error: (e as Error).message };
+      return erroDeEscrita(e);
     }
   }
 
@@ -206,7 +217,7 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
         await browser.close();
       }
     } catch (e) {
-      return { ok: false, error: (e as Error).message };
+      return erroDeEscrita(e);
     }
   }
 
@@ -222,7 +233,7 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
         await browser.close();
       }
     } catch (e) {
-      return { ok: false, error: (e as Error).message };
+      return erroDeEscrita(e);
     }
   }
 }

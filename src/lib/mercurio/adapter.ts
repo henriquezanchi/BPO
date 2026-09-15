@@ -105,6 +105,8 @@ export interface MercurioComposition {
 export interface MercurioWriteResult {
   ok: boolean;
   error?: string;
+  /** true = falhou por trava de concorrência (RodadaEmAndamentoError), não por erro real — vale tentar de novo depois, não é falha definitiva. */
+  retryable?: boolean;
 }
 
 export interface MercurioAdapter {

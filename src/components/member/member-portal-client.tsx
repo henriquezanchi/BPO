@@ -53,7 +53,7 @@ const MODAL_TITLES: Record<ModalKey, string> = {
 };
 
 export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }) {
-  const { member, walletBalance, agendaItems } = dashboard;
+  const { member, walletBalance, agendaItems, availableToAdd } = dashboard;
   const [modal, setModal] = useState<ModalKey | null>(null);
 
   const isDelayed = member.status === "atrasado" || member.status === "negociando";
@@ -224,7 +224,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             />
           )}
           {modal === "contribuicao" && (
-            <MyContributionPanel memberId={member.id} compositionItems={member.compositionItems} />
+            <MyContributionPanel
+              memberId={member.id}
+              compositionItems={member.compositionItems}
+              initialAvailableToAdd={availableToAdd}
+            />
           )}
           {modal === "historico" && (
             <ContributionPanel contributions={member.contributions.filter((c) => c.paidAt)} />

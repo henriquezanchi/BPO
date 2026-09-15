@@ -1,45 +1,33 @@
 "use client";
 
-import { addContributionItem, refreshMemberComposition, removeContributionItem } from "@/lib/actions/contribution-actions";
+import { addContributionItem, removeContributionItem } from "@/lib/actions/contribution-actions";
 import { formatBRL } from "@/lib/format";
 import type { SerializedCompositionItem } from "@/lib/member-data";
 import type { MercurioCatalogItem } from "@/lib/mercurio";
-import { AlertTriangle, Loader2, Lock, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, Loader2, Lock, Plus, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 
 export function MyContributionPanel({
   memberId,
   compositionItems,
+  initialAvailableToAdd,
 }: {
   memberId: string;
   compositionItems: SerializedCompositionItem[];
+  initialAvailableToAdd: MercurioCatalogItem[];
 }) {
   const [items, setItems] = useState(compositionItems);
-  const [catalog, setCatalog] = useState<MercurioCatalogItem[] | null>(null);
+  const [catalog, setCatalog] = useState(initialAvailableToAdd);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, startRefresh] = useTransition();
   const [isAdding, startAdd] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [isRemoving, startRemove] = useTransition();
 
   const total = items.reduce((soma, i) => soma + i.amount, 0);
 
-  function handleRefresh() {
-    setError(null);
-    startRefresh(async () => {
-      try {
-        const { availableToAdd, items: itensAtualizados } = await refreshMemberComposition(memberId);
-        setCatalog(availableToAdd);
-        setItems(itensAtualizados);
-      } catch (e) {
-        setError((e as Error).message);
-      }
-    });
-  }
-
   function handleAdd() {
-    if (!selectedGroup || !catalog) return;
+    if (!selectedGroup) return;
     setError(null);
     const label = catalog.find((c) => c.value === selectedGroup)?.label ?? "";
     startAdd(async () => {
@@ -49,7 +37,7 @@ export function MyContributionPanel({
         return;
       }
       setItems((prev) => [...prev.filter((i) => i.id !== res.item.id), res.item]);
-      setCatalog((prev) => prev?.filter((c) => c.value !== selectedGroup) ?? null);
+      setCatalog((prev) => prev.filter((c) => c.value !== selectedGroup));
       setSelectedGroup("");
     });
   }
@@ -69,23 +57,11 @@ export function MyContributionPanel({
 
   return (
     <div className="text-left">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs text-gray-500 dark:text-gray-400">Composição atual da sua contribuição:</p>
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="flex items-center gap-1 text-[11px] font-semibold text-na-green disabled:opacity-60 dark:text-emerald-400"
-        >
-          {isRefreshing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-          {isRefreshing ? "Atualizando do Mercúrio..." : "Atualizar"}
-        </button>
-      </div>
+      <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Composição atual da sua contribuição:</p>
 
       <div className="mb-4 rounded-xl border border-gray-200 dark:border-gray-700">
         {items.length === 0 ? (
-          <p className="p-3 text-xs text-gray-500 dark:text-gray-400">
-            Nenhum item carregado ainda — clique em &quot;Atualizar&quot; pra puxar sua composição real do Mercúrio.
-          </p>
+          <p className="p-3 text-xs text-gray-500 dark:text-gray-400">Nenhum item na sua composição ainda.</p>
         ) : (
           <div className="flex flex-col divide-y divide-gray-100 dark:divide-gray-800">
             {items.map((item) => (
@@ -129,16 +105,7 @@ export function MyContributionPanel({
 
       <div className="mb-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-2 text-[11px] font-bold text-gray-900 dark:text-gray-100">Incluir novo item</div>
-        {catalog === null ? (
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-[12px] font-semibold text-na-green disabled:opacity-60 dark:text-emerald-400"
-          >
-            {isRefreshing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-            {isRefreshing ? "Buscando itens disponíveis..." : "Clique em \"Atualizar\" pra ver os itens disponíveis pra incluir"}
-          </button>
-        ) : catalog.length === 0 ? (
+        {catalog.length === 0 ? (
           <p className="text-xs text-gray-500 dark:text-gray-400">Nenhum item novo disponível pra incluir.</p>
         ) : (
           <div className="flex gap-2">
