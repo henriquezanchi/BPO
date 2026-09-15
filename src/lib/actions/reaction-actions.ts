@@ -1,11 +1,10 @@
 "use server";
 
+import { EMOJIS_PERMITIDOS } from "@/lib/agenda-reactions";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import type { AgendaItemType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-
-export const EMOJIS_PERMITIDOS = ["👍", "❤️", "😂", "😮", "🙏"];
 
 /**
  * Alterna a reação do membro num item da Agenda (evento ou atividade) —

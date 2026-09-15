@@ -1,6 +1,7 @@
 "use client";
 
-import { EMOJIS_PERMITIDOS, toggleAgendaReaction } from "@/lib/actions/reaction-actions";
+import { toggleAgendaReaction } from "@/lib/actions/reaction-actions";
+import { EMOJIS_PERMITIDOS } from "@/lib/agenda-reactions";
 import { formatBRL, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem, AgendaReactionSummary } from "@/lib/member-data";
 import { GraduationCap, PartyPopper } from "lucide-react";
