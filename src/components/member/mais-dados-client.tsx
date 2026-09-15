@@ -19,7 +19,7 @@ interface MaisDadosClientProps {
 }
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light";
+  "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light";
 
 export function MaisDadosClient(props: MaisDadosClientProps) {
   const { memberId } = props;

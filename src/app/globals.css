@@ -31,11 +31,17 @@
   --color-na-warning: var(--na-warning);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/*
+ * O app é desenhado só pra tema claro (cores/contraste da identidade
+ * visual Nova Acrópole assumem fundo branco/cinza claro em toda parte) —
+ * sem isso, o navegador troca a cor do texto pra quase-branco quando o
+ * sistema operacional está em modo escuro, e páginas fora de modal (que
+ * não forçam cor de texto explícita, como BottomSheet faz) ficam
+ * ilegíveis. `color-scheme: light` também mantém os controles nativos
+ * (date picker, select) no tema claro.
+ */
+:root {
+  color-scheme: light;
 }
 
 body {
