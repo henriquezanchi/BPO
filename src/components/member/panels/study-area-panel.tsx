@@ -1,12 +1,12 @@
-import { BookOpenText, Clapperboard, FileText, LockOpen } from "lucide-react";
+import { BookOpen, BookOpenText, Clapperboard, FileText } from "lucide-react";
 
 export function StudyAreaPanel() {
   return (
     <div className="flex flex-col items-center gap-5 py-2 text-center">
-      <LockOpen size={32} className="text-na-gold" />
+      <BookOpen size={32} className="text-na-gold" />
       <div>
-        <div className="mb-1 text-[15px] font-semibold text-gray-900 dark:text-gray-100">Acesso Liberado</div>
-        <p className="text-xs text-gray-500 dark:text-gray-400">Sua contribuição está em dia. Bons estudos!</p>
+        <div className="mb-1 text-[15px] font-semibold text-gray-900 dark:text-gray-100">Área de Estudos</div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">Bons estudos!</p>
       </div>
 
       <div className="flex w-full flex-col gap-2.5">

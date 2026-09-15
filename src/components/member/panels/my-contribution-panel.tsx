@@ -127,37 +127,44 @@ export function MyContributionPanel({
         <Lock size={10} /> Itens com cadeado foram lançados pela secretaria e não podem ser alterados por aqui.
       </p>
 
-      {catalog && (
-        <div className="mb-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-          <div className="mb-2 text-[11px] font-bold text-gray-900 dark:text-gray-100">Incluir novo item</div>
-          {catalog.length === 0 ? (
-            <p className="text-xs text-gray-500 dark:text-gray-400">Nenhum item novo disponível pra incluir.</p>
-          ) : (
-            <div className="flex gap-2">
-              <select
-                value={selectedGroup}
-                onChange={(e) => setSelectedGroup(e.target.value)}
-                className="flex-1 rounded-lg border border-gray-200 p-2 text-[13px] text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-              >
-                <option value="">Selecione...</option>
-                {catalog.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={handleAdd}
-                disabled={!selectedGroup || isAdding}
-                className="flex items-center gap-1 rounded-lg bg-na-green px-3 text-[13px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
-              >
-                {isAdding ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                Incluir
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="mb-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <div className="mb-2 text-[11px] font-bold text-gray-900 dark:text-gray-100">Incluir novo item</div>
+        {catalog === null ? (
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 text-[12px] font-semibold text-na-green disabled:opacity-60 dark:text-emerald-400"
+          >
+            {isRefreshing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+            {isRefreshing ? "Buscando itens disponíveis..." : "Clique em \"Atualizar\" pra ver os itens disponíveis pra incluir"}
+          </button>
+        ) : catalog.length === 0 ? (
+          <p className="text-xs text-gray-500 dark:text-gray-400">Nenhum item novo disponível pra incluir.</p>
+        ) : (
+          <div className="flex gap-2">
+            <select
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              className="flex-1 rounded-lg border border-gray-200 p-2 text-[13px] text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">Selecione...</option>
+              {catalog.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAdd}
+              disabled={!selectedGroup || isAdding}
+              className="flex items-center gap-1 rounded-lg bg-na-green px-3 text-[13px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
+            >
+              {isAdding ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              Incluir
+            </button>
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-[11px] text-red-800 dark:bg-red-950/30 dark:text-red-300">
