@@ -171,6 +171,28 @@ export async function listarNomesDaListaAtivos(frame: Frame, limite = 10): Promi
 }
 
 /**
+ * Lê a coluna "Matr" (matrícula real, confirmado ao vivo — diferente da
+ * tabela de Turma que o scraper original usa, aqui "Matr" NÃO é índice de
+ * linha) de TODA a lista de Ativos — usado pra sincronizar em massa quem
+ * está ativo numa filial numa sessão só (scripts/sync-active-status.ts),
+ * em vez de checar 1 aluno por vez.
+ */
+export async function listarMatriculasAtivas(frame: Frame): Promise<string[]> {
+  const cabecalhos = await frame.locator("table").first().locator("tr").first().locator("td, th").allInnerTexts();
+  const colMatr = cabecalhos.findIndex((c) => /^matr\.?$/i.test(c.trim()));
+  if (colMatr === -1) throw new Error(`Coluna "Matr" não encontrada no cabeçalho: ${cabecalhos.join(" | ")}`);
+
+  const linhas = frame.locator("table").first().locator("tr");
+  const total = await linhas.count();
+  const matriculas: string[] = [];
+  for (let i = 1; i < total; i++) {
+    const texto = (await linhas.nth(i).locator("td").nth(colMatr).innerText()).trim();
+    if (texto) matriculas.push(texto);
+  }
+  return matriculas;
+}
+
+/**
  * A partir da lista de Ativos JÁ ABERTA (ver abrirListaAtivos), clica no
  * aluno que bate com `nomeRegex` e abre a aba ENDEREÇOS da ficha dele.
  */

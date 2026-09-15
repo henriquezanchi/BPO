@@ -110,6 +110,14 @@ model Member {
   rgNumero       String?
   rgOrgaoEmissor String?
   rgDataEmissao  DateTime?
+  // Situação real no Mercúrio (ATI/INA) — sincronizada periodicamente via
+  // scripts/sync-active-status.ts (lê a lista de Ativos da filial inteira
+  // numa sessão só, mais eficiente que checar 1 aluno por vez). Verificado
+  // no login (src/lib/auth.ts) pra impedir quem saiu da escola de manter
+  // acesso ao Portal — não é uma checagem ao vivo a cada login por
+  // velocidade, então pode ficar desatualizado até a próxima sincronização.
+  mercurioAtivo     Boolean   @default(true)
+  mercurioAtivoSync DateTime? // última vez que este campo foi sincronizado de verdade
   status         MemberStatus @default(em_dia)
   createdAt      DateTime     @default(now())
 

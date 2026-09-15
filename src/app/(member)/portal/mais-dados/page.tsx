@@ -1,4 +1,5 @@
 import { MaisDadosClient } from "@/components/member/mais-dados-client";
+import { InactiveMemberNotice } from "@/components/inactive-member-notice";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function MaisDadosPage() {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/portal/mais-dados");
+  if (!member.mercurioAtivo) return <InactiveMemberNotice schoolWhatsapp={member.school.whatsapp} />;
 
   return (
     <MaisDadosClient
