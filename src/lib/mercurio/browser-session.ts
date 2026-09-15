@@ -246,6 +246,28 @@ export async function lerConteudoRecibo(page: Page, mercurioRecId: string): Prom
 }
 
 /**
+ * Extrai um rótulo curto pro recibo a partir do texto ("CONTRIBUIÇÃO
+ * BIBLIOTECA", ou "CONTRIBUIÇÃO BIBLIOTECA +5 itens" se tiver mais de
+ * uma rubrica) — cada linha de item é "Qt Descrição.......Valor" (2+
+ * espaços entre descrição e valor); a linha seguinte, com o nome do
+ * membro, não bate nesse padrão e é ignorada. Descrições longas
+ * quebram em 2 linhas no template ("...PARA O BEM ME" + "NSAL" na
+ * linha de baixo) — a versão truncada é aceitável pra um rótulo
+ * "simplificado".
+ */
+export function extrairRubricaSimplificada(rawText: string): string {
+  const nomes = rawText
+    .split("\n")
+    .map((linha) => linha.match(/^\s*\d+\s+(.+?)\s{2,}[\d.]+\.\d{2}\s*$/))
+    .filter((m): m is RegExpMatchArray => m !== null)
+    .map((m) => m[1].trim());
+
+  if (nomes.length === 0) return "Comprovante";
+  if (nomes.length === 1) return nomes[0];
+  return `${nomes[0]} +${nomes.length - 1} ${nomes.length - 1 === 1 ? "item" : "itens"}`;
+}
+
+/**
  * Lê a coluna "Nome" da tabela de Ativos (achando a posição certa pelo
  * cabeçalho, não por índice fixo) e devolve o texto de cada link — usado
  * pra escolher um aluno real pra teste sem precisar saber o nome de

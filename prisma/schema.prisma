@@ -221,6 +221,10 @@ model ContributionReceipt {
   // não é definitiva (ver nota em browser-session.ts:lerRecibosDoMes).
   probablyCanceled Boolean   @default(false)
   rawText          String?   @db.Text
+  // Rótulo curto derivado do rawText (ex: "CONTRIBUIÇÃO BIBLIOTECA +5
+  // itens") — mostrado na lista antes do membro abrir o comprovante. Ver
+  // extrairRubricaSimplificada em browser-session.ts.
+  itemsSummary     String?
   // null = conteúdo nunca buscado, ainda não confirmado. true/false =
   // confirmado de verdade ao ler o documento (tem/não tem "CANCELADO").
   canceled         Boolean?

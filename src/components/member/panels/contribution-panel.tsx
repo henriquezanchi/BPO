@@ -97,13 +97,19 @@ export function ContributionPanel({ memberId, receipts }: { memberId: string; re
             <div key={r.id} className="rounded-lg border border-gray-200 p-2.5 text-xs dark:border-gray-700">
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5">
-                  <FileText size={12} className="text-gray-400" /> {formatDateBR(r.issuedAt)}
+                  <FileText size={12} className="shrink-0 text-gray-400" />
+                  <span>
+                    {formatDateBR(r.issuedAt)}
+                    {r.itemsSummary && (
+                      <span className="block text-[10px] text-gray-400 dark:text-gray-500">{r.itemsSummary}</span>
+                    )}
+                  </span>
                 </span>
-                <strong>{formatBRL(r.amount)}</strong>
+                <strong className="shrink-0">{formatBRL(r.amount)}</strong>
                 <button
                   onClick={() => handleVer(r)}
                   disabled={isPending && carregandoId === r.id}
-                  className="flex items-center gap-1 rounded-md bg-na-green px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
+                  className="flex shrink-0 items-center gap-1 rounded-md bg-na-green px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
                 >
                   {isPending && carregandoId === r.id ? <Loader2 size={11} className="animate-spin" /> : null}
                   Ver

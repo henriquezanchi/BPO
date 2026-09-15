@@ -35,6 +35,7 @@ function serializeReceipt(r: ContributionReceipt): SerializedReceipt {
     mercurioRecId: r.mercurioRecId,
     issuedAt: r.issuedAt,
     amount: Number(r.amount),
+    itemsSummary: r.itemsSummary,
     probablyCanceled: r.probablyCanceled,
     canceled: r.canceled,
     fetchedAt: r.fetchedAt,

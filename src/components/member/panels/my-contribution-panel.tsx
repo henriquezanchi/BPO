@@ -112,7 +112,7 @@ export function MyContributionPanel({
             <select
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-200 p-2 text-[13px] text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              className="min-w-0 flex-1 rounded-lg border border-gray-200 p-2 text-[13px] text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
             >
               <option value="">Selecione...</option>
               {catalog.map((c) => (
@@ -124,7 +124,7 @@ export function MyContributionPanel({
             <button
               onClick={handleAdd}
               disabled={!selectedGroup || isAdding}
-              className="flex items-center gap-1 rounded-lg bg-na-green px-3 text-[13px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
+              className="flex shrink-0 items-center gap-1 rounded-lg bg-na-green px-3 py-2 text-[13px] font-semibold whitespace-nowrap text-white transition hover:bg-na-green-dark disabled:opacity-60"
             >
               {isAdding ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
               Incluir
