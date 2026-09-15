@@ -8,8 +8,6 @@ import {
   BookOpen,
   CalendarCheck,
   CheckCircle2,
-  CreditCard,
-  FileText,
   HandHeart,
   Leaf,
   LifeBuoy,
@@ -23,8 +21,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
 import { AgendaPanel } from "./panels/agenda-panel";
-import { ContributionPanel } from "./panels/contribution-panel";
 import { ContributionStatusPanel } from "./panels/contribution-status-panel";
+import { FortunaTopUpPanel } from "./panels/fortuna-topup-panel";
 import { MyContributionPanel } from "./panels/my-contribution-panel";
 import { ProfileEditPanel } from "./panels/profile-edit-panel";
 import { StudyAreaPanel } from "./panels/study-area-panel";
@@ -34,7 +32,7 @@ type ModalKey =
   | "cadastro"
   | "contribuicao"
   | "situacao"
-  | "historico"
+  | "fortuna_recarga"
   | "agenda"
   | "estudos"
   | "voluntariado"
@@ -45,7 +43,7 @@ const MODAL_TITLES: Record<ModalKey, string> = {
   cadastro: "Atualizar Cadastro",
   contribuicao: "Minha Contribuição",
   situacao: "Situação da Contribuição",
-  historico: "Histórico & Recibos",
+  fortuna_recarga: "Adicionar Créditos",
   agenda: "Agenda & Eventos",
   estudos: "Área de Estudos",
   voluntariado: "Voluntariado",
@@ -59,6 +57,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
 
   const isDelayed = member.status === "atrasado" || member.status === "negociando";
   const schoolWhatsapp = member.school.whatsapp ?? member.whatsapp;
+  const compositionTotal = member.compositionItems.reduce((soma, i) => soma + i.amount, 0);
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
@@ -133,45 +132,24 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             </div>
           </div>
 
-          {isDelayed ? (
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => setModal("situacao")}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-[13px] font-semibold text-white transition hover:bg-red-700"
-              >
-                Ver Situação
-              </button>
-            </div>
-          ) : (
-            <div className="flex justify-between rounded-lg bg-white/70 p-2.5 text-[11px] dark:bg-black/20">
-              <span className="flex items-center gap-1.5 dark:text-gray-300">
-                <CreditCard size={13} /> Cartão cadastrado (Débito Automático)
-              </span>
-              <span className="font-semibold text-emerald-700 dark:text-emerald-400">Ativo</span>
-            </div>
-          )}
+          <button
+            onClick={() => setModal("situacao")}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold transition ${
+              isDelayed
+                ? "bg-red-600 text-white hover:bg-red-700"
+                : "bg-white/70 text-emerald-800 hover:bg-white dark:bg-black/20 dark:text-emerald-300"
+            }`}
+          >
+            Ver Situação
+          </button>
         </div>
 
         {/* Carteira Fortuna */}
-        <FortunaWalletCard balances={fortunaBalances} />
+        <FortunaWalletCard balances={fortunaBalances} onAdicionarCreditos={() => setModal("fortuna_recarga")} />
 
         {/* Grid de funcionalidades */}
         <section className="grid grid-cols-2 gap-2.5">
-          <button
-            onClick={() => setModal("gaf")}
-            className="col-span-2 flex items-center gap-4 rounded-2xl border border-na-gold bg-amber-50/60 p-3.5 text-left transition hover:-translate-y-0.5 dark:bg-amber-950/20"
-          >
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold">
-              <UsersRound size={20} />
-            </div>
-            <div>
-              <h5 className="text-sm font-semibold text-na-green-dark dark:text-emerald-400">Grupo de Acompanhamento (GAF)</h5>
-              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Conheça e faça sua adesão ao grupo</p>
-            </div>
-          </button>
-
           <FeatureTile icon={<Leaf size={16} />} title="Minha Contribuição" subtitle="Composição e apoios" onClick={() => setModal("contribuicao")} />
-          <FeatureTile icon={<FileText size={16} />} title="Histórico & Recibos" subtitle="Emissão de comprovantes" onClick={() => setModal("historico")} />
           <FeatureTile
             icon={<CalendarCheck size={16} />}
             title="Agenda & Eventos"
@@ -180,6 +158,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           />
           <FeatureTile icon={<BookOpen size={16} />} title="Área de Estudos" subtitle="Biblioteca, apostilas e Acrópole Play" onClick={() => setModal("estudos")} />
           <FeatureTile icon={<HandHeart size={16} />} title="Voluntariado" subtitle="Secretarias e mutirões" onClick={() => setModal("voluntariado")} />
+          <FeatureTile icon={<UsersRound size={16} />} title="Grupo de Acompanhamento" subtitle="Conheça e faça sua adesão ao GAF" onClick={() => setModal("gaf")} />
           <FeatureTile icon={<LifeBuoy size={16} />} title="Central de Ajuda" subtitle="Fale com a Economia" onClick={() => setModal("ajuda")} />
         </section>
       </main>
@@ -218,9 +197,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               initialAvailableToAdd={availableToAdd}
             />
           )}
-          {modal === "situacao" && <ContributionStatusPanel monthlyStatus={member.monthlyStatus} />}
-          {modal === "historico" && <ContributionPanel memberId={member.id} receipts={member.receipts} />}
-          {modal === "agenda" && <AgendaPanel items={agendaItems} />}
+          {modal === "situacao" && (
+            <ContributionStatusPanel memberId={member.id} monthlyStatus={member.monthlyStatus} compositionTotal={compositionTotal} />
+          )}
+          {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} />}
+          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} />}
           {modal === "estudos" && <StudyAreaPanel />}
           {modal === "voluntariado" && <VolunteerPanel />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}

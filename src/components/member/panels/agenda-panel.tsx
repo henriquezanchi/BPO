@@ -1,6 +1,10 @@
-import type { AgendaItem } from "@/lib/member-data";
+"use client";
+
+import { EMOJIS_PERMITIDOS, toggleAgendaReaction } from "@/lib/actions/reaction-actions";
 import { formatBRL, formatDateTimeBR } from "@/lib/format";
+import type { AgendaItem, AgendaReactionSummary } from "@/lib/member-data";
 import { GraduationCap, PartyPopper } from "lucide-react";
+import { useState, useTransition } from "react";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   prova: "Prova",
@@ -9,7 +13,62 @@ const ACTIVITY_LABEL: Record<string, string> = {
   atividade_turma: "Atividade de turma",
 };
 
-export function AgendaPanel({ items }: { items: AgendaItem[] }) {
+/**
+ * Reações de emoji num card da Agenda — visíveis pros outros alunos
+ * (contagem agregada, sem expor quem reagiu). Sem tempo real: a
+ * atualização de quem reagiu depois de você só aparece quando o Portal
+ * recarregar (ver toggleAgendaReaction), não instantaneamente.
+ */
+function ReactionBar({
+  memberId,
+  itemType,
+  itemId,
+  reactions,
+}: {
+  memberId: string;
+  itemType: "evento" | "atividade";
+  itemId: string;
+  reactions: AgendaReactionSummary[];
+}) {
+  const [local, setLocal] = useState(reactions);
+  const [isPending, startTransition] = useTransition();
+
+  function handleClick(emoji: string) {
+    startTransition(async () => {
+      const res = await toggleAgendaReaction(memberId, itemType, itemId, emoji);
+      setLocal((prev) => {
+        const semEsse = prev.filter((r) => r.emoji !== emoji);
+        const count = res.counts[emoji] ?? 0;
+        return count > 0 ? [...semEsse, { emoji, count, reactedByMe: res.reactedByMe }] : semEsse;
+      });
+    });
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {EMOJIS_PERMITIDOS.map((emoji) => {
+        const registro = local.find((r) => r.emoji === emoji);
+        return (
+          <button
+            key={emoji}
+            onClick={() => handleClick(emoji)}
+            disabled={isPending}
+            className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition disabled:opacity-60 ${
+              registro?.reactedByMe
+                ? "border-na-green bg-na-green-light dark:border-emerald-700 dark:bg-emerald-950/40"
+                : "border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
+            }`}
+          >
+            <span>{emoji}</span>
+            {registro && registro.count > 0 && <span className="text-gray-500 dark:text-gray-400">{registro.count}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function AgendaPanel({ memberId, items }: { memberId: string; items: AgendaItem[] }) {
   if (items.length === 0) {
     return (
       <p className="py-8 text-center text-[13px] text-gray-500 dark:text-gray-400">
@@ -34,6 +93,7 @@ export function AgendaPanel({ items }: { items: AgendaItem[] }) {
             <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
               {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
             </div>
+            <ReactionBar memberId={memberId} itemType="evento" itemId={item.id} reactions={item.reactions} />
           </div>
         ) : (
           <div
@@ -54,6 +114,7 @@ export function AgendaPanel({ items }: { items: AgendaItem[] }) {
             {item.description && (
               <p className="mt-2 text-[11px] text-gray-600 dark:text-gray-400">{item.description}</p>
             )}
+            <ReactionBar memberId={memberId} itemType="atividade" itemId={item.id} reactions={item.reactions} />
           </div>
         ),
       )}

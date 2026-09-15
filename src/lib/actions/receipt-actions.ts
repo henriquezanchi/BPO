@@ -40,3 +40,23 @@ export async function viewReceipt(memberId: string, receiptId: string) {
   }
   return { ok: true as const, rawText: recarregado.rawText ?? "" };
 }
+
+/**
+ * Mesmo fluxo do viewReceipt, mas a partir do mercurioRecId — usado pela
+ * tela "Situação da Contribuição" (Ficha Anual), que conhece o
+ * mercurioRecId de cada mês pago (ContributionMonthlyStatus.mercurioRecId)
+ * mas pode não ter ainda um ContributionReceipt local (só sincronizamos
+ * poucos meses via scripts/sync-receipts.ts) — cria o registro na hora se
+ * preciso, com dados provisórios que o próximo sync-receipts.ts corrige.
+ */
+export async function viewReceiptByMercurioRecId(memberId: string, mercurioRecId: string) {
+  await requireAuthenticatedMember(memberId);
+
+  let receipt = await db.contributionReceipt.findUnique({ where: { mercurioRecId } });
+  if (receipt && receipt.memberId !== memberId) throw new Error("Este recibo não pertence a este membro.");
+  if (!receipt) {
+    receipt = await db.contributionReceipt.create({ data: { memberId, mercurioRecId, issuedAt: new Date(), amount: 0 } });
+  }
+
+  return viewReceipt(memberId, receipt.id);
+}

@@ -152,6 +152,7 @@ model Member {
   activityNotifs       ActivityNotification[]
   contactChangeLogs    ContactChangeLog[]
   mercurioSyncTasks    MercurioSyncTask[]
+  agendaReactions      AgendaReaction[]
 
   @@index([schoolId])
 }
@@ -312,6 +313,29 @@ model ChargeTrigger {
   messageTemplate String           @db.Text
 
   @@index([chargingRuleId])
+}
+
+enum AgendaItemType {
+  evento
+  atividade
+}
+
+// Reação com emoji num item da Agenda (Event OU Activity — ver
+// AgendaItem.kind em member-data.ts). Sem FK pra itemId de propósito: um
+// único modelo cobre os dois tipos em vez de duplicar tudo pra
+// EventReaction/ActivityReaction. Visível pra outros alunos da mesma
+// turma/escola (agregado por emoji, sem expor quem reagiu).
+model AgendaReaction {
+  id        String         @id @default(cuid())
+  itemType  AgendaItemType
+  itemId    String
+  memberId  String
+  member    Member         @relation(fields: [memberId], references: [id])
+  emoji     String
+  createdAt DateTime       @default(now())
+
+  @@unique([itemType, itemId, memberId, emoji])
+  @@index([itemType, itemId])
 }
 
 model Event {

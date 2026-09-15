@@ -1,10 +1,10 @@
 "use client";
 
-import { addContributionItem, removeContributionItem } from "@/lib/actions/contribution-actions";
+import { addContributionItem, removeContributionItem, updateContributionItemValue } from "@/lib/actions/contribution-actions";
 import { formatBRL } from "@/lib/format";
 import type { SerializedCompositionItem } from "@/lib/member-data";
 import type { MercurioCatalogItem } from "@/lib/mercurio";
-import { AlertTriangle, Loader2, Lock, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Loader2, Lock, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useState, useTransition } from "react";
 
 export function MyContributionPanel({
@@ -23,6 +23,9 @@ export function MyContributionPanel({
   const [isAdding, startAdd] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [isRemoving, startRemove] = useTransition();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [isSavingEdit, startSaveEdit] = useTransition();
 
   const total = items.reduce((soma, i) => soma + i.amount, 0);
 
@@ -39,6 +42,30 @@ export function MyContributionPanel({
       setItems((prev) => [...prev.filter((i) => i.id !== res.item.id), res.item]);
       setCatalog((prev) => prev.filter((c) => c.value !== selectedGroup));
       setSelectedGroup("");
+    });
+  }
+
+  function handleStartEdit(item: SerializedCompositionItem) {
+    setError(null);
+    setEditingId(item.id);
+    setEditValue(item.amount.toFixed(2).replace(".", ","));
+  }
+
+  function handleSaveEdit(item: SerializedCompositionItem) {
+    const novoValor = parseFloat(editValue.replace(/\./g, "").replace(",", "."));
+    if (!Number.isFinite(novoValor) || novoValor < 0) {
+      setError("Valor inválido.");
+      return;
+    }
+    setError(null);
+    startSaveEdit(async () => {
+      const res = await updateContributionItemValue(memberId, item.id, novoValor);
+      if (!res.ok) {
+        setError(res.error ?? "Falha ao alterar valor.");
+        return;
+      }
+      setItems((prev) => prev.map((i) => (i.id === res.item.id ? res.item : i)));
+      setEditingId(null);
     });
   }
 
@@ -70,23 +97,55 @@ export function MyContributionPanel({
                   {!item.addedViaPortal && <Lock size={11} className="shrink-0 text-gray-400" />}
                   {item.label}
                 </span>
-                <div className="flex items-center gap-2">
-                  <strong>{formatBRL(item.amount)}</strong>
-                  {item.addedViaPortal && (
+                {editingId === item.id ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSaveEdit(item)}
+                      className="w-20 rounded-md border border-gray-200 p-1 text-right text-[13px] outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                    />
                     <button
-                      onClick={() => handleRemove(item)}
-                      disabled={isRemoving && removingId === item.id}
-                      title="Excluir item incluído por você"
-                      className="text-gray-400 transition hover:text-red-600 disabled:opacity-60"
+                      onClick={() => handleSaveEdit(item)}
+                      disabled={isSavingEdit}
+                      title="Salvar"
+                      className="text-gray-400 transition hover:text-na-green disabled:opacity-60"
                     >
-                      {isRemoving && removingId === item.id ? (
-                        <Loader2 size={13} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={13} />
-                      )}
+                      {isSavingEdit ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                     </button>
-                  )}
-                </div>
+                    <button onClick={() => setEditingId(null)} title="Cancelar" className="text-gray-400 transition hover:text-red-600">
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <strong>{formatBRL(item.amount)}</strong>
+                    {item.addedViaPortal && (
+                      <>
+                        <button
+                          onClick={() => handleStartEdit(item)}
+                          title="Alterar valor deste item"
+                          className="text-gray-400 transition hover:text-na-green"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleRemove(item)}
+                          disabled={isRemoving && removingId === item.id}
+                          title="Excluir item incluído por você"
+                          className="text-gray-400 transition hover:text-red-600 disabled:opacity-60"
+                        >
+                          {isRemoving && removingId === item.id ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={13} />
+                          )}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

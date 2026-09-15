@@ -12,11 +12,11 @@ import { useState } from "react";
  * padrão, com um seletor pras outras onde já existe saldo, pra dar pra
  * recarregar ANTES de viajar pra lá.
  *
- * "Adicionar Créditos" ainda não faz nada — recarga self-service depende
- * de cobrança real (gateway de pagamento) antes de creditar no Fortuna,
- * que ainda não está configurado (ver .env.example, ASAAS_API_KEY vazio).
+ * "Adicionar Créditos" abre a tela de recarga (ver FortunaTopUpPanel) —
+ * ainda simulada, recarga self-service de verdade depende de um gateway
+ * real na frente (ver .env.example, ASAAS_API_KEY vazio).
  */
-export function FortunaWalletCard({ balances }: { balances: FortunaBalanceView[] }) {
+export function FortunaWalletCard({ balances, onAdicionarCreditos }: { balances: FortunaBalanceView[]; onAdicionarCreditos: () => void }) {
   const home = balances.find((b) => b.isHome) ?? balances[0];
   const [selecionada, setSelecionada] = useState(home?.branchId);
   const atual = balances.find((b) => b.branchId === selecionada) ?? home;
@@ -59,9 +59,8 @@ export function FortunaWalletCard({ balances }: { balances: FortunaBalanceView[]
           <div className="text-2xl font-bold text-na-green dark:text-emerald-400">{formatBRL(atual.amount)}</div>
         </div>
         <button
-          disabled
-          title="Recarga pelo Portal ainda não disponível — em breve"
-          className="flex items-center gap-1.5 rounded-xl bg-na-green px-3.5 py-2 text-xs font-semibold text-white opacity-50"
+          onClick={onAdicionarCreditos}
+          className="flex items-center gap-1.5 rounded-xl bg-na-green px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-na-green-dark"
         >
           <Plus size={14} /> Adicionar Créditos
         </button>

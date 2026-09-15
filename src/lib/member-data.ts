@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { ActivityType, Contribution, ContributionCompositionItem, ContributionReceipt } from "@prisma/client";
+import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
 import { fortunaGetBranches, fortunaGetClient } from "@/lib/fortuna/client";
 
 export interface FortunaBalanceView {
@@ -15,7 +15,6 @@ export interface FortunaBalanceView {
 // na borda dos dados, em vez de em cada componente que consome Contribution.
 export type SerializedContribution = Omit<Contribution, "amount"> & { amount: number };
 export type SerializedCompositionItem = Omit<ContributionCompositionItem, "amount"> & { amount: number };
-export type SerializedReceipt = Omit<ContributionReceipt, "amount" | "rawText"> & { amount: number };
 
 function serializeContribution(c: Contribution): SerializedContribution {
   return { ...c, amount: Number(c.amount) };
@@ -25,22 +24,10 @@ function serializeCompositionItem(c: ContributionCompositionItem): SerializedCom
   return { ...c, amount: Number(c.amount) };
 }
 
-// rawText nunca vai pro client já na carga inicial do dashboard — só é
-// buscado/exposto quando o membro pede explicitamente pra ver um recibo
-// específico (ver viewReceipt em receipt-actions.ts).
-function serializeReceipt(r: ContributionReceipt): SerializedReceipt {
-  return {
-    id: r.id,
-    memberId: r.memberId,
-    mercurioRecId: r.mercurioRecId,
-    issuedAt: r.issuedAt,
-    amount: Number(r.amount),
-    itemsSummary: r.itemsSummary,
-    probablyCanceled: r.probablyCanceled,
-    canceled: r.canceled,
-    fetchedAt: r.fetchedAt,
-    createdAt: r.createdAt,
-  };
+export interface AgendaReactionSummary {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
 }
 
 export type AgendaItem =
@@ -50,6 +37,7 @@ export type AgendaItem =
       title: string;
       date: Date;
       price: number;
+      reactions: AgendaReactionSummary[];
     }
   | {
       kind: "atividade";
@@ -60,6 +48,7 @@ export type AgendaItem =
       studyItems: string | null;
       description: string | null;
       className: string;
+      reactions: AgendaReactionSummary[];
     };
 
 /**
@@ -74,18 +63,6 @@ export async function getMemberDashboard(memberId: string) {
       school: { include: { compositionCatalog: true } },
       contributions: { orderBy: { dueDate: "desc" }, take: 6 },
       compositionItems: { orderBy: { createdAt: "asc" } },
-      // canceled === true fica de fora — recibo cancelado não é um
-      // comprovante válido. canceled === null (ainda não confirmado, ver
-      // ContributionReceipt) continua aparecendo, só é confirmado quando o
-      // membro pede pra ver/baixar (viewReceipt). Importante: filtrar com
-      // `canceled: { not: true }` direto NÃO funciona pra null — o SQL
-      // gerado exclui as linhas null também (lógica de 3 valores),
-      // confirmado ao vivo — por isso o OR explícito abaixo.
-      receipts: {
-        where: { OR: [{ canceled: null }, { canceled: false }] },
-        orderBy: { issuedAt: "desc" },
-        take: 5,
-      },
       // Situação mês a mês da contribuição (Ficha Anual do Mercúrio, ver
       // scripts/sync-monthly-status.ts) do ano corrente — alimenta a tela
       // "situação atual" do ambiente de pagamento (cobrança/lançamento
@@ -148,6 +125,28 @@ export async function getMemberDashboard(memberId: string) {
       : Promise.resolve([]),
   ]);
 
+  // Reações de emoji (ver toggleAgendaReaction) — 1 query só pros dois
+  // tipos de item, agregada localmente em vez de N queries por card.
+  const reacoesGravadas = await db.agendaReaction.findMany({
+    where: {
+      OR: [
+        { itemType: "evento", itemId: { in: schoolEvents.map((e) => e.id) } },
+        { itemType: "atividade", itemId: { in: classActivities.map((a) => a.id) } },
+      ],
+    },
+  });
+
+  function resumoReacoes(itemId: string): AgendaReactionSummary[] {
+    const contagemPorEmoji = new Map<string, number>();
+    const minhasReacoes = new Set<string>();
+    for (const r of reacoesGravadas) {
+      if (r.itemId !== itemId) continue;
+      contagemPorEmoji.set(r.emoji, (contagemPorEmoji.get(r.emoji) ?? 0) + 1);
+      if (r.memberId === memberId) minhasReacoes.add(r.emoji);
+    }
+    return [...contagemPorEmoji.entries()].map(([emoji, count]) => ({ emoji, count, reactedByMe: minhasReacoes.has(emoji) }));
+  }
+
   const agendaItems: AgendaItem[] = [
     ...schoolEvents.map(
       (e): AgendaItem => ({
@@ -156,6 +155,7 @@ export async function getMemberDashboard(memberId: string) {
         title: e.title,
         date: e.startsAt,
         price: Number(e.price),
+        reactions: resumoReacoes(e.id),
       }),
     ),
     ...classActivities.map(
@@ -168,6 +168,7 @@ export async function getMemberDashboard(memberId: string) {
         studyItems: a.studyItems,
         description: a.description,
         className: a.classGroup.name,
+        reactions: resumoReacoes(a.id),
       }),
     ),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -179,7 +180,6 @@ export async function getMemberDashboard(memberId: string) {
       ...member,
       contributions: member.contributions.map(serializeContribution),
       compositionItems: member.compositionItems.map(serializeCompositionItem),
-      receipts: member.receipts.map(serializeReceipt),
     },
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     fortunaBalances,

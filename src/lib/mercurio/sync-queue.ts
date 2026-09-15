@@ -60,6 +60,13 @@ export async function enqueueMercurioCompositionRemove(memberId: string, mercuri
   });
 }
 
+/** Enfileira a alteração do valor de um item de composição incluído pelo próprio membro pelo Portal. */
+export async function enqueueMercurioCompositionEdit(memberId: string, mercurioGroupId: string, novoValor: number) {
+  return db.mercurioSyncTask.create({
+    data: { memberId, taskType: "editar_valor_item_composicao", payload: { mercurioGroupId, novoValor } },
+  });
+}
+
 /** Enfileira a busca do conteúdo (documento) de um recibo específico, sob demanda — ver ContributionReceipt.rawText. */
 export async function enqueueMercurioReceiptFetch(memberId: string, mercurioRecId: string) {
   return db.mercurioSyncTask.create({
@@ -145,6 +152,16 @@ export async function processMercurioSyncQueue(limit = 20) {
         result = await mercurioAdapter.removeCompositionItem(identidade, payload.mercurioGroupId);
         if (result.ok) {
           await db.contributionCompositionItem.deleteMany({ where: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } });
+        }
+      } else if (task.taskType === "editar_valor_item_composicao") {
+        const payload = task.payload as { mercurioGroupId: string; novoValor: number };
+        const valorBR = payload.novoValor.toFixed(2).replace(".", ",");
+        result = await mercurioAdapter.editCompositionItemValue(identidade, payload.mercurioGroupId, valorBR);
+        if (result.ok) {
+          await db.contributionCompositionItem.update({
+            where: { memberId_mercurioGroupId: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } },
+            data: { amount: payload.novoValor },
+          });
         }
       } else if (task.taskType === "buscar_recibo") {
         const payload = task.payload as { mercurioRecId: string };

@@ -85,6 +85,11 @@ export class MockMercurioAdapter implements MercurioAdapter {
     return { ok: true };
   }
 
+  async editCompositionItemValue(member: MercurioMemberIdentity, mercurioGroupId: string, novoValor: string): Promise<MercurioWriteResult> {
+    console.warn(`[MockMercurioAdapter] editCompositionItemValue(${member.matricula}, ${mercurioGroupId}, ${novoValor}) — simulado.`);
+    return { ok: true };
+  }
+
   async fetchReceiptContent(member: MercurioMemberIdentity, mercurioRecId: string): Promise<MercurioReceiptContent> {
     console.warn(`[MockMercurioAdapter] fetchReceiptContent(${member.matricula}, ${mercurioRecId}) — simulado.`);
     return { rawText: "(recibo simulado — credenciais do Mercúrio não configuradas)", canceled: false };

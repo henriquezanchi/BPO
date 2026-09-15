@@ -142,6 +142,9 @@ export interface MercurioAdapter {
   /** Remove um item da composição pelo mercurioGroupId. */
   removeCompositionItem(member: MercurioMemberIdentity, mercurioGroupId: string): Promise<MercurioWriteResult>;
 
+  /** Altera o valor de um item já existente na composição — `novoValor` no formato brasileiro ("50,00"). */
+  editCompositionItemValue(member: MercurioMemberIdentity, mercurioGroupId: string, novoValor: string): Promise<MercurioWriteResult>;
+
   /** Busca o conteúdo (documento) de um recibo específico pelo id — 1 chamada cara, sob demanda. */
   fetchReceiptContent(member: MercurioMemberIdentity, mercurioRecId: string): Promise<MercurioReceiptContent>;
 }
