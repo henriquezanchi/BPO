@@ -86,6 +86,11 @@ export async function getMemberDashboard(memberId: string) {
         orderBy: { issuedAt: "desc" },
         take: 5,
       },
+      // Situação mês a mês da contribuição (Ficha Anual do Mercúrio, ver
+      // scripts/sync-monthly-status.ts) do ano corrente — alimenta a tela
+      // "situação atual" do ambiente de pagamento (cobrança/lançamento
+      // ainda não implementados).
+      monthlyStatus: { where: { year: new Date().getFullYear() }, orderBy: { month: "asc" } },
       classMemberships: { include: { classGroup: true } },
     },
   });

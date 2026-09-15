@@ -156,6 +156,25 @@ export async function abrirListaAtivos(page: Page, filialLabelRegex: RegExp): Pr
 }
 
 /**
+ * Entra no módulo TESOURARIA de uma filial (menu de topo) e devolve o
+ * frame de conteúdo ("principal") — a essa altura ele mostra uma página
+ * padrão qualquer (ex: tes_contato.html), útil como ponto de partida pra
+ * navegar (via frame.goto) direto pra qualquer tela de dentro da
+ * Tesouraria sem precisar clicar em cada submenu.
+ */
+async function abrirTesouraria(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  const tesourarias = await listarLinksMenu(page, "TESOURARIA");
+  const filial = tesourarias.find((t) => filialLabelRegex.test(t.label));
+  if (!filial) {
+    throw new Error(`Filial batendo com ${filialLabelRegex} sem link de TESOURARIA entre: ${tesourarias.map((t) => t.label).join(", ")}`);
+  }
+
+  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
+  await framePrincipal0.getByRole("link", { name: "TESOURARIA", exact: true }).nth(filial.indice).click();
+  return esperarFrame(page, "principal", /tesoura\//, 15000);
+}
+
+/**
  * Abre a tela "Recibos Emitidos" (tesoura/tes_cailstr.php) da Tesouraria de
  * uma filial — listagem mensal (por padrão o mês corrente). Visitar essa
  * tela é o que "destrava" a sessão pra emitir o documento do recibo depois
@@ -165,14 +184,7 @@ export async function abrirListaAtivos(page: Page, filialLabelRegex: RegExp): Pr
  * seletor de mês da própria tela usa (pa=ano&pm=mes).
  */
 export async function abrirTelaRecibos(page: Page, filialLabelRegex: RegExp, ano?: number, mes?: number): Promise<Frame> {
-  const tesourarias = await listarLinksMenu(page, "TESOURARIA");
-  const filial = tesourarias.find((t) => filialLabelRegex.test(t.label));
-  if (!filial) {
-    throw new Error(`Filial batendo com ${filialLabelRegex} sem link de TESOURARIA entre: ${tesourarias.map((t) => t.label).join(", ")}`);
-  }
-
-  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
-  await framePrincipal0.getByRole("link", { name: "TESOURARIA", exact: true }).nth(filial.indice).click();
+  await abrirTesouraria(page, filialLabelRegex);
 
   const frameIndice = await esperarFrame(page, "indice", /tes_indice\.php/, 15000);
   await frameIndice.getByRole("link", { name: "Recibos", exact: true }).click();
@@ -183,6 +195,78 @@ export async function abrirTelaRecibos(page: Page, filialLabelRegex: RegExp, ano
     await page.waitForTimeout(500);
   }
   return frame;
+}
+
+export interface FichaAnualMes {
+  mes: number; // 1-12
+  status: "paga" | "em_branco" | "atrasado" | "isento";
+  registradoEmBR: string | null; // "dd/mm/yyyy", null se nunca registrado
+  responsavel: string | null;
+  mercurioRecId: string | null; // liga com ContributionReceipt, se já sincronizado
+}
+
+function statusFichaAnualDeTexto(texto: string): FichaAnualMes["status"] {
+  const t = texto.trim().toUpperCase();
+  if (t.startsWith("PAGA")) return "paga";
+  if (t.startsWith("ATRAS")) return "atrasado";
+  if (t.startsWith("ISENT")) return "isento";
+  return "em_branco";
+}
+
+/**
+ * Abre a "Ficha Anual" (tesoura/tes_condeta.php) de um aluno — mostra a
+ * composição (redundante com abrirComposicao, útil só pra cross-check) e,
+ * mais importante, o status mês a mês (PAGA/EM BRANCO/EM ATRASO/ISENTO)
+ * do ano informado. Diferente da Composição/Recibos, é navegável direto
+ * pela matrícula (sem precisar casar por nome).
+ */
+export async function abrirFichaAnual(page: Page, filialLabelRegex: RegExp, matricula: string, ano: number): Promise<Frame> {
+  const frame = await abrirTesouraria(page, filialLabelRegex);
+  await frame.goto(`https://mercurio.oinabn.com.br/tesoura/tes_condeta.php?matr=${matricula}&ano=${ano}&cmb=ATI`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.waitForTimeout(600);
+  return frame;
+}
+
+/** Lê a grade mês a mês da Ficha Anual já aberta (ver abrirFichaAnual). */
+export async function lerFichaAnual(frame: Frame): Promise<FichaAnualMes[]> {
+  const linhas: { mes: string; status: string; registro: string; responsavel: string; mercurioRecId: string | null }[] =
+    await frame.evaluate(() => {
+      const tabelas = Array.from(document.querySelectorAll("table"));
+      // Tabelas aninhadas: a mais externa contém tudo, então checar só se
+      // "Mês" aparece em algum lugar da 1ª linha (t.rows[0].innerText)
+      // bate com ela também (falso-positivo) — precisa ser exatamente a
+      // 1ª CÉLULA da 1ª linha pra achar a tabela certa (a de verdade, não
+      // a que só a envolve).
+      const tabela = tabelas.find((t) => /^m[eê]s$/i.test((t.rows[0]?.cells[0]?.innerText ?? "").trim()));
+      if (!tabela) return [];
+      return Array.from(tabela.rows)
+        .slice(1)
+        .map((linha) => {
+          const celulas = Array.from(linha.cells).map((c) => (c as HTMLElement).innerText.trim());
+          const linkRecibo = linha.querySelector('a[onclick*="tes_conprt"]');
+          const onclick = linkRecibo?.getAttribute("onclick") ?? "";
+          const recMatch = onclick.match(/rec=(\d+)/);
+          return {
+            mes: celulas[0] ?? "",
+            status: celulas[1] ?? "",
+            registro: celulas[celulas.length - 2] ?? "",
+            responsavel: celulas[celulas.length - 1] ?? "",
+            mercurioRecId: recMatch?.[1] ?? null,
+          };
+        });
+    });
+
+  return linhas
+    .map((l) => ({
+      mes: parseInt(l.mes, 10),
+      status: statusFichaAnualDeTexto(l.status),
+      registradoEmBR: l.registro && l.registro !== "00/00/0000" ? l.registro : null,
+      responsavel: l.responsavel && l.responsavel !== "-" ? l.responsavel : null,
+      mercurioRecId: l.mercurioRecId,
+    }))
+    .filter((m) => Number.isInteger(m.mes) && m.mes >= 1 && m.mes <= 12);
 }
 
 export interface ReciboMercurio {

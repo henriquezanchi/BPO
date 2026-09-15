@@ -22,6 +22,17 @@ enum ContributionStatus {
   atrasado
 }
 
+// Status de UM mês específico, lido direto da "Ficha Anual" do Mercúrio
+// (tesoura/tes_condeta.php) — granularidade mais fina que MemberStatus
+// (que é 1 status geral por membro). Nomes batem com a legenda real da
+// tela: EM BRANCO (ainda não cobrado), PAGA, EM ATRASO, ISENTO.
+enum ContributionMonthStatus {
+  em_branco
+  paga
+  atrasado
+  isento
+}
+
 enum ChargeTriggerType {
   inicio_mes
   vencimento
@@ -132,6 +143,7 @@ model Member {
   contributions        Contribution[]
   compositionItems     ContributionCompositionItem[]
   receipts             ContributionReceipt[]
+  monthlyStatus        ContributionMonthlyStatus[]
   fortunaTx            FortunaTransaction[]
   crmContacts          CrmContact[]
   eventRegistr         EventRegistration[]
@@ -231,6 +243,29 @@ model ContributionReceipt {
   fetchedAt        DateTime?
   createdAt        DateTime  @default(now())
 
+  @@index([memberId])
+}
+
+// Status mensal real da contribuição, sincronizado da Ficha Anual do
+// Mercúrio (scripts/sync-monthly-status.ts) — diferente da Composição
+// (que são as RUBRICAS que compõem o valor mensal) e dos Recibos (que são
+// os PAGAMENTOS já emitidos): esta é a grade PAGA/EM BRANCO/EM
+// ATRASO/ISENTO mês a mês que alimenta a tela "situação atual" do Portal
+// (ambiente de pagamento — cobrança real e lançamento no Mercúrio ainda
+// não implementados, ver histórico de conversa).
+model ContributionMonthlyStatus {
+  id             String                  @id @default(cuid())
+  memberId       String
+  member         Member                  @relation(fields: [memberId], references: [id])
+  year           Int
+  month          Int // 1-12
+  status         ContributionMonthStatus
+  registeredAtBR String? // data de registro do pagamento, formato dd/mm/yyyy como o Mercúrio grava
+  registeredBy   String? // "Responsável" na Ficha Anual — quem lançou o pagamento
+  mercurioRecId  String? // liga com ContributionReceipt.mercurioRecId quando o mês tem recibo
+  syncedAt       DateTime                @default(now())
+
+  @@unique([memberId, year, month])
   @@index([memberId])
 }
 

@@ -24,6 +24,7 @@ import { useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
 import { AgendaPanel } from "./panels/agenda-panel";
 import { ContributionPanel } from "./panels/contribution-panel";
+import { ContributionStatusPanel } from "./panels/contribution-status-panel";
 import { MyContributionPanel } from "./panels/my-contribution-panel";
 import { ProfileEditPanel } from "./panels/profile-edit-panel";
 import { StudyAreaPanel } from "./panels/study-area-panel";
@@ -32,6 +33,7 @@ import { GafPanel, HelpPanel, VolunteerPanel } from "./misc-panels";
 type ModalKey =
   | "cadastro"
   | "contribuicao"
+  | "situacao"
   | "historico"
   | "agenda"
   | "estudos"
@@ -42,6 +44,7 @@ type ModalKey =
 const MODAL_TITLES: Record<ModalKey, string> = {
   cadastro: "Atualizar Cadastro",
   contribuicao: "Minha Contribuição",
+  situacao: "Situação da Contribuição",
   historico: "Histórico & Recibos",
   agenda: "Agenda & Eventos",
   estudos: "Área de Estudos",
@@ -133,10 +136,10 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           {isDelayed ? (
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => setModal("contribuicao")}
+                onClick={() => setModal("situacao")}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-[13px] font-semibold text-white transition hover:bg-red-700"
               >
-                Pagar Contribuição
+                Ver Situação
               </button>
             </div>
           ) : (
@@ -215,6 +218,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               initialAvailableToAdd={availableToAdd}
             />
           )}
+          {modal === "situacao" && <ContributionStatusPanel monthlyStatus={member.monthlyStatus} />}
           {modal === "historico" && <ContributionPanel memberId={member.id} receipts={member.receipts} />}
           {modal === "agenda" && <AgendaPanel items={agendaItems} />}
           {modal === "estudos" && <StudyAreaPanel />}
