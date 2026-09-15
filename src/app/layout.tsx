@@ -34,6 +34,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // O script no <head> abaixo pode acrescentar "dark" a essa classe
+      // antes da hidratação (evita flash do tema errado) — isso é
+      // ESPERADO e sempre vai diferir do HTML renderizado pelo servidor,
+      // então suprimimos só o aviso de hidratação deste elemento.
+      suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />

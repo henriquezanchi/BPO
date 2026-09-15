@@ -306,10 +306,13 @@ export async function escreverAbaPessoais(frame: Frame, dados: Partial<DadosPess
 // ===================== Aba IDENTIFICAÇÃO =====================
 // Campos confirmados ao vivo: txtrg (número), txtexped (órgão expedidor),
 // txtdia/txtmes/txtano (emissão — "00/00/0000" quando não preenchido, não
-// é uma data válida). CPF (txtcpf) e Passaporte existem na mesma aba mas
-// não são expostos na Portal por ora (fora do pedido original).
+// é uma data válida), txtcpf. CPF só é lido pra derivar a senha inicial de
+// login (scripts/provision-member-auth.ts) — não é persistido no Member
+// (minimização de dado sensível: não precisamos guardar o CPF inteiro).
+// Passaporte existe na mesma aba mas não é usado.
 
 export interface DadosIdentificacaoMercurio {
+  cpf: string;
   rgNumero: string;
   rgOrgaoEmissor: string;
   rgEmissaoDia: string;
@@ -326,6 +329,7 @@ export async function lerAbaIdentificacao(frame: Frame): Promise<DadosIdentifica
   await abrirAbaIdentificacao(frame);
   const valor = async (nome: string) => (await frame.locator(`[name="${nome}"]`).first().inputValue().catch(() => "")).trim();
   return {
+    cpf: await valor("txtcpf"),
     rgNumero: await valor("txtrg"),
     rgOrgaoEmissor: await valor("txtexped"),
     rgEmissaoDia: await valor("txtdia"),

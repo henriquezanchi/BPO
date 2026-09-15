@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { enqueueMercurioContactUpdate, processMercurioSyncQueue } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
@@ -42,8 +43,13 @@ const OVERDUE_STATUSES = new Set(["atrasado", "negociando"]);
  * escola): enfileira em MercurioSyncTask (histórico/retry) e processa a
  * fila na hora (ver nota de escala em mercurio/sync-queue.ts) — o aluno vê
  * na mesma tela se a escrita no Mercúrio deu certo.
+ *
+ * requireAuthenticatedMember confere que quem está logado É o memberId
+ * recebido — Server Actions não passam pelo matcher do proxy.ts, então sem
+ * isso qualquer um poderia chamar a action com o id de outra pessoa.
  */
 export async function updateMemberContact(memberId: string, changes: ContactChangeInput) {
+  await requireAuthenticatedMember(memberId);
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
 
   const oldValues: Record<string, string | null> = {};

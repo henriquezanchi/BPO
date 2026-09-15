@@ -1,6 +1,7 @@
 "use client";
 
 import { updatePersonalData } from "@/lib/actions/personal-data-actions";
+import { ChangePasswordForm } from "@/components/change-password-form";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ESCOLARIDADE_OPCOES, ESTADO_CIVIL_OPCOES } from "@/lib/mercurio/personal-data-options";
 import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
@@ -50,7 +51,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
       <header className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
         <div className="flex items-center gap-3">
           <Link
-            href={`/portal?memberId=${memberId}`}
+            href="/portal"
             className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
           >
             <ArrowLeft size={18} />
@@ -152,6 +153,10 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
           </div>
         )}
       </form>
+
+      <div className="px-5 pb-8">
+        <ChangePasswordForm />
+      </div>
     </div>
   );
 }

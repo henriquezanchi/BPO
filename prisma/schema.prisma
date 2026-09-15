@@ -79,6 +79,7 @@ model Member {
   schoolId       String
   school         School       @relation(fields: [schoolId], references: [id])
   mercurioId     String?      @unique // matrícula no Mercúrio (ex: "21596"), quando conhecida
+  authUserId     String?      @unique // id do usuário no Supabase Auth (login por e-mail/senha) — ver src/lib/auth.ts
   registrationNo String? // "Matrícula #21596"
   name           String
   whatsapp       String

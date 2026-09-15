@@ -1,21 +1,12 @@
 import { MaisDadosClient } from "@/components/member/mais-dados-client";
-import { db } from "@/lib/db";
+import { getAuthenticatedMember } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function MaisDadosPage(props: PageProps<"/portal/mais-dados">) {
-  const searchParams = await props.searchParams;
-  const memberId = typeof searchParams.memberId === "string" ? searchParams.memberId : undefined;
-
-  if (!memberId) {
-    return (
-      <main className="flex min-h-screen items-center justify-center p-6 text-center text-sm text-gray-500">
-        Acesse com <code className="rounded bg-gray-100 px-1.5 py-0.5">?memberId=SEU_ID</code>.
-      </main>
-    );
-  }
-
-  const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
+export default async function MaisDadosPage() {
+  const member = await getAuthenticatedMember();
+  if (!member) redirect("/login?next=/portal/mais-dados");
 
   return (
     <MaisDadosClient

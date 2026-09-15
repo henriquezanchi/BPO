@@ -1,0 +1,30 @@
+import { db } from "@/lib/db";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+/**
+ * Resolve o Member logado a partir da sessão do Supabase Auth (cookie),
+ * não de parâmetro de URL. Usar em toda página/server action que expõe
+ * dado de um membro — nunca confiar só no proxy.ts pra isso: Server
+ * Actions não passam pelo matcher do proxy (ver aviso na doc do Next 16),
+ * então qualquer action que recebe um `memberId` precisa validar aqui que
+ * ele bate com quem está de fato logado.
+ */
+export async function getAuthenticatedMember() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  return db.member.findUnique({ where: { authUserId: user.id }, include: { school: true } });
+}
+
+/** Mesma resolução, mas lança se ninguém estiver logado ou o memberId não bater — uso em server actions. */
+export async function requireAuthenticatedMember(expectedMemberId: string) {
+  const member = await getAuthenticatedMember();
+  if (!member || member.id !== expectedMemberId) {
+    throw new Error("Não autenticado ou sem permissão para alterar este cadastro.");
+  }
+  return member;
+}

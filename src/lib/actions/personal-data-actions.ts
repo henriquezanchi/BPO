@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { enqueueMercurioPersonalUpdate, processMercurioSyncQueue } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
@@ -35,6 +36,7 @@ const OVERDUE_STATUSES = new Set(["atrasado", "negociando"]);
  * Mercúrio via fila processada na hora.
  */
 export async function updatePersonalData(memberId: string, changes: PersonalDataInput) {
+  await requireAuthenticatedMember(memberId);
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
 
   const oldValues: Record<string, string | null> = {};

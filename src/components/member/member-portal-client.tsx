@@ -2,6 +2,7 @@
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { logout } from "@/lib/actions/auth-actions";
 import { formatBRL } from "@/lib/format";
 import type { MemberDashboard } from "@/lib/member-data";
 import {
@@ -14,6 +15,7 @@ import {
   HandHeart,
   Leaf,
   LifeBuoy,
+  LogOut,
   MessageCircle,
   Pencil,
   Plus,
@@ -59,7 +61,16 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
       <header className="relative border-b border-gray-100 bg-white px-5 pt-6 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
-        <ThemeToggle className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
+        <div className="absolute top-4 right-4 flex items-center gap-1">
+          <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
+          <button
+            onClick={() => logout()}
+            title="Sair"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
         <div className="mb-5 flex justify-center">
           <Image src="/na-logo.png" alt={member.school.name} width={160} height={48} className="h-auto w-40 dark:brightness-0 dark:invert" />
         </div>
