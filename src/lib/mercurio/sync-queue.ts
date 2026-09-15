@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import type { MercurioContactChanges, MercurioPersonalChanges } from "./adapter";
+import type { MercurioContactChanges, MercurioPersonalChanges, MercurioWriteResult } from "./adapter";
+import { RodadaEmAndamentoError } from "./browser-session";
 import { mercurioAdapter } from "./index";
 
 /**
@@ -59,6 +60,13 @@ export async function enqueueMercurioCompositionRemove(memberId: string, mercuri
   });
 }
 
+/** Enfileira a busca do conteúdo (documento) de um recibo específico, sob demanda — ver ContributionReceipt.rawText. */
+export async function enqueueMercurioReceiptFetch(memberId: string, mercurioRecId: string) {
+  return db.mercurioSyncTask.create({
+    data: { memberId, taskType: "buscar_recibo", payload: { mercurioRecId } },
+  });
+}
+
 /**
  * Processa tarefas pendentes da fila, escrevendo de verdade no Mercúrio
  * (mercurioAdapter é o real quando as credenciais estão configuradas — ver
@@ -99,42 +107,58 @@ export async function processMercurioSyncQueue(limit = 20) {
 
     const identidade = { matricula: member.mercurioId, name: member.name, filialLabel: member.school.mercurioFilialLabel };
 
-    let result;
-    if (task.taskType === "atualizar_dados_pessoais") {
-      const payload = task.payload as MercurioPersonalChangesJson;
-      result = await mercurioAdapter.pushPersonalUpdate(identidade, {
-        ...payload,
-        birthDate: payload.birthDate === undefined ? undefined : payload.birthDate ? new Date(payload.birthDate) : null,
-        rgDataEmissao: payload.rgDataEmissao === undefined ? undefined : payload.rgDataEmissao ? new Date(payload.rgDataEmissao) : null,
-      });
-    } else if (task.taskType === "incluir_item_composicao") {
-      const payload = task.payload as { mercurioGroupId: string; label: string };
-      result = await mercurioAdapter.addCompositionItem(identidade, payload.mercurioGroupId);
-      if (result.ok) {
-        // O valor é o padrão que o Mercúrio aplica pro item — não escolhido
-        // pelo Portal, então relê a composição pra saber quanto ficou.
-        const { items } = await mercurioAdapter.pullComposition(identidade);
-        const incluido = items.find((i) => i.mercurioGroupId === payload.mercurioGroupId);
-        await db.contributionCompositionItem.upsert({
-          where: { memberId_mercurioGroupId: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } },
-          update: { label: incluido?.label ?? payload.label, amount: incluido?.amount ?? 0, addedViaPortal: true },
-          create: {
-            memberId: task.memberId,
-            mercurioGroupId: payload.mercurioGroupId,
-            label: incluido?.label ?? payload.label,
-            amount: incluido?.amount ?? 0,
-            addedViaPortal: true,
-          },
+    // Tudo dentro de 1 try/catch: chamadas de leitura do adapter (pullComposition,
+    // fetchReceiptContent) lançam em vez de devolver { ok: false } — sem isso,
+    // uma RodadaEmAndamentoError nelas quebraria o loop inteiro (e as tarefas de
+    // OUTROS membros que ainda nem tinham sido processadas nesta chamada).
+    let result: MercurioWriteResult;
+    try {
+      if (task.taskType === "atualizar_dados_pessoais") {
+        const payload = task.payload as MercurioPersonalChangesJson;
+        result = await mercurioAdapter.pushPersonalUpdate(identidade, {
+          ...payload,
+          birthDate: payload.birthDate === undefined ? undefined : payload.birthDate ? new Date(payload.birthDate) : null,
+          rgDataEmissao: payload.rgDataEmissao === undefined ? undefined : payload.rgDataEmissao ? new Date(payload.rgDataEmissao) : null,
         });
+      } else if (task.taskType === "incluir_item_composicao") {
+        const payload = task.payload as { mercurioGroupId: string; label: string };
+        result = await mercurioAdapter.addCompositionItem(identidade, payload.mercurioGroupId);
+        if (result.ok) {
+          // O valor é o padrão que o Mercúrio aplica pro item — não escolhido
+          // pelo Portal, então relê a composição pra saber quanto ficou.
+          const { items } = await mercurioAdapter.pullComposition(identidade);
+          const incluido = items.find((i) => i.mercurioGroupId === payload.mercurioGroupId);
+          await db.contributionCompositionItem.upsert({
+            where: { memberId_mercurioGroupId: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } },
+            update: { label: incluido?.label ?? payload.label, amount: incluido?.amount ?? 0, addedViaPortal: true },
+            create: {
+              memberId: task.memberId,
+              mercurioGroupId: payload.mercurioGroupId,
+              label: incluido?.label ?? payload.label,
+              amount: incluido?.amount ?? 0,
+              addedViaPortal: true,
+            },
+          });
+        }
+      } else if (task.taskType === "excluir_item_composicao") {
+        const payload = task.payload as { mercurioGroupId: string };
+        result = await mercurioAdapter.removeCompositionItem(identidade, payload.mercurioGroupId);
+        if (result.ok) {
+          await db.contributionCompositionItem.deleteMany({ where: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } });
+        }
+      } else if (task.taskType === "buscar_recibo") {
+        const payload = task.payload as { mercurioRecId: string };
+        const conteudo = await mercurioAdapter.fetchReceiptContent(identidade, payload.mercurioRecId);
+        await db.contributionReceipt.updateMany({
+          where: { mercurioRecId: payload.mercurioRecId },
+          data: { rawText: conteudo.rawText, canceled: conteudo.canceled, fetchedAt: new Date() },
+        });
+        result = { ok: true };
+      } else {
+        result = await mercurioAdapter.pushContactUpdate(identidade, task.payload as MercurioContactChanges);
       }
-    } else if (task.taskType === "excluir_item_composicao") {
-      const payload = task.payload as { mercurioGroupId: string };
-      result = await mercurioAdapter.removeCompositionItem(identidade, payload.mercurioGroupId);
-      if (result.ok) {
-        await db.contributionCompositionItem.deleteMany({ where: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } });
-      }
-    } else {
-      result = await mercurioAdapter.pushContactUpdate(identidade, task.payload as MercurioContactChanges);
+    } catch (e) {
+      result = { ok: false, error: (e as Error).message, retryable: e instanceof RodadaEmAndamentoError };
     }
 
     // `retryable` = falhou só por trava de concorrência (rodada agendada do

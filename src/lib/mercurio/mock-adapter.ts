@@ -7,6 +7,7 @@ import type {
   MercurioMemberIdentity,
   MercurioPersonalChanges,
   MercurioPersonalData,
+  MercurioReceiptContent,
   MercurioRosterEntry,
   MercurioWriteResult,
 } from "./adapter";
@@ -82,5 +83,10 @@ export class MockMercurioAdapter implements MercurioAdapter {
   async removeCompositionItem(member: MercurioMemberIdentity, mercurioGroupId: string): Promise<MercurioWriteResult> {
     console.warn(`[MockMercurioAdapter] removeCompositionItem(${member.matricula}, ${mercurioGroupId}) — simulado.`);
     return { ok: true };
+  }
+
+  async fetchReceiptContent(member: MercurioMemberIdentity, mercurioRecId: string): Promise<MercurioReceiptContent> {
+    console.warn(`[MockMercurioAdapter] fetchReceiptContent(${member.matricula}, ${mercurioRecId}) — simulado.`);
+    return { rawText: "(recibo simulado — credenciais do Mercúrio não configuradas)", canceled: false };
   }
 }

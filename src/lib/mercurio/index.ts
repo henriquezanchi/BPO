@@ -18,5 +18,6 @@ export type {
   MercurioMemberIdentity,
   MercurioPersonalChanges,
   MercurioPersonalData,
+  MercurioReceiptContent,
   MercurioWriteResult,
 } from "./adapter";

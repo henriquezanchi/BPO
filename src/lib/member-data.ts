@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
+import type { ActivityType, Contribution, ContributionCompositionItem, ContributionReceipt } from "@prisma/client";
 
 // Server Components só podem passar objetos "planos" para Client Components
 // — instâncias de Decimal (retornadas pelo Prisma para campos @db.Decimal)
@@ -7,6 +7,7 @@ import type { ActivityType, Contribution, ContributionCompositionItem } from "@p
 // na borda dos dados, em vez de em cada componente que consome Contribution.
 export type SerializedContribution = Omit<Contribution, "amount"> & { amount: number };
 export type SerializedCompositionItem = Omit<ContributionCompositionItem, "amount"> & { amount: number };
+export type SerializedReceipt = Omit<ContributionReceipt, "amount" | "rawText"> & { amount: number };
 
 function serializeContribution(c: Contribution): SerializedContribution {
   return { ...c, amount: Number(c.amount) };
@@ -14,6 +15,23 @@ function serializeContribution(c: Contribution): SerializedContribution {
 
 function serializeCompositionItem(c: ContributionCompositionItem): SerializedCompositionItem {
   return { ...c, amount: Number(c.amount) };
+}
+
+// rawText nunca vai pro client já na carga inicial do dashboard — só é
+// buscado/exposto quando o membro pede explicitamente pra ver um recibo
+// específico (ver viewReceipt em receipt-actions.ts).
+function serializeReceipt(r: ContributionReceipt): SerializedReceipt {
+  return {
+    id: r.id,
+    memberId: r.memberId,
+    mercurioRecId: r.mercurioRecId,
+    issuedAt: r.issuedAt,
+    amount: Number(r.amount),
+    probablyCanceled: r.probablyCanceled,
+    canceled: r.canceled,
+    fetchedAt: r.fetchedAt,
+    createdAt: r.createdAt,
+  };
 }
 
 export type AgendaItem =
@@ -47,6 +65,18 @@ export async function getMemberDashboard(memberId: string) {
       school: { include: { compositionCatalog: true } },
       contributions: { orderBy: { dueDate: "desc" }, take: 6 },
       compositionItems: { orderBy: { createdAt: "asc" } },
+      // canceled === true fica de fora — recibo cancelado não é um
+      // comprovante válido. canceled === null (ainda não confirmado, ver
+      // ContributionReceipt) continua aparecendo, só é confirmado quando o
+      // membro pede pra ver/baixar (viewReceipt). Importante: filtrar com
+      // `canceled: { not: true }` direto NÃO funciona pra null — o SQL
+      // gerado exclui as linhas null também (lógica de 3 valores),
+      // confirmado ao vivo — por isso o OR explícito abaixo.
+      receipts: {
+        where: { OR: [{ canceled: null }, { canceled: false }] },
+        orderBy: { issuedAt: "desc" },
+        take: 5,
+      },
       classMemberships: { include: { classGroup: true } },
     },
   });
@@ -113,6 +143,7 @@ export async function getMemberDashboard(memberId: string) {
       ...member,
       contributions: member.contributions.map(serializeContribution),
       compositionItems: member.compositionItems.map(serializeCompositionItem),
+      receipts: member.receipts.map(serializeReceipt),
     },
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     agendaItems,

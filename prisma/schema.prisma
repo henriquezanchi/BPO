@@ -124,6 +124,7 @@ model Member {
 
   contributions        Contribution[]
   compositionItems     ContributionCompositionItem[]
+  receipts             ContributionReceipt[]
   fortunaTx            FortunaTransaction[]
   crmContacts          CrmContact[]
   eventRegistr         EventRegistration[]
@@ -190,6 +191,36 @@ model SchoolCompositionCatalogItem {
 
   @@unique([schoolId, mercurioGroupId])
   @@index([schoolId])
+}
+
+// Comprovantes reais de pagamento (recibos de caixa emitidos pela
+// tesouraria — tesoura/tes_cailstr.php + tes_conprt.php no Mercúrio).
+// A LISTA (mercurioRecId, issuedAt, amount, probablyCanceled) vem de uma
+// sincronização em lote por escola (scripts/sync-receipts.ts, varre a
+// listagem mensal — barata, não abre o documento de cada recibo). O
+// CONTEÚDO (rawText) só é buscado sob demanda, na primeira vez que o
+// membro pede pra ver/baixar um recibo específico (fila MercurioSyncTask,
+// taskType "buscar_recibo") — e cacheado pra sempre depois, porque um
+// recibo já emitido é um documento histórico imutável (só pode ser
+// cancelado, nunca alterado).
+model ContributionReceipt {
+  id               String    @id @default(cuid())
+  memberId         String
+  member           Member    @relation(fields: [memberId], references: [id])
+  mercurioRecId    String    @unique // "rec" no Mercúrio (ex: "1346179")
+  issuedAt         DateTime
+  amount           Decimal   @db.Decimal(10, 2)
+  // Heurística da listagem (linha sem o link "Cancela") — só pré-triagem,
+  // não é definitiva (ver nota em browser-session.ts:lerRecibosDoMes).
+  probablyCanceled Boolean   @default(false)
+  rawText          String?   @db.Text
+  // null = conteúdo nunca buscado, ainda não confirmado. true/false =
+  // confirmado de verdade ao ler o documento (tem/não tem "CANCELADO").
+  canceled         Boolean?
+  fetchedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([memberId])
 }
 
 model FortunaTransaction {

@@ -79,9 +79,15 @@ async function loginMercurio(page: Page, matricula: string, senha: string) {
   await page.waitForURL(/ger_frame\.php/, { timeout: 20000 });
 }
 
-async function listarLinksCadastro(page: Page) {
+/**
+ * Lista os links de um módulo (ex: "CADASTRO", "TESOURARIA") no menu de
+ * topo (ger_funcao.php) — cada filial tem sua própria instância desses
+ * links, identificada pelo texto da tabela de menu ancestral (nome da
+ * filial), não por um id estável.
+ */
+async function listarLinksMenu(page: Page, nomeFuncao: string) {
   const framePrincipal = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
-  const links = framePrincipal.getByRole("link", { name: "CADASTRO", exact: true });
+  const links = framePrincipal.getByRole("link", { name: nomeFuncao, exact: true });
   const total = await links.count();
   const resultado: { label: string; indice: number }[] = [];
   for (let i = 0; i < total; i++) {
@@ -135,7 +141,7 @@ export async function abrirSessaoMercurio(): Promise<SessaoMercurio> {
  * not found" ao tentar direto).
  */
 export async function abrirListaAtivos(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
-  const cadastros = await listarLinksCadastro(page);
+  const cadastros = await listarLinksMenu(page, "CADASTRO");
   const filial = cadastros.find((c) => filialLabelRegex.test(c.label));
   if (!filial) {
     throw new Error(`Filial batendo com ${filialLabelRegex} não encontrada entre: ${cadastros.map((c) => c.label).join(", ")}`);
@@ -147,6 +153,96 @@ export async function abrirListaAtivos(page: Page, filialLabelRegex: RegExp): Pr
   const frameIndice = await esperarFrame(page, "indice", /uni_indice\.php/, 15000);
   await frameIndice.getByText("Ativos", { exact: true }).click();
   return esperarFrame(page, "principal", /uni_newati\.php/, 15000);
+}
+
+/**
+ * Abre a tela "Recibos Emitidos" (tesoura/tes_cailstr.php) da Tesouraria de
+ * uma filial — listagem mensal (por padrão o mês corrente). Visitar essa
+ * tela é o que "destrava" a sessão pra emitir o documento do recibo depois
+ * (tes_conprt.php recusa direto com "Configure a impressora..." se a
+ * sessão nunca passou por aqui — confirmado ao vivo). `ano`/`mes`
+ * (opcionais) navegam pra um mês específico via os mesmos parâmetros que o
+ * seletor de mês da própria tela usa (pa=ano&pm=mes).
+ */
+export async function abrirTelaRecibos(page: Page, filialLabelRegex: RegExp, ano?: number, mes?: number): Promise<Frame> {
+  const tesourarias = await listarLinksMenu(page, "TESOURARIA");
+  const filial = tesourarias.find((t) => filialLabelRegex.test(t.label));
+  if (!filial) {
+    throw new Error(`Filial batendo com ${filialLabelRegex} sem link de TESOURARIA entre: ${tesourarias.map((t) => t.label).join(", ")}`);
+  }
+
+  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
+  await framePrincipal0.getByRole("link", { name: "TESOURARIA", exact: true }).nth(filial.indice).click();
+
+  const frameIndice = await esperarFrame(page, "indice", /tes_indice\.php/, 15000);
+  await frameIndice.getByRole("link", { name: "Recibos", exact: true }).click();
+
+  const frame = await esperarFrame(page, "principal", /tes_cailstr\.php/, 15000);
+  if (ano !== undefined && mes !== undefined) {
+    await frame.goto(`https://mercurio.oinabn.com.br/tesoura/tes_cailstr.php?pa=${ano}&pm=${mes}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(500);
+  }
+  return frame;
+}
+
+export interface ReciboMercurio {
+  mercurioRecId: string;
+  dateBR: string; // "dd/mm/yyyy"
+  interessado: string;
+  amount: number;
+  /**
+   * Heurística: a linha só oferece o link "Cancela" enquanto o recibo
+   * ainda está ativo — sua ausência sugere já cancelado/superado, mas não
+   * é garantido (a tela usa cor pra marcar status, perdida no texto). Não
+   * usar como fonte definitiva de "cancelado" — só pra pré-triagem; a
+   * confirmação de verdade vem do conteúdo do próprio documento (ver
+   * lerConteudoRecibo, que procura "CANCELADO" no texto).
+   */
+  provavelmenteCancelado: boolean;
+}
+
+/** Lê as linhas da listagem de Recibos Emitidos de um mês já aberto (ver abrirTelaRecibos). */
+export async function lerRecibosDoMes(frame: Frame): Promise<ReciboMercurio[]> {
+  const linhas = frame.locator('tr:has(a:has-text("Recibo"))');
+  const total = await linhas.count();
+  const resultado: ReciboMercurio[] = [];
+  for (let i = 0; i < total; i++) {
+    const linha = linhas.nth(i);
+    const celulas = linha.locator("td");
+    if ((await celulas.count()) < 5) continue;
+    const numTexto = (await celulas.nth(0).innerText()).trim();
+    const dateBR = (await celulas.nth(1).innerText()).trim();
+    const interessado = (await celulas.nth(2).innerText()).trim();
+    const amountTexto = (await celulas.nth(4).innerText()).trim();
+    const temCancela = (await linha.locator('a:has-text("Cancela")').count()) > 0;
+    const mercurioRecId = numTexto.replace(/^0+/, "");
+    if (!mercurioRecId || !dateBR) continue;
+    resultado.push({ mercurioRecId, dateBR, interessado, amount: parseValorFlexivel(amountTexto), provavelmenteCancelado: !temCancela });
+  }
+  return resultado;
+}
+
+export interface ConteudoRecibo {
+  rawText: string;
+  canceled: boolean;
+}
+
+/**
+ * Busca o documento de um recibo específico (tesoura/tes_conprt.php) — só
+ * funciona depois de ter passado pela tela de Recibos da filial certa na
+ * MESMA sessão (ver abrirTelaRecibos). Texto pré-formatado (monoespaçado),
+ * é o próprio comprovante — "CANCELADO" aparece literalmente no texto
+ * quando o recibo foi cancelado depois de emitido.
+ */
+export async function lerConteudoRecibo(page: Page, mercurioRecId: string): Promise<ConteudoRecibo> {
+  await page.goto(`https://mercurio.oinabn.com.br/tesoura/tes_conprt.php?rec=${mercurioRecId}`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(400);
+  const rawText = (await page.locator("pre").innerText()).trim();
+  // O template imprime "C A N C E L A D O" com espaço entre cada letra
+  // (confirmado ao vivo) — sem remover espaços antes, um regex simples
+  // "CANCELADO" nunca bate e o cancelamento passa batido.
+  const semEspacos = rawText.replace(/\s+/g, "").toUpperCase();
+  return { rawText, canceled: semEspacos.includes("CANCELADO") };
 }
 
 /**

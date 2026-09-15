@@ -7,6 +7,7 @@ import type {
   MercurioMemberIdentity,
   MercurioPersonalChanges,
   MercurioPersonalData,
+  MercurioReceiptContent,
   MercurioRosterEntry,
   MercurioWriteResult,
 } from "./adapter";
@@ -15,6 +16,7 @@ import {
   abrirFichaDaListaAtivos,
   abrirListaAtivos,
   abrirSessaoMercurio,
+  abrirTelaRecibos,
   escreverAbaEnderecos,
   escreverAbaIdentificacao,
   escreverAbaPessoais,
@@ -25,6 +27,7 @@ import {
   lerAbaPessoais,
   lerCatalogoItensDisponiveis,
   lerComposicao,
+  lerConteudoRecibo,
   RodadaEmAndamentoError,
 } from "./browser-session";
 import { parseLogradouro } from "./parse-logradouro";
@@ -234,6 +237,18 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
       }
     } catch (e) {
       return erroDeEscrita(e);
+    }
+  }
+
+  async fetchReceiptContent(member: MercurioMemberIdentity, mercurioRecId: string): Promise<MercurioReceiptContent> {
+    const { browser, page } = await abrirSessaoMercurio();
+    try {
+      // Só precisa passar pela tela de Recibos uma vez pra "destravar" a
+      // sessão — não importa qual mês, tes_conprt.php funciona por id.
+      await abrirTelaRecibos(page, new RegExp(member.filialLabel, "i"));
+      return await lerConteudoRecibo(page, mercurioRecId);
+    } finally {
+      await browser.close();
     }
   }
 }

@@ -83,8 +83,9 @@ async function main() {
   console.log("Seed concluído:");
   console.log(`  Aluno de teste: ${aluno.id} (${aluno.name})`);
   console.log(`  Professor de teste: ${professor.id} (${professor.name})`);
-  console.log(`  Acesse o portal em /portal?memberId=${aluno.id}`);
-  console.log(`  Acesse o painel do professor em /professor?memberId=${professor.id}`);
+  console.log(`  Portal do Membro agora usa login real (Supabase Auth) — não dá mais pra acessar por /portal?memberId=...`);
+  console.log(`  Rode "npx tsx --env-file=.env scripts/provision-member-auth.ts ${aluno.mercurioId}" pra criar/vincular o login, depois entre em /login com o e-mail do membro.`);
+  console.log(`  Acesse o painel do professor (ainda sem login real) em /professor?memberId=${professor.id}`);
 }
 
 main()

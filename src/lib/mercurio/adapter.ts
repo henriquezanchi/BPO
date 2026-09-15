@@ -102,6 +102,11 @@ export interface MercurioComposition {
   availableToAdd: MercurioCatalogItem[];
 }
 
+export interface MercurioReceiptContent {
+  rawText: string;
+  canceled: boolean;
+}
+
 export interface MercurioWriteResult {
   ok: boolean;
   error?: string;
@@ -136,4 +141,7 @@ export interface MercurioAdapter {
 
   /** Remove um item da composição pelo mercurioGroupId. */
   removeCompositionItem(member: MercurioMemberIdentity, mercurioGroupId: string): Promise<MercurioWriteResult>;
+
+  /** Busca o conteúdo (documento) de um recibo específico pelo id — 1 chamada cara, sob demanda. */
+  fetchReceiptContent(member: MercurioMemberIdentity, mercurioRecId: string): Promise<MercurioReceiptContent>;
 }

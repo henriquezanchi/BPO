@@ -230,9 +230,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               initialAvailableToAdd={availableToAdd}
             />
           )}
-          {modal === "historico" && (
-            <ContributionPanel contributions={member.contributions.filter((c) => c.paidAt)} />
-          )}
+          {modal === "historico" && <ContributionPanel memberId={member.id} receipts={member.receipts} />}
           {modal === "agenda" && <AgendaPanel items={agendaItems} />}
           {modal === "estudos" && <StudyAreaPanel />}
           {modal === "voluntariado" && <VolunteerPanel />}
