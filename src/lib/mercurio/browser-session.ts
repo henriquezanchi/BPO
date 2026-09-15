@@ -354,3 +354,108 @@ export async function escreverAbaIdentificacao(frame: Frame, dados: Partial<Dado
   await frame.getByRole("button", { name: /gravar/i }).first().click();
   await frame.page().waitForTimeout(1500);
 }
+
+// ===================== Composição das Contribuições =====================
+// Módulo diferente (Tesouraria/Economia, não a ficha uni_cadfun.php) —
+// confirmado ao vivo (2026-09-15) que dá pra navegar direto por matrícula
+// depois de já estar dentro da ficha do aluno (mesmo frame "principal").
+//   tesoura/tes_conedit.php?matr=X&cmb=ATI        = lista + incluir (cmbgrp)
+//   tesoura/tes_conedit1.php?matr=X&grp=Y&cmb=ATI = editar valor (txtval)
+//   tesoura/tes_conedit.php?matr=X&cmdExcluir=Y   = excluir (GET simples)
+// O "grp" de um item recém-incluído é o MESMO valor do catálogo (cmbgrp)
+// selecionado — confirmado ao vivo incluindo e excluindo "DIÁRIAS EVENTO
+// NACIONAL" (cmbgrp=2308) na composição real do Luiz.
+
+export interface ItemComposicaoMercurio {
+  mercurioGroupId: string;
+  label: string;
+  amount: number;
+}
+
+export interface CatalogoItemMercurio {
+  value: string;
+  label: string;
+}
+
+/**
+ * A tabela de Composição usa PONTO decimal ("100.00" — confirmado ao vivo,
+ * 2026-09-15), diferente da tela de Editar valor (tes_conedit1.php), que
+ * usa vírgula ("100,00", formato brasileiro). Em vez de assumir um
+ * formato fixo (bug real: assumir vírgula aqui inflava tudo por 100x, já
+ * que o "." de "100.00" era tratado como separador de milhar), decide
+ * pelo separador mais à direita — esse é sempre o decimal, nos dois
+ * formatos, com ou sem separador de milhar.
+ */
+function parseValorFlexivel(texto: string): number {
+  const limpo = texto.trim();
+  const ultimaVirgula = limpo.lastIndexOf(",");
+  const ultimoPonto = limpo.lastIndexOf(".");
+  let normalizado: string;
+  if (ultimaVirgula > ultimoPonto) {
+    normalizado = limpo.replace(/\./g, "").replace(",", ".");
+  } else if (ultimoPonto > ultimaVirgula) {
+    normalizado = limpo.replace(/,/g, "");
+  } else {
+    normalizado = limpo;
+  }
+  const n = parseFloat(normalizado);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+/** A partir da ficha já aberta (qualquer aba), navega pra Composição das Contribuições daquele aluno. */
+export async function abrirComposicao(page: Page, frameFicha: Frame, matricula: string): Promise<Frame> {
+  await frameFicha.goto(`https://mercurio.oinabn.com.br/tesoura/tes_conedit.php?matr=${matricula}&cmb=ATI`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.waitForTimeout(800);
+  return frameFicha;
+}
+
+export async function lerComposicao(frame: Frame): Promise<ItemComposicaoMercurio[]> {
+  const linhas = frame.locator('tr:has(a:has-text("Excluir"))');
+  const total = await linhas.count();
+  const itens: ItemComposicaoMercurio[] = [];
+  for (let i = 0; i < total; i++) {
+    const linha = linhas.nth(i);
+    const celulas = linha.locator("td");
+    const label = (await celulas.nth(0).innerText()).trim();
+    const valorTexto = (await celulas.nth(1).innerText()).trim();
+    const excluirHref = await linha.locator('a:has-text("Excluir")').getAttribute("href");
+    const grpMatch = excluirHref?.match(/cmdExcluir=(\d+)/);
+    if (!grpMatch) continue;
+    itens.push({ mercurioGroupId: grpMatch[1], label, amount: parseValorFlexivel(valorTexto) });
+  }
+  return itens;
+}
+
+/** Opções do <select> "Itens de Contribuição" — só os tipos que o aluno AINDA NÃO tem. */
+export async function lerCatalogoItensDisponiveis(frame: Frame): Promise<CatalogoItemMercurio[]> {
+  return frame.locator('select[name="cmbgrp"] option').evaluateAll((els) =>
+    els.map((el) => ({ value: (el as HTMLOptionElement).value, label: (el.textContent ?? "").trim() })),
+  );
+}
+
+/** Inclui um item pelo código do catálogo (value do <select> cmbgrp) — o Mercúrio aplica o valor padrão dele automaticamente. */
+export async function incluirItemComposicao(frame: Frame, mercurioGroupId: string): Promise<void> {
+  await frame.locator('select[name="cmbgrp"]').selectOption(mercurioGroupId);
+  await frame.getByRole("button", { name: /incluir/i }).click();
+  await frame.page().waitForTimeout(1000);
+}
+
+export async function excluirItemComposicao(frame: Frame, matricula: string, mercurioGroupId: string): Promise<void> {
+  await frame.goto(`https://mercurio.oinabn.com.br/tesoura/tes_conedit.php?matr=${matricula}&cmdExcluir=${mercurioGroupId}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await frame.page().waitForTimeout(800);
+}
+
+/** `novoValor` no formato brasileiro, ex: "50,00". */
+export async function editarValorItemComposicao(frame: Frame, matricula: string, mercurioGroupId: string, novoValor: string): Promise<void> {
+  await frame.goto(`https://mercurio.oinabn.com.br/tesoura/tes_conedit1.php?matr=${matricula}&grp=${mercurioGroupId}&cmb=ATI`, {
+    waitUntil: "domcontentloaded",
+  });
+  await frame.page().waitForTimeout(500);
+  await frame.locator('input[name="txtval"]').fill(novoValor);
+  await frame.getByRole("button", { name: /gravar/i }).click();
+  await frame.page().waitForTimeout(1000);
+}

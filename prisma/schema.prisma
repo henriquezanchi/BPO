@@ -113,15 +113,16 @@ model Member {
   status         MemberStatus @default(em_dia)
   createdAt      DateTime     @default(now())
 
-  contributions      Contribution[]
-  fortunaTx          FortunaTransaction[]
-  crmContacts        CrmContact[]
-  eventRegistr       EventRegistration[]
-  classMemberships   ClassMembership[]
-  createdActivities  Activity[]             @relation("ActivityCreator")
-  activityNotifs     ActivityNotification[]
-  contactChangeLogs  ContactChangeLog[]
-  mercurioSyncTasks  MercurioSyncTask[]
+  contributions        Contribution[]
+  compositionItems     ContributionCompositionItem[]
+  fortunaTx            FortunaTransaction[]
+  crmContacts          CrmContact[]
+  eventRegistr         EventRegistration[]
+  classMemberships     ClassMembership[]
+  createdActivities    Activity[]             @relation("ActivityCreator")
+  activityNotifs       ActivityNotification[]
+  contactChangeLogs    ContactChangeLog[]
+  mercurioSyncTasks    MercurioSyncTask[]
 
   @@index([schoolId])
 }
@@ -137,6 +138,30 @@ model Contribution {
   gatewayRef String? // id da cobrança no Asaas
   createdAt  DateTime            @default(now())
 
+  @@index([memberId])
+}
+
+// ===================== Composição das Contribuições =====================
+// Espelha a tela "Composição das Contribuições" do Mercúrio
+// (tesoura/tes_conedit.php) — a lista de itens que somados formam a
+// mensalidade do membro (ex: CONTRIBUIÇÃO BIBLIOTECA, CC FILIAL, DIRIGENTE...).
+// mercurioGroupId é o "grp" da URL de lá — identifica o item de verdade,
+// usado pra editar/excluir no Mercúrio. addedViaPortal marca o que o
+// PRÓPRIO membro incluiu pelo Portal — regra de negócio explícita: só
+// esses podem ser editados/excluídos por ele; itens que já vieram do
+// Mercúrio (lançados pela tesouraria) são só leitura no Portal.
+model ContributionCompositionItem {
+  id              String   @id @default(cuid())
+  memberId        String
+  member          Member   @relation(fields: [memberId], references: [id])
+  mercurioGroupId String // "grp" no Mercúrio
+  label           String // "CONTRIBUIÇÃO BIBLIOTECA"
+  amount          Decimal  @db.Decimal(10, 2)
+  addedViaPortal  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([memberId, mercurioGroupId])
   @@index([memberId])
 }
 

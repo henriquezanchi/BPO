@@ -10,6 +10,9 @@ export const mercurioAdapter: MercurioAdapter = temCredenciaisReais ? new Playwr
 
 export type {
   MercurioAdapter,
+  MercurioCatalogItem,
+  MercurioComposition,
+  MercurioCompositionItem,
   MercurioContactChanges,
   MercurioContactData,
   MercurioMemberIdentity,

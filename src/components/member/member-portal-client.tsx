@@ -26,6 +26,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { AgendaPanel } from "./panels/agenda-panel";
 import { ContributionPanel } from "./panels/contribution-panel";
+import { MyContributionPanel } from "./panels/my-contribution-panel";
 import { ProfileEditPanel } from "./panels/profile-edit-panel";
 import { StudyAreaPanel } from "./panels/study-area-panel";
 import { GafPanel, HelpPanel, VolunteerPanel } from "./misc-panels";
@@ -222,7 +223,9 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               addressZip={member.addressZip}
             />
           )}
-          {modal === "contribuicao" && <ContributionPanel contributions={member.contributions} />}
+          {modal === "contribuicao" && (
+            <MyContributionPanel memberId={member.id} compositionItems={member.compositionItems} />
+          )}
           {modal === "historico" && (
             <ContributionPanel contributions={member.contributions.filter((c) => c.paidAt)} />
           )}

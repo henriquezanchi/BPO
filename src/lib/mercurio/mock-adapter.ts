@@ -1,6 +1,7 @@
 import type {
   MercurioAdapter,
   MercurioClass,
+  MercurioComposition,
   MercurioContactChanges,
   MercurioContactData,
   MercurioMemberIdentity,
@@ -65,6 +66,21 @@ export class MockMercurioAdapter implements MercurioAdapter {
 
   async pushPersonalUpdate(member: MercurioMemberIdentity, changes: MercurioPersonalChanges): Promise<MercurioWriteResult> {
     console.warn(`[MockMercurioAdapter] pushPersonalUpdate(${member.matricula}) — simulado, nada foi escrito no Mercúrio de verdade.`, changes);
+    return { ok: true };
+  }
+
+  async pullComposition(member: MercurioMemberIdentity): Promise<MercurioComposition> {
+    console.warn(`[MockMercurioAdapter] pullComposition(${member.matricula}) — credenciais do Mercúrio não configuradas, devolvendo vazio.`);
+    return { items: [], availableToAdd: [] };
+  }
+
+  async addCompositionItem(member: MercurioMemberIdentity, mercurioGroupId: string): Promise<MercurioWriteResult> {
+    console.warn(`[MockMercurioAdapter] addCompositionItem(${member.matricula}, ${mercurioGroupId}) — simulado.`);
+    return { ok: true };
+  }
+
+  async removeCompositionItem(member: MercurioMemberIdentity, mercurioGroupId: string): Promise<MercurioWriteResult> {
+    console.warn(`[MockMercurioAdapter] removeCompositionItem(${member.matricula}, ${mercurioGroupId}) — simulado.`);
     return { ok: true };
   }
 }

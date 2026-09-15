@@ -83,6 +83,25 @@ export interface MercurioPersonalData {
   rgDataEmissao: Date | null;
 }
 
+// "Minha Contribuição" (tesoura/tes_conedit.php). Cada item vem com o
+// mercurioGroupId ("grp" na URL de lá) — precisa pra editar/excluir depois.
+export interface MercurioCompositionItem {
+  mercurioGroupId: string;
+  label: string;
+  amount: number;
+}
+
+/** Um tipo de item ainda não presente na composição do aluno, disponível pra incluir. */
+export interface MercurioCatalogItem {
+  value: string;
+  label: string;
+}
+
+export interface MercurioComposition {
+  items: MercurioCompositionItem[];
+  availableToAdd: MercurioCatalogItem[];
+}
+
 export interface MercurioWriteResult {
   ok: boolean;
   error?: string;
@@ -106,4 +125,13 @@ export interface MercurioAdapter {
 
   /** Envia uma atualização de "Mais Dados" para o Mercúrio. */
   pushPersonalUpdate(member: MercurioMemberIdentity, changes: MercurioPersonalChanges): Promise<MercurioWriteResult>;
+
+  /** Lê a composição das contribuições (itens + catálogo do que ainda pode ser incluído). */
+  pullComposition(member: MercurioMemberIdentity): Promise<MercurioComposition>;
+
+  /** Inclui um item da composição pelo código do catálogo (MercurioCatalogItem.value). */
+  addCompositionItem(member: MercurioMemberIdentity, mercurioGroupId: string): Promise<MercurioWriteResult>;
+
+  /** Remove um item da composição pelo mercurioGroupId. */
+  removeCompositionItem(member: MercurioMemberIdentity, mercurioGroupId: string): Promise<MercurioWriteResult>;
 }

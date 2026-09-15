@@ -1,6 +1,7 @@
 import type {
   MercurioAdapter,
   MercurioClass,
+  MercurioComposition,
   MercurioContactChanges,
   MercurioContactData,
   MercurioMemberIdentity,
@@ -10,15 +11,20 @@ import type {
   MercurioWriteResult,
 } from "./adapter";
 import {
+  abrirComposicao,
   abrirFichaDaListaAtivos,
   abrirListaAtivos,
   abrirSessaoMercurio,
   escreverAbaEnderecos,
   escreverAbaIdentificacao,
   escreverAbaPessoais,
+  excluirItemComposicao,
+  incluirItemComposicao,
   lerAbaEnderecos,
   lerAbaIdentificacao,
   lerAbaPessoais,
+  lerCatalogoItensDisponiveis,
+  lerComposicao,
 } from "./browser-session";
 import { parseLogradouro } from "./parse-logradouro";
 import type { Page } from "playwright";
@@ -167,6 +173,50 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
           });
         }
 
+        return { ok: true };
+      } finally {
+        await browser.close();
+      }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
+    }
+  }
+
+  async pullComposition(member: MercurioMemberIdentity): Promise<MercurioComposition> {
+    const { browser, page } = await abrirSessaoMercurio();
+    try {
+      const frameFicha = await abrirFichaEmEnderecos(page, new RegExp(member.filialLabel, "i"), new RegExp(member.name, "i"));
+      const frame = await abrirComposicao(page, frameFicha, member.matricula);
+      const [items, availableToAdd] = await Promise.all([lerComposicao(frame), lerCatalogoItensDisponiveis(frame)]);
+      return { items, availableToAdd };
+    } finally {
+      await browser.close();
+    }
+  }
+
+  async addCompositionItem(member: MercurioMemberIdentity, mercurioGroupId: string): Promise<MercurioWriteResult> {
+    try {
+      const { browser, page } = await abrirSessaoMercurio();
+      try {
+        const frameFicha = await abrirFichaEmEnderecos(page, new RegExp(member.filialLabel, "i"), new RegExp(member.name, "i"));
+        const frame = await abrirComposicao(page, frameFicha, member.matricula);
+        await incluirItemComposicao(frame, mercurioGroupId);
+        return { ok: true };
+      } finally {
+        await browser.close();
+      }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
+    }
+  }
+
+  async removeCompositionItem(member: MercurioMemberIdentity, mercurioGroupId: string): Promise<MercurioWriteResult> {
+    try {
+      const { browser, page } = await abrirSessaoMercurio();
+      try {
+        const frameFicha = await abrirFichaEmEnderecos(page, new RegExp(member.filialLabel, "i"), new RegExp(member.name, "i"));
+        const frame = await abrirComposicao(page, frameFicha, member.matricula);
+        await excluirItemComposicao(frame, member.matricula, mercurioGroupId);
         return { ok: true };
       } finally {
         await browser.close();
