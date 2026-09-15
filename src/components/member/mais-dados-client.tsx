@@ -1,6 +1,7 @@
 "use client";
 
 import { updatePersonalData } from "@/lib/actions/personal-data-actions";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ESCOLARIDADE_OPCOES, ESTADO_CIVIL_OPCOES } from "@/lib/mercurio/personal-data-options";
 import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -19,7 +20,8 @@ interface MaisDadosClientProps {
 }
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light";
+  "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100";
+const LABEL_CLASS = "text-[11px] font-semibold text-gray-800 dark:text-gray-300";
 
 export function MaisDadosClient(props: MaisDadosClientProps) {
   const { memberId } = props;
@@ -44,29 +46,32 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white sm:my-5 sm:rounded-[28px]">
-      <header className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
-        <Link
-          href={`/portal?memberId=${memberId}`}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100"
-        >
-          <ArrowLeft size={18} />
-        </Link>
-        <h1 className="text-base font-bold text-na-green-dark">Mais Dados</h1>
+    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
+      <header className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/portal?memberId=${memberId}`}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            <ArrowLeft size={18} />
+          </Link>
+          <h1 className="text-base font-bold text-na-green-dark dark:text-emerald-400">Mais Dados</h1>
+        </div>
+        <ThemeToggle />
       </header>
 
       <form action={handleSubmit} autoComplete="on" className="flex flex-1 flex-col gap-4 p-5 text-left">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           Esses dados vêm do seu cadastro oficial no Mercúrio e podem ser corrigidos por aqui.
         </p>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">Data de Nascimento</label>
+          <label className={LABEL_CLASS}>Data de Nascimento</label>
           <input name="birthDate" type="date" autoComplete="bday" defaultValue={props.birthDate} className={INPUT_CLASS} />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">Naturalidade</label>
+          <label className={LABEL_CLASS}>Naturalidade</label>
           <input
             name="naturalidade"
             placeholder="Cidade/UF"
@@ -77,7 +82,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
 
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-800">Estado Civil</label>
+            <label className={LABEL_CLASS}>Estado Civil</label>
             <select name="estadoCivil" defaultValue={props.estadoCivil ?? "???"} className={INPUT_CLASS}>
               {ESTADO_CIVIL_OPCOES.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -87,7 +92,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-800">Escolaridade</label>
+            <label className={LABEL_CLASS}>Escolaridade</label>
             <select name="escolaridade" defaultValue={props.escolaridade ?? "???"} className={INPUT_CLASS}>
               {ESCOLARIDADE_OPCOES.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -99,7 +104,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">Profissão</label>
+          <label className={LABEL_CLASS}>Profissão</label>
           <input
             name="profession"
             autoComplete="organization-title"
@@ -108,21 +113,21 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
           />
         </div>
 
-        <div className="mt-2 mb-1 text-[11px] font-bold text-gray-900">Identidade (RG)</div>
+        <div className="mt-2 mb-1 text-[11px] font-bold text-gray-900 dark:text-gray-100">Identidade (RG)</div>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-800">Número do RG</label>
+            <label className={LABEL_CLASS}>Número do RG</label>
             <input name="rgNumero" inputMode="numeric" defaultValue={props.rgNumero ?? ""} className={INPUT_CLASS} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-800">Órgão Emissor</label>
+            <label className={LABEL_CLASS}>Órgão Emissor</label>
             <input name="rgOrgaoEmissor" placeholder="Ex: SSPPE" defaultValue={props.rgOrgaoEmissor ?? ""} className={INPUT_CLASS} />
           </div>
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">Data de Emissão do RG</label>
+          <label className={LABEL_CLASS}>Data de Emissão do RG</label>
           <input name="rgDataEmissao" type="date" defaultValue={props.rgDataEmissao} className={INPUT_CLASS} />
         </div>
 
@@ -136,7 +141,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
         </button>
 
         {result?.changed && (
-          <div className="flex items-start gap-2 rounded-lg bg-green-50 p-3 text-[11px] text-green-800">
+          <div className="flex items-start gap-2 rounded-lg bg-green-50 p-3 text-[11px] text-green-800 dark:bg-green-950/30 dark:text-green-300">
             <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
             <span>
               Dados atualizados com sucesso.{" "}

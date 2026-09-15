@@ -9,7 +9,7 @@ export function GafPanel() {
   const [sent, setSent] = useState(false);
   return (
     <div className="text-left">
-      <p className="mb-3 text-xs text-gray-600">
+      <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">
         O <strong>Grupo de Acompanhamento Filosófico (GAF)</strong> é um espaço criado para apoiar o aluno em sua
         jornada de vivência prática da filosofia, com encontros periódicos e acompanhamento próximo por instrutores.
       </p>
@@ -34,7 +34,7 @@ export function VolunteerPanel() {
 
   return (
     <div className="text-left">
-      <p className="mb-3 text-xs text-gray-600">Ofereça-se para ajudar no funcionamento da escola:</p>
+      <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">Ofereça-se para ajudar no funcionamento da escola:</p>
       <div className="mb-4 flex flex-wrap gap-2">
         {SECRETARIAS.map((s) => (
           <button
@@ -42,8 +42,8 @@ export function VolunteerPanel() {
             onClick={() => toggle(s)}
             className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
               active.includes(s)
-                ? "border-na-green bg-na-green-light text-na-green-dark"
-                : "border-gray-200 bg-gray-50 text-gray-700 hover:border-na-green"
+                ? "border-na-green bg-na-green-light text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-400"
+                : "border-gray-200 bg-gray-50 text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
             }`}
           >
             {s}
@@ -64,7 +64,7 @@ export function VolunteerPanel() {
 export function HelpPanel({ whatsapp }: { whatsapp: string }) {
   return (
     <div className="py-2 text-center">
-      <p className="mb-4 text-xs text-gray-600">
+      <p className="mb-4 text-xs text-gray-600 dark:text-gray-400">
         Precisa de ajuda com sua composição, recibos ou tem alguma dúvida? Nossa equipe está pronta para te
         atender via WhatsApp.
       </p>

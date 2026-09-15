@@ -12,24 +12,24 @@ export function ContributionPanel({ contributions }: { contributions: Serialized
 
   return (
     <div className="text-left">
-      <p className="mb-3 text-xs text-gray-500">Sua contribuição mensal atual:</p>
+      <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Sua contribuição mensal atual:</p>
 
-      <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+      <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
         {latest ? (
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
-              <CheckCircle2 size={14} className="text-na-green" /> Contribuição de Membro
+              <CheckCircle2 size={14} className="text-na-green dark:text-emerald-400" /> Contribuição de Membro
             </span>
             <strong>{formatBRL(Number(latest.amount))}</strong>
           </div>
         ) : (
-          <p className="text-xs text-gray-500">Nenhuma contribuição cadastrada ainda.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Nenhuma contribuição cadastrada ainda.</p>
         )}
 
         {latest && (
           <>
-            <hr className="my-2.5 border-dashed border-gray-300" />
-            <div className="flex justify-between text-sm font-bold text-na-green-dark">
+            <hr className="my-2.5 border-dashed border-gray-300 dark:border-gray-600" />
+            <div className="flex justify-between text-sm font-bold text-na-green-dark dark:text-emerald-400">
               <span>Total da Composição</span>
               <span>{formatBRL(Number(latest.amount))}/mês</span>
             </div>
@@ -37,12 +37,12 @@ export function ContributionPanel({ contributions }: { contributions: Serialized
         )}
       </div>
 
-      <div className="mb-2 text-[13px] font-bold text-gray-900">Histórico Recente</div>
+      <div className="mb-2 text-[13px] font-bold text-gray-900 dark:text-gray-100">Histórico Recente</div>
       <div className="flex flex-col gap-1.5">
         {contributions.map((c) => (
           <div
             key={c.id}
-            className="flex items-center justify-between rounded-lg border border-gray-200 p-2.5 text-xs"
+            className="flex items-center justify-between rounded-lg border border-gray-200 p-2.5 text-xs dark:border-gray-700"
           >
             <span>Venc. {formatDateBR(c.dueDate)}</span>
             <span className="font-semibold">{formatBRL(Number(c.amount))}</span>

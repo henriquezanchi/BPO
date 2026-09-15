@@ -17,12 +17,27 @@ export const metadata: Metadata = {
   description: "Autogestão, carteira digital e agenda de atividades para membros e professores.",
 };
 
+// Roda ANTES da hidratação (script síncrono no <head>) pra aplicar a
+// classe "dark" já no primeiro paint — sem isso, a página nasceria clara
+// e só escureceria um instante depois (flash visível), mesmo pra quem já
+// escolheu modo noturno antes. Ver src/components/ui/theme-toggle.tsx.
+const THEME_INIT_SCRIPT = `
+  try {
+    if (localStorage.getItem('na-theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  } catch (e) {}
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

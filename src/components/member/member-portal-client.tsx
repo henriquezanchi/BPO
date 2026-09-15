@@ -1,6 +1,7 @@
 "use client";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { formatBRL } from "@/lib/format";
 import type { MemberDashboard } from "@/lib/member-data";
 import {
@@ -56,10 +57,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
   const schoolWhatsapp = member.school.whatsapp ?? member.whatsapp;
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px]">
-      <header className="border-b border-gray-100 bg-white px-5 pt-6 pb-4 text-center">
+    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
+      <header className="relative border-b border-gray-100 bg-white px-5 pt-6 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
+        <ThemeToggle className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
         <div className="mb-5 flex justify-center">
-          <Image src="/na-logo.png" alt={member.school.name} width={160} height={48} className="h-auto w-40" />
+          <Image src="/na-logo.png" alt={member.school.name} width={160} height={48} className="h-auto w-40 dark:brightness-0 dark:invert" />
         </div>
 
         <div className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-left text-white">
@@ -84,26 +86,34 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24">
+      <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         {/* Status financeiro */}
         <div
           className={`flex flex-col gap-3 rounded-2xl border p-4 ${
-            isDelayed ? "border-red-300 bg-red-50" : "border-emerald-300 bg-emerald-50"
+            isDelayed
+              ? "border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+              : "border-emerald-300 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30"
           }`}
         >
           <div className="flex items-center gap-2.5">
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                isDelayed ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+                isDelayed
+                  ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"
+                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
               }`}
             >
               {isDelayed ? <TriangleAlert size={16} /> : <CheckCircle2 size={16} />}
             </div>
             <div>
-              <h4 className={`text-[13px] font-bold ${isDelayed ? "text-red-800" : "text-emerald-800"}`}>
+              <h4
+                className={`text-[13px] font-bold ${
+                  isDelayed ? "text-red-800 dark:text-red-300" : "text-emerald-800 dark:text-emerald-300"
+                }`}
+              >
                 {isDelayed ? "Contribuição Pendente" : "Contribuição em Dia"}
               </h4>
-              <p className="mt-0.5 text-xs text-gray-700">
+              <p className="mt-0.5 text-xs text-gray-700 dark:text-gray-400">
                 Olá, {member.name.split(" ")[0]}. Sua contribuição deste mês está{" "}
                 {isDelayed ? "atrasada" : "em dia"}.
               </p>
@@ -120,24 +130,24 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               </button>
             </div>
           ) : (
-            <div className="flex justify-between rounded-lg bg-white/70 p-2.5 text-[11px]">
-              <span className="flex items-center gap-1.5">
+            <div className="flex justify-between rounded-lg bg-white/70 p-2.5 text-[11px] dark:bg-black/20">
+              <span className="flex items-center gap-1.5 dark:text-gray-300">
                 <CreditCard size={13} /> Cartão cadastrado (Débito Automático)
               </span>
-              <span className="font-semibold text-emerald-700">Ativo</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">Ativo</span>
             </div>
           )}
         </div>
 
         {/* Carteira Fortuna */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
           <span className="mb-3 block text-[11px] font-semibold text-na-gold">
             <Coffee size={12} className="mr-1 inline" /> CARTEIRA DIGITAL FORTUNA
           </span>
           <div className="flex items-end justify-between">
             <div>
-              <div className="text-[11px] text-gray-500">Saldo atual na lanchonete</div>
-              <div className="text-2xl font-bold text-na-green">{formatBRL(walletBalance)}</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400">Saldo atual na lanchonete</div>
+              <div className="text-2xl font-bold text-na-green dark:text-emerald-400">{formatBRL(walletBalance)}</div>
             </div>
             <button className="flex items-center gap-1.5 rounded-xl bg-na-green px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-na-green-dark">
               <Plus size={14} /> Adicionar Créditos
@@ -149,14 +159,14 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
         <section className="grid grid-cols-2 gap-2.5">
           <button
             onClick={() => setModal("gaf")}
-            className="col-span-2 flex items-center gap-4 rounded-2xl border border-na-gold bg-amber-50/60 p-3.5 text-left transition hover:-translate-y-0.5"
+            className="col-span-2 flex items-center gap-4 rounded-2xl border border-na-gold bg-amber-50/60 p-3.5 text-left transition hover:-translate-y-0.5 dark:bg-amber-950/20"
           >
             <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold">
               <UsersRound size={20} />
             </div>
             <div>
-              <h5 className="text-sm font-semibold text-na-green-dark">Grupo de Acompanhamento (GAF)</h5>
-              <p className="mt-0.5 text-[11px] text-gray-500">Conheça e faça sua adesão ao grupo</p>
+              <h5 className="text-sm font-semibold text-na-green-dark dark:text-emerald-400">Grupo de Acompanhamento (GAF)</h5>
+              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Conheça e faça sua adesão ao grupo</p>
             </div>
           </button>
 
@@ -230,13 +240,13 @@ function FeatureTile({
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-start gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold"
+      className="flex flex-col items-start gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold dark:border-gray-800 dark:bg-gray-900"
     >
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-green-light text-na-green">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
         {icon}
       </div>
-      <h5 className="text-xs font-semibold text-gray-900">{title}</h5>
-      <p className="text-[10px] text-gray-500">{subtitle}</p>
+      <h5 className="text-xs font-semibold text-gray-900 dark:text-gray-100">{title}</h5>
+      <p className="text-[10px] text-gray-500 dark:text-gray-400">{subtitle}</p>
     </button>
   );
 }

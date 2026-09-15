@@ -21,7 +21,8 @@ interface ProfileEditPanelProps {
 
 // Classe repetida nos inputs de texto do formulário.
 const INPUT_CLASS =
-  "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light";
+  "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100";
+const LABEL_CLASS = "text-[11px] font-semibold text-gray-800 dark:text-gray-300";
 
 export function ProfileEditPanel(props: ProfileEditPanelProps) {
   const { memberId, name } = props;
@@ -60,16 +61,16 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       </p>
 
       <div className="mb-3 flex flex-col gap-1">
-        <label className="text-[11px] font-semibold text-gray-800">Nome Completo</label>
+        <label className={LABEL_CLASS}>Nome Completo</label>
         <input
           disabled
           defaultValue={name}
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-[13px] text-gray-500"
+          className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-[13px] text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
         />
       </div>
 
       <div className="mb-3 flex flex-col gap-1">
-        <label className="text-[11px] font-semibold text-gray-800">WhatsApp</label>
+        <label className={LABEL_CLASS}>WhatsApp</label>
         <input
           name="whatsapp"
           type="tel"
@@ -81,7 +82,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       </div>
 
       <div className="mb-3 flex flex-col gap-1">
-        <label className="text-[11px] font-semibold text-gray-800">E-mail</label>
+        <label className={LABEL_CLASS}>E-mail</label>
         <input
           name="email"
           type="email"
@@ -91,11 +92,11 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         />
       </div>
 
-      <div className="mb-1 text-[11px] font-bold text-gray-900">Endereço</div>
+      <div className="mb-1 text-[11px] font-bold text-gray-900 dark:text-gray-100">Endereço</div>
 
       <div className="mb-3 grid grid-cols-3 gap-2">
         <div className="col-span-2 flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">Rua</label>
+          <label className={LABEL_CLASS}>Rua</label>
           <input
             name="addressStreet"
             autoComplete="address-line1"
@@ -104,7 +105,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">Número</label>
+          <label className={LABEL_CLASS}>Número</label>
           <input
             name="addressNumber"
             inputMode="numeric"
@@ -115,7 +116,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       </div>
 
       <div className="mb-3 flex flex-col gap-1">
-        <label className="text-[11px] font-semibold text-gray-800">Complemento</label>
+        <label className={LABEL_CLASS}>Complemento</label>
         <input
           name="addressComplement"
           autoComplete="address-line2"
@@ -127,7 +128,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
 
       <div className="mb-3 grid grid-cols-2 gap-2">
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">Bairro</label>
+          <label className={LABEL_CLASS}>Bairro</label>
           <input
             name="addressNeighborhood"
             autoComplete="address-level3"
@@ -136,7 +137,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">CEP</label>
+          <label className={LABEL_CLASS}>CEP</label>
           <input
             name="addressZip"
             inputMode="numeric"
@@ -149,7 +150,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
 
       <div className="mb-5 grid grid-cols-3 gap-2">
         <div className="col-span-2 flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">Cidade</label>
+          <label className={LABEL_CLASS}>Cidade</label>
           <input
             name="addressCity"
             autoComplete="address-level2"
@@ -158,7 +159,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-800">UF</label>
+          <label className={LABEL_CLASS}>UF</label>
           <input
             name="addressState"
             maxLength={2}
@@ -171,10 +172,10 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
 
       <Link
         href={`/portal/mais-dados?memberId=${memberId}`}
-        className="mb-5 flex items-center justify-between rounded-xl border border-gray-200 p-3 text-[13px] font-medium text-gray-800 transition hover:border-na-gold"
+        className="mb-5 flex items-center justify-between rounded-xl border border-gray-200 p-3 text-[13px] font-medium text-gray-800 transition hover:border-na-gold dark:border-gray-700 dark:text-gray-200"
       >
         Mais Dados
-        <ChevronRight size={16} className="text-gray-400" />
+        <ChevronRight size={16} className="text-gray-400 dark:text-gray-500" />
       </Link>
 
       <button
@@ -187,7 +188,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       </button>
 
       {result?.changed && (
-        <div className="mt-3 flex items-start gap-2 rounded-lg bg-green-50 p-3 text-[11px] text-green-800">
+        <div className="mt-3 flex items-start gap-2 rounded-lg bg-green-50 p-3 text-[11px] text-green-800 dark:bg-green-950/30 dark:text-green-300">
           <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
           <span>
             Dados atualizados com sucesso.{" "}
@@ -199,7 +200,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       )}
 
       {result?.alerted && (
-        <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-[11px] text-amber-800">
+        <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
           <span>
             Como sua contribuição está em atraso, a secretaria de economia foi notificada desta alteração de
