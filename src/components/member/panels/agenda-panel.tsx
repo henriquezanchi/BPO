@@ -1,10 +1,11 @@
 "use client";
 
 import { toggleAgendaReaction } from "@/lib/actions/reaction-actions";
+import { votePoll } from "@/lib/actions/poll-actions";
 import { EMOJIS_PERMITIDOS } from "@/lib/agenda-reactions";
 import { formatBRL, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem, AgendaReactionSummary } from "@/lib/member-data";
-import { GraduationCap, PartyPopper } from "lucide-react";
+import { GraduationCap, ListChecks, PartyPopper } from "lucide-react";
 import { useState, useTransition } from "react";
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -69,6 +70,66 @@ function ReactionBar({
   );
 }
 
+/**
+ * Enquete criada pelo professor (ver createPoll) — o resultado (barra e %)
+ * só aparece depois que o próprio aluno vota, pra não influenciar quem
+ * ainda não respondeu.
+ */
+function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaItem, { kind: "enquete" }> }) {
+  const [options, setOptions] = useState(item.options);
+  const [myVote, setMyVote] = useState(item.myVote);
+  const [isPending, startTransition] = useTransition();
+
+  function handleVote(optionId: string) {
+    startTransition(async () => {
+      const res = await votePoll(memberId, item.id, optionId);
+      setMyVote(res.myOptionId);
+      setOptions((prev) => prev.map((o) => ({ ...o, votes: res.counts[o.id] ?? 0 })));
+    });
+  }
+
+  const total = options.reduce((soma, o) => soma + o.votes, 0);
+
+  return (
+    <div className="rounded-xl border border-na-gold/30 bg-na-gold/5 p-3 dark:bg-na-gold/10">
+      <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold">
+        <ListChecks size={14} /> ENQUETE · {item.className}
+      </div>
+      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.question}</div>
+      <div className="mt-2 flex flex-col gap-1.5">
+        {options.map((o) => {
+          const pct = total > 0 ? Math.round((o.votes / total) * 100) : 0;
+          const selecionada = myVote === o.id;
+          return (
+            <button
+              key={o.id}
+              onClick={() => handleVote(o.id)}
+              disabled={isPending}
+              className={`relative overflow-hidden rounded-lg border px-2.5 py-1.5 text-left text-[12px] transition disabled:opacity-60 ${
+                selecionada ? "border-na-green" : "border-gray-200 dark:border-gray-700"
+              }`}
+            >
+              {myVote && (
+                <div className="absolute inset-y-0 left-0 bg-na-green-light dark:bg-emerald-950/40" style={{ width: `${pct}%` }} />
+              )}
+              <div className="relative flex items-center justify-between">
+                <span className={selecionada ? "font-semibold text-na-green-dark dark:text-emerald-400" : "text-gray-700 dark:text-gray-300"}>
+                  {o.label}
+                </span>
+                {myVote && (
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {pct}% ({o.votes})
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function AgendaPanel({ memberId, items }: { memberId: string; items: AgendaItem[] }) {
   if (items.length === 0) {
     return (
@@ -81,7 +142,9 @@ export function AgendaPanel({ memberId, items }: { memberId: string; items: Agen
   return (
     <div className="flex flex-col gap-3">
       {items.map((item) =>
-        item.kind === "evento" ? (
+        item.kind === "enquete" ? (
+          <PollCard key={`enquete-${item.id}`} memberId={memberId} item={item} />
+        ) : item.kind === "evento" ? (
           <div
             key={`evento-${item.id}`}
             className="rounded-xl border border-gray-200 p-3 dark:border-gray-700"

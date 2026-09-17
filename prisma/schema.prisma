@@ -159,6 +159,8 @@ model Member {
   contactChangeLogs    ContactChangeLog[]
   mercurioSyncTasks    MercurioSyncTask[]
   agendaReactions      AgendaReaction[]
+  createdPolls         Poll[]                  @relation("PollCreator")
+  pollVotes            PollVote[]
 
   @@index([schoolId])
 }
@@ -401,6 +403,7 @@ model ClassGroup {
 
   memberships ClassMembership[]
   activities  Activity[]
+  polls       Poll[]
 
   @@index([schoolId])
 }
@@ -437,6 +440,49 @@ model Activity {
   notifications ActivityNotification[]
 
   @@index([classGroupId])
+}
+
+// Enquete criada pelo professor para uma turma — os alunos votam numa
+// opção (1 voto por membro, ver PollVote) e o resultado aparece igual a
+// uma atividade dentro de "Agenda & Eventos" no Portal do Membro.
+model Poll {
+  id           String     @id @default(cuid())
+  classGroupId String
+  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id])
+  createdById  String
+  createdBy    Member     @relation("PollCreator", fields: [createdById], references: [id])
+  question     String
+  createdAt    DateTime   @default(now())
+
+  options PollOption[]
+  votes   PollVote[]
+
+  @@index([classGroupId])
+}
+
+model PollOption {
+  id     String @id @default(cuid())
+  pollId String
+  poll   Poll   @relation(fields: [pollId], references: [id])
+  label  String
+
+  votes PollVote[]
+
+  @@index([pollId])
+}
+
+model PollVote {
+  id           String     @id @default(cuid())
+  pollId       String
+  poll         Poll       @relation(fields: [pollId], references: [id])
+  pollOptionId String
+  pollOption   PollOption @relation(fields: [pollOptionId], references: [id])
+  memberId     String
+  member       Member     @relation(fields: [memberId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@unique([pollId, memberId])
+  @@index([pollOptionId])
 }
 
 // Registro de envio de notificação por aluno (WhatsApp hoje; push como

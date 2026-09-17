@@ -30,6 +30,12 @@ export interface AgendaReactionSummary {
   reactedByMe: boolean;
 }
 
+export interface PollOptionView {
+  id: string;
+  label: string;
+  votes: number;
+}
+
 export type AgendaItem =
   | {
       kind: "evento";
@@ -49,6 +55,15 @@ export type AgendaItem =
       description: string | null;
       className: string;
       reactions: AgendaReactionSummary[];
+    }
+  | {
+      kind: "enquete";
+      id: string;
+      question: string;
+      date: Date; // createdAt da enquete — não tem uma "data" própria como evento/atividade
+      className: string;
+      options: PollOptionView[];
+      myVote: string | null; // id da PollOption votada, null se ainda não votou
     };
 
 /**
@@ -111,7 +126,7 @@ export async function getMemberDashboard(memberId: string) {
     .filter((cm) => cm.role === "aluno")
     .map((cm) => cm.classGroupId);
 
-  const [schoolEvents, classActivities] = await Promise.all([
+  const [schoolEvents, classActivities, classPolls] = await Promise.all([
     db.event.findMany({
       where: { schoolId: member.schoolId, startsAt: { gte: new Date() } },
       orderBy: { startsAt: "asc" },
@@ -121,6 +136,13 @@ export async function getMemberDashboard(memberId: string) {
           where: { classGroupId: { in: studentClassGroupIds }, dueDate: { gte: new Date() } },
           include: { classGroup: true },
           orderBy: { dueDate: "asc" },
+        })
+      : Promise.resolve([]),
+    studentClassGroupIds.length
+      ? db.poll.findMany({
+          where: { classGroupId: { in: studentClassGroupIds } },
+          include: { classGroup: true, options: { include: { votes: true } } },
+          orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
   ]);
@@ -169,6 +191,17 @@ export async function getMemberDashboard(memberId: string) {
         description: a.description,
         className: a.classGroup.name,
         reactions: resumoReacoes(a.id),
+      }),
+    ),
+    ...classPolls.map(
+      (p): AgendaItem => ({
+        kind: "enquete",
+        id: p.id,
+        question: p.question,
+        date: p.createdAt,
+        className: p.classGroup.name,
+        options: p.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes.length })),
+        myVote: p.options.find((o) => o.votes.some((v) => v.memberId === memberId))?.id ?? null,
       }),
     ),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());

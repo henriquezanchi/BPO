@@ -8,7 +8,6 @@ import {
   BookOpen,
   CalendarCheck,
   CheckCircle2,
-  GraduationCap,
   HandHeart,
   Leaf,
   LifeBuoy,
@@ -86,10 +85,10 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
                 <>
                   <span className="text-[10px] text-white/30">·</span>
                   <Link
-                    href="/professor"
+                    href="/voluntario"
                     className="text-[10px] font-semibold text-white/80 underline decoration-dotted underline-offset-2 transition hover:text-white"
                   >
-                    Portal do Instrutor
+                    Portal do Voluntário
                   </Link>
                 </>
               )}
@@ -173,18 +172,6 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           <FeatureTile icon={<HandHeart size={16} />} title="Voluntariado" subtitle="Secretarias e mutirões" onClick={() => setModal("voluntariado")} />
           <FeatureTile icon={<UsersRound size={16} />} title="Grupo de Acompanhamento" subtitle="Conheça e faça sua adesão ao GAF" onClick={() => setModal("gaf")} />
           <FeatureTile icon={<LifeBuoy size={16} />} title="Central de Ajuda" subtitle="Fale com a Economia" onClick={() => setModal("ajuda")} />
-          {member.isPedagogo && (
-            <Link
-              href="/professor"
-              className="flex flex-col items-start gap-2 rounded-2xl border border-na-gold/40 bg-na-gold/10 p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-gold/20 text-na-gold">
-                <GraduationCap size={16} />
-              </div>
-              <h5 className="text-xs font-semibold text-gray-900 dark:text-gray-100">Área do Professor</h5>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400">Suas turmas e atividades</p>
-            </Link>
-          )}
         </section>
       </main>
 

@@ -1,4 +1,4 @@
-import { BookOpen, BookOpenText, Clapperboard, FileText } from "lucide-react";
+import { BookOpen, BookOpenText, Clapperboard, FileText, PlaySquare } from "lucide-react";
 
 export function StudyAreaPanel() {
   return (
@@ -29,6 +29,14 @@ export function StudyAreaPanel() {
         <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
           <FileText size={16} /> Acessar Apostilas
         </button>
+        <a
+          href="https://www.youtube.com/novaacropole"
+          target="_blank"
+          rel="noreferrer"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+        >
+          <PlaySquare size={16} /> Canal da Nova Acrópole no YouTube
+        </a>
       </div>
     </div>
   );
