@@ -1,5 +1,7 @@
 import { getAuthenticatedMember } from "@/lib/auth";
-import { ArrowLeft, GraduationCap, UsersRound } from "lucide-react";
+import { db } from "@/lib/db";
+import { VOLUNTEER_TERM_VERSION } from "@/lib/volunteer-term";
+import { ArrowLeft, FileSignature, GraduationCap, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -17,6 +19,10 @@ export default async function VoluntarioPage() {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/voluntario");
   if (!member.isPedagogo) redirect("/portal");
+
+  const termoAssinado = await db.volunteerTermSignature.findUnique({
+    where: { memberId_termVersion: { memberId: member.id, termVersion: VOLUNTEER_TERM_VERSION } },
+  });
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
@@ -40,6 +46,19 @@ export default async function VoluntarioPage() {
             </div>
           </Link>
         )}
+
+        <Link
+          href="/voluntario/termo"
+          className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold">
+            <FileSignature size={18} />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Termo de Voluntariado</h2>
+            <p className="text-xs text-gray-500">{termoAssinado ? "Assinado" : "Pendente de assinatura"}</p>
+          </div>
+        </Link>
 
         <div className="flex items-center gap-3 rounded-2xl border border-dashed border-gray-300 p-4 opacity-60">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500">

@@ -161,6 +161,7 @@ model Member {
   agendaReactions      AgendaReaction[]
   createdPolls         Poll[]                  @relation("PollCreator")
   pollVotes            PollVote[]
+  volunteerTermSignatures VolunteerTermSignature[]
 
   @@index([schoolId])
 }
@@ -539,4 +540,25 @@ model MercurioSyncTask {
 
   @@index([memberId])
   @@index([status])
+}
+
+// ===================== Termo de Voluntariado =====================
+// Assinatura eletrônica do Termo de Voluntariado (Portal do Voluntário —
+// ver src/lib/volunteer-term.ts pro texto vigente). "Assinar" aqui é
+// digitar o nome completo de confirmação, não um desenho/captura
+// biométrica — nível de e-signature equivalente ao resto do Portal
+// (mesmo padrão de "confiar no login" usado em toda ação do membro).
+// termVersion referencia VOLUNTEER_TERM_VERSION (código) — se o texto do
+// termo mudar, a versão muda junto e quem já assinou precisa assinar nesse
+// e assinaturas antigas continuam guardadas, sem confundir com a vigente.
+model VolunteerTermSignature {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id])
+  termVersion String
+  signedName  String
+  signedAt    DateTime @default(now())
+
+  @@unique([memberId, termVersion])
+  @@index([memberId])
 }
