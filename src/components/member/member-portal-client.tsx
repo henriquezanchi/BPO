@@ -80,9 +80,20 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
 
         <div className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-left text-white">
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-na-gold">
-              PORTAL DO MEMBRO
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-semibold text-na-gold">PORTAL DO MEMBRO</span>
+              {member.isPedagogo && (
+                <>
+                  <span className="text-[10px] text-white/30">·</span>
+                  <Link
+                    href="/professor"
+                    className="text-[10px] font-semibold text-white/80 underline decoration-dotted underline-offset-2 transition hover:text-white"
+                  >
+                    Portal do Instrutor
+                  </Link>
+                </>
+              )}
+            </div>
             <button
               onClick={() => setModal("cadastro")}
               className="flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[10px] font-semibold transition hover:bg-white/25"
