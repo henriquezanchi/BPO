@@ -735,3 +735,103 @@ export async function lerListaPedagogos(frame: Frame): Promise<PedagogoMercurio[
       .filter((p) => p.matricula);
   });
 }
+
+// ===================== Turmas e Escala de Professores =====================
+// Módulo CADASTRO de novo (não Integração) — dentro do frame "indice" de
+// uma filial (uni_indice.php, o mesmo usado por abrirListaAtivos) tem um
+// link "Turmas" (aparece 2x no menu — "PROGRAMA BRANCO" e "COMPLEMENTAR" —
+// o 1º já é o que precisamos, confirmado batendo com o scraper irmão desse
+// projeto — scraper/mercurio.js, repo crm-agencia-na, função
+// processarTurmas — que usa exatamente esse mesmo caminho pra achar a
+// ficha de cada turma). Leva a uni_esctur.php: lista de turmas da filial
+// com 3 botões (Nova Turma/Listar Turmas/Escala de Professores) — o último
+// abre uni_escesc.php, uma tabela só (Professor/Turma/Nível/Matéria/
+// Início/Dia/Horário/Sala) SEM matrícula — cruzar com o Member local só dá
+// por nome (confirmado via print do usuário, 2026-09-17).
+
+async function abrirTurmas(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  const cadastros = await listarLinksMenu(page, "CADASTRO");
+  const filial = cadastros.find((c) => filialLabelRegex.test(c.label));
+  if (!filial) {
+    throw new Error(`Filial batendo com ${filialLabelRegex} sem link de CADASTRO entre: ${cadastros.map((c) => c.label).join(", ")}`);
+  }
+
+  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
+  await framePrincipal0.getByRole("link", { name: "CADASTRO", exact: true }).nth(filial.indice).click();
+
+  const frameIndice = await esperarFrame(page, "indice", /uni_indice\.php/, 15000);
+  await frameIndice.getByText("Turmas", { exact: true }).first().click();
+  return esperarFrame(page, "principal", /uni_esctur\.php/, 15000);
+}
+
+export interface EscalaProfessorMercurio {
+  professor: string;
+  turma: string;
+  nivel: string;
+  materia: string;
+  inicio: string; // "dd/mm/yyyy"
+  dia: string;
+  horario: string;
+  sala: string;
+}
+
+/** Abre "Turmas > Escala de Professores" de uma filial. */
+export async function abrirEscalaProfessores(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  const frameTurmas = await abrirTurmas(page, filialLabelRegex);
+  await frameTurmas.getByRole("link", { name: "Escala de Professores", exact: true }).click();
+  return esperarFrame(page, "principal", /uni_escesc\.php/, 15000);
+}
+
+/** Lê a Escala de Professores já aberta (ver abrirEscalaProfessores). */
+export async function lerEscalaProfessores(frame: Frame): Promise<EscalaProfessorMercurio[]> {
+  return frame.evaluate(() => {
+    const tabela = document.querySelector("table");
+    if (!tabela) return [];
+    return Array.from(tabela.rows)
+      .slice(1)
+      .map((linha) => {
+        const c = Array.from(linha.cells).map((td) => (td as HTMLElement).innerText.trim());
+        return { professor: c[0] ?? "", turma: c[1] ?? "", nivel: c[2] ?? "", materia: c[3] ?? "", inicio: c[4] ?? "", dia: c[5] ?? "", horario: c[6] ?? "", sala: c[7] ?? "" };
+      })
+      .filter((e) => e.professor);
+  });
+}
+
+export interface AlunoTurmaMercurio {
+  nome: string;
+  ingressoEmBR: string | null; // "dd/mm/yyyy", null se não veio preenchido
+}
+
+/**
+ * A partir da lista de turmas já aberta (ver abrirTurmas — hoje só exposto
+ * indiretamente, então esta função reabre do zero), entra na ficha de 1
+ * turma e lê o roster de alunos (tabela com colunas "Nome"/"Ingresso" —
+ * mesmo critério de detecção do scraper irmão, mas checando a célula exata
+ * do cabeçalho em vez de substring da linha inteira, pra não cair na
+ * mesma pegadinha de tabela aninhada já vista em lerFichaAnual).
+ */
+export async function abrirDetalheTurma(page: Page, filialLabelRegex: RegExp, nomeTurma: string): Promise<Frame> {
+  const frameTurmas = await abrirTurmas(page, filialLabelRegex);
+  await frameTurmas.getByRole("link", { name: nomeTurma, exact: true }).click();
+  return esperarFrame(page, "principal", /uni_esctal\.php/, 15000);
+}
+
+export async function lerAlunosDaTurma(frame: Frame): Promise<AlunoTurmaMercurio[]> {
+  return frame.evaluate(() => {
+    const tabelas = Array.from(document.querySelectorAll("table"));
+    for (const tabela of tabelas) {
+      const cabecalhos = Array.from(tabela.rows[0]?.cells ?? []).map((c) => (c as HTMLElement).innerText.trim().toLowerCase());
+      const colNome = cabecalhos.findIndex((c) => c === "nome");
+      const colIngresso = cabecalhos.findIndex((c) => c === "ingresso");
+      if (colNome === -1 || colIngresso === -1) continue;
+      return Array.from(tabela.rows)
+        .slice(1)
+        .map((linha) => {
+          const celulas = Array.from(linha.cells).map((c) => (c as HTMLElement).innerText.trim());
+          return { nome: celulas[colNome] ?? "", ingressoEmBR: celulas[colIngresso] || null };
+        })
+        .filter((a) => a.nome);
+    }
+    return [];
+  });
+}

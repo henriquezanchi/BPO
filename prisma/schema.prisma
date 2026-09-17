@@ -399,13 +399,17 @@ model ClassGroup {
   schoolId        String
   school          School   @relation(fields: [schoolId], references: [id])
   name            String // "Curso de Filosofia - Turma A"
-  mercurioClassId String? // id da turma no Mercúrio, quando soubermos o formato
+  // Nome da turma tal como aparece na Escala de Professores do Mercúrio
+  // (ex: "HILARION", "AMON") — sabemos o formato agora (ver
+  // scripts/sync-teacher-classes.ts), diferente do comentário antigo.
+  mercurioClassId String?
   createdAt       DateTime @default(now())
 
   memberships ClassMembership[]
   activities  Activity[]
   polls       Poll[]
 
+  @@unique([schoolId, name])
   @@index([schoolId])
 }
 
