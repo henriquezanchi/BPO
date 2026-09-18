@@ -197,6 +197,68 @@ export async function abrirTelaRecibos(page: Page, filialLabelRegex: RegExp, ano
   return frame;
 }
 
+export interface FichaContribuicaoResumo {
+  matricula: string;
+  nome: string;
+  nivel: string;
+  turma: string;
+  pendente: boolean;
+  meses: ("em_branco" | "paga" | "atrasado" | "isento")[]; // 12 posições, índice 0 = janeiro
+}
+
+/**
+ * Abre "Tesouraria > Cadastro > Fichas" (tesoura/tes_conficha.php) — tabela
+ * ÚNICA com TODOS os membros da filial e o status mês a mês (cor + letra:
+ * branco/vazio=em_branco, LIME "P"=paga, RED "A"=atrasado,
+ * DODGERBLUE "I"=isento — confirmado ao vivo via print do usuário,
+ * 2026-09-18). Achado importante: essa é a fonte de verdade pro atraso de
+ * VERDADE, hoje — "Ficha Anual" (tes_condeta.php, abrirFichaAnual) mostra
+ * "EM BRANCO" pra meses que aqui aparecem "EM ATRASO" (comprovado ao vivo:
+ * GESSICA FIGUEIREDO DA SILVA aparecia atrasada aqui e em_branco lá pros
+ * mesmos meses) — não são a mesma informação, e Ficha Anual não deve ser
+ * usada pra decidir atraso sozinha. Também dá a filial INTEIRA numa
+ * chamada só (O(1), não O(n) por membro).
+ */
+export async function abrirFichasContribuicao(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  await abrirTesouraria(page, filialLabelRegex);
+  const frameIndice = await esperarFrame(page, "indice", /tes_indice\.php/, 15000);
+  await frameIndice.getByRole("link", { name: "Fichas", exact: true }).click();
+  return esperarFrame(page, "principal", /tes_conficha\.php/, 15000);
+}
+
+/** Lê a tabela de Fichas de Contribuições já aberta (ver abrirFichasContribuicao). */
+export async function lerFichasContribuicao(frame: Frame): Promise<FichaContribuicaoResumo[]> {
+  return frame.evaluate(() => {
+    const tabelas = Array.from(document.querySelectorAll("table"));
+    const tabela = tabelas.find((t) => {
+      const cabecalhos = Array.from(t.rows[0]?.cells ?? []).map((c) => (c as HTMLElement).innerText.trim());
+      return cabecalhos.includes("Nome") && cabecalhos.includes("Turma");
+    });
+    if (!tabela) return [];
+
+    return Array.from(tabela.rows)
+      .slice(1)
+      .map((linha) => {
+        const celulas = Array.from(linha.cells);
+        const href = celulas[1]?.querySelector("a")?.getAttribute("href") ?? "";
+        const matricula = href.match(/matr=(\d+)/)?.[1] ?? "";
+        const nome = (celulas[2] as HTMLElement | undefined)?.innerText.trim() ?? "";
+        const nivel = (celulas[3] as HTMLElement | undefined)?.innerText.trim() ?? "";
+        const turma = (celulas[4] as HTMLElement | undefined)?.innerText.trim() ?? "";
+        const pendente = ((celulas[5] as HTMLElement | undefined)?.innerText.trim() ?? "").toUpperCase() === "SIM";
+        const meses = celulas.slice(6, 18).map((c): FichaContribuicaoResumo["meses"][number] => {
+          const t = (c as HTMLElement).innerText.trim().toUpperCase();
+          if (t === "P") return "paga";
+          if (t === "A") return "atrasado";
+          if (t === "I") return "isento";
+          return "em_branco";
+        });
+        return { matricula, nome, nivel, turma, pendente, meses };
+      })
+      .filter((f) => f.matricula);
+  });
+}
+
 export interface FichaAnualMes {
   mes: number; // 1-12
   status: "paga" | "em_branco" | "atrasado" | "isento";

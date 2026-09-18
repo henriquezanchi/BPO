@@ -37,7 +37,7 @@ async function main() {
   const { criado } = await provisionarLoginComSenha(member.id, member.email, senhaInicial);
   console.log(criado ? "Usuário criado e vinculado ao Member." : "Usuário já existia — senha redefinida e vínculo confirmado.");
 
-  console.log(`\n✅ Login pronto: ${member.email} / senha inicial (6 primeiros dígitos do CPF)`);
+  console.log(`\n✅ Login pronto: ${member.email} / ${senhaInicial} (6 primeiros dígitos do CPF — repassar ao membro, não é secreto além disso)`);
 }
 
 main()
