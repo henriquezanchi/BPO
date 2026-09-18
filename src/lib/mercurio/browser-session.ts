@@ -394,6 +394,50 @@ export async function listarMatriculasAtivas(frame: Frame): Promise<string[]> {
   return matriculas;
 }
 
+export interface AtivoResumo {
+  matricula: string;
+  nome: string;
+}
+
+/**
+ * Lê matrícula + nome de TODA a lista de Ativos numa passada só (em vez de
+ * listarNomesDaListaAtivos + listarMatriculasAtivas separados) — usado pra
+ * decidir QUEM precisa de ficha visitada antes de abrir uma sessão de
+ * onboarding em lote (scripts/onboard-filial-lote.ts), sem gastar 2
+ * leituras da mesma tabela.
+ */
+export async function listarAtivosResumo(frame: Frame): Promise<AtivoResumo[]> {
+  const cabecalhos = await frame.locator("table").first().locator("tr").first().locator("td, th").allInnerTexts();
+  const colNome = cabecalhos.findIndex((c) => /^nome$/i.test(c.trim()));
+  const colMatr = cabecalhos.findIndex((c) => /^matr\.?$/i.test(c.trim()));
+  if (colNome === -1 || colMatr === -1) {
+    throw new Error(`Coluna "Nome" e/ou "Matr" não encontrada no cabeçalho: ${cabecalhos.join(" | ")}`);
+  }
+
+  const linhas = frame.locator("table").first().locator("tr");
+  const total = await linhas.count();
+  const resultado: AtivoResumo[] = [];
+  for (let i = 1; i < total; i++) {
+    const matricula = (await linhas.nth(i).locator("td").nth(colMatr).innerText()).trim();
+    const nome = (await linhas.nth(i).locator("td").nth(colNome).innerText()).trim();
+    if (matricula && nome) resultado.push({ matricula, nome });
+  }
+  return resultado;
+}
+
+/**
+ * Volta pro estado logo depois do login (ger_frame.php, lista de
+ * filiais/módulos) — usado pra "resetar" a navegação entre visitas a
+ * fichas diferentes dentro do mesmo loop/sessão (ver
+ * scripts/onboard-filial-lote.ts). Sair de dentro de um frameset com
+ * "voltar" tem comportamento incerto sem teste real — mesma cautela já
+ * documentada (e comprovada em produção) no scraper irmão deste projeto,
+ * crm-agencia-na/scraper/mercurio.js.
+ */
+export async function resetarNavegacao(page: Page): Promise<void> {
+  await page.goto("https://mercurio.oinabn.com.br/ger_frame.php", { waitUntil: "domcontentloaded" });
+}
+
 /**
  * A partir da lista de Ativos JÁ ABERTA (ver abrirListaAtivos), clica no
  * aluno que bate com `nomeRegex` e abre a aba ENDEREÇOS da ficha dele.

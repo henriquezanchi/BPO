@@ -7,7 +7,7 @@
  * Uso: npx tsx --env-file=.env scripts/provision-member-auth.ts <mercurioId>
  */
 import { db } from "../src/lib/db";
-import { supabaseAdmin } from "../src/lib/supabase/admin";
+import { provisionarLoginComSenha } from "../src/lib/mercurio/auth-provisioning";
 import { abrirFichaDaListaAtivos, abrirListaAtivos, abrirSessaoMercurio, lerAbaIdentificacao } from "../src/lib/mercurio/browser-session";
 
 async function main() {
@@ -34,33 +34,8 @@ async function main() {
   const senhaInicial = cpf.slice(0, 6);
 
   console.log(`Provisionando login (e-mail: ${member.email})...`);
-
-  let authUserId = member.authUserId;
-  if (!authUserId) {
-    // Pode já existir um usuário de Auth com esse e-mail (ex: provisionamento
-    // anterior que não terminou de vincular) — busca antes de tentar criar.
-    const { data: lista, error: erroLista } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    if (erroLista) throw erroLista;
-    const existente = lista.users.find((u) => u.email?.toLowerCase() === member.email!.toLowerCase());
-    if (existente) authUserId = existente.id;
-  }
-
-  if (authUserId) {
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(authUserId, { password: senhaInicial });
-    if (error) throw error;
-    if (authUserId !== member.authUserId) await db.member.update({ where: { id: member.id }, data: { authUserId } });
-    console.log("Usuário já existia — senha redefinida pra o padrão (6 primeiros dígitos do CPF) e vínculo confirmado.");
-  } else {
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email: member.email,
-      password: senhaInicial,
-      email_confirm: true, // sem etapa de confirmação por e-mail — o próprio provisionamento já confirma a identidade via CPF do Mercúrio
-    });
-    if (error) throw error;
-    authUserId = data.user.id;
-    await db.member.update({ where: { id: member.id }, data: { authUserId } });
-    console.log("Usuário criado e vinculado ao Member.");
-  }
+  const { criado } = await provisionarLoginComSenha(member.id, member.email, senhaInicial);
+  console.log(criado ? "Usuário criado e vinculado ao Member." : "Usuário já existia — senha redefinida e vínculo confirmado.");
 
   console.log(`\n✅ Login pronto: ${member.email} / senha inicial (6 primeiros dígitos do CPF)`);
 }
