@@ -1,24 +1,23 @@
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { VOLUNTEER_TERM_VERSION } from "@/lib/volunteer-term";
-import { ArrowLeft, FileSignature, GraduationCap, UsersRound } from "lucide-react";
+import { ArrowLeft, Crown, FileSignature, GraduationCap, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Hub pros diferentes tipos de voluntário (instrutor, secretário, etc — ver
- * conversa) — hoje só sabemos identificar instrutor de verdade
- * (member.isPedagogo, sincronizado de "Integração > Pedagogos" do
- * Mercúrio). Secretário e outros tipos ainda não têm nenhum sinal real
- * (nem no Mercúrio nem local), então aparecem só como "em breve" — dá pra
- * virar seção de verdade assim que existir um jeito de saber quem é quem.
+ * Hub pros diferentes tipos de voluntário (instrutor, direção, secretário,
+ * etc — ver conversa). Instrutor (isPedagogo, "Integração > Pedagogos") e
+ * Direção (isDiretor/isSubChefe, "Diretor > Dados da Unidade") já têm
+ * sinal real do Mercúrio — Secretário ainda não tem nenhum (nem lá nem
+ * local), então aparece só como "em breve".
  */
 export default async function VoluntarioPage() {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/voluntario");
-  if (!member.isPedagogo) redirect("/portal");
+  if (!member.isPedagogo && !member.isDiretor && !member.isSubChefe) redirect("/portal");
 
   const termoAssinado = await db.volunteerTermSignature.findUnique({
     where: { memberId_termVersion: { memberId: member.id, termVersion: VOLUNTEER_TERM_VERSION } },
@@ -43,6 +42,21 @@ export default async function VoluntarioPage() {
             <div>
               <h2 className="text-sm font-semibold text-gray-900">Instrutor</h2>
               <p className="text-xs text-gray-500">Turmas, atividades e enquetes</p>
+            </div>
+          </Link>
+        )}
+
+        {(member.isDiretor || member.isSubChefe) && (
+          <Link
+            href="/diretor"
+            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold">
+              <Crown size={18} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Direção</h2>
+              <p className="text-xs text-gray-500">{member.isDiretor ? "Diretor(a)" : "Sub-Chefe"} da unidade</p>
             </div>
           </Link>
         )}

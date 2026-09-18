@@ -77,6 +77,15 @@ model School {
   whatsapp            String? // número da secretaria/economia, usado no botão de ajuda do Portal
   mercurioFilialLabel String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
   createdAt           DateTime @default(now())
+  // "Diretor > Dados da Unidade" do Mercúrio (diretor/dir_frame.php) — só
+  // o que alimenta o Painel do Diretor por ora (ver scripts/sync-diretoria.ts).
+  // Nome do diretor/sub-chefe fica no Member (isDiretor/isSubChefe), não
+  // aqui — aqui é só o que é mesmo dado da UNIDADE, não de pessoa.
+  cnpj             String?
+  enderecoCompleto String?
+  telefoneUnidade  String?
+  fundacao         DateTime?
+  unidadeSyncedAt  DateTime?
 
   members            Member[]
   events             Event[]
@@ -136,6 +145,13 @@ model Member {
   // Professor" (ver scripts/sync-pedagogos.ts e member-portal-client.tsx).
   isPedagogo       Boolean   @default(false)
   pedagogoSyncedAt DateTime?
+  // É Diretor(a) ou Sub-Chefe de alguma filial — lido de "Diretor > Dados
+  // da Unidade" do Mercúrio (tem matrícula de verdade nesses dois campos,
+  // diferente de Pedagogos — cruza por matrícula, não por nome). Libera o
+  // card "Direção" no Portal do Voluntário (ver scripts/sync-diretoria.ts).
+  isDiretor        Boolean   @default(false)
+  isSubChefe       Boolean   @default(false)
+  direcaoSyncedAt  DateTime?
   // Id do cliente na carteira digital Fortuna (oinabnfortuna.acropolebrasil.com.br)
   // — numeração própria, SEM relação com mercurioId. Resolvido 1x por
   // e-mail/telefone (scripts/link-fortuna-client.ts), não por nome (mais

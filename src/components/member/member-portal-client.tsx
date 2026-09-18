@@ -81,7 +81,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-semibold text-na-gold">PORTAL DO MEMBRO</span>
-              {member.isPedagogo && (
+              {(member.isPedagogo || member.isDiretor || member.isSubChefe) && (
                 <>
                   <span className="text-[10px] text-white/30">·</span>
                   <Link

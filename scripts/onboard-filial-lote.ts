@@ -7,10 +7,11 @@
  * frameset tem comportamento incerto sem teste real (mesma cautela do
  * scraper irmão deste projeto, crm-agencia-na/scraper/mercurio.js).
  *
- * Cria/atualiza o Member (endereço, telefone, e-mail) e, se tiver e-mail e
- * CPF legíveis, provisiona o login (senha inicial = 6 primeiros dígitos
- * do CPF, nunca guardado no nosso banco). Erro em 1 ativo não para os
- * demais.
+ * Cria/atualiza o Member (endereço, telefone, e-mail, dados pessoais e RG
+ * — abas ENDEREÇOS/PESSOAIS/IDENTIFICAÇÃO da mesma ficha, sem navegação
+ * extra) e, se tiver e-mail e CPF legíveis, provisiona o login (senha
+ * inicial = 6 primeiros dígitos do CPF, nunca guardado no nosso banco).
+ * Erro em 1 ativo não para os demais.
  *
  * Uso: npx tsx --env-file=.env scripts/onboard-filial-lote.ts "<mercurioFilialLabel>"
  */
@@ -23,9 +24,11 @@ import {
   abrirSessaoMercurio,
   lerAbaEnderecos,
   lerAbaIdentificacao,
+  lerAbaPessoais,
   listarAtivosResumo,
   resetarNavegacao,
 } from "../src/lib/mercurio/browser-session";
+import { diaMesAnoParaData } from "../src/lib/mercurio/playwright-adapter";
 import { parseLogradouro } from "../src/lib/mercurio/parse-logradouro";
 
 function escapeRegex(s: string) {
@@ -51,9 +54,11 @@ async function main() {
 
     const pendentes = ativos.filter((a) => {
       const membro = membroPorMatricula.get(a.matricula);
-      return !membro || !membro.authUserId; // sem Member local, ou sem login ainda
+      // sem Member local, sem login, ou sem dados pessoais ainda (rodadas
+      // anteriores desta versão do script não liam PESSOAIS/IDENTIFICAÇÃO)
+      return !membro || !membro.authUserId || (!membro.birthDate && !membro.naturalidade);
     });
-    console.log(`Pendentes de onboarding (sem Member local ou sem login): ${pendentes.length} de ${ativos.length}\n`);
+    console.log(`Pendentes de onboarding (sem Member local, sem login, ou sem dados pessoais): ${pendentes.length} de ${ativos.length}\n`);
     if (pendentes.length === 0) {
       console.log("✅ Nada a fazer — todo mundo já tem Member + login.");
       return;
@@ -74,6 +79,7 @@ async function main() {
         const frameAtivosDeNovo = await abrirListaAtivos(page, filialLabelRegex);
         const frame = await abrirFichaDaListaAtivos(page, frameAtivosDeNovo, new RegExp(escapeRegex(ativo.nome), "i"));
         const dados = await lerAbaEnderecos(frame);
+        const pessoais = await lerAbaPessoais(frame);
         const identificacao = await lerAbaIdentificacao(frame);
         const { street, number, complement } = parseLogradouro(dados.logradouro);
 
@@ -90,6 +96,14 @@ async function main() {
           addressCity: dados.cidade || null,
           addressState: dados.uf || null,
           addressZip: dados.cep || null,
+          birthDate: diaMesAnoParaData(pessoais.nascimentoDia, pessoais.nascimentoMes, pessoais.nascimentoAno),
+          naturalidade: pessoais.naturalidade || null,
+          profession: pessoais.profissao || null,
+          estadoCivil: pessoais.estadoCivil || null,
+          escolaridade: pessoais.escolaridade || null,
+          rgNumero: identificacao.rgNumero || null,
+          rgOrgaoEmissor: identificacao.rgOrgaoEmissor || null,
+          rgDataEmissao: diaMesAnoParaData(identificacao.rgEmissaoDia, identificacao.rgEmissaoMes, identificacao.rgEmissaoAno),
         };
 
         const member = await db.member.upsert({

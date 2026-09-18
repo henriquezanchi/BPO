@@ -790,6 +790,85 @@ export async function editarValorItemComposicao(frame: Frame, matricula: string,
   await frame.page().waitForTimeout(1000);
 }
 
+// ===================== Diretor > Dados da Unidade =====================
+// Módulo DIRETOR de novo (menu de topo, mesmo padrão de CADASTRO/
+// TESOURARIA/INTEGRAÇÃO) — "Dados da Unidade" é a página padrão que
+// aparece ao entrar (sem precisar clicar em nada no índice), com
+// Diretor(a) e Sub-Chefe — os dois com MATRÍCULA de verdade (diferente de
+// Pedagogos, que só tem nome), então cruza com o Member local por
+// matrícula, sem heurística de nome.
+
+export interface DadosUnidadeMercurio {
+  diretorMatricula: string;
+  diretorNome: string;
+  subChefeMatricula: string;
+  subChefeNome: string;
+  cnpj: string;
+  endereco: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  cep: string;
+  telefone: string;
+  fundacaoDia: string;
+  fundacaoMes: string;
+  fundacaoAno: string;
+}
+
+/** Abre "Diretor > Dados da Unidade" de uma filial. */
+export async function abrirDadosUnidade(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  const diretores = await listarLinksMenu(page, "DIRETOR");
+  const filial = diretores.find((d) => filialLabelRegex.test(d.label));
+  if (!filial) {
+    throw new Error(`Filial batendo com ${filialLabelRegex} sem link de DIRETOR entre: ${diretores.map((d) => d.label).join(", ")}`);
+  }
+
+  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
+  await framePrincipal0.getByRole("link", { name: "DIRETOR", exact: true }).nth(filial.indice).click();
+  // O frame "principal" passa por um estado intermediário logo depois do
+  // clique (confirmado ao vivo: ler o handle rápido demais dá "Frame was
+  // detached", já que ele é recriado até estabilizar em dir_uniref.php) —
+  // esperarFrame já bate o regex nesse meio-tempo, então preciso reler o
+  // handle DE NOVO depois de um respiro, não reaproveitar o que voltou.
+  await esperarFrame(page, "principal", /diretor\//, 15000);
+  await page.waitForTimeout(1200);
+  return page.frame({ name: "principal" })!;
+}
+
+/**
+ * Lê "Dados da Unidade" já aberta (ver abrirDadosUnidade) — campos
+ * confirmados ao vivo (2026-09-18) pelo `name` do <input>, igual
+ * lerAbaEnderecos. Diretor(a)/Sub-Chefe são o único caso com matrícula +
+ * nome na mesma célula (nome é só texto solto depois do input, sem
+ * atributo próprio — extraído tirando o valor da matrícula do innerText).
+ */
+export async function lerDadosUnidade(frame: Frame): Promise<DadosUnidadeMercurio> {
+  const valor = async (nome: string) => (await frame.locator(`[name="${nome}"]`).first().inputValue().catch(() => "")).trim();
+  const nomeAoLadoDaMatricula = async (nomeCampoMatricula: string) => {
+    const input = frame.locator(`[name="${nomeCampoMatricula}"]`).first();
+    const matricula = (await input.inputValue().catch(() => "")).trim();
+    const textoCelula = (await input.locator("xpath=..").innerText().catch(() => "")).trim();
+    return textoCelula.replace(matricula, "").trim();
+  };
+
+  return {
+    diretorMatricula: await valor("txtdir"),
+    diretorNome: await nomeAoLadoDaMatricula("txtdir"),
+    subChefeMatricula: await valor("txtsub"),
+    subChefeNome: await nomeAoLadoDaMatricula("txtsub"),
+    cnpj: await valor("txtcnpj"),
+    endereco: await valor("txtlogra"),
+    bairro: await valor("txtbai"),
+    cidade: await valor("txtcida"),
+    uf: await valor("txtuf"),
+    cep: await valor("txtcep"),
+    telefone: [await valor("txtddd"), await valor("txtfone")].filter(Boolean).join(" "),
+    fundacaoDia: await valor("txtdia"),
+    fundacaoMes: await valor("txtmes"),
+    fundacaoAno: await valor("txtano"),
+  };
+}
+
 // ===================== Integração > Pedagogos =====================
 // Módulo diferente de novo (não Cadastro/Tesouraria) — confirmado ao vivo
 // (2026-09-15): clicar em "INTEGRAÇÃO" no menu de topo troca a página

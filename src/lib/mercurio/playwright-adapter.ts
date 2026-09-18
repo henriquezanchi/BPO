@@ -274,7 +274,7 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
  * "00"/"00"/"0000" é o jeito do Mercúrio dizer "data não preenchida" — não
  * é uma data válida. Devolve null nesse caso.
  */
-function diaMesAnoParaData(dia: string, mes: string, ano: string): Date | null {
+export function diaMesAnoParaData(dia: string, mes: string, ano: string): Date | null {
   const d = parseInt(dia, 10);
   const m = parseInt(mes, 10);
   const a = parseInt(ano, 10);
