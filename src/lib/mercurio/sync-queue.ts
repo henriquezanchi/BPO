@@ -74,6 +74,13 @@ export async function enqueueMercurioReceiptFetch(memberId: string, mercurioRecI
   });
 }
 
+/** Enfileira o lançamento de uma contribuição já confirmada pelo Asaas — ver confirmarPagamento() em src/lib/asaas/confirm-payment.ts. */
+export async function enqueueMercurioContributionLaunch(memberId: string, chargeId: string) {
+  return db.mercurioSyncTask.create({
+    data: { memberId, taskType: "lancar_contribuicao_paga", payload: { chargeId } },
+  });
+}
+
 /**
  * Processa tarefas pendentes da fila, escrevendo de verdade no Mercúrio
  * (mercurioAdapter é o real quando as credenciais estão configuradas — ver
@@ -171,6 +178,25 @@ export async function processMercurioSyncQueue(limit = 20) {
           data: { rawText: conteudo.rawText, canceled: conteudo.canceled, fetchedAt: new Date() },
         });
         result = { ok: true };
+      } else if (task.taskType === "lancar_contribuicao_paga") {
+        const payload = task.payload as { chargeId: string };
+        if (!member.school.mercurioCaixaLancamento) {
+          // Não é falha DEFINITIVA nem retryable (não é trava de
+          // concorrência) — mas também não dá pra lançar "no escuro" sem
+          // saber o caixa certo. Marca falhou com uma mensagem clara em vez
+          // de tentar adivinhar um caixa e arriscar lançar no lugar errado.
+          result = { ok: false, error: `Escola sem mercurioCaixaLancamento configurado — lançamento automático desligado (ver scripts/list-cashiers.ts).` };
+        } else {
+          const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: payload.chargeId } });
+          // Data real (com hora), não "pura" como Fundação/dueDate — usa o
+          // fuso do Brasil de propósito (não UTC), já que é isso que decide
+          // se ainda vale o desconto de pontualidade lá dentro do Mercúrio.
+          const dataBR = (charge.paidAt ?? new Date()).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+          result = await mercurioAdapter.launchContributionPayment(identidade, member.school.mercurioCaixaLancamento, {
+            amount: Number(charge.amount),
+            paidAtBR: dataBR,
+          });
+        }
       } else {
         result = await mercurioAdapter.pushContactUpdate(identidade, task.payload as MercurioContactChanges);
       }

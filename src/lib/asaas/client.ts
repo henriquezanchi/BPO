@@ -1,0 +1,89 @@
+/**
+ * Cliente da API REST do Asaas (gateway de pagamento) — API JSON normal,
+ * sem OAuth (autenticação por header "access_token" fixo). Conta real,
+ * chave de PRODUÇÃO (decisão explícita do usuário em 2026-09-18) —
+ * qualquer cobrança criada aqui é real, não é sandbox.
+ */
+const BASE_URL = process.env.ASAAS_ENV === "sandbox" ? "https://sandbox.asaas.com/api/v3" : "https://api.asaas.com/v3";
+
+async function chamarApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const apiKey = process.env.ASAAS_API_KEY;
+  if (!apiKey) throw new Error("ASAAS_API_KEY não configurado.");
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      access_token: apiKey,
+      "Content-Type": "application/json",
+      "User-Agent": "portal-na",
+      ...init?.headers,
+    },
+  });
+  if (!res.ok) {
+    const corpo = await res.text();
+    throw new Error(`Asaas API ${path} -> HTTP ${res.status}: ${corpo}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export interface AsaasCustomer {
+  id: string;
+  name: string;
+  cpfCnpj: string;
+}
+
+/**
+ * Acha o cliente Asaas pelo CPF (evita duplicar) ou cria um novo — CPF
+ * chega por parâmetro (digitado na hora do pagamento), nunca persistido
+ * no nosso banco, mesma minimização já usada pra derivar senha inicial a
+ * partir do CPF do Mercúrio.
+ */
+export async function asaasFindOrCreateCustomer(nome: string, cpf: string, email?: string): Promise<AsaasCustomer> {
+  const cpfLimpo = cpf.replace(/\D/g, "");
+  const existentes = await chamarApi<{ data: AsaasCustomer[] }>(`/customers?cpfCnpj=${cpfLimpo}`);
+  if (existentes.data.length > 0) return existentes.data[0];
+
+  return chamarApi<AsaasCustomer>("/customers", {
+    method: "POST",
+    body: JSON.stringify({ name: nome, cpfCnpj: cpfLimpo, email }),
+  });
+}
+
+export interface AsaasPayment {
+  id: string;
+  status: "PENDING" | "RECEIVED" | "CONFIRMED" | "OVERDUE" | "REFUNDED" | string;
+  value: number;
+  customer: string;
+}
+
+export async function asaasCreatePixCharge(customerId: string, valor: number, descricao: string, vencimento: string): Promise<AsaasPayment> {
+  return chamarApi<AsaasPayment>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: "PIX",
+      value: valor,
+      dueDate: vencimento, // "aaaa-mm-dd"
+      description: descricao,
+    }),
+  });
+}
+
+export interface AsaasPixQrCode {
+  encodedImage: string; // base64 PNG
+  payload: string; // texto "copia e cola"
+  expirationDate: string;
+}
+
+export async function asaasGetPixQrCode(paymentId: string): Promise<AsaasPixQrCode> {
+  return chamarApi<AsaasPixQrCode>(`/payments/${paymentId}/pixQrCode`);
+}
+
+export async function asaasGetPaymentStatus(paymentId: string): Promise<AsaasPayment> {
+  return chamarApi<AsaasPayment>(`/payments/${paymentId}`);
+}
+
+/** Cancela uma cobrança (ex: aluno desistiu, ou cobrança de teste) — best-effort, não lança se já não existir mais. */
+export async function asaasCancelPayment(paymentId: string): Promise<void> {
+  await chamarApi(`/payments/${paymentId}`, { method: "DELETE" }).catch(() => {});
+}

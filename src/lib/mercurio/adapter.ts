@@ -107,6 +107,13 @@ export interface MercurioReceiptContent {
   canceled: boolean;
 }
 
+/** Recebimento de contribuição já confirmado por um gateway externo (Asaas) — lançar na Tesouraria igual a secretaria faria na mão. */
+export interface MercurioContributionPayment {
+  amount: number;
+  paidAtBR: string; // "dd/mm/yyyy"
+  interessado?: string;
+}
+
 export interface MercurioWriteResult {
   ok: boolean;
   error?: string;
@@ -147,4 +154,16 @@ export interface MercurioAdapter {
 
   /** Busca o conteúdo (documento) de um recibo específico pelo id — 1 chamada cara, sob demanda. */
   fetchReceiptContent(member: MercurioMemberIdentity, mercurioRecId: string): Promise<MercurioReceiptContent>;
+
+  /**
+   * Lança um recebimento de contribuição já confirmado por um gateway
+   * externo (Asaas) na Tesouraria — `nomeCaixa` vem de
+   * School.mercurioCaixaLancamento (null = lançamento automático
+   * desligado pra essa escola, chamador deve tratar como falha).
+   */
+  launchContributionPayment(
+    member: MercurioMemberIdentity,
+    nomeCaixa: string,
+    payment: MercurioContributionPayment,
+  ): Promise<MercurioWriteResult>;
 }

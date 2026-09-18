@@ -33,6 +33,13 @@ enum ContributionMonthStatus {
   isento
 }
 
+enum PaymentChargeStatus {
+  pendente
+  pago
+  expirado
+  cancelado
+}
+
 enum ChargeTriggerType {
   inicio_mes
   vencimento
@@ -86,6 +93,13 @@ model School {
   telefoneUnidade  String?
   fundacao         DateTime?
   unidadeSyncedAt  DateTime?
+  // Nome EXATO do caixa (Tesouraria > Caixas) usado pra lançar automaticamente
+  // um recebimento de contribuição confirmado pelo Asaas (ver
+  // browser-session.ts#lancarPagamentoContribuicaoHoje e
+  // scripts/list-cashiers.ts pra descobrir os nomes reais antes de configurar
+  // isto) — enquanto null, o lançamento automático fica desligado pra essa
+  // escola (a fila só marca a tarefa como falha, nunca lança "no escuro").
+  mercurioCaixaLancamento String?
 
   members            Member[]
   events             Event[]
@@ -178,6 +192,7 @@ model Member {
   createdPolls         Poll[]                  @relation("PollCreator")
   pollVotes            PollVote[]
   volunteerTermSignatures VolunteerTermSignature[]
+  paymentCharges          PaymentCharge[]
 
   @@index([schoolId])
 }
@@ -292,6 +307,32 @@ model ContributionMonthlyStatus {
   syncedAt       DateTime                @default(now())
 
   @@unique([memberId, year, month])
+  @@index([memberId])
+}
+
+// Cobrança PIX real via Asaas (gateway de pagamento) pra 1 mês de
+// contribuição. CPF é pedido na hora do pagamento e passado direto pro
+// Asaas — não fica guardado aqui, mesma lógica de minimização já usada
+// pra derivar a senha inicial de login a partir do CPF do Mercúrio.
+// Confirmação de pagamento vem por webhook (rota /api/webhooks/asaas) OU
+// polling (checkChargeStatus) — o que chegar primeiro marca `pago` e
+// enfileira o lançamento no Mercúrio (MercurioSyncTask).
+model PaymentCharge {
+  id              String              @id @default(cuid())
+  memberId        String
+  member          Member              @relation(fields: [memberId], references: [id])
+  referenceYear   Int
+  referenceMonth  Int
+  amount          Decimal             @db.Decimal(10, 2)
+  status          PaymentChargeStatus @default(pendente)
+  asaasCustomerId String
+  asaasPaymentId  String              @unique
+  pixPayload      String?             @db.Text
+  pixQrCodeBase64 String?             @db.Text
+  paidAt          DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
   @@index([memberId])
 }
 

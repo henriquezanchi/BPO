@@ -1020,3 +1020,304 @@ export async function lerAlunosDaTurma(frame: Frame): Promise<AlunoTurmaMercurio
     return [];
   });
 }
+
+// ===================== Tesouraria > Caixas (lançamento de contribuição) =====================
+// Adaptado de C:\Scrapper\mercurio-tesouraria-portatil (ferramenta irmã já
+// em uso real por esta escola pra importar extrato bancário e lançar
+// pagamentos na Tesouraria) — a lógica de abrir caixa/dia e lançar um
+// recebimento de CONTRIBUIÇÃO já foi testada ao vivo lá (12/09/2026,
+// matrícula 52664, desfeita em seguida). Portado aqui pra disparar
+// automaticamente quando o Asaas confirma um PIX (ver
+// src/lib/actions/payment-actions.ts), reaproveitando a MESMA trava de
+// concorrência (verificarRodadaJaEmAndamento) — nunca abre 2 sessões ao
+// mesmo tempo com a credencial compartilhada do Mercúrio.
+//
+// IMPORTANTE: "Caixa" aqui é o nome exato cadastrado em Tesouraria >
+// Caixas daquela filial (ex: "BANCO CONTA CORRENTE") — listarCaixas()
+// lê os nomes reais (só leitura, sem risco) pra configurar
+// School.mercurioCaixaLancamento antes de habilitar o lançamento de
+// verdade.
+
+async function abrirCaixas(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  await abrirTesouraria(page, filialLabelRegex);
+  const frameIndice = await esperarFrame(page, "indice", /tes_indice\.php/, 15000);
+  await frameIndice.getByText("Caixas", { exact: true }).click();
+  return esperarFrame(page, "principal", /tes_cailivro\.php/, 15000);
+}
+
+/** Lista os nomes de todos os caixas cadastrados na filial — só leitura, usar pra configurar School.mercurioCaixaLancamento. */
+export async function listarCaixas(page: Page, filialLabelRegex: RegExp): Promise<string[]> {
+  const frame = await abrirCaixas(page, filialLabelRegex);
+  const opcoes = frame.locator('select[name="cmbcxa"] option');
+  const total = await opcoes.count();
+  const nomes: string[] = [];
+  for (let i = 0; i < total; i++) {
+    const texto = ((await opcoes.nth(i).textContent()) ?? "").trim();
+    if (texto && !/selecione/i.test(texto)) nomes.push(texto);
+  }
+  return nomes;
+}
+
+/**
+ * Vai até o calendário do caixa certo, no mês/ano da data alvo — comparação
+ * de mês/ano SEMPRE numérica (bug real do original: comparar como texto
+ * com zero à esquerda dava "08" > "9" == false, invertendo se devia
+ * avançar ou voltar o mês, girando até estourar tentativas).
+ */
+async function irParaCalendario(page: Page, filialLabelRegex: RegExp, nomeCaixa: string, dataDDMMAAAA: string): Promise<Frame> {
+  const [, mesAlvoTexto, anoAlvoTexto] = dataDDMMAAAA.split("/");
+  const mesAlvo = Number(mesAlvoTexto);
+  const anoAlvo = Number(anoAlvoTexto);
+  let frame = await abrirCaixas(page, filialLabelRegex);
+
+  for (let tentativas = 0; tentativas < 24; tentativas++) {
+    const mesAtual = Number(await frame.locator('input[name="mes"]').inputValue());
+    const anoAtual = Number(await frame.locator('input[name="ano"]').inputValue());
+    const caixaAtualTexto = await frame
+      .locator('select[name="cmbcxa"]')
+      .evaluate((el) => (el as HTMLSelectElement).selectedOptions[0]?.textContent?.trim());
+
+    const caixaCerto = caixaAtualTexto === nomeCaixa;
+    const mesCerto = mesAtual === mesAlvo && anoAtual === anoAlvo;
+    if (caixaCerto && mesCerto) return frame;
+
+    if (!caixaCerto) {
+      const valorOpt = await frame.locator('select[name="cmbcxa"] option', { hasText: nomeCaixa }).getAttribute("value");
+      if (!valorOpt) {
+        const opcoes = await frame.locator('select[name="cmbcxa"] option').allTextContents();
+        throw new Error(`Caixa "${nomeCaixa}" não encontrado. Opções disponíveis: ${opcoes.join(", ")}`);
+      }
+      await Promise.all([
+        frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {}),
+        frame.locator('select[name="cmbcxa"]').selectOption(valorOpt),
+      ]);
+      frame = await esperarFrame(page, "principal", /tes_cailivro\.php/, 15000);
+      continue;
+    }
+
+    const alvoMaior = anoAlvo > anoAtual || (anoAlvo === anoAtual && mesAlvo > mesAtual);
+    const botao = alvoMaior ? "cmdMais" : "cmdMenos";
+    await Promise.all([
+      frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {}),
+      frame.locator(`input[name="${botao}"]`).click(),
+    ]);
+    frame = await esperarFrame(page, "principal", /tes_cailivro\.php/, 15000);
+  }
+  throw new Error(`Não consegui chegar em ${dataDDMMAAAA} no calendário do caixa "${nomeCaixa}" depois de 24 tentativas.`);
+}
+
+/** Abre (ou entra em) o dia/caixa — devolve o frame de lançamento e se está editável (não travado/fechado). */
+async function abrirDia(page: Page, filialLabelRegex: RegExp, nomeCaixa: string, dataDDMMAAAA: string): Promise<{ frame: Frame; editavel: boolean }> {
+  let frame = await irParaCalendario(page, filialLabelRegex, nomeCaixa, dataDDMMAAAA);
+
+  const dataComTraco = dataDDMMAAAA.replace(/\//g, "-");
+  let linha = frame.locator("tr", { has: frame.locator(`td:text-is("${dataComTraco}")`) });
+  let totalLinhas = await linha.count();
+  if (totalLinhas === 0) {
+    linha = frame.locator("tr", { has: frame.locator(`td:text-is("${dataDDMMAAAA}")`) });
+    totalLinhas = await linha.count();
+  }
+  if (totalLinhas === 0) throw new Error(`Não encontrei a linha do dia ${dataDDMMAAAA} na tabela do calendário.`);
+
+  const botao = linha.first().locator("a, input[type=\"submit\"]").last();
+  await Promise.all([page.waitForTimeout(50), botao.click()]);
+  frame = await esperarFrame(page, "principal", /tes_caifolha\.php/, 15000);
+  await page.waitForTimeout(500);
+
+  const editavel =
+    (await frame.getByRole("link", { name: "Pagamento Outros", exact: false }).count()) > 0 ||
+    (await frame.getByText("Pagamento Outros", { exact: false }).count()) > 0;
+
+  return { frame, editavel };
+}
+
+interface FichaPendenteMercurio {
+  mes: string; // "MM/AAAA"
+  valorCheckbox: string; // "AAAAMM"
+}
+
+function valorCheckboxParaMes(valor: string): string | null {
+  if (!/^\d{6}$/.test(valor)) return null;
+  return `${valor.slice(4, 6)}/${valor.slice(0, 4)}`;
+}
+
+async function lerFichasPendentes(frame: Frame): Promise<FichaPendenteMercurio[]> {
+  const checkboxes = frame.locator('input[type="checkbox"][name^="ckb"]');
+  const total = await checkboxes.count();
+  const fichas: FichaPendenteMercurio[] = [];
+  for (let i = 0; i < total; i++) {
+    const valor = await checkboxes.nth(i).getAttribute("value");
+    const mes = valorCheckboxParaMes(valor ?? "");
+    if (!mes) continue;
+    fichas.push({ mes, valorCheckbox: valor! });
+  }
+  return fichas;
+}
+
+function fichaMaisAntiga(fichas: FichaPendenteMercurio[]): FichaPendenteMercurio {
+  return fichas.reduce((antiga, atual) => (atual.valorCheckbox < antiga.valorCheckbox ? atual : antiga));
+}
+
+/** Marca o(s) mês(es) pedido(s) — o próprio checkbox já dispara "Calcular" via onclick, não precisa clicar de novo. */
+async function marcarECalcular(page: Page, frame: Frame, fichas: FichaPendenteMercurio[], mesesParaMarcar: string[]): Promise<{ frame: Frame; total: number }> {
+  const fichaAlvo = fichas.find((f) => mesesParaMarcar.includes(f.mes));
+  if (!fichaAlvo) throw new Error(`Nenhuma ficha pendente bate com o(s) mês(es) pedido(s): ${mesesParaMarcar.join(", ")}.`);
+
+  const checkbox = frame.locator(`input[type="checkbox"][value="${fichaAlvo.valorCheckbox}"]`);
+  if (!(await checkbox.isChecked())) {
+    await Promise.all([
+      frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {}),
+      checkbox.setChecked(true),
+    ]);
+  }
+  const frameNovo = await esperarFrame(page, "principal", /tes_universal7\.php/, 15000);
+  const linhaTotal = frameNovo.locator("tr", { hasText: "Total" }).last();
+  const celulas = await linhaTotal.locator("td").allInnerTexts().catch(() => []);
+  const valorTexto = celulas[celulas.length - 1] || "";
+  return { frame: frameNovo, total: parseValorFlexivel(valorTexto) };
+}
+
+async function ajustarValorItemRecibo(page: Page, frameRecibo: Frame, valorDesejado: number): Promise<Frame> {
+  await frameRecibo
+    .getByRole("link", { name: "Alterar", exact: true })
+    .first()
+    .click()
+    .catch(async () => {
+      await frameRecibo.getByText("Alterar", { exact: true }).first().click();
+    });
+  const frameAltera = await esperarFrame(page, "principal", /tes_universal0\.php/, 15000);
+  await frameAltera.locator('input[name="txtvalu"]').fill(String(valorDesejado).replace(".", ","));
+  await frameAltera.locator('input[name="cmdGravar"]').click();
+  return esperarFrame(page, "principal", /tes_universal\.php/, 15000);
+}
+
+/**
+ * Clica "Finalizar com/sem Recibo" — abre um popup separado com a tela de
+ * impressão do recibo; sempre fechamos essa janela em seguida (nunca
+ * deixa acumulando numa sessão headless). Envio por e-mail do recibo
+ * fica de fora por ora (não confirmado ao vivo qual é o ícone certo na
+ * ferramenta original — ver comentário lá).
+ */
+async function finalizarRecibo(page: Page, frame: Frame, emitirRecibo: boolean): Promise<void> {
+  const nomeBotao = emitirRecibo === false ? "Finalizar sem Recibo" : "Finalizar com Recibo";
+  const promessaPopup = page.waitForEvent("popup", { timeout: 4000 }).catch(() => null);
+  await frame
+    .getByRole("button", { name: nomeBotao })
+    .click()
+    .catch(async () => {
+      await frame.getByText(nomeBotao, { exact: false }).click();
+    });
+  const popup = await promessaPopup;
+  if (popup) await popup.close().catch(() => {});
+}
+
+export interface LancamentoContribuicao {
+  matricula: string;
+  valor: number;
+  dataPagamentoBR: string; // "dd/mm/yyyy" — decide a data do lançamento E se ainda vale o desconto de pontualidade
+  interessado?: string;
+}
+
+/**
+ * Tolerância pra bater o valor calculado da ficha pendente contra o valor
+ * pago de verdade, e o desconto de pontualidade (contribuição sai R$10
+ * mais barata se pago até o dia 10 — a ficha do Mercúrio nunca aplica
+ * esse desconto sozinha, sempre mostra o valor cheio; lança no valor
+ * CHEIO e ajusta pro valor real depois via ajustarValorItemRecibo).
+ * Qualquer diferença maior, ou fora do dia 10, ABORTA — nunca lança
+ * "quase certo" com dinheiro real envolvido.
+ */
+const TOLERANCIA_CENTAVOS = 0.005;
+const LIMITE_DESCONTO_PONTUALIDADE = 10;
+const DIA_LIMITE_DESCONTO_PONTUALIDADE = 10;
+
+/**
+ * Lança um recebimento de CONTRIBUIÇÃO já confirmado (gateway) na
+ * Tesouraria — mesmo fluxo que a secretaria faz manualmente hoje.
+ * `frameDia` precisa vir de abrirDia() (dia/caixa já aberto e editável).
+ * Sempre marca o mês PENDENTE MAIS ANTIGO (contribuição é paga na ordem
+ * em que venceu) — nunca soma/combina vários meses sozinho.
+ */
+async function lancarRecebimentoContribuicao(page: Page, frameDia: Frame, lancamento: LancamentoContribuicao): Promise<void> {
+  await frameDia
+    .getByRole("link", { name: "Recebimento", exact: false })
+    .click()
+    .catch(async () => {
+      await frameDia.getByText("Recebimento", { exact: false }).click();
+    });
+  let frame = await esperarFrame(page, "principal", /tes_universal\.php/, 15000);
+
+  await frame.locator('input[value="Contribuições"]').click();
+  await frame.locator('input[name="txtmatr"]').fill(lancamento.matricula);
+  await Promise.all([
+    frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {}),
+    frame.locator('input[name="cmdContr"]').click(),
+  ]);
+  frame = await esperarFrame(page, "principal", /tes_universal7\.php/, 15000);
+
+  const fichas = await lerFichasPendentes(frame);
+  if (fichas.length === 0) {
+    throw new Error(`Matrícula "${lancamento.matricula}": não encontrei nenhuma ficha PENDENTE no Mercúrio — confira manualmente antes de tentar de novo.`);
+  }
+  const mesEscolhido = fichaMaisAntiga(fichas).mes;
+
+  const resultado = await marcarECalcular(page, frame, fichas, [mesEscolhido]);
+  frame = resultado.frame;
+
+  let precisaAjustarValor = false;
+  if (Number.isNaN(resultado.total) || Math.abs(resultado.total - lancamento.valor) >= TOLERANCIA_CENTAVOS) {
+    const dia = parseInt(lancamento.dataPagamentoBR.split("/")[0], 10);
+    const diferenca = Number.isNaN(resultado.total) ? NaN : resultado.total - lancamento.valor;
+    const dentroDoDesconto =
+      !Number.isNaN(diferenca) &&
+      dia <= DIA_LIMITE_DESCONTO_PONTUALIDADE &&
+      diferenca > TOLERANCIA_CENTAVOS &&
+      diferenca <= LIMITE_DESCONTO_PONTUALIDADE + TOLERANCIA_CENTAVOS;
+
+    if (!dentroDoDesconto) {
+      const totalTexto = Number.isNaN(resultado.total) ? "(não consegui ler)" : `R$ ${resultado.total.toFixed(2).replace(".", ",")}`;
+      throw new Error(
+        `Matrícula "${lancamento.matricula}": o mês pendente mais antigo (${mesEscolhido}) totaliza ${totalTexto}, mas o pagamento confirmado foi de R$ ${lancamento.valor.toFixed(2).replace(".", ",")} — não batem, e a diferença não é compatível com o desconto de pontualidade (até R$${LIMITE_DESCONTO_PONTUALIDADE}, pago até o dia ${DIA_LIMITE_DESCONTO_PONTUALIDADE}). Lançamento abortado por segurança — confira e lance manualmente.`,
+      );
+    }
+    precisaAjustarValor = true;
+  }
+
+  await Promise.all([
+    frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {}),
+    frame.locator('input[name="cmdLancar"]').click(),
+  ]);
+  let frameReciboDepois = await esperarFrame(page, "principal", /tes_universal\.php/, 15000);
+
+  if (precisaAjustarValor) {
+    frameReciboDepois = await ajustarValorItemRecibo(page, frameReciboDepois, lancamento.valor);
+  }
+  if (lancamento.interessado) {
+    await frameReciboDepois.locator('input[name="txtnome"]').fill(lancamento.interessado).catch(() => {});
+  }
+
+  await finalizarRecibo(page, frameReciboDepois, true);
+  await esperarFrame(page, "principal", /tes_caifolha\.php/, 15000);
+}
+
+/**
+ * Ponto de entrada completo: abre sessão-independente (chamador cuida de
+ * abrir/fechar o browser), navega até o caixa/dia de HOJE na filial certa,
+ * e lança o recebimento. `nomeCaixa` vem de School.mercurioCaixaLancamento
+ * (configurado 1x via listarCaixas — ver scripts/list-cashiers.ts).
+ */
+export async function lancarPagamentoContribuicaoHoje(
+  page: Page,
+  filialLabelRegex: RegExp,
+  nomeCaixa: string,
+  lancamento: LancamentoContribuicao,
+): Promise<void> {
+  const hoje = new Date();
+  const dataDDMMAAAA = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
+
+  const { frame, editavel } = await abrirDia(page, filialLabelRegex, nomeCaixa, dataDDMMAAAA);
+  if (!editavel) {
+    throw new Error(`O dia ${dataDDMMAAAA} está fechado/travado no Mercúrio (caixa "${nomeCaixa}") — não dá pra lançar automaticamente. Lance manualmente.`);
+  }
+  await lancarRecebimentoContribuicao(page, frame, lancamento);
+}

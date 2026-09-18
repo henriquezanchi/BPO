@@ -4,6 +4,7 @@ import type {
   MercurioComposition,
   MercurioContactChanges,
   MercurioContactData,
+  MercurioContributionPayment,
   MercurioMemberIdentity,
   MercurioPersonalChanges,
   MercurioPersonalData,
@@ -93,5 +94,14 @@ export class MockMercurioAdapter implements MercurioAdapter {
   async fetchReceiptContent(member: MercurioMemberIdentity, mercurioRecId: string): Promise<MercurioReceiptContent> {
     console.warn(`[MockMercurioAdapter] fetchReceiptContent(${member.matricula}, ${mercurioRecId}) — simulado.`);
     return { rawText: "(recibo simulado — credenciais do Mercúrio não configuradas)", canceled: false };
+  }
+
+  async launchContributionPayment(
+    member: MercurioMemberIdentity,
+    nomeCaixa: string,
+    payment: MercurioContributionPayment,
+  ): Promise<MercurioWriteResult> {
+    console.warn(`[MockMercurioAdapter] launchContributionPayment(${member.matricula}, caixa=${nomeCaixa}) — simulado.`, payment);
+    return { ok: true };
   }
 }

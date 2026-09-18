@@ -4,6 +4,7 @@ import type {
   MercurioComposition,
   MercurioContactChanges,
   MercurioContactData,
+  MercurioContributionPayment,
   MercurioMemberIdentity,
   MercurioPersonalChanges,
   MercurioPersonalData,
@@ -23,6 +24,7 @@ import {
   escreverAbaPessoais,
   excluirItemComposicao,
   incluirItemComposicao,
+  lancarPagamentoContribuicaoHoje,
   lerAbaEnderecos,
   lerAbaIdentificacao,
   lerAbaPessoais,
@@ -266,6 +268,29 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
       return await lerConteudoRecibo(page, mercurioRecId);
     } finally {
       await browser.close();
+    }
+  }
+
+  async launchContributionPayment(
+    member: MercurioMemberIdentity,
+    nomeCaixa: string,
+    payment: MercurioContributionPayment,
+  ): Promise<MercurioWriteResult> {
+    try {
+      const { browser, page } = await abrirSessaoMercurio();
+      try {
+        await lancarPagamentoContribuicaoHoje(page, new RegExp(member.filialLabel, "i"), nomeCaixa, {
+          matricula: member.matricula,
+          valor: payment.amount,
+          dataPagamentoBR: payment.paidAtBR,
+          interessado: payment.interessado,
+        });
+        return { ok: true };
+      } finally {
+        await browser.close();
+      }
+    } catch (e) {
+      return erroDeEscrita(e);
     }
   }
 }
