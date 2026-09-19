@@ -2,7 +2,7 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enqueueMercurioContactUpdate, processMercurioSyncQueue } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioContactUpdate } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
 export interface ContactChangeInput {
@@ -40,9 +40,13 @@ const OVERDUE_STATUSES = new Set(["atrasado", "negociando"]);
  * troquem contato "por baixo do pano" sem a economia perceber.
  *
  * Também propaga a mudança pro Mercúrio (fonte de verdade cadastral da
- * escola): enfileira em MercurioSyncTask (histórico/retry) e processa a
- * fila na hora (ver nota de escala em mercurio/sync-queue.ts) — o aluno vê
- * na mesma tela se a escrita no Mercúrio deu certo.
+ * escola): só enfileira em MercurioSyncTask (histórico/retry) — quem
+ * processa de fato é o worker separado (scripts/process-mercurio-queue.ts,
+ * agendado via Task Scheduler), NÃO esta Server Action. Antes disso
+ * processava a fila na hora (segurava a resposta HTTP pelos ~5-10s de uma
+ * sessão de navegador inteira — bug real relatado pelo usuário: "cadastro
+ * está bem lento"). O aluno não vê mais confirmação imediata; ver aviso de
+ * "até 24h" na UI (profile-edit-panel.tsx).
  *
  * requireAuthenticatedMember confere que quem está logado É o memberId
  * recebido — Server Actions não passam pelo matcher do proxy.ts, então sem
@@ -65,7 +69,7 @@ export async function updateMemberContact(memberId: string, changes: ContactChan
   }
 
   if (Object.keys(newValues).length === 0) {
-    return { changed: false, alerted: false, mercurioSynced: false };
+    return { changed: false, alerted: false };
   }
 
   const wasOverdue = OVERDUE_STATUSES.has(member.status);
@@ -85,19 +89,7 @@ export async function updateMemberContact(memberId: string, changes: ContactChan
 
   await enqueueMercurioContactUpdate(memberId, newValues);
 
-  // Processa a fila na hora pra dar feedback imediato no Portal. Uma falha
-  // aqui (ex: Mercúrio fora do ar, trava de concorrência ativa) não deve
-  // impedir o salvamento local — a tarefa já está na fila e será
-  // retentada; só reportamos que a sincronização não confirmou ainda.
-  let mercurioSynced = false;
-  try {
-    const resultados = await processMercurioSyncQueue();
-    mercurioSynced = resultados.some((r) => r.memberId === memberId && r.status === "sincronizado");
-  } catch (e) {
-    console.error("Falha ao processar fila de sincronização com o Mercúrio:", e);
-  }
-
   revalidatePath("/portal");
 
-  return { changed: true, alerted: wasOverdue, mercurioSynced };
+  return { changed: true, alerted: wasOverdue };
 }

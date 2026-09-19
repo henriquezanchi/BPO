@@ -56,7 +56,20 @@ export interface AsaasPayment {
   customer: string;
 }
 
-export async function asaasCreatePixCharge(customerId: string, valor: number, descricao: string, vencimento: string): Promise<AsaasPayment> {
+export interface AsaasSplit {
+  walletId: string;
+  /** % (0-100) sobre o valor líquido — o que NÃO for enviado no split fica automaticamente na conta do BPO (a que criou a cobrança). */
+  percentualValue?: number;
+  fixedValue?: number;
+}
+
+export async function asaasCreatePixCharge(
+  customerId: string,
+  valor: number,
+  descricao: string,
+  vencimento: string,
+  split?: AsaasSplit[],
+): Promise<AsaasPayment> {
   return chamarApi<AsaasPayment>("/payments", {
     method: "POST",
     body: JSON.stringify({
@@ -65,6 +78,7 @@ export async function asaasCreatePixCharge(customerId: string, valor: number, de
       value: valor,
       dueDate: vencimento, // "aaaa-mm-dd"
       description: descricao,
+      ...(split && split.length > 0 ? { split } : {}),
     }),
   });
 }
@@ -86,4 +100,36 @@ export async function asaasGetPaymentStatus(paymentId: string): Promise<AsaasPay
 /** Cancela uma cobrança (ex: aluno desistiu, ou cobrança de teste) — best-effort, não lança se já não existir mais. */
 export async function asaasCancelPayment(paymentId: string): Promise<void> {
   await chamarApi(`/payments/${paymentId}`, { method: "DELETE" }).catch(() => {});
+}
+
+export interface AsaasSubaccountInput {
+  name: string;
+  cpfCnpj: string;
+  email: string;
+  mobilePhone: string;
+  incomeValue: number;
+  address: string;
+  addressNumber: string;
+  province: string; // bairro
+  postalCode: string;
+  companyType?: "MEI" | "LIMITED" | "INDIVIDUAL" | "ASSOCIATION";
+}
+
+export interface AsaasSubaccount {
+  id: string;
+  walletId: string;
+  accessToken?: { value: string }; // apiKey da subconta — só vem na criação, não é recuperável depois
+}
+
+/**
+ * Cria uma subconta (1 por escola) — a conta-pai (BPO) precisa ser PJ.
+ * Novas subcontas entram num período de avaliação regulatória (até 60
+ * dias) com limite de R$2.000 em cobranças até serem aprovadas pelo
+ * Asaas — vale pedir aprovação antecipada ao suporte assim que criar.
+ */
+export async function asaasCreateSubaccount(input: AsaasSubaccountInput): Promise<AsaasSubaccount> {
+  return chamarApi<AsaasSubaccount>("/accounts", {
+    method: "POST",
+    body: JSON.stringify({ companyType: "ASSOCIATION", ...input }),
+  });
 }

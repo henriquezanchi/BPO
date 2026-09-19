@@ -67,6 +67,13 @@ export async function enqueueMercurioCompositionEdit(memberId: string, mercurioG
   });
 }
 
+/** Enfileira a atualização das "Anotações Econômicas sobre o Aluno" (textarea txtobs na tela de Composição, ver browser-session.ts). */
+export async function enqueueMercurioEconomicNotesUpdate(memberId: string, texto: string) {
+  return db.mercurioSyncTask.create({
+    data: { memberId, taskType: "atualizar_anotacoes_economicas", payload: { texto } },
+  });
+}
+
 /** Enfileira a busca do conteúdo (documento) de um recibo específico, sob demanda — ver ContributionReceipt.rawText. */
 export async function enqueueMercurioReceiptFetch(memberId: string, mercurioRecId: string) {
   return db.mercurioSyncTask.create({
@@ -169,6 +176,12 @@ export async function processMercurioSyncQueue(limit = 20) {
             where: { memberId_mercurioGroupId: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } },
             data: { amount: payload.novoValor },
           });
+        }
+      } else if (task.taskType === "atualizar_anotacoes_economicas") {
+        const payload = task.payload as { texto: string };
+        result = await mercurioAdapter.pushEconomicNotes(identidade, payload.texto);
+        if (result.ok) {
+          await db.member.update({ where: { id: task.memberId }, data: { economicNotesSyncedAt: new Date() } });
         }
       } else if (task.taskType === "buscar_recibo") {
         const payload = task.payload as { mercurioRecId: string };

@@ -1,0 +1,40 @@
+/**
+ * Worker separado que drena a fila de sincronização com o Mercúrio
+ * (MercurioSyncTask) — extraído de dentro das Server Actions (ver
+ * member-actions.ts / personal-data-actions.ts / asaas/confirm-payment.ts)
+ * pra não segurar a resposta HTTP pelos ~5-10s de uma sessão de navegador
+ * (bug real relatado pelo usuário: cadastro lento no Portal).
+ *
+ * Pensado pra rodar periodicamente via Windows Task Scheduler (mesmo
+ * padrão externo já usado pelo "scraper agendado" — ver comentário em
+ * scraper-credentials.ts sobre a trava scraper_progresso, respeitada
+ * automaticamente aqui via abrirSessaoMercurio). Sugestão: a cada 5-10min.
+ * Enquanto isso não está agendado, o Portal já avisa o membro que a
+ * alteração pode levar até 24h pra ser confirmada no Mercúrio — rodar este
+ * script manualmente também resolve a fila na hora.
+ *
+ * Uso: npx tsx --env-file=.env scripts/process-mercurio-queue.ts
+ */
+import { db } from "../src/lib/db";
+import { processMercurioSyncQueue } from "../src/lib/mercurio/sync-queue";
+
+async function main() {
+  const resultados = await processMercurioSyncQueue();
+  if (resultados.length === 0) {
+    console.log("Fila vazia — nada a processar.");
+    return;
+  }
+  const porStatus = resultados.reduce<Record<string, number>>((acc, r) => {
+    acc[r.status] = (acc[r.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  console.log(`Processadas ${resultados.length} tarefa(s):`, porStatus);
+}
+
+main()
+  .then(() => db.$disconnect())
+  .catch(async (e) => {
+    console.error("ERRO:", e);
+    await db.$disconnect();
+    process.exit(1);
+  });

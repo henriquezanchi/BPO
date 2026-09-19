@@ -54,7 +54,7 @@ async function acharContextoComTexto(page: Page, textoAlvo: string, timeoutMs = 
   throw new Error(`Não encontrei "${textoAlvo}" (timeout ${timeoutMs}ms).`);
 }
 
-async function esperarFrame(page: Page, nome: string, regexUrl: RegExp, timeoutMs = 10000): Promise<Frame> {
+export async function esperarFrame(page: Page, nome: string, regexUrl: RegExp, timeoutMs = 10000): Promise<Frame> {
   const fim = Date.now() + timeoutMs;
   while (Date.now() < fim) {
     const frame = page.frame({ name: nome });
@@ -85,7 +85,7 @@ async function loginMercurio(page: Page, matricula: string, senha: string) {
  * links, identificada pelo texto da tabela de menu ancestral (nome da
  * filial), não por um id estável.
  */
-async function listarLinksMenu(page: Page, nomeFuncao: string) {
+export async function listarLinksMenu(page: Page, nomeFuncao: string) {
   const framePrincipal = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
   const links = framePrincipal.getByRole("link", { name: nomeFuncao, exact: true });
   const total = await links.count();
@@ -150,9 +150,57 @@ export async function abrirListaAtivos(page: Page, filialLabelRegex: RegExp): Pr
   const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
   await framePrincipal0.getByRole("link", { name: "CADASTRO", exact: true }).nth(filial.indice).click();
 
+  return reabrirListaAtivos(page);
+}
+
+/**
+ * Reabre a lista de Ativos da filial JÁ SELECIONADA (ver abrirListaAtivos) —
+ * o frame "indice" continua mostrando o menu da filial mesmo depois de
+ * abrir a ficha de um aluno, então clicar em "Ativos" de novo nele volta
+ * pra lista sem precisar renavegar por CADASTRO. Necessário entre membros
+ * num loop (ex: sync-composition.ts): o frame "principal" é o MESMO frame
+ * reaproveitado pra tudo (lista, ficha, composição...), então depois de
+ * abrir a ficha de um aluno ele deixa de conter a lista — sem reabrir
+ * aqui, a busca pelo próximo nome nunca acha o link (confirmado ao vivo:
+ * batch de 33 alunos só sincronizou o 1º, todo o resto deu timeout).
+ */
+export async function reabrirListaAtivos(page: Page): Promise<Frame> {
   const frameIndice = await esperarFrame(page, "indice", /uni_indice\.php/, 15000);
   await frameIndice.getByText("Ativos", { exact: true }).click();
   return esperarFrame(page, "principal", /uni_newati\.php/, 15000);
+}
+
+/**
+ * Lista do Círculo de Amigos (dentro de "COMPLEMENTAR", separada de
+ * "Ativos" — confirmado ao vivo, 2026-09-18: o menu da filial tem
+ * PROGRAMA BRANCO > Ativos/Provacionistas/Membros/Inativos e COMPLEMENTAR
+ * > Cadastramento/Pré-Provacion./C. de Amigos/Correntinha/Távolas/Janos,
+ * cada um com sua própria listagem — "C. de Amigos" abre uni_esccir.php,
+ * MESMO formato de tabela (colunas "Matr."/"Nome") que a lista de Ativos,
+ * então listarAtivosResumo já funciona aqui sem mudança. O aluno cadastrado
+ * aqui TEM matrícula e ficha reais (uni_cadfun.php), só não conta pra
+ * relatório mensal de Membro/Provacionista — mesmo caminho de composição
+ * (tes_conedit.php) funciona, incluindo o item "CONTRIBUIÇÃO CÍRCULO DE
+ * AMIGOS" do catálogo.
+ */
+export async function abrirCirculoDeAmigos(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  const cadastros = await listarLinksMenu(page, "CADASTRO");
+  const filial = cadastros.find((c) => filialLabelRegex.test(c.label));
+  if (!filial) {
+    throw new Error(`Filial batendo com ${filialLabelRegex} não encontrada entre: ${cadastros.map((c) => c.label).join(", ")}`);
+  }
+
+  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
+  await framePrincipal0.getByRole("link", { name: "CADASTRO", exact: true }).nth(filial.indice).click();
+
+  return reabrirCirculoDeAmigos(page);
+}
+
+/** Reabre a lista do Círculo de Amigos — mesmo motivo/uso de reabrirListaAtivos, entre membros num loop. */
+export async function reabrirCirculoDeAmigos(page: Page): Promise<Frame> {
+  const frameIndice = await esperarFrame(page, "indice", /uni_indice\.php/, 15000);
+  await frameIndice.getByText("C. de Amigos", { exact: true }).click();
+  return esperarFrame(page, "principal", /uni_esccir\.php/, 15000);
 }
 
 /**
@@ -765,6 +813,24 @@ export async function lerCatalogoItensDisponiveis(frame: Frame): Promise<Catalog
   );
 }
 
+/**
+ * "Anotações Econômicas sobre o Aluno" — textarea `txtobs` na MESMA página
+ * de Composição (tes_conedit.php), não precisa navegar. Confirmado ao vivo
+ * (2026-09-18): é o mesmo `&lt;form name="f1"&gt;` da lista de itens, com um botão
+ * PRÓPRIO `input[name="cmdGravar"][value="Gravar Anotações"]` — mesmo NOME
+ * do botão usado em editarValorItemComposicao, mas em PÁGINA/FRAME
+ * diferente (tes_conedit1.php), então não colide.
+ */
+export async function lerAnotacoesEconomicas(frame: Frame): Promise<string> {
+  return (await frame.locator('textarea[name="txtobs"]').inputValue()).trim();
+}
+
+export async function gravarAnotacoesEconomicas(frame: Frame, texto: string): Promise<void> {
+  await frame.locator('textarea[name="txtobs"]').fill(texto.slice(0, 255));
+  await frame.locator('input[name="cmdGravar"]').click();
+  await frame.page().waitForTimeout(800);
+}
+
 /** Inclui um item pelo código do catálogo (value do <select> cmbgrp) — o Mercúrio aplica o valor padrão dele automaticamente. */
 export async function incluirItemComposicao(frame: Frame, mercurioGroupId: string): Promise<void> {
   await frame.locator('select[name="cmbgrp"]').selectOption(mercurioGroupId);
@@ -804,12 +870,14 @@ export interface DadosUnidadeMercurio {
   subChefeMatricula: string;
   subChefeNome: string;
   cnpj: string;
+  razaoSocial: string;
   endereco: string;
   bairro: string;
   cidade: string;
   uf: string;
   cep: string;
   telefone: string;
+  emailDiretor: string;
   fundacaoDia: string;
   fundacaoMes: string;
   fundacaoAno: string;
@@ -857,12 +925,14 @@ export async function lerDadosUnidade(frame: Frame): Promise<DadosUnidadeMercuri
     subChefeMatricula: await valor("txtsub"),
     subChefeNome: await nomeAoLadoDaMatricula("txtsub"),
     cnpj: await valor("txtcnpj"),
+    razaoSocial: await valor("txtrazao"),
     endereco: await valor("txtlogra"),
     bairro: await valor("txtbai"),
     cidade: await valor("txtcida"),
     uf: await valor("txtuf"),
     cep: await valor("txtcep"),
     telefone: [await valor("txtddd"), await valor("txtfone")].filter(Boolean).join(" "),
+    emailDiretor: await valor("txtemail"),
     fundacaoDia: await valor("txtdia"),
     fundacaoMes: await valor("txtmes"),
     fundacaoAno: await valor("txtano"),
@@ -1320,4 +1390,50 @@ export async function lancarPagamentoContribuicaoHoje(
     throw new Error(`O dia ${dataDDMMAAAA} está fechado/travado no Mercúrio (caixa "${nomeCaixa}") — não dá pra lançar automaticamente. Lance manualmente.`);
   }
   await lancarRecebimentoContribuicao(page, frame, lancamento);
+}
+
+export interface RubricaPagamentoMercurio {
+  mercurioRubricaId: string;
+  label: string;
+}
+
+/**
+ * Lê o catálogo de Rubricas de Pagamento (Tesouraria > Caixa > dia >
+ * "Pagamento Outros" > select "cmbrub") — só leitura. Mesmo catálogo e
+ * mesma navegação que a ferramenta irmã C:\Scrapper\mercurio-tesouraria
+ * usa pra lançamento automático de despesa (confirmado comparando
+ * RUBRICAS_PAGAMENTO.md de lá com esta implementação) — usado aqui pra
+ * conciliar categoria de despesa importada de extrato bancário contra as
+ * rubricas reais da filial. Precisa de um dia editável (mesma exigência
+ * de abrirDia/lancarPagamentoContribuicaoHoje) — rodar num dia do mês
+ * corrente.
+ */
+export async function lerRubricasDePagamentoHoje(page: Page, filialLabelRegex: RegExp, nomeCaixa: string): Promise<RubricaPagamentoMercurio[]> {
+  const hoje = new Date();
+  const dataDDMMAAAA = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
+
+  const { frame: frameDia, editavel } = await abrirDia(page, filialLabelRegex, nomeCaixa, dataDDMMAAAA);
+  if (!editavel) {
+    throw new Error(`O dia ${dataDDMMAAAA} está fechado/travado no Mercúrio (caixa "${nomeCaixa}") — tente novamente num dia do mês corrente.`);
+  }
+
+  await frameDia
+    .getByRole("link", { name: "Pagamento Outros", exact: false })
+    .click()
+    .catch(async () => {
+      await frameDia.getByText("Pagamento Outros", { exact: false }).click();
+    });
+  const framePagamento = await esperarFrame(page, "principal", /tes_pagaout\.php/, 15000);
+
+  const opcoes = framePagamento.locator('select[name="cmbrub"] option');
+  const total = await opcoes.count();
+  const itens: RubricaPagamentoMercurio[] = [];
+  for (let i = 0; i < total; i++) {
+    const opcao = opcoes.nth(i);
+    const valor = (await opcao.getAttribute("value")) || "";
+    const texto = ((await opcao.textContent()) || "").trim();
+    if (!valor || !texto || /selecione/i.test(texto)) continue;
+    itens.push({ mercurioRubricaId: valor, label: texto });
+  }
+  return itens;
 }

@@ -3,6 +3,7 @@
 import { asaasCreatePixCharge, asaasFindOrCreateCustomer, asaasGetPaymentStatus, asaasGetPixQrCode } from "@/lib/asaas/client";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
 import { requireAuthenticatedMember } from "@/lib/auth";
+import { PERCENTUAL_SPLIT_ESCOLA } from "@/lib/billing-constants";
 import { db } from "@/lib/db";
 
 /**
@@ -35,7 +36,10 @@ export async function createContributionCharge(memberId: string, year: number, m
   const dueDate = vencimento.toISOString().slice(0, 10);
 
   const nomeMes = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("pt-BR", { month: "long", timeZone: "UTC" });
-  const pagamento = await asaasCreatePixCharge(cliente.id, valor, `Contribuição ${nomeMes}/${year} — ${member.name}`, dueDate);
+  const split = member.school.asaasWalletId
+    ? [{ walletId: member.school.asaasWalletId, percentualValue: PERCENTUAL_SPLIT_ESCOLA }]
+    : undefined;
+  const pagamento = await asaasCreatePixCharge(cliente.id, valor, `Contribuição ${nomeMes}/${year} — ${member.name}`, dueDate, split);
   const qrcode = await asaasGetPixQrCode(pagamento.id);
 
   const charge = await db.paymentCharge.create({

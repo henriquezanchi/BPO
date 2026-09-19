@@ -40,8 +40,19 @@ enum PaymentChargeStatus {
   cancelado
 }
 
+enum RecurrenceFrequency {
+  diaria
+  semanal
+  quinzenal
+  mensal
+  bimestral
+  semestral
+  anual
+}
+
 enum ChargeTriggerType {
   inicio_mes
+  dia_10_desconto // dia fixo (10) do mês, prazo do desconto de pontualidade — ver demo-whatsapp.html
   vencimento
   fim_mes
   atraso_30
@@ -78,21 +89,21 @@ enum MercurioSyncStatus {
 }
 
 model School {
-  id                  String   @id @default(cuid())
-  name                String
-  city                String?
-  whatsapp            String? // número da secretaria/economia, usado no botão de ajuda do Portal
-  mercurioFilialLabel String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
-  createdAt           DateTime @default(now())
+  id                      String    @id @default(cuid())
+  name                    String
+  city                    String?
+  whatsapp                String? // número da secretaria/economia, usado no botão de ajuda do Portal
+  mercurioFilialLabel     String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
+  createdAt               DateTime  @default(now())
   // "Diretor > Dados da Unidade" do Mercúrio (diretor/dir_frame.php) — só
   // o que alimenta o Painel do Diretor por ora (ver scripts/sync-diretoria.ts).
   // Nome do diretor/sub-chefe fica no Member (isDiretor/isSubChefe), não
   // aqui — aqui é só o que é mesmo dado da UNIDADE, não de pessoa.
-  cnpj             String?
-  enderecoCompleto String?
-  telefoneUnidade  String?
-  fundacao         DateTime?
-  unidadeSyncedAt  DateTime?
+  cnpj                    String?
+  enderecoCompleto        String?
+  telefoneUnidade         String?
+  fundacao                DateTime?
+  unidadeSyncedAt         DateTime?
   // Nome EXATO do caixa (Tesouraria > Caixas) usado pra lançar automaticamente
   // um recebimento de contribuição confirmado pelo Asaas (ver
   // browser-session.ts#lancarPagamentoContribuicaoHoje e
@@ -100,113 +111,130 @@ model School {
   // isto) — enquanto null, o lançamento automático fica desligado pra essa
   // escola (a fila só marca a tarefa como falha, nunca lança "no escuro").
   mercurioCaixaLancamento String?
+  // Subconta Asaas da escola (ver scripts/create-asaas-subaccount.ts) — a
+  // cobrança continua sendo criada pela conta do BPO (1 API key só,
+  // gerencia N escolas), e um split manda a fatia da escola pra esta
+  // wallet, ficando a taxa do BPO (não informada no split) retida na
+  // conta que criou a cobrança automaticamente. Enquanto null, nenhum
+  // split é aplicado (100% fica na conta do BPO, comportamento antigo).
+  asaasWalletId           String?
 
   members            Member[]
   events             Event[]
   payables           Payable[]
+  repasses           Repasse[]
   chargingRules      ChargingRule[]
   classGroups        ClassGroup[]
   compositionCatalog SchoolCompositionCatalogItem[]
+  paymentRubricas    SchoolPaymentRubrica[]
 }
 
 model Member {
-  id             String       @id @default(cuid())
-  schoolId       String
-  school         School       @relation(fields: [schoolId], references: [id])
-  mercurioId     String?      @unique // matrícula no Mercúrio (ex: "21596"), quando conhecida
-  authUserId     String?      @unique // id do usuário no Supabase Auth (login por e-mail/senha) — ver src/lib/auth.ts
-  registrationNo String? // "Matrícula #21596"
-  name           String
-  whatsapp       String
-  whatsappAlt    String? // "Telefone Alternativo" do Mercúrio (2º par Celular/Alternativo)
-  email          String?
+  id                    String       @id @default(cuid())
+  schoolId              String
+  school                School       @relation(fields: [schoolId], references: [id])
+  mercurioId            String?      @unique // matrícula no Mercúrio (ex: "21596"), quando conhecida
+  authUserId            String?      @unique // id do usuário no Supabase Auth (login por e-mail/senha) — ver src/lib/auth.ts
+  registrationNo        String? // "Matrícula #21596"
+  name                  String
+  whatsapp              String
+  whatsappAlt           String? // "Telefone Alternativo" do Mercúrio (2º par Celular/Alternativo)
+  email                 String?
   // Endereço estruturado (não um campo único de texto) pra permitir
   // autopreenchimento nativo do celular/Google no formulário do Portal —
   // ver src/components/member/panels/profile-edit-panel.tsx. Composto de
   // volta num Logradouro único só na hora de escrever no Mercúrio (que usa
   // 1 campo de texto livre pra rua+número+complemento), em
   // src/lib/mercurio/playwright-adapter.ts.
-  addressStreet       String?
-  addressNumber       String?
-  addressComplement   String?
-  addressNeighborhood String?
-  addressCity         String?
-  addressState        String? // UF, 2 letras
-  addressZip          String?
+  addressStreet         String?
+  addressNumber         String?
+  addressComplement     String?
+  addressNeighborhood   String?
+  addressCity           String?
+  addressState          String? // UF, 2 letras
+  addressZip            String?
   // "Mais Dados" (aba PESSOAIS + IDENTIFICAÇÃO do Mercúrio) — ver
   // src/app/(member)/portal/mais-dados. escolaridade/estadoCivil guardam o
   // CÓDIGO que o Mercúrio usa (ex: "GRP", "SOL"), não o texto — ver
   // src/lib/mercurio/personal-data-options.ts.
-  birthDate      DateTime?
-  naturalidade   String? // "cidade/UF" (formato livre, como o Mercúrio grava)
-  profession     String?
-  escolaridade   String?
-  estadoCivil    String?
-  rgNumero       String?
-  rgOrgaoEmissor String?
-  rgDataEmissao  DateTime?
+  birthDate             DateTime?
+  naturalidade          String? // "cidade/UF" (formato livre, como o Mercúrio grava)
+  profession            String?
+  escolaridade          String?
+  estadoCivil           String?
+  rgNumero              String?
+  rgOrgaoEmissor        String?
+  rgDataEmissao         DateTime?
   // Situação real no Mercúrio (ATI/INA) — sincronizada periodicamente via
   // scripts/sync-active-status.ts (lê a lista de Ativos da filial inteira
   // numa sessão só, mais eficiente que checar 1 aluno por vez). Verificado
   // no login (src/lib/auth.ts) pra impedir quem saiu da escola de manter
   // acesso ao Portal — não é uma checagem ao vivo a cada login por
   // velocidade, então pode ficar desatualizado até a próxima sincronização.
-  mercurioAtivo     Boolean   @default(true)
-  mercurioAtivoSync DateTime? // última vez que este campo foi sincronizado de verdade
+  mercurioAtivo         Boolean      @default(true)
+  mercurioAtivoSync     DateTime? // última vez que este campo foi sincronizado de verdade
   // Aparece na lista "Pedagogos" (Integração > Pedagogos) de alguma filial
   // no Mercúrio — quem dá aula lá também é aluno em outras turmas, então
   // não é um papel separado no Portal, só libera o botão "Área do
   // Professor" (ver scripts/sync-pedagogos.ts e member-portal-client.tsx).
-  isPedagogo       Boolean   @default(false)
-  pedagogoSyncedAt DateTime?
+  isPedagogo            Boolean      @default(false)
+  pedagogoSyncedAt      DateTime?
   // É Diretor(a) ou Sub-Chefe de alguma filial — lido de "Diretor > Dados
   // da Unidade" do Mercúrio (tem matrícula de verdade nesses dois campos,
   // diferente de Pedagogos — cruza por matrícula, não por nome). Libera o
   // card "Direção" no Portal do Voluntário (ver scripts/sync-diretoria.ts).
-  isDiretor        Boolean   @default(false)
-  isSubChefe       Boolean   @default(false)
-  direcaoSyncedAt  DateTime?
+  isDiretor             Boolean      @default(false)
+  isSubChefe            Boolean      @default(false)
+  direcaoSyncedAt       DateTime?
   // Id do cliente na carteira digital Fortuna (oinabnfortuna.acropolebrasil.com.br)
   // — numeração própria, SEM relação com mercurioId. Resolvido 1x por
   // e-mail/telefone (scripts/link-fortuna-client.ts), não por nome (mais
   // confiável que o casamento por nome que o Mercúrio exige). Diferente do
   // Mercúrio, a API do Fortuna é rápida (REST normal, sem RPA) — o saldo é
   // lido ao vivo a cada carregamento do Portal, não sincronizado/cacheado.
-  fortunaClientId Int? @unique
-  status         MemberStatus @default(em_dia)
-  createdAt      DateTime     @default(now())
+  fortunaClientId       Int?         @unique
+  status                MemberStatus @default(em_dia)
+  createdAt             DateTime     @default(now())
+  // "Anotações Econômicas sobre o Aluno" — textarea da tela de Composição
+  // das Contribuições no Mercúrio (campo txtobs, limite de 255 caracteres
+  // lá). Igual ao contato/dados pessoais: escreve local na hora e só
+  // enfileira a propagação pro Mercúrio (ver sync-queue.ts) — worker
+  // separado processa em background (scripts/process-mercurio-queue.ts).
+  economicNotes         String?      @db.VarChar(255)
+  economicNotesSyncedAt DateTime?
 
-  contributions        Contribution[]
-  compositionItems     ContributionCompositionItem[]
-  receipts             ContributionReceipt[]
-  monthlyStatus        ContributionMonthlyStatus[]
-  fortunaTx            FortunaTransaction[]
-  crmContacts          CrmContact[]
-  eventRegistr         EventRegistration[]
-  classMemberships     ClassMembership[]
-  createdActivities    Activity[]             @relation("ActivityCreator")
-  activityNotifs       ActivityNotification[]
-  contactChangeLogs    ContactChangeLog[]
-  mercurioSyncTasks    MercurioSyncTask[]
-  agendaReactions      AgendaReaction[]
-  createdPolls         Poll[]                  @relation("PollCreator")
-  pollVotes            PollVote[]
+  contributions           Contribution[]
+  compositionItems        ContributionCompositionItem[]
+  receipts                ContributionReceipt[]
+  monthlyStatus           ContributionMonthlyStatus[]
+  fortunaTx               FortunaTransaction[]
+  crmContacts             CrmContact[]
+  eventRegistr            EventRegistration[]
+  classMemberships        ClassMembership[]
+  createdActivities       Activity[]                    @relation("ActivityCreator")
+  activityNotifs          ActivityNotification[]
+  contactChangeLogs       ContactChangeLog[]
+  mercurioSyncTasks       MercurioSyncTask[]
+  agendaReactions         AgendaReaction[]
+  createdPolls            Poll[]                        @relation("PollCreator")
+  pollVotes               PollVote[]
   volunteerTermSignatures VolunteerTermSignature[]
   paymentCharges          PaymentCharge[]
+  chargeMessageDrafts     ChargeMessageDraft[]
 
   @@index([schoolId])
 }
 
 model Contribution {
-  id         String              @id @default(cuid())
+  id         String             @id @default(cuid())
   memberId   String
-  member     Member              @relation(fields: [memberId], references: [id])
-  amount     Decimal             @db.Decimal(10, 2)
+  member     Member             @relation(fields: [memberId], references: [id])
+  amount     Decimal            @db.Decimal(10, 2)
   dueDate    DateTime
   paidAt     DateTime?
-  status     ContributionStatus  @default(pendente)
+  status     ContributionStatus @default(pendente)
   gatewayRef String? // id da cobrança no Asaas
-  createdAt  DateTime            @default(now())
+  createdAt  DateTime           @default(now())
 
   @@index([memberId])
 }
@@ -348,22 +376,28 @@ model FortunaTransaction {
   @@index([memberId])
 }
 
+// Log de tentativas de negociação com membro inadimplente. O registro mais
+// recente SEM resolvedAt de um membro representa a negociação em aberto
+// (ver RecuperacaoTab) — não é 1 registro fixo por negociação, é histórico
+// de contatos, e o último aberto que conta.
 model CrmContact {
-  id        String   @id @default(cuid())
-  memberId  String
-  member    Member   @relation(fields: [memberId], references: [id])
-  channel   String // whatsapp | telefone | presencial
-  hadReply  Boolean  @default(false)
-  notes     String?
-  createdAt DateTime @default(now())
+  id                  String    @id @default(cuid())
+  memberId            String
+  member              Member    @relation(fields: [memberId], references: [id])
+  channel             String // whatsapp | telefone | presencial
+  hadReply            Boolean   @default(false)
+  notes               String?
+  promisedPaymentDate DateTime?
+  resolvedAt          DateTime?
+  createdAt           DateTime  @default(now())
 
   @@index([memberId])
 }
 
 model ChargingRule {
-  id       String  @id @default(cuid())
+  id       String          @id @default(cuid())
   schoolId String
-  school   School  @relation(fields: [schoolId], references: [id])
+  school   School          @relation(fields: [schoolId], references: [id])
   name     String // "Régua Padrão", "Régua Suave", "Régua de Resgate"
   triggers ChargeTrigger[]
 
@@ -371,14 +405,46 @@ model ChargingRule {
 }
 
 model ChargeTrigger {
-  id             String            @id @default(cuid())
-  chargingRuleId String
-  chargingRule   ChargingRule      @relation(fields: [chargingRuleId], references: [id])
-  type           ChargeTriggerType
-  active         Boolean           @default(true)
-  messageTemplate String           @db.Text
+  id              String            @id @default(cuid())
+  chargingRuleId  String
+  chargingRule    ChargingRule      @relation(fields: [chargingRuleId], references: [id])
+  type            ChargeTriggerType
+  active          Boolean           @default(true)
+  messageTemplate String            @db.Text
+
+  drafts ChargeMessageDraft[]
 
   @@index([chargingRuleId])
+}
+
+enum ChargeMessageStatus {
+  pendente_aprovacao
+  aprovado
+  enviado
+  descartado
+}
+
+// Rascunho de mensagem de cobrança gerado a partir de um gatilho — fica
+// pendente de aprovação manual do diretor antes de enviar de verdade (ver
+// discussão: disparo automático real não foi autorizado, só fila revisada
+// à mão). @@unique com cycleKey evita gerar 2x a mesma cobrança pro mesmo
+// membro/gatilho no mesmo ciclo (ex: "2026-09") a cada vez que a tela roda
+// a geração.
+model ChargeMessageDraft {
+  id              String              @id @default(cuid())
+  memberId        String
+  member          Member              @relation(fields: [memberId], references: [id])
+  chargeTriggerId String
+  chargeTrigger   ChargeTrigger       @relation(fields: [chargeTriggerId], references: [id])
+  cycleKey        String // "aaaa-mm" do momento em que foi gerado
+  channel         String              @default("whatsapp")
+  body            String              @db.Text
+  status          ChargeMessageStatus @default(pendente_aprovacao)
+  createdAt       DateTime            @default(now())
+  decidedAt       DateTime?
+
+  @@unique([memberId, chargeTriggerId, cycleKey])
+  @@index([memberId])
 }
 
 enum AgendaItemType {
@@ -405,13 +471,13 @@ model AgendaReaction {
 }
 
 model Event {
-  id          String   @id @default(cuid())
-  schoolId    String
-  school      School   @relation(fields: [schoolId], references: [id])
-  title       String
-  startsAt    DateTime
-  price       Decimal  @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+  title     String
+  startsAt  DateTime
+  price     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
 
   registrations EventRegistration[]
 
@@ -433,17 +499,104 @@ model EventRegistration {
 }
 
 model Payable {
-  id         String    @id @default(cuid())
-  schoolId   String
-  school     School    @relation(fields: [schoolId], references: [id])
-  vendor     String
-  amount     Decimal   @db.Decimal(10, 2)
-  dueDate    DateTime
-  hasInvoice Boolean   @default(false)
-  paidAt     DateTime?
-  createdAt  DateTime  @default(now())
+  id                  String                @id @default(cuid())
+  schoolId            String
+  school              School                @relation(fields: [schoolId], references: [id])
+  vendor              String
+  amount              Decimal               @db.Decimal(10, 2)
+  dueDate             DateTime
+  hasInvoice          Boolean               @default(false)
+  paidAt              DateTime?
+  createdAt           DateTime              @default(now())
+  // Id da transação no extrato OFX (FITID) — dedupe: reimportar o mesmo
+  // extrato (ou um período que se sobrepõe) nunca duplica a conta. Só
+  // presente em contas que vieram de importação de extrato.
+  bankFitId           String?               @unique
+  // Conta prevista automaticamente (por padrão detectado no extrato OU
+  // porque é filha de uma conta marcada `recurring`) — ver
+  // bank-import-actions.ts e repasse-actions.ts. Ainda não é um pagamento
+  // real, só uma previsão editável/removível pelo diretor.
+  predicted           Boolean               @default(false)
+  // Conta recorrente marcada explicitamente pelo diretor na criação — ao
+  // criar ou ao marcar como paga, gera automaticamente a PRÓXIMA
+  // ocorrência (predicted:true, recurring:true + mesma frequência, pra
+  // continuar a cadeia). frequency é null quando recurring=false.
+  recurring           Boolean               @default(false)
+  recurrenceFrequency RecurrenceFrequency?
+  // Categoria de despesa conciliada contra o catálogo real do Mercúrio
+  // (Tesouraria > Caixa > Pagamento Outros > select "Rubrica", mesmo usado
+  // pela ferramenta irmã C:\Scrapper\mercurio-tesouraria pra lançamento
+  // automático — ver SchoolPaymentRubrica/rubrica-actions.ts). Null =
+  // ainda não conciliada.
+  rubricaId           String?
+  rubrica             SchoolPaymentRubrica? @relation(fields: [rubricaId], references: [id])
+
+  documents AccountantDocument[]
 
   @@index([schoolId])
+  @@index([rubricaId])
+}
+
+// Catálogo de Rubricas de Pagamento da filial, sincronizado ao vivo do
+// Mercúrio (Tesouraria > Caixa > dia > "Pagamento Outros" > select
+// cmbrub) — ver lerRubricasDePagamento em browser-session.ts. Mesmo
+// catálogo que a ferramenta irmã C:\Scrapper\mercurio-tesouraria usa pra
+// lançamento automático de despesa.
+model SchoolPaymentRubrica {
+  id                String   @id @default(cuid())
+  schoolId          String
+  school            School   @relation(fields: [schoolId], references: [id])
+  mercurioRubricaId String
+  label             String
+  syncedAt          DateTime @default(now())
+
+  payables Payable[]
+
+  @@unique([schoolId, mercurioRubricaId])
+  @@index([schoolId])
+}
+
+// Registro MANUAL de repasse (a fatia que sai da conta do BPO — que criou
+// a cobrança PIX real com split, ver PERCENTUAL_SPLIT_ESCOLA em
+// payment-actions.ts — e chega na subconta Asaas da escola). Decisão
+// explícita do usuário: registro próprio no banco, não leitura em tempo
+// real da API do Asaas (não existe endpoint de extrato/transferência
+// chamado hoje). Um mês pode ter mais de 1 repasse (parcial), por isso sem
+// @@unique em (schoolId, referenceYear, referenceMonth).
+// Repasse — decisão explícita do usuário (2026-09-18): NÃO fica visível
+// pro diretor da escola (é a remuneração do BPO/split, não faz parte do
+// que a escola precisa acompanhar) — o model/action continuam existindo
+// pra um painel interno futuro do BPO, só a aba "Contas e Conciliações" do
+// Painel do Diretor deixou de mostrar isso.
+model Repasse {
+  id             String   @id @default(cuid())
+  schoolId       String
+  school         School   @relation(fields: [schoolId], references: [id])
+  amount         Decimal  @db.Decimal(10, 2)
+  referenceYear  Int
+  referenceMonth Int
+  note           String?
+  registeredAt   DateTime @default(now())
+
+  @@index([schoolId])
+}
+
+// Recibo/NF que o diretor cadastra pra enviar ao contador mensalmente —
+// arquivo real guardado no Supabase Storage (bucket "contador-docs",
+// privado — ver accountant-actions.ts), aqui só o caminho + metadados.
+// Recibo/NF anexado DIRETO na conta a pagar correspondente (não numa área
+// solta) — decisão explícita do usuário: evita conciliar o documento
+// errado com o pagamento errado. 1 Payable pode ter mais de 1 documento
+// (ex: NF + recibo de pagamento).
+model AccountantDocument {
+  id         String   @id @default(cuid())
+  payableId  String
+  payable    Payable  @relation(fields: [payableId], references: [id])
+  title      String
+  filePath   String
+  uploadedAt DateTime @default(now())
+
+  @@index([payableId])
 }
 
 // ===================== Turmas, Professores e Agenda =====================
@@ -569,15 +722,15 @@ model ActivityNotification {
 // com o antes/depois. Se o aluno estiver com contribuição em atraso no
 // momento da alteração, a secretaria de economia é alertada (alertedEconomia).
 model ContactChangeLog {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   memberId         String
-  member           Member   @relation(fields: [memberId], references: [id])
+  member           Member    @relation(fields: [memberId], references: [id])
   oldValues        Json
   newValues        Json
-  memberWasOverdue Boolean  @default(false)
-  alertedEconomia  Boolean  @default(false)
+  memberWasOverdue Boolean   @default(false)
+  alertedEconomia  Boolean   @default(false)
   acknowledgedAt   DateTime?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   @@index([memberId])
 }

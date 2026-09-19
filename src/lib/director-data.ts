@@ -9,6 +9,7 @@ export interface MemberRow {
   status: string;
   compositionLabels: string[];
   compositionTotal: number;
+  overdueCount: number;
 }
 
 export interface TransacaoRecente {
@@ -41,24 +42,73 @@ export async function getDirectorDashboard(schoolId: string) {
   const totalEmAtraso = atrasados.reduce((soma, m) => soma + totalComposicao(m), 0);
   const taxaInadimplencia = ativos.length > 0 ? (atrasados.length / ativos.length) * 100 : 0;
 
-  const despesasPendentes = await db.payable.findMany({ where: { schoolId, paidAt: null }, orderBy: { dueDate: "asc" } });
+  const atrasosPorMembro = await db.contributionMonthlyStatus.groupBy({
+    by: ["memberId"],
+    where: { member: { schoolId }, status: "atrasado" },
+    _count: { _all: true },
+  });
+  const atrasosMap = new Map(atrasosPorMembro.map((a) => [a.memberId, a._count._all]));
+
+  const despesasPendentes = await db.payable.findMany({
+    where: { schoolId, paidAt: null },
+    include: { documents: true, rubrica: true },
+    orderBy: { dueDate: "asc" },
+  });
   const despesasPrevistas = despesasPendentes.reduce((soma, p) => soma + Number(p.amount), 0);
+  // take maior que antes (era 20) — agora agrupado por mês em gavetas
+  // colapsáveis na UI, então precisa de histórico suficiente pra mostrar
+  // mais de 1-2 meses fechados antes do atual.
+  const despesasRealizadas = await db.payable.findMany({
+    where: { schoolId, paidAt: { not: null } },
+    include: { documents: true, rubrica: true },
+    orderBy: { paidAt: "desc" },
+    take: 200,
+  });
+
+  const rubricasDisponiveis = await db.schoolPaymentRubrica.findMany({ where: { schoolId }, orderBy: { label: "asc" } });
+
+  // % conciliado (medidor) — só considera contas REAIS (não previsão
+  // automática ainda não confirmada) que já deveriam ter documento: uma
+  // conta "conciliada" é a que tem pelo menos 1 recibo/NF anexado.
+  const todasReais = await db.payable.findMany({ where: { schoolId, predicted: false }, include: { documents: true } });
+  const percentualConciliado = todasReais.length > 0 ? (todasReais.filter((p) => p.documents.length > 0).length / todasReais.length) * 100 : 100;
+
+  // Resultado financeiro do mês corrente — receita prevista (recorrente,
+  // mensal) vs. despesas do mês (previstas com vencimento este mês +
+  // realizadas pagas este mês), pra dar 1 número só de "estamos indo bem
+  // ou mal este mês" no topo da Visão Geral.
+  const agora = new Date();
+  const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+  const fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 1);
+  const despesasPendentesMes = despesasPendentes
+    .filter((p) => p.dueDate >= inicioMes && p.dueDate < fimMes)
+    .reduce((soma, p) => soma + Number(p.amount), 0);
+  const despesasRealizadasMesAgg = await db.payable.aggregate({
+    where: { schoolId, paidAt: { gte: inicioMes, lt: fimMes } },
+    _sum: { amount: true },
+  });
+  const despesasRealizadasMes = Number(despesasRealizadasMesAgg._sum.amount ?? 0);
+  const despesasTotaisMes = despesasPendentesMes + despesasRealizadasMes;
 
   // Saldo Fortuna consolidado — só quem já está vinculado (fortunaClientId,
-  // ver scripts/link-fortuna-clients.ts). É uma API real, então isso é 1
-  // chamada por membro vinculado — tudo bem na escala de hoje (poucos
-  // membros vinculados), reconsiderar se crescer muito.
+  // ver scripts/link-fortuna-clients.ts / vincularMembroFortuna). É uma API
+  // real, então isso é 1 chamada por membro vinculado — tudo bem na escala
+  // de hoje (poucos membros vinculados), reconsiderar se crescer muito.
   const vinculadosFortuna = membros.filter((m) => m.fortunaClientId);
+  const naoVinculadosFortuna = ativos.filter((m) => !m.fortunaClientId);
   let saldoFortunaConsolidado = 0;
-  const fortunaTransacoes: { memberName: string; amount: number }[] = [];
+  const saldosFortunaPorMembro: { memberId: string; memberName: string; balance: number }[] = [];
   for (const m of vinculadosFortuna) {
     try {
       const cliente = await fortunaGetClient(m.fortunaClientId!);
-      saldoFortunaConsolidado += cliente.balance.reduce((soma, b) => soma + Number(b.amount), 0);
+      const saldo = cliente.balance.reduce((soma, b) => soma + Number(b.amount), 0);
+      saldoFortunaConsolidado += saldo;
+      saldosFortunaPorMembro.push({ memberId: m.id, memberName: m.name, balance: saldo });
     } catch {
       // Best-effort — 1 cliente falhar (API fora do ar, id desvinculado) não derruba o resto do painel.
     }
   }
+  const fortunaTransacoes: { memberName: string; amount: number }[] = [];
   const fortunaTxRecentes = await db.fortunaTransaction.findMany({
     where: { member: { schoolId } },
     include: { member: true },
@@ -88,6 +138,7 @@ export async function getDirectorDashboard(schoolId: string) {
     status: m.status,
     compositionLabels: m.compositionItems.map((i) => i.label),
     compositionTotal: totalComposicao(m),
+    overdueCount: atrasosMap.get(m.id) ?? 0,
   }));
 
   const eventos = await db.event.findMany({
@@ -99,19 +150,62 @@ export async function getDirectorDashboard(schoolId: string) {
 
   const regrasDeCobranca = await db.chargingRule.findMany({ where: { schoolId }, include: { triggers: true } });
 
+  const rascunhosPendentes = await db.chargeMessageDraft.findMany({
+    where: { status: "pendente_aprovacao", member: { schoolId } },
+    include: { member: true, chargeTrigger: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const negociacoesAbertas = await db.crmContact.findMany({
+    where: { resolvedAt: null, member: { schoolId } },
+    include: { member: true },
+    orderBy: { createdAt: "desc" },
+  });
+
   return {
     kpis: {
       receitaPrevista,
       despesasPrevistas,
+      despesasRealizadasMes,
+      despesasTotaisMes,
+      resultadoFinanceiroMes: receitaPrevista - despesasTotaisMes,
       taxaInadimplencia,
       totalEmAtraso,
       saldoFortunaConsolidado,
       membrosAtivos: ativos.length,
+      percentualConciliado,
     },
     transacoesRecentes,
     membros: membrosRows,
-    despesasPendentes: despesasPendentes.map((p) => ({ id: p.id, vendor: p.vendor, amount: Number(p.amount), dueDate: p.dueDate, hasInvoice: p.hasInvoice })),
+    despesasPendentes: despesasPendentes.map((p) => ({
+      id: p.id,
+      vendor: p.vendor,
+      amount: Number(p.amount),
+      dueDate: p.dueDate,
+      predicted: p.predicted,
+      recurring: p.recurring,
+      recurrenceFrequency: p.recurrenceFrequency,
+      rubricaId: p.rubricaId,
+      rubricaLabel: p.rubrica?.label ?? null,
+      documents: p.documents.map((d) => ({ id: d.id, title: d.title })),
+    })),
+    despesasRealizadas: despesasRealizadas.map((p) => ({
+      id: p.id,
+      vendor: p.vendor,
+      amount: Number(p.amount),
+      dueDate: p.dueDate,
+      paidAt: p.paidAt!,
+      predicted: p.predicted,
+      recurring: p.recurring,
+      recurrenceFrequency: p.recurrenceFrequency,
+      rubricaId: p.rubricaId,
+      rubricaLabel: p.rubrica?.label ?? null,
+      documents: p.documents.map((d) => ({ id: d.id, title: d.title })),
+    })),
+    rubricasDisponiveis: rubricasDisponiveis.map((r) => ({ id: r.id, label: r.label })),
     fortunaTransacoes: fortunaTransacoes.slice(0, 10),
+    fortunaSaldosPorMembro: saldosFortunaPorMembro,
+    fortunaNaoVinculados: naoVinculadosFortuna.map((m) => ({ id: m.id, name: m.name })),
     eventos: eventos.map((e) => ({
       id: e.id,
       title: e.title,
@@ -121,7 +215,25 @@ export async function getDirectorDashboard(schoolId: string) {
       presentes: e.registrations.filter((r) => r.checkedIn).length,
       registrations: e.registrations.map((r) => ({ id: r.id, memberName: r.member.name, paid: r.paid, checkedIn: r.checkedIn })),
     })),
-    regrasDeCobranca: regrasDeCobranca.map((r) => ({ id: r.id, name: r.name, triggers: r.triggers.length })),
+    regrasDeCobranca: regrasDeCobranca.map((r) => ({
+      id: r.id,
+      name: r.name,
+      triggers: r.triggers.map((t) => ({ id: t.id, type: t.type, active: t.active, messageTemplate: t.messageTemplate })),
+    })),
+    rascunhosPendentes: rascunhosPendentes.map((d) => ({
+      id: d.id,
+      memberName: d.member.name,
+      triggerType: d.chargeTrigger.type,
+      body: d.body,
+      createdAt: d.createdAt,
+    })),
+    negociacoesAbertas: negociacoesAbertas.map((n) => ({
+      id: n.id,
+      memberName: n.member.name,
+      notes: n.notes,
+      promisedPaymentDate: n.promisedPaymentDate,
+      createdAt: n.createdAt,
+    })),
   };
 }
 

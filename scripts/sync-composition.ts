@@ -19,7 +19,7 @@
  * Uso: npx tsx --env-file=.env scripts/sync-composition.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirComposicao, abrirFichaDaListaAtivos, abrirListaAtivos, abrirSessaoMercurio, lerCatalogoItensDisponiveis, lerComposicao } from "../src/lib/mercurio/browser-session";
+import { abrirComposicao, abrirFichaDaListaAtivos, abrirListaAtivos, abrirSessaoMercurio, lerCatalogoItensDisponiveis, lerComposicao, reabrirListaAtivos } from "../src/lib/mercurio/browser-session";
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -36,10 +36,11 @@ async function main() {
   let processados = 0;
 
   try {
-    const frameAtivos = await abrirListaAtivos(page, new RegExp(filialLabel, "i"));
+    let frameAtivos = await abrirListaAtivos(page, new RegExp(filialLabel, "i"));
 
-    for (const membro of membrosConhecidos) {
+    for (const [i, membro] of membrosConhecidos.entries()) {
       try {
+        if (i > 0) frameAtivos = await reabrirListaAtivos(page);
         const frameFicha = await abrirFichaDaListaAtivos(page, frameAtivos, new RegExp(membro.name, "i"));
         const frame = await abrirComposicao(page, frameFicha, membro.mercurioId!);
         const [itens, disponiveis] = await Promise.all([lerComposicao(frame), lerCatalogoItensDisponiveis(frame)]);

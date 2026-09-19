@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HandHeart } from "lucide-react";
+import { whatsappHref } from "@/lib/format";
 
 const SECRETARIAS = ["Economia", "Difusão", "Abertura de Turma", "Café Sophia", "Artes", "Manutenção", "Escolástica"];
 
@@ -69,7 +70,7 @@ export function HelpPanel({ whatsapp }: { whatsapp: string }) {
         atender via WhatsApp.
       </p>
       <a
-        href={`https://wa.me/${whatsapp.replace(/\D/g, "")}?text=Ol%C3%A1,%20preciso%20de%20ajuda%20com%20o%20Portal%20do%20Membro`}
+        href={whatsappHref(whatsapp, "Olá, preciso de ajuda com o Portal do Membro")}
         target="_blank"
         rel="noreferrer"
         className="inline-flex items-center justify-center gap-2 rounded-xl bg-na-green px-5 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark"

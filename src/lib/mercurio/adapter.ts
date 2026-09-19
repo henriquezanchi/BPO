@@ -152,6 +152,9 @@ export interface MercurioAdapter {
   /** Altera o valor de um item já existente na composição — `novoValor` no formato brasileiro ("50,00"). */
   editCompositionItemValue(member: MercurioMemberIdentity, mercurioGroupId: string, novoValor: string): Promise<MercurioWriteResult>;
 
+  /** Grava a "Anotações Econômicas sobre o Aluno" (mesma tela da composição, textarea txtobs, limite 255 caracteres lá). */
+  pushEconomicNotes(member: MercurioMemberIdentity, texto: string): Promise<MercurioWriteResult>;
+
   /** Busca o conteúdo (documento) de um recibo específico pelo id — 1 chamada cara, sob demanda. */
   fetchReceiptContent(member: MercurioMemberIdentity, mercurioRecId: string): Promise<MercurioReceiptContent>;
 

@@ -27,7 +27,7 @@ const LABEL_CLASS = "text-[11px] font-semibold text-gray-800 dark:text-gray-300"
 export function ProfileEditPanel(props: ProfileEditPanelProps) {
   const { memberId, name } = props;
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ changed: boolean; alerted: boolean; mercurioSynced: boolean } | null>(null);
+  const [result, setResult] = useState<{ changed: boolean; alerted: boolean } | null>(null);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -190,12 +190,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       {result?.changed && (
         <div className="mt-3 flex items-start gap-2 rounded-lg bg-green-50 p-3 text-[11px] text-green-800 dark:bg-green-950/30 dark:text-green-300">
           <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-          <span>
-            Dados atualizados com sucesso.{" "}
-            {result.mercurioSynced
-              ? "A alteração já foi confirmada no Mercúrio."
-              : "A alteração foi enviada e será confirmada no Mercúrio em instantes."}
-          </span>
+          <span>Dados atualizados com sucesso. A alteração pode levar até 24h para ser confirmada no Mercúrio.</span>
         </div>
       )}
 

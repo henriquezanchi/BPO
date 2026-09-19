@@ -3,6 +3,7 @@
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logout } from "@/lib/actions/auth-actions";
+import { whatsappHref } from "@/lib/format";
 import type { MemberDashboard } from "@/lib/member-data";
 import {
   BookOpen,
@@ -176,7 +177,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
       </main>
 
       <a
-        href={`https://wa.me/${schoolWhatsapp.replace(/\D/g, "")}`}
+        href={whatsappHref(schoolWhatsapp)}
         target="_blank"
         rel="noreferrer"
         className="fixed bottom-6 right-6 flex h-13 w-13 items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg transition hover:scale-105 sm:absolute"

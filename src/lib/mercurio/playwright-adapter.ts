@@ -23,6 +23,7 @@ import {
   escreverAbaIdentificacao,
   escreverAbaPessoais,
   excluirItemComposicao,
+  gravarAnotacoesEconomicas,
   incluirItemComposicao,
   lancarPagamentoContribuicaoHoje,
   lerAbaEnderecos,
@@ -234,6 +235,22 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
         const frameFicha = await abrirFichaEmEnderecos(page, new RegExp(member.filialLabel, "i"), new RegExp(member.name, "i"));
         const frame = await abrirComposicao(page, frameFicha, member.matricula);
         await editarValorItemComposicao(frame, member.matricula, mercurioGroupId, novoValor);
+        return { ok: true };
+      } finally {
+        await browser.close();
+      }
+    } catch (e) {
+      return erroDeEscrita(e);
+    }
+  }
+
+  async pushEconomicNotes(member: MercurioMemberIdentity, texto: string): Promise<MercurioWriteResult> {
+    try {
+      const { browser, page } = await abrirSessaoMercurio();
+      try {
+        const frameFicha = await abrirFichaEmEnderecos(page, new RegExp(member.filialLabel, "i"), new RegExp(member.name, "i"));
+        const frame = await abrirComposicao(page, frameFicha, member.matricula);
+        await gravarAnotacoesEconomicas(frame, texto);
         return { ok: true };
       } finally {
         await browser.close();

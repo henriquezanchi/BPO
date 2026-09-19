@@ -20,3 +20,17 @@ export function formatDateTimeBR(date: Date) {
     month: "long",
   });
 }
+
+/**
+ * Monta o href de "conversar no WhatsApp" (wa.me) a partir de um número
+ * salvo SEM código de país (DDD + número, como vem do Mercúrio) — sem o
+ * "55" na frente, o wa.me interpreta o DDD como código de país (ex: "66"
+ * virou Tailândia, bug real visto ao vivo). Só não adiciona se o número já
+ * vier com o 55 (13 dígitos: 55 + DDD + celular de 9 dígitos).
+ */
+export function whatsappHref(numero: string, texto?: string) {
+  const digitos = numero.replace(/\D/g, "");
+  const comPais = digitos.length === 13 && digitos.startsWith("55") ? digitos : `55${digitos}`;
+  const query = texto ? `?text=${encodeURIComponent(texto)}` : "";
+  return `https://wa.me/${comPais}${query}`;
+}

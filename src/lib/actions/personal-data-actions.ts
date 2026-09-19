@@ -2,7 +2,7 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enqueueMercurioPersonalUpdate, processMercurioSyncQueue } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioPersonalUpdate } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
 export interface PersonalDataInput {
@@ -33,7 +33,8 @@ const OVERDUE_STATUSES = new Set(["atrasado", "negociando"]);
  * escolaridade, estado civil) a partir do Portal — mesmo padrão de
  * updateMemberContact (src/lib/actions/member-actions.ts): audit log com
  * alerta pra economia se o membro estiver em atraso, e propagação pro
- * Mercúrio via fila processada na hora.
+ * Mercúrio só enfileirada aqui — processada em background pelo worker
+ * separado (scripts/process-mercurio-queue.ts), não nesta Server Action.
  */
 export async function updatePersonalData(memberId: string, changes: PersonalDataInput) {
   await requireAuthenticatedMember(memberId);
@@ -66,7 +67,7 @@ export async function updatePersonalData(memberId: string, changes: PersonalData
   }
 
   if (Object.keys(newValues).length === 0) {
-    return { changed: false, alerted: false, mercurioSynced: false };
+    return { changed: false, alerted: false };
   }
 
   const wasOverdue = OVERDUE_STATUSES.has(member.status);
@@ -100,16 +101,8 @@ export async function updatePersonalData(memberId: string, changes: PersonalData
     rgDataEmissao: "rgDataEmissao" in newValuesData ? newValuesData.rgDataEmissao : undefined,
   });
 
-  let mercurioSynced = false;
-  try {
-    const resultados = await processMercurioSyncQueue();
-    mercurioSynced = resultados.some((r) => r.memberId === memberId && r.status === "sincronizado");
-  } catch (e) {
-    console.error("Falha ao processar fila de sincronização com o Mercúrio:", e);
-  }
-
   revalidatePath("/portal");
   revalidatePath("/portal/mais-dados");
 
-  return { changed: true, alerted: wasOverdue, mercurioSynced };
+  return { changed: true, alerted: wasOverdue };
 }

@@ -18,5 +18,5 @@ export default async function DiretorPage() {
 
   const data = await getDirectorDashboard(member.schoolId);
 
-  return <DiretorDashboard schoolName={member.school.name} data={data} />;
+  return <DiretorDashboard schoolId={member.schoolId} schoolName={member.school.name} data={data} />;
 }

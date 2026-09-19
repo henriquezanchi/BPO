@@ -1,4 +1,5 @@
 import { logout } from "@/lib/actions/auth-actions";
+import { whatsappHref } from "@/lib/format";
 import { LogOut, MessageCircle } from "lucide-react";
 
 /**
@@ -20,7 +21,7 @@ export function InactiveMemberNotice({ schoolWhatsapp }: { schoolWhatsapp: strin
 
         {schoolWhatsapp && (
           <a
-            href={`https://wa.me/${schoolWhatsapp.replace(/\D/g, "")}`}
+            href={whatsappHref(schoolWhatsapp)}
             target="_blank"
             rel="noreferrer"
             className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark"

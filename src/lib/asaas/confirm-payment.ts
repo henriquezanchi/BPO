@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { enqueueMercurioContributionLaunch, processMercurioSyncQueue } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioContributionLaunch } from "@/lib/mercurio/sync-queue";
 
 /**
  * Marca uma cobrança como paga e dispara o resto (status mensal + fila de
@@ -25,10 +25,9 @@ export async function confirmarPagamento(chargeId: string): Promise<void> {
     create: { memberId: charge.memberId, year: charge.referenceYear, month: charge.referenceMonth, status: "paga" },
   });
 
+  // Só enfileira — quem processa é o worker separado (scripts/process-
+  // mercurio-queue.ts, agendado via Task Scheduler). Essa função é chamada
+  // tanto pelo polling do aluno quanto pelo webhook do Asaas; nenhum dos
+  // dois deveria esperar uma sessão de navegador inteira pra responder.
   await enqueueMercurioContributionLaunch(charge.memberId, charge.id);
-  // Best-effort: se a trava do Mercúrio estiver ativa agora, a tarefa fica
-  // pendente e uma próxima chamada à fila (de qualquer membro) resolve —
-  // não faz sentido essa requisição (webhook ou polling do aluno) esperar
-  // uma sessão de navegador inteira pra responder.
-  await processMercurioSyncQueue().catch(() => {});
 }

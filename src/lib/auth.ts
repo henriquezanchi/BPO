@@ -39,6 +39,22 @@ export async function requireAuthenticatedMember(expectedMemberId: string) {
 }
 
 /**
+ * Confirma que quem está logado é Diretor(a)/Sub-Chefe DA ESCOLA informada
+ * — usado por toda Server Action do Painel do Diretor (recuperação de
+ * crédito, repasses, Fortuna, detalhe de membro). Mesma defesa em
+ * profundidade de requireAuthenticatedMember: a página já reverifica isso
+ * em src/app/(member)/diretor/page.tsx, mas Server Actions não passam pelo
+ * proxy, então cada uma precisa checar de novo.
+ */
+export async function requireDirector(schoolId: string) {
+  const member = await getAuthenticatedMember();
+  if (!member || member.schoolId !== schoolId || (!member.isDiretor && !member.isSubChefe)) {
+    throw new Error("Não autenticado ou sem permissão de Direção nesta escola.");
+  }
+  return member;
+}
+
+/**
  * Confirma que o membro logado é professor da turma informada — nunca
  * confiar num createdById vindo do client (mesma lógica de defesa em
  * profundidade de requireAuthenticatedMember, aplicada ao papel de
