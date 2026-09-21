@@ -55,14 +55,20 @@ async function main() {
 
   try {
     const hoje = new Date();
+    // abrirTelaRecibos SEMPRE renavega a partir do menu de topo (CADASTRO) —
+    // só funciona na 1ª chamada. Do 2º mês em diante, o frame já aberto
+    // continua válido: só troca o mês via o mesmo goto que abrirTelaRecibos
+    // usaria (bug real corrigido 2026-09-21, mesma classe do problema já
+    // visto em reabrirListaAtivos/reabrirCirculoDeAmigos).
+    let frame = await abrirTelaRecibos(page, new RegExp(filialLabel, "i"));
     for (let i = 0; i < meses; i++) {
       const referencia = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - i, 1));
       const ano = referencia.getUTCFullYear();
       const mes = referencia.getUTCMonth() + 1;
-      const frame =
-        i === 0
-          ? await abrirTelaRecibos(page, new RegExp(filialLabel, "i"))
-          : await abrirTelaRecibos(page, new RegExp(filialLabel, "i"), ano, mes);
+      if (i > 0) {
+        await frame.goto(`https://mercurio.oinabn.com.br/tesoura/tes_cailstr.php?pa=${ano}&pm=${mes}`, { waitUntil: "domcontentloaded" });
+        await page.waitForTimeout(500);
+      }
       const linhas = await lerRecibosDoMes(frame);
       console.log(`Mês ${ano}-${String(mes).padStart(2, "0")}: ${linhas.length} recibo(s) na filial.`);
 
