@@ -84,3 +84,36 @@ export async function fortunaGetClient(fortunaClientId: number): Promise<Fortuna
 export async function fortunaSearchClientsByName(name: string): Promise<FortunaClient[]> {
   return chamarApi<FortunaClient[]>(`/clients/search?name=${encodeURIComponent(name)}`);
 }
+
+export interface FortunaCreditResult {
+  balance: { amount: string; clientId: number; branchId: number };
+  receipt: { id: number; amount: string; createdAt: string; method: string };
+}
+
+/**
+ * Credita saldo real na carteira Fortuna de um cliente — endpoint de
+ * escrita confirmado ao vivo em 2026-09-21 (capturado do DevTools durante um
+ * lançamento manual real feito por um colaborador "Gerente" no painel
+ * deles): PUT /balance/with-receipt. Ao contrário do resto da API (só
+ * leitura), esse endpoint espera o SALDO TOTAL NOVO (não só o delta) — por
+ * isso lê o saldo atual da filial antes de calcular. `operatorId` é
+ * decodificado do próprio token (é o id da conta configurada em
+ * FORTUNA_INSCRICAO/FORTUNA_SENHA) — o Fortuna registra quem lançou.
+ */
+export async function fortunaCreditarSaldo(clientId: number, branchId: number, amount: number, method: string = "PIX"): Promise<FortunaCreditResult> {
+  const token = await obterToken();
+  const payloadB64 = token.split(".")[1];
+  const operatorId = (JSON.parse(Buffer.from(payloadB64, "base64").toString()) as { payload: { id: number } }).payload.id;
+
+  const cliente = await fortunaGetClient(clientId);
+  const saldoAtual = Number(cliente.balance.find((b) => b.branchId === branchId)?.amount ?? 0);
+  const novoSaldo = Math.round((saldoAtual + amount) * 100) / 100;
+
+  const res = await fetch(`${BASE_URL}/balance/with-receipt`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ clientId, branchId, balance: novoSaldo, amount, method, operatorId }),
+  });
+  if (!res.ok) throw new Error(`Fortuna credit -> HTTP ${res.status}`);
+  return res.json() as Promise<FortunaCreditResult>;
+}

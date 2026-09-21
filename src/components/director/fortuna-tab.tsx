@@ -1,10 +1,10 @@
 "use client";
 
-import { buscarClientesFortunaPorNome, vincularMembroFortuna } from "@/lib/actions/fortuna-actions";
+import { buscarClientesFortunaPorNome, marcarRecargaFortunaComoLancada, tentarNovamenteCreditoFortuna, vincularMembroFortuna } from "@/lib/actions/fortuna-actions";
 import type { DirectorDashboard } from "@/lib/director-data";
-import { formatBRL } from "@/lib/format";
+import { formatBRL, formatDateBR } from "@/lib/format";
 import type { FortunaClient } from "@/lib/fortuna/client";
-import { Coffee, Link2, Loader2 } from "lucide-react";
+import { CircleCheck, Coffee, Link2, Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { EmptyState, KpiCard } from "./diretor-dashboard";
 
@@ -33,6 +33,15 @@ export function FortunaTab({ schoolId, data }: { schoolId: string; data: Directo
     });
   }
 
+  function handleMarcarLancada(topUpChargeId: string) {
+    const nome = prompt("Quem está confirmando o lançamento manual? (nome — opcional)") ?? "";
+    startTransition(() => marcarRecargaFortunaComoLancada(schoolId, topUpChargeId, nome));
+  }
+
+  function handleTentarNovamente(topUpChargeId: string) {
+    startTransition(() => tentarNovamenteCreditoFortuna(schoolId, topUpChargeId));
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <KpiCard
@@ -42,6 +51,48 @@ export function FortunaTab({ schoolId, data }: { schoolId: string; data: Directo
         accent="gold"
         icon={Coffee}
       />
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <h3 className="mb-1 text-sm font-bold text-na-green-dark dark:text-emerald-400">Recargas Pagas — Falha no Crédito Automático</h3>
+        <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
+          O crédito no Fortuna já é automático assim que o PIX é confirmado. Só aparece aqui quando essa chamada falhou (membro
+          desvinculado, API fora do ar etc.) — tente de novo, e só use o lançamento manual se a nova tentativa também falhar.
+        </p>
+        {data.recargasFortunaPendentes.length === 0 ? (
+          <EmptyState text="Nenhuma recarga com falha de crédito automático." />
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {data.recargasFortunaPendentes.map((r) => (
+              <li key={r.id} className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{r.memberName}</span>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Pago em {formatDateBR(r.paidAt)}</p>
+                  </div>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">{formatBRL(r.amount)}</span>
+                </div>
+                {r.autoCreditError && <p className="text-[11px] text-red-700 dark:text-red-400">Erro: {r.autoCreditError}</p>}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleTentarNovamente(r.id)}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-1 rounded-lg bg-na-green px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+                  >
+                    <CircleCheck size={12} /> Tentar creditar de novo
+                  </button>
+                  <button
+                    onClick={() => handleMarcarLancada(r.id)}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    Marcar lançada manualmente
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
         <h3 className="mb-4 text-sm font-bold text-na-green-dark dark:text-emerald-400">Saldo por Membro</h3>

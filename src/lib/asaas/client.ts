@@ -38,6 +38,13 @@ export interface AsaasCustomer {
  * no nosso banco, mesma minimização já usada pra derivar senha inicial a
  * partir do CPF do Mercúrio.
  */
+/**
+ * `notificationDisabled: true` — confirmado ao vivo em 2026-09-21 que o
+ * Asaas cobra uma "Taxa de mensageria" (R$0,99, separada da taxa do PIX)
+ * toda vez que dispara uma notificação (e-mail/SMS) própria de cobrança
+ * pro cliente. O Portal já avisa o membro por conta própria (WhatsApp,
+ * status na tela) — pagar o Asaas pra mandar OUTRO aviso é custo sem uso.
+ */
 export async function asaasFindOrCreateCustomer(nome: string, cpf: string, email?: string): Promise<AsaasCustomer> {
   const cpfLimpo = cpf.replace(/\D/g, "");
   const existentes = await chamarApi<{ data: AsaasCustomer[] }>(`/customers?cpfCnpj=${cpfLimpo}`);
@@ -45,7 +52,7 @@ export async function asaasFindOrCreateCustomer(nome: string, cpf: string, email
 
   return chamarApi<AsaasCustomer>("/customers", {
     method: "POST",
-    body: JSON.stringify({ name: nome, cpfCnpj: cpfLimpo, email }),
+    body: JSON.stringify({ name: nome, cpfCnpj: cpfLimpo, email, notificationDisabled: true }),
   });
 }
 
@@ -100,6 +107,42 @@ export async function asaasGetPaymentStatus(paymentId: string): Promise<AsaasPay
 /** Cancela uma cobrança (ex: aluno desistiu, ou cobrança de teste) — best-effort, não lança se já não existir mais. */
 export async function asaasCancelPayment(paymentId: string): Promise<void> {
   await chamarApi(`/payments/${paymentId}`, { method: "DELETE" }).catch(() => {});
+}
+
+export interface AsaasPixFeeStatus {
+  /** true = esse PIX provavelmente cai dentro da franquia gratuita do mês (não gera taxa). */
+  isento: boolean;
+  /** Taxa fixa vigente (com desconto promocional, se ainda ativo) caso NÃO isento. */
+  taxaFixa: number;
+}
+
+/**
+ * Confirmado ao vivo em 2026-09-21: o PIX no Asaas cobra uma taxa FIXA (não
+ * percentual, `percentageFee: null`), e os primeiros `monthlyCreditsWithoutFee`
+ * PIX recebidos no mês são gratuitos. Usado pra decidir, na hora de criar
+ * uma cobrança, se o split deve reservar essa taxa pra escola (ver
+ * asaas/split.ts) — best-effort: o contador reflete o estado NO MOMENTO da
+ * criação da cobrança, não da confirmação do pagamento (que pode vir depois
+ * e, em teoria, cruzar a franquia por causa de outras cobranças pagas antes).
+ */
+export async function asaasGetPixFeeStatus(): Promise<AsaasPixFeeStatus> {
+  const dados = await chamarApi<{
+    payment: {
+      pix: {
+        fixedFeeValue: number;
+        fixedFeeValueWithDiscount: number | null;
+        discountExpiration: string | null;
+        monthlyCreditsWithoutFee: number;
+        creditsReceivedOfCurrentMonth: number;
+      };
+    };
+  }>("/myAccount/fees");
+  const { pix } = dados.payment;
+  const descontoVigente = pix.fixedFeeValueWithDiscount !== null && pix.discountExpiration !== null && new Date(pix.discountExpiration) > new Date();
+  return {
+    isento: pix.creditsReceivedOfCurrentMonth < pix.monthlyCreditsWithoutFee,
+    taxaFixa: descontoVigente ? pix.fixedFeeValueWithDiscount! : pix.fixedFeeValue,
+  };
 }
 
 export interface AsaasSubaccountInput {

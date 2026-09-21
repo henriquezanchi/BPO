@@ -220,6 +220,7 @@ model Member {
   pollVotes               PollVote[]
   volunteerTermSignatures VolunteerTermSignature[]
   paymentCharges          PaymentCharge[]
+  fortunaTopUpCharges     FortunaTopUpCharge[]
   chargeMessageDrafts     ChargeMessageDraft[]
 
   @@index([schoolId])
@@ -360,6 +361,34 @@ model PaymentCharge {
   paidAt          DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
+
+  @@index([memberId])
+}
+
+// Recarga da carteira Fortuna via PIX real (Asaas). Confirmado ao vivo em
+// 2026-09-21 (DevTools na sessão real da tesouraria) que o Fortuna TEM um
+// endpoint de escrita real — PUT /balance/with-receipt — então o crédito é
+// automático (ver fortunaCreditarSaldo em fortuna/client.ts), chamado assim
+// que o polling detecta o PIX pago. `launchedAt`/`launchedBy`/
+// `autoCreditError` só existem pro caso de FALHA do crédito automático
+// (ex: membro sem fortunaClientId vinculado, API fora do ar) — nesse caso a
+// cobrança cai numa fila de exceção na FortunaTab pra lançamento manual.
+model FortunaTopUpCharge {
+  id              String              @id @default(cuid())
+  memberId        String
+  member          Member              @relation(fields: [memberId], references: [id])
+  amount          Decimal             @db.Decimal(10, 2)
+  branchId        Int
+  status          PaymentChargeStatus @default(pendente)
+  asaasCustomerId String
+  asaasPaymentId  String              @unique
+  pixPayload      String?             @db.Text
+  pixQrCodeBase64 String?             @db.Text
+  paidAt          DateTime?
+  launchedAt      DateTime?
+  launchedBy      String?
+  autoCreditError String?             @db.Text
+  createdAt       DateTime            @default(now())
 
   @@index([memberId])
 }

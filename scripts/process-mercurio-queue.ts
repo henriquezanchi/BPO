@@ -13,8 +13,9 @@
  * alteração pode levar até 24h pra ser confirmada no Mercúrio — rodar este
  * script manualmente também resolve a fila na hora.
  *
- * Uso: npx tsx --env-file=.env scripts/process-mercurio-queue.ts
+ * Uso: npx tsx scripts/process-mercurio-queue.ts
  */
+import "dotenv/config";
 import { db } from "../src/lib/db";
 import { processMercurioSyncQueue } from "../src/lib/mercurio/sync-queue";
 

@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
-import { fortunaGetBranches, fortunaGetClient } from "@/lib/fortuna/client";
 
 export interface FortunaBalanceView {
   branchId: number;
@@ -14,14 +13,14 @@ export interface FortunaBalanceView {
 // não são suportadas e quebram a serialização. Convertemos para number aqui,
 // na borda dos dados, em vez de em cada componente que consome Contribution.
 export type SerializedContribution = Omit<Contribution, "amount"> & { amount: number };
-export type SerializedCompositionItem = Omit<ContributionCompositionItem, "amount"> & { amount: number };
+export type SerializedCompositionItem = Omit<ContributionCompositionItem, "amount"> & { amount: number; pendingSync: boolean };
 
 function serializeContribution(c: Contribution): SerializedContribution {
   return { ...c, amount: Number(c.amount) };
 }
 
-function serializeCompositionItem(c: ContributionCompositionItem): SerializedCompositionItem {
-  return { ...c, amount: Number(c.amount) };
+function serializeCompositionItem(c: ContributionCompositionItem, gruposComTarefaPendente: Set<string>): SerializedCompositionItem {
+  return { ...c, amount: Number(c.amount), pendingSync: gruposComTarefaPendente.has(c.mercurioGroupId) };
 }
 
 export interface AgendaReactionSummary {
@@ -87,6 +86,22 @@ export async function getMemberDashboard(memberId: string) {
     },
   });
 
+  // Itens de composição com tarefa ainda pendente na fila (inclusão/edição
+  // ainda não confirmada no Mercúrio pelo worker — ver process-mercurio-
+  // queue.ts) — pra UI diferenciar visualmente "salvo, mas ainda não
+  // confirmado" de "já confirmado".
+  const tarefasComposicaoPendentes = await db.mercurioSyncTask.findMany({
+    where: {
+      memberId,
+      status: "pendente",
+      taskType: { in: ["incluir_item_composicao", "editar_valor_item_composicao"] },
+    },
+    select: { payload: true },
+  });
+  const gruposComTarefaPendente = new Set(
+    tarefasComposicaoPendentes.map((t) => (t.payload as { mercurioGroupId: string }).mercurioGroupId),
+  );
+
   // Catálogo sincronizado da filial (scripts/sync-composition.ts) menos o
   // que o membro já tem — não é mais lido ao vivo do Mercúrio a cada
   // carregamento do Portal (ver discussão de escala em CLAUDE.md/histórico).
@@ -100,27 +115,11 @@ export async function getMemberDashboard(memberId: string) {
     _sum: { amount: true },
   });
 
-  // Saldo real do Fortuna (carteira digital da lanchonete) — lido AO VIVO
-  // a cada carregamento, diferente do Mercúrio: é uma API REST normal,
-  // rápida, sem trava de sessão única, então não precisa de sync/cache.
-  // Sem fortunaClientId ainda (membro não vinculado — ver
-  // scripts/link-fortuna-clients.ts) ou API fora do ar: fica lista vazia,
-  // não quebra o resto do dashboard.
-  let fortunaBalances: FortunaBalanceView[] = [];
-  if (member.fortunaClientId) {
-    try {
-      const [client, branches] = await Promise.all([fortunaGetClient(member.fortunaClientId), fortunaGetBranches()]);
-      const tituloPorFilial = new Map(branches.map((b) => [b.id, b.title]));
-      fortunaBalances = client.balance.map((b) => ({
-        branchId: b.branchId,
-        branchTitle: tituloPorFilial.get(b.branchId) ?? `Filial ${b.branchId}`,
-        amount: Number(b.amount),
-        isHome: b.branchId === client.branch.id,
-      }));
-    } catch (e) {
-      console.error("Falha ao buscar saldo Fortuna:", (e as Error).message);
-    }
-  }
+  // Saldo real do Fortuna NÃO é buscado aqui — API externa (login+2
+  // requests) segurava o carregamento inicial da tela inteira (bug real
+  // relatado pelo usuário). FortunaWalletCard busca sozinho, client-side,
+  // via getFortunaBalancesForMember — ver fortuna-member-actions.ts.
+  const fortunaBalances: FortunaBalanceView[] = [];
 
   const studentClassGroupIds = member.classMemberships
     .filter((cm) => cm.role === "aluno")
@@ -210,7 +209,7 @@ export async function getMemberDashboard(memberId: string) {
     member: {
       ...member,
       contributions: member.contributions.map(serializeContribution),
-      compositionItems: member.compositionItems.map(serializeCompositionItem),
+      compositionItems: member.compositionItems.map((i) => serializeCompositionItem(i, gruposComTarefaPendente)),
     },
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     fortunaBalances,

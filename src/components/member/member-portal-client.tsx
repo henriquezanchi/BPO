@@ -3,6 +3,7 @@
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logout } from "@/lib/actions/auth-actions";
+import { getFortunaBalancesForMember } from "@/lib/actions/fortuna-member-actions";
 import { whatsappHref } from "@/lib/format";
 import type { MemberDashboard } from "@/lib/member-data";
 import {
@@ -20,7 +21,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
 import { AgendaPanel } from "./panels/agenda-panel";
 import { ContributionStatusPanel } from "./panels/contribution-status-panel";
@@ -54,8 +55,26 @@ const MODAL_TITLES: Record<ModalKey, string> = {
 };
 
 export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }) {
-  const { member, fortunaBalances, agendaItems, availableToAdd } = dashboard;
+  const { member, agendaItems, availableToAdd } = dashboard;
   const [modal, setModal] = useState<ModalKey | null>(null);
+  const [fortunaBalances, setFortunaBalances] = useState(dashboard.fortunaBalances);
+  const [fortunaCarregando, setFortunaCarregando] = useState(true);
+
+  function carregarSaldoFortuna() {
+    getFortunaBalancesForMember(member.id)
+      .then(setFortunaBalances)
+      .finally(() => setFortunaCarregando(false));
+  }
+
+  function buscarSaldoFortuna() {
+    setFortunaCarregando(true);
+    carregarSaldoFortuna();
+  }
+
+  useEffect(() => {
+    carregarSaldoFortuna();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isDelayed = member.status === "atrasado" || member.status === "negociando";
   const schoolWhatsapp = member.school.whatsapp ?? member.whatsapp;
@@ -158,7 +177,12 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
         </div>
 
         {/* Carteira Fortuna */}
-        <FortunaWalletCard balances={fortunaBalances} onAdicionarCreditos={() => setModal("fortuna_recarga")} />
+        <FortunaWalletCard
+          balances={fortunaBalances}
+          loading={fortunaCarregando}
+          onAdicionarCreditos={() => setModal("fortuna_recarga")}
+          onAtualizar={buscarSaldoFortuna}
+        />
 
         {/* Grid de funcionalidades */}
         <section className="grid grid-cols-2 gap-2.5">
@@ -213,7 +237,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           {modal === "situacao" && (
             <ContributionStatusPanel memberId={member.id} monthlyStatus={member.monthlyStatus} compositionTotal={compositionTotal} />
           )}
-          {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} />}
+          {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
           {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} />}
           {modal === "estudos" && <StudyAreaPanel />}
           {modal === "voluntariado" && <VolunteerPanel />}

@@ -2,21 +2,32 @@
 
 import { formatBRL } from "@/lib/format";
 import type { FortunaBalanceView } from "@/lib/member-data";
-import { Coffee, Plus } from "lucide-react";
+import { Coffee, Loader2, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 /**
  * Saldo real do Fortuna (carteira da lanchonete), lido ao vivo — ver
- * getMemberDashboard. Um membro pode ter saldo em mais de 1 filial (ex:
- * visitou outra unidade em um evento) — mostra a filial de casa por
- * padrão, com um seletor pras outras onde já existe saldo, pra dar pra
- * recarregar ANTES de viajar pra lá.
+ * getFortunaBalancesForMember. Um membro pode ter saldo em mais de 1
+ * filial (ex: visitou outra unidade em um evento) — mostra a filial de
+ * casa por padrão, com um seletor pras outras onde já existe saldo, pra
+ * dar pra recarregar ANTES de viajar pra lá.
  *
- * "Adicionar Créditos" abre a tela de recarga (ver FortunaTopUpPanel) —
- * ainda simulada, recarga self-service de verdade depende de um gateway
- * real na frente (ver .env.example, ASAAS_API_KEY vazio).
+ * "Adicionar Créditos" abre a tela de recarga real (PIX via Asaas, ver
+ * FortunaTopUpPanel) — o crédito em si não é automático (Fortuna sem API
+ * de escrita), então o botão de atualizar aqui deixa o membro conferir se
+ * a tesouraria já lançou, sem precisar recarregar o Portal inteiro.
  */
-export function FortunaWalletCard({ balances, onAdicionarCreditos }: { balances: FortunaBalanceView[]; onAdicionarCreditos: () => void }) {
+export function FortunaWalletCard({
+  balances,
+  loading,
+  onAdicionarCreditos,
+  onAtualizar,
+}: {
+  balances: FortunaBalanceView[];
+  loading?: boolean;
+  onAdicionarCreditos: () => void;
+  onAtualizar: () => void;
+}) {
   const home = balances.find((b) => b.isHome) ?? balances[0];
   const [selecionada, setSelecionada] = useState(home?.branchId);
   const atual = balances.find((b) => b.branchId === selecionada) ?? home;
@@ -27,7 +38,13 @@ export function FortunaWalletCard({ balances, onAdicionarCreditos }: { balances:
         <span className="mb-3 block text-[11px] font-semibold text-na-gold">
           <Coffee size={12} className="mr-1 inline" /> CARTEIRA DIGITAL FORTUNA
         </span>
-        <p className="text-xs text-gray-500 dark:text-gray-400">Ainda não conseguimos localizar sua conta no Fortuna.</p>
+        {loading ? (
+          <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <Loader2 size={12} className="animate-spin" /> Buscando seu saldo...
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500 dark:text-gray-400">Ainda não conseguimos localizar sua conta no Fortuna.</p>
+        )}
       </section>
     );
   }
@@ -55,7 +72,12 @@ export function FortunaWalletCard({ balances, onAdicionarCreditos }: { balances:
       </div>
       <div className="flex items-end justify-between">
         <div>
-          <div className="text-[11px] text-gray-500 dark:text-gray-400">Saldo em {atual.branchTitle}</div>
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+            Saldo em {atual.branchTitle}
+            <button onClick={onAtualizar} disabled={loading} title="Atualizar saldo" className="text-gray-400 transition hover:text-na-green disabled:opacity-60">
+              <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
           <div className="text-2xl font-bold text-na-green dark:text-emerald-400">{formatBRL(atual.amount)}</div>
         </div>
         <button

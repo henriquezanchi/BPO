@@ -117,6 +117,15 @@ export async function getDirectorDashboard(schoolId: string) {
   });
   fortunaTransacoes.push(...fortunaTxRecentes.map((t) => ({ memberName: t.member.name, amount: Number(t.amount) })));
 
+  // Recargas pagas via PIX cujo crédito AUTOMÁTICO no Fortuna falhou (ver
+  // checkFortunaTopUpStatus) — fila de exceção pra lançamento manual, não o
+  // caminho normal (que já credita sozinho assim que o PIX é confirmado).
+  const recargasFortunaPendentes = await db.fortunaTopUpCharge.findMany({
+    where: { member: { schoolId }, status: "pago", launchedAt: null },
+    include: { member: true },
+    orderBy: { paidAt: "asc" },
+  });
+
   const cobrancasPagas = await db.paymentCharge.findMany({
     where: { member: { schoolId }, status: "pago" },
     include: { member: true },
@@ -206,6 +215,13 @@ export async function getDirectorDashboard(schoolId: string) {
     fortunaTransacoes: fortunaTransacoes.slice(0, 10),
     fortunaSaldosPorMembro: saldosFortunaPorMembro,
     fortunaNaoVinculados: naoVinculadosFortuna.map((m) => ({ id: m.id, name: m.name })),
+    recargasFortunaPendentes: recargasFortunaPendentes.map((r) => ({
+      id: r.id,
+      memberName: r.member.name,
+      amount: Number(r.amount),
+      paidAt: r.paidAt!,
+      autoCreditError: r.autoCreditError,
+    })),
     eventos: eventos.map((e) => ({
       id: e.id,
       title: e.title,

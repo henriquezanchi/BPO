@@ -46,10 +46,10 @@ export async function enqueueMercurioPersonalUpdate(memberId: string, changes: M
   });
 }
 
-/** Enfileira a inclusão de um item de composição escolhido pelo membro (catálogo escolar já sincronizado — ver sync-composition.ts). */
-export async function enqueueMercurioCompositionAdd(memberId: string, mercurioGroupId: string, label: string) {
+/** Enfileira a inclusão de um item de composição escolhido pelo membro (catálogo escolar já sincronizado — ver sync-composition.ts), já com o valor que o membro escolheu. */
+export async function enqueueMercurioCompositionAdd(memberId: string, mercurioGroupId: string, label: string, valor: number) {
   return db.mercurioSyncTask.create({
-    data: { memberId, taskType: "incluir_item_composicao", payload: { mercurioGroupId, label } },
+    data: { memberId, taskType: "incluir_item_composicao", payload: { mercurioGroupId, label, valor } },
   });
 }
 
@@ -142,11 +142,17 @@ export async function processMercurioSyncQueue(limit = 20) {
           rgDataEmissao: payload.rgDataEmissao === undefined ? undefined : payload.rgDataEmissao ? new Date(payload.rgDataEmissao) : null,
         });
       } else if (task.taskType === "incluir_item_composicao") {
-        const payload = task.payload as { mercurioGroupId: string; label: string };
+        const payload = task.payload as { mercurioGroupId: string; label: string; valor?: number };
         result = await mercurioAdapter.addCompositionItem(identidade, payload.mercurioGroupId);
+        if (result.ok && payload.valor !== undefined) {
+          // Inclui com o valor padrão do Mercúrio primeiro, depois ajusta pro
+          // valor que o membro escolheu no Portal (mesma chamada de escrita
+          // já usada por editar_valor_item_composicao) — best-effort: se essa
+          // 2ª chamada falhar, o item fica incluído mesmo assim, só com o
+          // valor padrão em vez do escolhido (relido abaixo de qualquer jeito).
+          await mercurioAdapter.editCompositionItemValue(identidade, payload.mercurioGroupId, payload.valor.toFixed(2).replace(".", ","));
+        }
         if (result.ok) {
-          // O valor é o padrão que o Mercúrio aplica pro item — não escolhido
-          // pelo Portal, então relê a composição pra saber quanto ficou.
           const { items } = await mercurioAdapter.pullComposition(identidade);
           const incluido = items.find((i) => i.mercurioGroupId === payload.mercurioGroupId);
           await db.contributionCompositionItem.upsert({

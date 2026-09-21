@@ -40,6 +40,9 @@ yarn-error.log*
 # saídas de scripts exploratórios (podem conter PII/screenshots reais)
 scripts/.mercurio-test-output/
 
+# logs do worker agendado (Task Scheduler) — pode conter PII de membros
+/logs/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
