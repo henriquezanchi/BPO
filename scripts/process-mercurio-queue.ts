@@ -17,7 +17,7 @@
  */
 import "dotenv/config";
 import { db } from "../src/lib/db";
-import { processMercurioSyncQueue, processSchoolRubricaSyncRequests } from "../src/lib/mercurio/sync-queue";
+import { processMercurioSyncQueue, processSchoolRubricaSyncRequests } from "../src/lib/mercurio/sync-worker";
 
 async function main() {
   const resultados = await processMercurioSyncQueue();

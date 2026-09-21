@@ -20,11 +20,12 @@
  *   cmdGravar = botão Gravar (input[type=submit])
  */
 import { chromium, type Browser, type Frame, type Page } from "playwright";
+import { RodadaEmAndamentoError } from "./errors";
 import { lerCredencialMercurio, verificarRodadaJaEmAndamento } from "./scraper-credentials";
 
 const URL_LOGIN = "https://mercurio.oinabn.com.br/";
 
-export class RodadaEmAndamentoError extends Error {}
+export { RodadaEmAndamentoError };
 
 async function preencherComFallback(contexto: Page | Frame, getByLabelRegex: RegExp, seletorFallback: string, valor: string) {
   try {
