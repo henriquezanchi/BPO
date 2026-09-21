@@ -17,19 +17,24 @@
  */
 import "dotenv/config";
 import { db } from "../src/lib/db";
-import { processMercurioSyncQueue } from "../src/lib/mercurio/sync-queue";
+import { processMercurioSyncQueue, processSchoolRubricaSyncRequests } from "../src/lib/mercurio/sync-queue";
 
 async function main() {
   const resultados = await processMercurioSyncQueue();
   if (resultados.length === 0) {
     console.log("Fila vazia — nada a processar.");
-    return;
+  } else {
+    const porStatus = resultados.reduce<Record<string, number>>((acc, r) => {
+      acc[r.status] = (acc[r.status] ?? 0) + 1;
+      return acc;
+    }, {});
+    console.log(`Processadas ${resultados.length} tarefa(s):`, porStatus);
   }
-  const porStatus = resultados.reduce<Record<string, number>>((acc, r) => {
-    acc[r.status] = (acc[r.status] ?? 0) + 1;
-    return acc;
-  }, {});
-  console.log(`Processadas ${resultados.length} tarefa(s):`, porStatus);
+
+  const rubricas = await processSchoolRubricaSyncRequests();
+  if (rubricas.length > 0) {
+    console.log(`Pedidos de sincronização de rubricas processados: ${rubricas.length}`, rubricas);
+  }
 }
 
 main()

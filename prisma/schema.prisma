@@ -111,6 +111,12 @@ model School {
   // isto) — enquanto null, o lançamento automático fica desligado pra essa
   // escola (a fila só marca a tarefa como falha, nunca lança "no escuro").
   mercurioCaixaLancamento String?
+  // Pedido pendente de sincronização das Rubricas de Pagamento — marcado
+  // por sincronizarRubricasDePagamento (rubrica-actions.ts), processado
+  // pelo worker (process-mercurio-queue.ts, já roda a cada 10min no
+  // Railway) e limpo (volta a null) ao concluir. Precisou virar assíncrono
+  // pra rodar no Vercel (serverless não tem Chromium/Playwright).
+  rubricaSyncRequestedAt DateTime?
   // Subconta Asaas da escola (ver scripts/create-asaas-subaccount.ts) — a
   // cobrança continua sendo criada pela conta do BPO (1 API key só,
   // gerencia N escolas), e um split manda a fatia da escola pra esta

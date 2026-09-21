@@ -60,7 +60,7 @@ async function main() {
     // continua válido: só troca o mês via o mesmo goto que abrirTelaRecibos
     // usaria (bug real corrigido 2026-09-21, mesma classe do problema já
     // visto em reabrirListaAtivos/reabrirCirculoDeAmigos).
-    let frame = await abrirTelaRecibos(page, new RegExp(filialLabel, "i"));
+    const frame = await abrirTelaRecibos(page, new RegExp(filialLabel, "i"));
     for (let i = 0; i < meses; i++) {
       const referencia = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - i, 1));
       const ano = referencia.getUTCFullYear();

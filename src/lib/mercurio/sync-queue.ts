@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import type { MercurioContactChanges, MercurioPersonalChanges, MercurioWriteResult } from "./adapter";
-import { RodadaEmAndamentoError } from "./browser-session";
+import { abrirSessaoMercurio, lerRubricasDePagamentoHoje, RodadaEmAndamentoError } from "./browser-session";
 import { mercurioAdapter } from "./index";
 
 /**
@@ -240,4 +240,45 @@ export async function processMercurioSyncQueue(limit = 20) {
   }
 
   return results;
+}
+
+/**
+ * Processa pedidos pendentes de sincronização das Rubricas de Pagamento
+ * (School.rubricaSyncRequestedAt) — movido pra cá (rodado pelo worker, não
+ * mais dentro da Server Action sincronizarRubricasDePagamento) pra rodar no
+ * Vercel, que não tem Chromium/Playwright disponível em serverless.
+ */
+export async function processSchoolRubricaSyncRequests() {
+  const escolas = await db.school.findMany({ where: { rubricaSyncRequestedAt: { not: null } } });
+  const resultados: { schoolId: string; ok: boolean; error?: string }[] = [];
+
+  for (const school of escolas) {
+    try {
+      if (!school.mercurioFilialLabel || !school.mercurioCaixaLancamento) {
+        throw new Error("Escola sem mercurioFilialLabel/mercurioCaixaLancamento configurado.");
+      }
+      const { browser, page } = await abrirSessaoMercurio();
+      let rubricas;
+      try {
+        rubricas = await lerRubricasDePagamentoHoje(page, new RegExp(school.mercurioFilialLabel, "i"), school.mercurioCaixaLancamento);
+      } finally {
+        await browser.close();
+      }
+      for (const r of rubricas) {
+        await db.schoolPaymentRubrica.upsert({
+          where: { schoolId_mercurioRubricaId: { schoolId: school.id, mercurioRubricaId: r.mercurioRubricaId } },
+          update: { label: r.label, syncedAt: new Date() },
+          create: { schoolId: school.id, mercurioRubricaId: r.mercurioRubricaId, label: r.label },
+        });
+      }
+      await db.school.update({ where: { id: school.id }, data: { rubricaSyncRequestedAt: null } });
+      resultados.push({ schoolId: school.id, ok: true });
+    } catch (e) {
+      // Best-effort — deixa rubricaSyncRequestedAt setado pra tentar de novo
+      // no próximo ciclo do worker (10min depois), em vez de perder o pedido.
+      resultados.push({ schoolId: school.id, ok: false, error: (e as Error).message });
+    }
+  }
+
+  return resultados;
 }

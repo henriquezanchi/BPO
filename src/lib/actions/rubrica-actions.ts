@@ -2,16 +2,15 @@
 
 import { requireDirector } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { abrirSessaoMercurio, lerRubricasDePagamentoHoje } from "@/lib/mercurio/browser-session";
 import { revalidatePath } from "next/cache";
 
 /**
- * Sincroniza o catálogo de Rubricas de Pagamento ao vivo do Mercúrio
- * (Tesouraria > Caixa > dia > "Pagamento Outros") — mesmo catálogo usado
- * pra conciliar despesa importada de extrato bancário. Precisa de
- * School.mercurioFilialLabel e School.mercurioCaixaLancamento já
- * configurados (mesmo campo usado pro lançamento automático de
- * contribuição — ver scripts/list-cashiers.ts).
+ * Só marca o pedido — quem processa de verdade (abre sessão real do
+ * Mercúrio, lê as Rubricas de Pagamento, atualiza SchoolPaymentRubrica) é
+ * o worker (scripts/process-mercurio-queue.ts, já roda a cada 10min no
+ * Railway). Precisou virar assíncrono pra rodar no Vercel (serverless não
+ * tem Chromium/Playwright) — antes disso essa action abria a sessão do
+ * Mercúrio direto, na hora.
  */
 export async function sincronizarRubricasDePagamento(schoolId: string) {
   await requireDirector(schoolId);
@@ -21,24 +20,9 @@ export async function sincronizarRubricasDePagamento(schoolId: string) {
     throw new Error("Escola sem caixa configurado (School.mercurioCaixaLancamento) — configure antes, ver scripts/list-cashiers.ts.");
   }
 
-  const { browser, page } = await abrirSessaoMercurio();
-  let rubricas;
-  try {
-    rubricas = await lerRubricasDePagamentoHoje(page, new RegExp(school.mercurioFilialLabel, "i"), school.mercurioCaixaLancamento);
-  } finally {
-    await browser.close();
-  }
-
-  for (const r of rubricas) {
-    await db.schoolPaymentRubrica.upsert({
-      where: { schoolId_mercurioRubricaId: { schoolId, mercurioRubricaId: r.mercurioRubricaId } },
-      update: { label: r.label, syncedAt: new Date() },
-      create: { schoolId, mercurioRubricaId: r.mercurioRubricaId, label: r.label },
-    });
-  }
-
+  await db.school.update({ where: { id: schoolId }, data: { rubricaSyncRequestedAt: new Date() } });
   revalidatePath("/diretor");
-  return { total: rubricas.length };
+  return { pending: true as const };
 }
 
 /** Concilia (ou desfaz — rubricaId null) a categoria de uma conta contra o catálogo de rubricas — alteração e exclusão livres. */

@@ -2,12 +2,15 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enqueueMercurioReceiptFetch, processMercurioSyncQueue } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioReceiptFetch } from "@/lib/mercurio/sync-queue";
 
 /**
  * Busca o conteúdo (documento) de um recibo específico do membro. Primeira
- * vez: enfileira e processa na hora (~poucos segundos, sessão real no
- * Mercúrio) — depois disso o conteúdo fica cacheado pra sempre em
+ * vez: só enfileira — quem processa de verdade (sessão real no Mercúrio) é
+ * o worker (scripts/process-mercurio-queue.ts, já roda a cada 10min no
+ * Railway), não mais esta action (precisou virar assíncrono pra rodar no
+ * Vercel, que não tem Chromium/Playwright em serverless). Depois de
+ * processado, o conteúdo fica cacheado pra sempre em
  * ContributionReceipt.rawText (documento histórico imutável, só é
  * cancelado, nunca alterado), então visualizações futuras nem tocam o
  * Mercúrio de novo.
@@ -24,7 +27,6 @@ export async function viewReceipt(memberId: string, receiptId: string) {
   }
 
   const task = await enqueueMercurioReceiptFetch(memberId, receipt.mercurioRecId);
-  await processMercurioSyncQueue();
 
   const atualizada = await db.mercurioSyncTask.findUniqueOrThrow({ where: { id: task.id } });
   if (atualizada.status === "falhou") {
