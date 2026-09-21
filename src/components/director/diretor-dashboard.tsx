@@ -1,11 +1,12 @@
 "use client";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { getFortunaBalancesForDirector, type FortunaBalancesForDirector } from "@/lib/actions/fortuna-actions";
 import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import type { DirectorDashboard } from "@/lib/director-data";
 import { ArrowLeft, ArrowUpDown, BadgePercent, Coffee, FileWarning, Handshake, LayoutDashboard, Search, Ticket, Users, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FortunaTab } from "./fortuna-tab";
 import { MemberDetailPanel } from "./member-detail-panel";
 import { RecuperacaoTab } from "./recuperacao-tab";
@@ -34,6 +35,20 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
   const [aba, setAba] = useState<AbaId>("visao-geral");
   const [membrosFiltroInicial, setMembrosFiltroInicial] = useState<string>("todos");
   const abaAtual = ABAS.find((a) => a.id === aba)!;
+
+  // Saldo Fortuna buscado à parte, no cliente — NÃO no carregamento inicial
+  // de getDirectorDashboard (bug real: /diretor levava 7-9s porque isso
+  // rodava em série, 1 chamada HTTP por membro vinculado, bloqueando a
+  // página inteira — mesmo problema já corrigido no Portal do Membro).
+  const [fortunaBalances, setFortunaBalances] = useState<FortunaBalancesForDirector>({ saldoConsolidado: 0, saldosPorMembro: [] });
+  const [fortunaCarregando, setFortunaCarregando] = useState(true);
+
+  useEffect(() => {
+    getFortunaBalancesForDirector(schoolId)
+      .then(setFortunaBalances)
+      .finally(() => setFortunaCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function navegarPara(destino: AbaId, opts?: { statusFiltro?: string }) {
     if (opts?.statusFiltro) setMembrosFiltroInicial(opts.statusFiltro);
@@ -74,11 +89,13 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
         </header>
 
         <div className="p-8">
-          {aba === "visao-geral" && <VisaoGeralTab data={data} onNavigate={navegarPara} />}
+          {aba === "visao-geral" && (
+            <VisaoGeralTab data={data} onNavigate={navegarPara} saldoFortunaConsolidado={fortunaBalances.saldoConsolidado} fortunaCarregando={fortunaCarregando} />
+          )}
           {aba === "membros" && <MembrosTab schoolId={schoolId} data={data} filtroInicial={membrosFiltroInicial} />}
           {aba === "eventos" && <EventosTab data={data} />}
           {aba === "recuperacao" && <RecuperacaoTab schoolId={schoolId} data={data} />}
-          {aba === "fortuna" && <FortunaTab schoolId={schoolId} data={data} />}
+          {aba === "fortuna" && <FortunaTab schoolId={schoolId} data={data} balances={fortunaBalances} carregando={fortunaCarregando} />}
           {aba === "repasses" && <ContasConciliacoesTab schoolId={schoolId} data={data} />}
         </div>
       </main>
@@ -129,7 +146,17 @@ export function EmptyState({ text }: { text: string }) {
   return <p className="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{text}</p>;
 }
 
-function VisaoGeralTab({ data, onNavigate }: { data: DirectorDashboard; onNavigate: (aba: AbaId, opts?: { statusFiltro?: string }) => void }) {
+function VisaoGeralTab({
+  data,
+  onNavigate,
+  saldoFortunaConsolidado,
+  fortunaCarregando,
+}: {
+  data: DirectorDashboard;
+  onNavigate: (aba: AbaId, opts?: { statusFiltro?: string }) => void;
+  saldoFortunaConsolidado: number;
+  fortunaCarregando: boolean;
+}) {
   const { kpis, transacoesRecentes } = data;
   const resultadoPositivo = kpis.resultadoFinanceiroMes >= 0;
   return (
@@ -193,7 +220,7 @@ function VisaoGeralTab({ data, onNavigate }: { data: DirectorDashboard; onNaviga
         />
         <KpiCard
           title="Saldo Fortuna Consolidado"
-          value={formatBRL(kpis.saldoFortunaConsolidado)}
+          value={fortunaCarregando ? "..." : formatBRL(saldoFortunaConsolidado)}
           sub="Membros vinculados ao Fortuna"
           accent="blue"
           icon={Coffee}

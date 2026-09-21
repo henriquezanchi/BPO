@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { fortunaGetClient } from "@/lib/fortuna/client";
 
 export interface MemberRow {
   id: string;
@@ -90,24 +89,12 @@ export async function getDirectorDashboard(schoolId: string) {
   const despesasRealizadasMes = Number(despesasRealizadasMesAgg._sum.amount ?? 0);
   const despesasTotaisMes = despesasPendentesMes + despesasRealizadasMes;
 
-  // Saldo Fortuna consolidado — só quem já está vinculado (fortunaClientId,
-  // ver scripts/link-fortuna-clients.ts / vincularMembroFortuna). É uma API
-  // real, então isso é 1 chamada por membro vinculado — tudo bem na escala
-  // de hoje (poucos membros vinculados), reconsiderar se crescer muito.
-  const vinculadosFortuna = membros.filter((m) => m.fortunaClientId);
+  // Saldo Fortuna NÃO é buscado aqui — bug real medido ao vivo (2026-09-21):
+  // /diretor levava 7-9s porque isso rodava 1 chamada HTTP por membro
+  // vinculado, em série, bloqueando o carregamento inteiro da página. Vira
+  // getFortunaBalancesForDirector (fortuna-actions.ts), chamado client-side
+  // e em paralelo — mesmo padrão já usado no Portal do Membro.
   const naoVinculadosFortuna = ativos.filter((m) => !m.fortunaClientId);
-  let saldoFortunaConsolidado = 0;
-  const saldosFortunaPorMembro: { memberId: string; memberName: string; balance: number }[] = [];
-  for (const m of vinculadosFortuna) {
-    try {
-      const cliente = await fortunaGetClient(m.fortunaClientId!);
-      const saldo = cliente.balance.reduce((soma, b) => soma + Number(b.amount), 0);
-      saldoFortunaConsolidado += saldo;
-      saldosFortunaPorMembro.push({ memberId: m.id, memberName: m.name, balance: saldo });
-    } catch {
-      // Best-effort — 1 cliente falhar (API fora do ar, id desvinculado) não derruba o resto do painel.
-    }
-  }
   const fortunaTransacoes: { memberName: string; amount: number }[] = [];
   const fortunaTxRecentes = await db.fortunaTransaction.findMany({
     where: { member: { schoolId } },
@@ -180,7 +167,6 @@ export async function getDirectorDashboard(schoolId: string) {
       resultadoFinanceiroMes: receitaPrevista - despesasTotaisMes,
       taxaInadimplencia,
       totalEmAtraso,
-      saldoFortunaConsolidado,
       membrosAtivos: ativos.length,
       percentualConciliado,
     },
@@ -213,7 +199,6 @@ export async function getDirectorDashboard(schoolId: string) {
     })),
     rubricasDisponiveis: rubricasDisponiveis.map((r) => ({ id: r.id, label: r.label })),
     fortunaTransacoes: fortunaTransacoes.slice(0, 10),
-    fortunaSaldosPorMembro: saldosFortunaPorMembro,
     fortunaNaoVinculados: naoVinculadosFortuna.map((m) => ({ id: m.id, name: m.name })),
     recargasFortunaPendentes: recargasFortunaPendentes.map((r) => ({
       id: r.id,

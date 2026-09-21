@@ -1,6 +1,12 @@
 "use client";
 
-import { buscarClientesFortunaPorNome, marcarRecargaFortunaComoLancada, tentarNovamenteCreditoFortuna, vincularMembroFortuna } from "@/lib/actions/fortuna-actions";
+import {
+  buscarClientesFortunaPorNome,
+  marcarRecargaFortunaComoLancada,
+  tentarNovamenteCreditoFortuna,
+  vincularMembroFortuna,
+  type FortunaBalancesForDirector,
+} from "@/lib/actions/fortuna-actions";
 import type { DirectorDashboard } from "@/lib/director-data";
 import { formatBRL, formatDateBR } from "@/lib/format";
 import type { FortunaClient } from "@/lib/fortuna/client";
@@ -8,7 +14,17 @@ import { CircleCheck, Coffee, Link2, Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { EmptyState, KpiCard } from "./diretor-dashboard";
 
-export function FortunaTab({ schoolId, data }: { schoolId: string; data: DirectorDashboard }) {
+export function FortunaTab({
+  schoolId,
+  data,
+  balances,
+  carregando,
+}: {
+  schoolId: string;
+  data: DirectorDashboard;
+  balances: FortunaBalancesForDirector;
+  carregando: boolean;
+}) {
   const [isPending, startTransition] = useTransition();
   const [membroEmBusca, setMembroEmBusca] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
@@ -46,7 +62,7 @@ export function FortunaTab({ schoolId, data }: { schoolId: string; data: Directo
     <div className="flex flex-col gap-5">
       <KpiCard
         title="Saldo Consolidado (membros vinculados ao Fortuna)"
-        value={formatBRL(data.kpis.saldoFortunaConsolidado)}
+        value={carregando ? "..." : formatBRL(balances.saldoConsolidado)}
         sub="Lido em tempo real da API do Fortuna"
         accent="gold"
         icon={Coffee}
@@ -96,11 +112,15 @@ export function FortunaTab({ schoolId, data }: { schoolId: string; data: Directo
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
         <h3 className="mb-4 text-sm font-bold text-na-green-dark dark:text-emerald-400">Saldo por Membro</h3>
-        {data.fortunaSaldosPorMembro.length === 0 ? (
+        {carregando ? (
+          <p className="flex items-center gap-1.5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+            <Loader2 size={14} className="animate-spin" /> Buscando saldos no Fortuna...
+          </p>
+        ) : balances.saldosPorMembro.length === 0 ? (
           <EmptyState text="Nenhum membro vinculado ao Fortuna ainda." />
         ) : (
           <ul className="flex flex-col gap-2">
-            {data.fortunaSaldosPorMembro.map((s) => (
+            {balances.saldosPorMembro.map((s) => (
               <li key={s.memberId} className="flex items-center justify-between rounded-lg border border-gray-100 p-3 text-sm dark:border-gray-800">
                 <span className="font-medium text-gray-900 dark:text-gray-100">{s.memberName}</span>
                 <span className="font-semibold text-na-green dark:text-emerald-400">{formatBRL(s.balance)}</span>

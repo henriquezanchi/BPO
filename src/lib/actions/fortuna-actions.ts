@@ -2,8 +2,43 @@
 
 import { requireDirector } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { fortunaCreditarSaldo, fortunaSearchClientsByName, type FortunaClient } from "@/lib/fortuna/client";
+import { fortunaCreditarSaldo, fortunaGetClient, fortunaSearchClientsByName, type FortunaClient } from "@/lib/fortuna/client";
 import { revalidatePath } from "next/cache";
+
+export interface FortunaBalancesForDirector {
+  saldoConsolidado: number;
+  saldosPorMembro: { memberId: string; memberName: string; balance: number }[];
+}
+
+/**
+ * Saldo Fortuna por membro vinculado — chamado client-side, FORA do
+ * carregamento inicial de getDirectorDashboard (bug real medido ao vivo:
+ * /diretor levando 7-9s porque essa busca rodava 1 chamada por membro,
+ * em série, bloqueando a página inteira — mesmo problema já corrigido no
+ * Portal do Membro, só que esquecido aqui). Paralelizado com Promise.all
+ * (best-effort por membro, 1 falhar não derruba os outros).
+ */
+export async function getFortunaBalancesForDirector(schoolId: string): Promise<FortunaBalancesForDirector> {
+  await requireDirector(schoolId);
+
+  const vinculados = await db.member.findMany({ where: { schoolId, fortunaClientId: { not: null } } });
+
+  const resultados = await Promise.all(
+    vinculados.map(async (m) => {
+      try {
+        const cliente = await fortunaGetClient(m.fortunaClientId!);
+        const balance = cliente.balance.reduce((soma, b) => soma + Number(b.amount), 0);
+        return { memberId: m.id, memberName: m.name, balance };
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  const saldosPorMembro = resultados.filter((r) => r !== null);
+  const saldoConsolidado = saldosPorMembro.reduce((soma, s) => soma + s.balance, 0);
+  return { saldoConsolidado, saldosPorMembro };
+}
 
 /** Busca no Fortuna por nome — só pra RESOLVER manualmente qual fortunaClientId vincular (mesma cautela do script scripts/link-fortuna-clients.ts: confirmar por e-mail/telefone antes de vincular, nunca confiar só no nome). */
 export async function buscarClientesFortunaPorNome(schoolId: string, nome: string): Promise<FortunaClient[]> {
