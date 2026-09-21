@@ -6,12 +6,13 @@ FROM mcr.microsoft.com/playwright:v1.63.0-noble
 WORKDIR /app
 
 COPY package*.json ./
+# O "postinstall" do package.json roda "prisma generate", que precisa do
+# schema — copia ele ANTES do npm ci, senão o postinstall falha (bug real
+# encontrado no primeiro build: schema.prisma não existia ainda nesse ponto).
+COPY prisma ./prisma
 RUN npm ci
 
 COPY . .
-
-# Gera o client do Prisma (schema já commitado) antes do build do Next.
-RUN npx prisma generate
 RUN npm run build
 
 ENV NODE_ENV=production
