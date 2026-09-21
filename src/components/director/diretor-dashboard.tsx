@@ -23,13 +23,19 @@ const ABAS = [
 
 type AbaId = (typeof ABAS)[number]["id"];
 
-const STATUS_LABEL: Record<string, string> = { em_dia: "Em Dia", atrasado: "Atrasado", negociando: "Em Negociação", isento: "Isento" };
+const STATUS_LABEL: Record<string, string> = { em_dia: "Em Dia", atrasado: "Atrasado", negociando: "Em Negociação", isento: "Isento", inativo: "Inativo" };
 const STATUS_ESTILO: Record<string, string> = {
   em_dia: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400",
   atrasado: "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400",
   negociando: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400",
   isento: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  inativo: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500",
 };
+
+/** Matrícula trancada/inativa no Mercúrio — não faz sentido cobrar nem mostrar "atrasado" pra quem não é mais aluno ativo, mesmo que o último status calculado antes de trancar tenha sido esse. */
+function statusEfetivo(m: { status: string; mercurioAtivo: boolean }): string {
+  return m.mercurioAtivo ? m.status : "inativo";
+}
 
 export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: string; schoolName: string; data: DirectorDashboard }) {
   const [aba, setAba] = useState<AbaId>("visao-geral");
@@ -237,6 +243,7 @@ function VisaoGeralTab({
             <thead>
               <tr className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
                 <th className="border-b border-gray-100 pb-2 dark:border-gray-800">Membro</th>
+                <th className="border-b border-gray-100 pb-2 dark:border-gray-800">Tipo</th>
                 <th className="border-b border-gray-100 pb-2 dark:border-gray-800">Data</th>
                 <th className="border-b border-gray-100 pb-2 dark:border-gray-800">Valor</th>
               </tr>
@@ -245,6 +252,9 @@ function VisaoGeralTab({
               {transacoesRecentes.map((t) => (
                 <tr key={t.id}>
                   <td className="border-b border-gray-100 py-2.5 font-medium dark:border-gray-800">{t.memberName}</td>
+                  <td className="border-b border-gray-100 py-2.5 text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                    {t.tipo === "recarga_fortuna" ? "Recarga Fortuna" : "Contribuição"}
+                  </td>
                   <td className="border-b border-gray-100 py-2.5 text-gray-500 dark:border-gray-800 dark:text-gray-400">{formatDateBR(t.paidAt)}</td>
                   <td className="border-b border-gray-100 py-2.5 font-semibold text-na-green dark:border-gray-800 dark:text-emerald-400">{formatBRL(t.amount)}</td>
                 </tr>
@@ -293,12 +303,12 @@ function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data:
 
   const filtrados = data.membros
     .filter((m) => m.name.toLowerCase().includes(busca.toLowerCase()))
-    .filter((m) => statusFiltro === "todos" || m.status === statusFiltro)
+    .filter((m) => statusFiltro === "todos" || statusEfetivo(m) === statusFiltro)
     .filter((m) => composicaoFiltro === "todas" || m.compositionLabels.includes(composicaoFiltro))
     .sort((a, b) => {
       let cmp = 0;
       if (ordenarPor === "nome") cmp = a.name.localeCompare(b.name, "pt-BR");
-      else if (ordenarPor === "status") cmp = a.status.localeCompare(b.status);
+      else if (ordenarPor === "status") cmp = statusEfetivo(a).localeCompare(statusEfetivo(b));
       else if (ordenarPor === "valor") cmp = a.compositionTotal - b.compositionTotal;
       else if (ordenarPor === "atrasadas") cmp = a.overdueCount - b.overdueCount;
       if (cmp === 0 && ordenarPor !== "atrasadas") cmp = b.overdueCount - a.overdueCount; // empate: quem tem mais atraso aparece primeiro
@@ -391,8 +401,8 @@ function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data:
               </td>
               <td className="py-3 font-semibold text-gray-900 dark:text-gray-100">{formatBRL(m.compositionTotal)}</td>
               <td className="py-3">
-                <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${STATUS_ESTILO[m.status] ?? STATUS_ESTILO.em_dia}`}>
-                  {STATUS_LABEL[m.status] ?? m.status}
+                <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${STATUS_ESTILO[statusEfetivo(m)] ?? STATUS_ESTILO.em_dia}`}>
+                  {STATUS_LABEL[statusEfetivo(m)] ?? statusEfetivo(m)}
                 </span>
               </td>
               <td className="py-3">

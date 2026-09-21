@@ -6,6 +6,7 @@ export interface MemberRow {
   registrationNo: string | null;
   whatsapp: string;
   status: string;
+  mercurioAtivo: boolean;
   compositionLabels: string[];
   compositionTotal: number;
   overdueCount: number;
@@ -16,6 +17,7 @@ export interface TransacaoRecente {
   memberName: string;
   amount: number;
   paidAt: Date;
+  tipo: "contribuicao" | "recarga_fortuna";
 }
 
 /**
@@ -119,12 +121,21 @@ export async function getDirectorDashboard(schoolId: string) {
     orderBy: { paidAt: "desc" },
     take: 10,
   });
-  const transacoesRecentes: TransacaoRecente[] = cobrancasPagas.map((c) => ({
-    id: c.id,
-    memberName: c.member.name,
-    amount: Number(c.amount),
-    paidAt: c.paidAt!,
-  }));
+  const recargasFortunaPagas = await db.fortunaTopUpCharge.findMany({
+    where: { member: { schoolId }, status: "pago" },
+    include: { member: true },
+    orderBy: { paidAt: "desc" },
+    take: 10,
+  });
+  // As 2 fontes de PIX confirmado (contribuição + recarga Fortuna) juntas
+  // numa lista só, mais recentes primeiro — antes só mostrava contribuição,
+  // então uma recarga real de Fortuna nunca aparecia aqui.
+  const transacoesRecentes: TransacaoRecente[] = [
+    ...cobrancasPagas.map((c) => ({ id: c.id, memberName: c.member.name, amount: Number(c.amount), paidAt: c.paidAt!, tipo: "contribuicao" as const })),
+    ...recargasFortunaPagas.map((r) => ({ id: r.id, memberName: r.member.name, amount: Number(r.amount), paidAt: r.paidAt!, tipo: "recarga_fortuna" as const })),
+  ]
+    .sort((a, b) => b.paidAt.getTime() - a.paidAt.getTime())
+    .slice(0, 10);
 
   const membrosRows: MemberRow[] = membros.map((m) => ({
     id: m.id,
@@ -132,6 +143,7 @@ export async function getDirectorDashboard(schoolId: string) {
     registrationNo: m.registrationNo,
     whatsapp: m.whatsapp,
     status: m.status,
+    mercurioAtivo: m.mercurioAtivo,
     compositionLabels: m.compositionItems.map((i) => i.label),
     compositionTotal: totalComposicao(m),
     overdueCount: atrasosMap.get(m.id) ?? 0,
