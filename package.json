@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio"
@@ -23,7 +24,7 @@
     "lucide-react": "^1.45.0",
     "next": "16.3.4",
     "pg": "^8.23.0",
-    "playwright": "^1.63.0",
+    "playwright": "1.63.0",
     "prisma": "^7.10.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
