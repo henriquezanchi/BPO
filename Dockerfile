@@ -13,6 +13,18 @@ COPY prisma ./prisma
 RUN npm ci
 
 COPY . .
+
+# NEXT_PUBLIC_* precisam existir NO BUILD (o Next grava o valor direto no
+# JS do navegador em `next build` — diferente das outras variáveis, que só
+# são lidas em runtime). O Railway injeta as variáveis do serviço como
+# build args automaticamente quando declaradas com ARG aqui (bug real
+# descoberto ao vivo: sem isso, o login quebrava com "Your project's URL
+# and API key are required to create a Supabase client").
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 RUN npm run build
 
 ENV NODE_ENV=production
