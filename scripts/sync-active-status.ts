@@ -8,7 +8,7 @@
  * Uso: npx tsx --env-file=.env scripts/sync-active-status.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirListaAtivos, abrirSessaoMercurio, listarMatriculasAtivas } from "../src/lib/mercurio/browser-session";
+import { abrirListaAtivos, abrirSessaoMercurio, listarMatriculasAtivas, reabrirCirculoDeAmigos } from "../src/lib/mercurio/browser-session";
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -23,8 +23,14 @@ async function main() {
   const { browser, page } = await abrirSessaoMercurio();
   let matriculasAtivas: string[];
   try {
-    const frame = await abrirListaAtivos(page, new RegExp(filialLabel, "i"));
-    matriculasAtivas = await listarMatriculasAtivas(frame);
+    // Ativos (PROGRAMA BRANCO) + C. de Amigos — bug real corrigido
+    // 2026-09-21: essa lista só olhava Ativos, então marcava os membros do
+    // Círculo de Amigos como inativos (eles nunca aparecem em Ativos).
+    const frameAtivos = await abrirListaAtivos(page, new RegExp(filialLabel, "i"));
+    const matriculasProgramaBranco = await listarMatriculasAtivas(frameAtivos);
+    const frameCirculo = await reabrirCirculoDeAmigos(page);
+    const matriculasCirculo = await listarMatriculasAtivas(frameCirculo);
+    matriculasAtivas = [...matriculasProgramaBranco, ...matriculasCirculo];
   } finally {
     await browser.close();
   }
