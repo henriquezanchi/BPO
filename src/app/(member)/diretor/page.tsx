@@ -1,9 +1,11 @@
 import { DiretorDashboard } from "@/components/director/diretor-dashboard";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { getDirectorDashboard } from "@/lib/director-data";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Painel do Diretor - Nova Acrópole" };
 
 /**
  * Acesso: link direto (esta URL, /diretor) OU pelo Portal do Membro >
