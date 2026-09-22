@@ -4,6 +4,7 @@ import { ativarPixAutomatico, checkPixAutomaticoStatus, desativarPixAutomatico }
 import { cancelarCobrancaContribuicaoPendente, checkChargeStatus, createContributionCharge, getPendingContributionCharge } from "@/lib/actions/payment-actions";
 import { viewReceiptByMercurioRecId } from "@/lib/actions/receipt-actions";
 import { formatBRL } from "@/lib/format";
+import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import type { FortunaBalanceView } from "@/lib/member-data";
 import type { ContributionMonthlyStatus } from "@prisma/client";
 import { AlertTriangle, Check, Coffee, Copy, CreditCard, ExternalLink, Loader2, Printer, QrCode, RefreshCw, Zap } from "lucide-react";
@@ -271,7 +272,7 @@ function RealPaymentScreen({
         const res = await createContributionCharge(memberId, year, mes, cpfLimpo, { metodo, fortunaTopUpAmount: recargaFortuna });
         setCharge(res);
       } catch (e) {
-        setErro((e as Error).message);
+        setErro(mensagemErroAmigavel(e));
       }
     });
   }
@@ -489,7 +490,7 @@ function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: s
         const res = await ativarPixAutomatico(memberId, cpfLimpo);
         setAutorizacao(res);
       } catch (e) {
-        setErro((e as Error).message);
+        setErro(mensagemErroAmigavel(e));
       }
     });
   }

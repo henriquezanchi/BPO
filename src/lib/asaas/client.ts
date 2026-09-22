@@ -174,6 +174,21 @@ export interface AsaasPixAutomaticAuthorization {
  * não um valor fixo automático do Asaas. `contractId` (até 35 caracteres) é
  * nosso identificador — usamos o memberId.
  */
+/**
+ * O campo `description` do Pix Automático rejeita acento e travessão
+ * (confirmado ao vivo 2026-09-22: "A descrição da autorização contém
+ * caracteres não permitidos" pra "Contribuição mensal — Nome") — diferente
+ * do resto da API Asaas (`description` de cobrança normal aceita acento
+ * numa boa). Normaliza removendo diacríticos e troca travessão/en-dash por
+ * hífen simples.
+ */
+function sanitizarDescricaoPixAutomatico(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[–—]/g, "-");
+}
+
 export async function asaasCreatePixAutomaticAuthorization(
   customerId: string,
   contractId: string,
@@ -181,7 +196,7 @@ export async function asaasCreatePixAutomaticAuthorization(
   descricao: string,
 ): Promise<AsaasPixAutomaticAuthorization> {
   const hoje = new Date().toISOString().slice(0, 10);
-  const descricaoCurta = descricao.slice(0, 35);
+  const descricaoCurta = sanitizarDescricaoPixAutomatico(descricao).slice(0, 35);
   return chamarApi<AsaasPixAutomaticAuthorization>("/pix/automatic/authorizations", {
     method: "POST",
     body: JSON.stringify({

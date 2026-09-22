@@ -852,3 +852,19 @@ model VolunteerTermSignature {
   @@unique([memberId, termVersion])
   @@index([memberId])
 }
+
+// ===================== Monitoramento de erros =====================
+// Decisão do usuário 2026-09-22: erros em produção (Server Actions, Route
+// Handlers, render) devem virar um alerta pro suporte (WhatsApp via
+// CallMeBot, ver error-notify.ts) o quanto antes, sem esperar o usuário
+// reclamar. `fingerprint` (rota + mensagem, ver error-notify.ts) dedupe pra
+// não floodar o WhatsApp com o MESMO erro repetido (ex: um cron falhando a
+// cada 10min) — só reavisa depois de JANELA_DEDUPE_MIN.
+model ErrorNotification {
+  id             String   @id @default(cuid())
+  fingerprint    String   @unique
+  message        String   @db.Text
+  count          Int      @default(1)
+  firstSeenAt    DateTime @default(now())
+  lastNotifiedAt DateTime
+}
