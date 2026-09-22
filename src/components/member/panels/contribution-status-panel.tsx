@@ -1,11 +1,12 @@
 "use client";
 
+import { ativarPixAutomatico, checkPixAutomaticoStatus, desativarPixAutomatico } from "@/lib/actions/pix-automatico-actions";
 import { checkChargeStatus, createContributionCharge } from "@/lib/actions/payment-actions";
 import { viewReceiptByMercurioRecId } from "@/lib/actions/receipt-actions";
 import { formatBRL } from "@/lib/format";
 import type { FortunaBalanceView } from "@/lib/member-data";
 import type { ContributionMonthlyStatus } from "@prisma/client";
-import { AlertTriangle, Check, Coffee, Copy, CreditCard, ExternalLink, Loader2, Printer, QrCode } from "lucide-react";
+import { AlertTriangle, Check, Coffee, Copy, CreditCard, ExternalLink, Loader2, Printer, QrCode, RefreshCw, Zap } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -62,11 +63,13 @@ export function ContributionStatusPanel({
   monthlyStatus,
   compositionTotal,
   fortunaBalances,
+  pixAutomaticStatus,
 }: {
   memberId: string;
   monthlyStatus: ContributionMonthlyStatus[];
   compositionTotal: number;
   fortunaBalances: FortunaBalanceView[];
+  pixAutomaticStatus: string | null;
 }) {
   const [recibo, setRecibo] = useState<string | null>(null);
   const [mesPagamento, setMesPagamento] = useState<number | null>(null);
@@ -141,6 +144,8 @@ export function ContributionStatusPanel({
 
   return (
     <div className="text-left">
+      <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />
+
       <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
         Situação da sua contribuição em {new Date().getFullYear()}:
       </p>
@@ -407,5 +412,126 @@ function RealPaymentScreen({
         </form>
       )}
     </div>
+  );
+}
+
+/**
+ * Débito automático de verdade (Pix Automático, Asaas) — decisão do
+ * usuário 2026-09-22: vira o padrão SUGERIDO (banner sempre visível quando
+ * não ativado), pra não depender do aluno lembrar de pagar todo mês. Uma
+ * vez ativo, a cobrança de cada mês é criada sozinha pelo worker (ver
+ * scripts/process-pix-automatico.ts) — nenhuma ação do aluno depois disso.
+ */
+function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: string | null }) {
+  const [statusAtual, setStatusAtual] = useState(status);
+  const [ativando, setAtivando] = useState(false);
+  const [cpf, setCpf] = useState("");
+  const [autorizacao, setAutorizacao] = useState<{ payload?: string; encodedImage?: string } | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (statusAtual === "ACTIVE" || !autorizacao) return;
+    const intervalo = setInterval(async () => {
+      const res = await checkPixAutomaticoStatus(memberId);
+      if (res.status === "ACTIVE") {
+        setStatusAtual("ACTIVE");
+        setAutorizacao(null);
+        clearInterval(intervalo);
+      }
+    }, 5000);
+    return () => clearInterval(intervalo);
+  }, [autorizacao, statusAtual, memberId]);
+
+  function handleAtivar(e: React.FormEvent) {
+    e.preventDefault();
+    const cpfLimpo = cpf.replace(/\D/g, "");
+    if (cpfLimpo.length !== 11) {
+      setErro("Digite um CPF válido (11 números).");
+      return;
+    }
+    setErro(null);
+    startTransition(async () => {
+      try {
+        const res = await ativarPixAutomatico(memberId, cpfLimpo);
+        setAutorizacao(res);
+      } catch (e) {
+        setErro((e as Error).message);
+      }
+    });
+  }
+
+  function handleDesativar() {
+    if (!confirm("Desativar o débito automático? Você volta a precisar pagar manualmente todo mês.")) return;
+    startTransition(async () => {
+      await desativarPixAutomatico(memberId);
+      setStatusAtual("CANCELLED");
+    });
+  }
+
+  if (statusAtual === "ACTIVE") {
+    return (
+      <div className="mb-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] dark:border-emerald-900 dark:bg-emerald-950/30">
+        <span className="flex items-center gap-1.5 font-semibold text-emerald-800 dark:text-emerald-300">
+          <Zap size={13} /> Débito automático ativo — sua contribuição é cobrada sozinha todo mês.
+        </span>
+        <button onClick={handleDesativar} disabled={isPending} className="shrink-0 font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
+          Desativar
+        </button>
+      </div>
+    );
+  }
+
+  if (autorizacao?.encodedImage) {
+    return (
+      <div className="mb-4 flex flex-col items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-center dark:border-amber-900 dark:bg-amber-950/30">
+        <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">Escaneie pra confirmar — esse pagamento também autoriza os próximos meses</p>
+        {/* eslint-disable-next-line @next/next/no-img-element -- base64 dinâmico do Asaas */}
+        <img src={`data:image/png;base64,${autorizacao.encodedImage}`} alt="QR Code Pix Automático" className="h-40 w-40 rounded-lg border border-gray-200" />
+        <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+          <Loader2 size={12} className="animate-spin" /> Aguardando confirmação...
+        </p>
+      </div>
+    );
+  }
+
+  if (ativando) {
+    return (
+      <form onSubmit={handleAtivar} className="mb-4 flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+        <label className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">CPF de quem vai pagar</label>
+        <input
+          value={cpf}
+          onChange={(e) => setCpf(e.target.value)}
+          placeholder="000.000.000-00"
+          inputMode="numeric"
+          className="rounded-lg border border-amber-300 bg-white p-2 text-sm dark:border-amber-800 dark:bg-gray-900"
+        />
+        {erro && <span className="text-[11px] text-red-700 dark:text-red-400">{erro}</span>}
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="flex-1 rounded-lg bg-amber-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+          >
+            {isPending ? "Gerando..." : "Gerar autorização"}
+          </button>
+          <button type="button" onClick={() => setAtivando(false)} className="rounded-lg border border-amber-300 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setAtivando(true)}
+      className="mb-4 flex w-full items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-left text-[11px] transition hover:brightness-95 dark:border-amber-900 dark:bg-amber-950/30"
+    >
+      <RefreshCw size={14} className="shrink-0 text-amber-700 dark:text-amber-400" />
+      <span className="text-amber-800 dark:text-amber-300">
+        <span className="font-semibold">Ative o débito automático</span> — nunca mais esqueça de pagar. Autoriza uma vez, cobramos sozinhos todo mês.
+      </span>
+    </button>
   );
 }

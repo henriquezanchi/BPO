@@ -240,6 +240,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               monthlyStatus={member.monthlyStatus}
               compositionTotal={compositionTotal}
               fortunaBalances={fortunaBalances}
+              pixAutomaticStatus={member.pixAutomaticStatus}
             />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}

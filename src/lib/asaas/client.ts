@@ -139,6 +139,83 @@ export async function asaasCancelPayment(paymentId: string): Promise<void> {
   await chamarApi(`/payments/${paymentId}`, { method: "DELETE" }).catch(() => {});
 }
 
+export interface AsaasPixAutomaticAuthorization {
+  id: string;
+  status: "CREATED" | "ACTIVE" | "CANCELLED" | "REFUSED" | "EXPIRED";
+  payload?: string; // "copia e cola" do QR code da 1ª cobrança/autorização
+  encodedImage?: string; // base64 PNG do QR code
+}
+
+/**
+ * Pix Automático (Asaas, lançado maio/2026) — débito recorrente de verdade,
+ * diferente do PIX avulso: o cliente autoriza 1x (paga este QR code, que já
+ * embute "pagamento da 1ª cobrança + autorização pros próximos ciclos") e
+ * os ciclos seguintes são cobrados sem precisar de um novo QR code (ver
+ * asaasCreatePixAutomaticCharge). `paymentCreationMode: MANUAL` (em vez de
+ * SUBSCRIPTION) de propósito — decisão do usuário 2026-09-22: precisamos
+ * controlar o VALOR de cada ciclo (composição do aluno varia mês a mês),
+ * não um valor fixo automático do Asaas. `contractId` (até 35 caracteres) é
+ * nosso identificador — usamos o memberId.
+ */
+export async function asaasCreatePixAutomaticAuthorization(
+  customerId: string,
+  contractId: string,
+  valorPrimeiraCobranca: number,
+  descricao: string,
+): Promise<AsaasPixAutomaticAuthorization> {
+  const hoje = new Date().toISOString().slice(0, 10);
+  const descricaoCurta = descricao.slice(0, 35);
+  return chamarApi<AsaasPixAutomaticAuthorization>("/pix/automatic/authorizations", {
+    method: "POST",
+    body: JSON.stringify({
+      customerId,
+      contractId: contractId.slice(0, 35),
+      frequency: "MONTHLY",
+      startDate: hoje,
+      paymentCreationMode: "MANUAL",
+      description: descricaoCurta,
+      immediateQrCode: { originalValue: valorPrimeiraCobranca, expirationSeconds: 3600, description: descricaoCurta },
+    }),
+  });
+}
+
+export async function asaasGetPixAutomaticAuthorization(id: string): Promise<AsaasPixAutomaticAuthorization> {
+  return chamarApi<AsaasPixAutomaticAuthorization>(`/pix/automatic/authorizations/${id}`);
+}
+
+/** Cancela a autorização — sem isso, o aluno não consegue "desligar" o débito automático (ver desativarPixAutomatico). */
+export async function asaasCancelPixAutomaticAuthorization(id: string): Promise<void> {
+  await chamarApi(`/pix/automatic/authorizations/${id}`, { method: "DELETE" });
+}
+
+/**
+ * Cria a cobrança de 1 ciclo contra uma autorização já ATIVA — debitado
+ * automaticamente, sem o aluno precisar fazer nada. Precisa ser criada
+ * entre 2 e 10 dias úteis antes do vencimento (regra do Asaas) — ver o
+ * worker em scripts/sync-monthly-status.ts que decide a janela certa.
+ */
+export async function asaasCreatePixAutomaticCharge(
+  customerId: string,
+  authorizationId: string,
+  valor: number,
+  descricao: string,
+  vencimento: string,
+  split?: AsaasSplit[],
+): Promise<AsaasPayment> {
+  return chamarApi<AsaasPayment>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: "PIX",
+      value: valor,
+      dueDate: vencimento,
+      description: descricao,
+      pixAutomaticAuthorizationId: authorizationId,
+      ...(split && split.length > 0 ? { split } : {}),
+    }),
+  });
+}
+
 export interface AsaasPixFeeStatus {
   /** true = esse PIX provavelmente cai dentro da franquia gratuita do mês (não gera taxa). */
   isento: boolean;

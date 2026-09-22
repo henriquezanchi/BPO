@@ -209,6 +209,23 @@ model Member {
   economicNotes         String?      @db.VarChar(255)
   economicNotesSyncedAt DateTime?
 
+  // Pix Automático (Asaas, lançado maio/2026) — autorização de débito
+  // recorrente de verdade: o aluno autoriza 1x (paga o 1º QR code) e os
+  // ciclos seguintes são cobrados automaticamente pelo worker mensal (ver
+  // scripts/sync-monthly-status.ts e pix-automatico-actions.ts), sem
+  // precisar abrir o Portal de novo — decisão do usuário 2026-09-22: vira o
+  // padrão SUGERIDO (empurrado ativamente após o 1º pagamento manual), mas
+  // continua opcional. `asaasCustomerId` persistido aqui (diferente do
+  // fluxo avulso de createContributionCharge, que resolve por CPF toda vez)
+  // porque o worker precisa cobrar sem o aluno digitar o CPF de novo.
+  asaasCustomerId             String?
+  pixAutomaticAuthorizationId String?
+  // Espelha o status da autorização no Asaas: CREATED | ACTIVE | CANCELLED
+  // | REFUSED | EXPIRED — atualizado via webhook (evento
+  // PIX_AUTOMATIC_RECURRING_AUTHORIZATION_*) e por polling de fallback.
+  pixAutomaticStatus          String?
+  pixAutomaticActivatedAt     DateTime?
+
   contributions           Contribution[]
   compositionItems        ContributionCompositionItem[]
   receipts                ContributionReceipt[]
@@ -383,6 +400,11 @@ model PaymentCharge {
   fortunaTopUpLaunchedAt DateTime?
   fortunaTopUpLaunchedBy String?
   fortunaTopUpError      String?      @db.Text
+  // true = gerada sozinha pelo worker contra uma autorização Pix Automático
+  // ativa (ver pix-automatico-actions.ts), sem o aluno ter feito nada —
+  // só pra transparência no Painel do Diretor (distinguir de cobrança
+  // manual criada quando o aluno clicou em "pagar").
+  autoDebito             Boolean      @default(false)
   paidAt          DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
