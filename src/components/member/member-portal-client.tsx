@@ -235,7 +235,12 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             />
           )}
           {modal === "situacao" && (
-            <ContributionStatusPanel memberId={member.id} monthlyStatus={member.monthlyStatus} compositionTotal={compositionTotal} />
+            <ContributionStatusPanel
+              memberId={member.id}
+              monthlyStatus={member.monthlyStatus}
+              compositionTotal={compositionTotal}
+              fortunaBalances={fortunaBalances}
+            />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
           {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} />}

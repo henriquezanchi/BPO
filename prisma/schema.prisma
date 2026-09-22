@@ -362,8 +362,27 @@ model PaymentCharge {
   status          PaymentChargeStatus @default(pendente)
   asaasCustomerId String
   asaasPaymentId  String              @unique
+  // "PIX" (padrão) ou "CREDIT_CARD" — decide se pixPayload/pixQrCodeBase64
+  // (embutido na tela) ou invoiceUrl (checkout hospedado pelo Asaas, evita
+  // qualquer dado de cartão passar pelo nosso servidor) é o campo relevante.
+  billingType     String              @default("PIX")
   pixPayload      String?             @db.Text
   pixQrCodeBase64 String?             @db.Text
+  invoiceUrl      String?             @db.Text
+  // Sobretaxa do cartão (repassada ao aluno — decisão do usuário em
+  // 2026-09-22) somada em cima do `amount` real da contribuição pra cobrir
+  // a taxa do Asaas (bem mais alta que a do PIX) — não é receita real, só
+  // referência pra mostrar "valor + taxa do cartão" na tela.
+  cardSurcharge   Decimal?            @db.Decimal(10, 2)
+  // Recarga Fortuna combinada na MESMA cobrança da contribuição (decisão do
+  // usuário 2026-09-22: aproveitar o momento em que o aluno já está pagando
+  // pra sugerir também recarregar, sem precisar de um 2º PIX/cartão) — ver
+  // confirm-payment.ts, que credita isso automaticamente junto da
+  // confirmação, igual ao fluxo já existente em fortuna-topup-actions.ts.
+  fortunaTopUpAmount     Decimal?     @db.Decimal(10, 2)
+  fortunaTopUpLaunchedAt DateTime?
+  fortunaTopUpLaunchedBy String?
+  fortunaTopUpError      String?      @db.Text
   paidAt          DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt

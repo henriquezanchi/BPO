@@ -61,6 +61,8 @@ export interface AsaasPayment {
   status: "PENDING" | "RECEIVED" | "CONFIRMED" | "OVERDUE" | "REFUNDED" | string;
   value: number;
   customer: string;
+  /** Checkout hospedado pelo Asaas — usado pro fluxo de cartão de crédito (nenhum dado de cartão passa pelo nosso servidor). */
+  invoiceUrl?: string;
 }
 
 export interface AsaasSplit {
@@ -84,6 +86,34 @@ export async function asaasCreatePixCharge(
       billingType: "PIX",
       value: valor,
       dueDate: vencimento, // "aaaa-mm-dd"
+      description: descricao,
+      ...(split && split.length > 0 ? { split } : {}),
+    }),
+  });
+}
+
+/**
+ * Cartão de crédito — checkout hospedado pelo Asaas (`invoiceUrl`), nunca
+ * dados de cartão direto no nosso servidor (evita todo o escopo de
+ * conformidade PCI-DSS que a captura direta exigiria). `valor` aqui já deve
+ * vir com a sobretaxa da taxa do cartão embutida (ver split.ts/
+ * payment-actions.ts) — decisão do usuário 2026-09-22: repassar a taxa ao
+ * aluno, não absorver pela escola/BPO.
+ */
+export async function asaasCreateCreditCardCharge(
+  customerId: string,
+  valor: number,
+  descricao: string,
+  vencimento: string,
+  split?: AsaasSplit[],
+): Promise<AsaasPayment> {
+  return chamarApi<AsaasPayment>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: "CREDIT_CARD",
+      value: valor,
+      dueDate: vencimento,
       description: descricao,
       ...(split && split.length > 0 ? { split } : {}),
     }),
@@ -143,6 +173,38 @@ export async function asaasGetPixFeeStatus(): Promise<AsaasPixFeeStatus> {
     isento: pix.creditsReceivedOfCurrentMonth < pix.monthlyCreditsWithoutFee,
     taxaFixa: descontoVigente ? pix.fixedFeeValueWithDiscount! : pix.fixedFeeValue,
   };
+}
+
+export interface AsaasCreditCardFeeStatus {
+  /** % sobre o valor (à vista, 1x — não oferecemos parcelamento por ora). */
+  percentual: number;
+  /** Taxa fixa por operação, somada ao percentual. */
+  fixo: number;
+}
+
+/**
+ * Confirmado ao vivo em 2026-09-22: taxa do cartão é bem mais alta que a do
+ * PIX — percentual (2,99% à vista, com desconto promocional vigente até
+ * 2026-12-18) + R$0,49 fixo por operação, além de levar 32 dias pra cair na
+ * conta (vs. instantâneo no PIX). Só 1x (à vista) por ora — sem parcelamento.
+ */
+export async function asaasGetCreditCardFeeStatus(): Promise<AsaasCreditCardFeeStatus> {
+  const dados = await chamarApi<{
+    payment: {
+      creditCard: {
+        operationValue: number;
+        oneInstallmentPercentage: number;
+        discountOneInstallmentPercentage: number | null;
+        hasValidDiscount: boolean;
+      };
+    };
+  }>("/myAccount/fees");
+  const { creditCard } = dados.payment;
+  const percentual =
+    creditCard.hasValidDiscount && creditCard.discountOneInstallmentPercentage !== null
+      ? creditCard.discountOneInstallmentPercentage
+      : creditCard.oneInstallmentPercentage;
+  return { percentual, fixo: creditCard.operationValue };
 }
 
 export interface AsaasSubaccountInput {

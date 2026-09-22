@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { fortunaCreditarSaldo, fortunaGetClient } from "@/lib/fortuna/client";
 import { enqueueMercurioContributionLaunch } from "@/lib/mercurio/sync-queue";
 
 /**
@@ -30,4 +31,21 @@ export async function confirmarPagamento(chargeId: string): Promise<void> {
   // tanto pelo polling do aluno quanto pelo webhook do Asaas; nenhum dos
   // dois deveria esperar uma sessão de navegador inteira pra responder.
   await enqueueMercurioContributionLaunch(charge.memberId, charge.id);
+
+  // Recarga Fortuna combinada na mesma cobrança (ver payment-actions.ts) —
+  // mesmo padrão best-effort do fluxo dedicado em fortuna-topup-actions.ts:
+  // se falhar (membro desvinculado, API fora do ar), fica registrado em
+  // fortunaTopUpError pra aparecer na fila de exceção do Painel do Diretor
+  // em vez de se perder silenciosamente.
+  if (charge.fortunaTopUpAmount && Number(charge.fortunaTopUpAmount) > 0) {
+    try {
+      const member = await db.member.findUniqueOrThrow({ where: { id: charge.memberId } });
+      if (!member.fortunaClientId) throw new Error("Membro sem fortunaClientId vinculado.");
+      const cliente = await fortunaGetClient(member.fortunaClientId);
+      await fortunaCreditarSaldo(member.fortunaClientId, cliente.branch.id, Number(charge.fortunaTopUpAmount));
+      await db.paymentCharge.update({ where: { id: charge.id }, data: { fortunaTopUpLaunchedAt: new Date() } });
+    } catch (e) {
+      await db.paymentCharge.update({ where: { id: charge.id }, data: { fortunaTopUpError: (e as Error).message } });
+    }
+  }
 }

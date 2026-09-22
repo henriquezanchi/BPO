@@ -2,8 +2,10 @@
 
 import {
   buscarClientesFortunaPorNome,
+  marcarRecargaContribuicaoFortunaComoLancada,
   marcarRecargaFortunaComoLancada,
   tentarNovamenteCreditoFortuna,
+  tentarNovamenteCreditoFortunaContribuicao,
   vincularMembroFortuna,
   type FortunaBalancesForDirector,
 } from "@/lib/actions/fortuna-actions";
@@ -49,13 +51,15 @@ export function FortunaTab({
     });
   }
 
-  function handleMarcarLancada(topUpChargeId: string) {
+  function handleMarcarLancada(id: string, source: "topup" | "contribuicao") {
     const nome = prompt("Quem está confirmando o lançamento manual? (nome — opcional)") ?? "";
-    startTransition(() => marcarRecargaFortunaComoLancada(schoolId, topUpChargeId, nome));
+    startTransition(() =>
+      source === "topup" ? marcarRecargaFortunaComoLancada(schoolId, id, nome) : marcarRecargaContribuicaoFortunaComoLancada(schoolId, id, nome),
+    );
   }
 
-  function handleTentarNovamente(topUpChargeId: string) {
-    startTransition(() => tentarNovamenteCreditoFortuna(schoolId, topUpChargeId));
+  function handleTentarNovamente(id: string, source: "topup" | "contribuicao") {
+    startTransition(() => (source === "topup" ? tentarNovamenteCreditoFortuna(schoolId, id) : tentarNovamenteCreditoFortunaContribuicao(schoolId, id)));
   }
 
   return (
@@ -83,21 +87,24 @@ export function FortunaTab({
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-medium text-gray-900 dark:text-gray-100">{r.memberName}</span>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Pago em {formatDateBR(r.paidAt)}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Pago em {formatDateBR(r.paidAt)}
+                      {r.source === "contribuicao" && " — recarga combinada com a contribuição"}
+                    </p>
                   </div>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">{formatBRL(r.amount)}</span>
                 </div>
                 {r.autoCreditError && <p className="text-[11px] text-red-700 dark:text-red-400">Erro: {r.autoCreditError}</p>}
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleTentarNovamente(r.id)}
+                    onClick={() => handleTentarNovamente(r.id, r.source)}
                     disabled={isPending}
                     className="inline-flex items-center gap-1 rounded-lg bg-na-green px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
                   >
                     <CircleCheck size={12} /> Tentar creditar de novo
                   </button>
                   <button
-                    onClick={() => handleMarcarLancada(r.id)}
+                    onClick={() => handleMarcarLancada(r.id, r.source)}
                     disabled={isPending}
                     className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                   >

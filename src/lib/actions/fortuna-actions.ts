@@ -90,3 +90,39 @@ export async function marcarRecargaFortunaComoLancada(schoolId: string, topUpCha
   });
   revalidatePath("/diretor");
 }
+
+/**
+ * Mesma fila de exceção, só que pra recargas Fortuna combinadas numa
+ * cobrança de CONTRIBUIÇÃO (ver payment-actions.ts createContributionCharge
+ * e confirm-payment.ts) — tabela diferente (PaymentCharge, não
+ * FortunaTopUpCharge), por isso ações próprias em vez de reaproveitar as
+ * acima.
+ */
+export async function tentarNovamenteCreditoFortunaContribuicao(schoolId: string, chargeId: string) {
+  await requireDirector(schoolId);
+  const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: chargeId }, include: { member: true } });
+  if (charge.member.schoolId !== schoolId) throw new Error("Cobrança não pertence a esta escola.");
+  if (charge.status !== "pago" || !charge.fortunaTopUpAmount) throw new Error("Só é possível creditar uma recarga combinada já paga.");
+  if (!charge.member.fortunaClientId) throw new Error("Membro ainda sem vínculo com o Fortuna — vincule antes de tentar de novo.");
+
+  const cliente = await fortunaGetClient(charge.member.fortunaClientId);
+  await fortunaCreditarSaldo(charge.member.fortunaClientId, cliente.branch.id, Number(charge.fortunaTopUpAmount));
+  await db.paymentCharge.update({
+    where: { id: chargeId },
+    data: { fortunaTopUpLaunchedAt: new Date(), fortunaTopUpLaunchedBy: "Automático (nova tentativa)", fortunaTopUpError: null },
+  });
+  revalidatePath("/diretor");
+}
+
+export async function marcarRecargaContribuicaoFortunaComoLancada(schoolId: string, chargeId: string, launchedBy: string) {
+  const director = await requireDirector(schoolId);
+  const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: chargeId }, include: { member: true } });
+  if (charge.member.schoolId !== schoolId) throw new Error("Cobrança não pertence a esta escola.");
+  if (charge.status !== "pago" || !charge.fortunaTopUpAmount) throw new Error("Só é possível marcar como lançada uma recarga combinada já paga.");
+
+  await db.paymentCharge.update({
+    where: { id: chargeId },
+    data: { fortunaTopUpLaunchedAt: new Date(), fortunaTopUpLaunchedBy: launchedBy.trim() || director.name },
+  });
+  revalidatePath("/diretor");
+}

@@ -19,3 +19,16 @@ export async function calcularSplitEscola(valor: number, walletId: string): Prom
   const valorEscola = Math.max(0, Math.round((valor - taxaReal - margemBpo) * 100) / 100);
   return { walletId, fixedValue: valorEscola };
 }
+
+/**
+ * Versão pro cartão de crédito — diferente da PIX, aqui a taxa (bem mais
+ * alta, ver asaasGetCreditCardFeeStatus) já foi repassada ao aluno como
+ * sobretaxa ANTES desta função ser chamada (ver payment-actions.ts: o valor
+ * cobrado no cartão já é maior que `valor`) — então não precisa descontar
+ * taxa nenhuma aqui, só a margem normal do BPO sobre o valor base.
+ */
+export function calcularSplitEscolaCartao(valor: number, walletId: string): AsaasSplit {
+  const margemBpo = ((100 - PERCENTUAL_SPLIT_ESCOLA) / 100) * valor;
+  const valorEscola = Math.max(0, Math.round((valor - margemBpo) * 100) / 100);
+  return { walletId, fixedValue: valorEscola };
+}

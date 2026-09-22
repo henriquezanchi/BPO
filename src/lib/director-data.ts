@@ -109,8 +109,17 @@ export async function getDirectorDashboard(schoolId: string) {
   // Recargas pagas via PIX cujo crédito AUTOMÁTICO no Fortuna falhou (ver
   // checkFortunaTopUpStatus) — fila de exceção pra lançamento manual, não o
   // caminho normal (que já credita sozinho assim que o PIX é confirmado).
-  const recargasFortunaPendentes = await db.fortunaTopUpCharge.findMany({
+  // Duas origens possíveis desde 2026-09-22: recarga dedicada
+  // (FortunaTopUpCharge) e recarga combinada com a contribuição
+  // (PaymentCharge.fortunaTopUpAmount, ver payment-actions.ts) — mescladas
+  // aqui numa lista só, com `source` pra UI saber qual action chamar.
+  const recargasFortunaPendentesDedicadas = await db.fortunaTopUpCharge.findMany({
     where: { member: { schoolId }, status: "pago", launchedAt: null },
+    include: { member: true },
+    orderBy: { paidAt: "asc" },
+  });
+  const recargasFortunaPendentesCombinadas = await db.paymentCharge.findMany({
+    where: { member: { schoolId }, status: "pago", fortunaTopUpAmount: { not: null }, fortunaTopUpLaunchedAt: null },
     include: { member: true },
     orderBy: { paidAt: "asc" },
   });
@@ -212,13 +221,24 @@ export async function getDirectorDashboard(schoolId: string) {
     rubricasDisponiveis: rubricasDisponiveis.map((r) => ({ id: r.id, label: r.label })),
     fortunaTransacoes: fortunaTransacoes.slice(0, 10),
     fortunaNaoVinculados: naoVinculadosFortuna.map((m) => ({ id: m.id, name: m.name })),
-    recargasFortunaPendentes: recargasFortunaPendentes.map((r) => ({
-      id: r.id,
-      memberName: r.member.name,
-      amount: Number(r.amount),
-      paidAt: r.paidAt!,
-      autoCreditError: r.autoCreditError,
-    })),
+    recargasFortunaPendentes: [
+      ...recargasFortunaPendentesDedicadas.map((r) => ({
+        source: "topup" as const,
+        id: r.id,
+        memberName: r.member.name,
+        amount: Number(r.amount),
+        paidAt: r.paidAt!,
+        autoCreditError: r.autoCreditError,
+      })),
+      ...recargasFortunaPendentesCombinadas.map((r) => ({
+        source: "contribuicao" as const,
+        id: r.id,
+        memberName: r.member.name,
+        amount: Number(r.fortunaTopUpAmount),
+        paidAt: r.paidAt!,
+        autoCreditError: r.fortunaTopUpError,
+      })),
+    ].sort((a, b) => a.paidAt.getTime() - b.paidAt.getTime()),
     eventos: eventos.map((e) => ({
       id: e.id,
       title: e.title,
