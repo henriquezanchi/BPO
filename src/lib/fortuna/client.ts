@@ -12,6 +12,11 @@
  * pra chamar ao vivo por requisição sem problema de escala/sessão única.
  */
 const BASE_URL = "https://oinabnfortunaback.acropolebrasil.com.br/api";
+// Sem isso, alguma proteção (Cloudflare?) do lado do Fortuna rejeita com
+// 403 quando a chamada vem de IP de datacenter serverless (confirmado ao
+// vivo: funciona normal do Railway/local, mas dá 403 no Vercel) — um
+// User-Agent "de navegador" contorna.
+const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
 
 export interface FortunaCashier {
   id: number;
@@ -53,10 +58,10 @@ async function obterToken(): Promise<string> {
 
   const res = await fetch(`${BASE_URL}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
     body: JSON.stringify({ id: inscricao, password: senha, accountType: "user" }),
   });
-  if (!res.ok) throw new Error(`Falha ao logar no Fortuna: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`Falha ao logar no Fortuna: HTTP ${res.status} - ${(await res.text()).slice(0, 200)}`);
   const data = (await res.json()) as { token: string };
 
   // O JWT do próprio Fortuna já tem "exp" (~1 dia, visto ao vivo) — cacheia
@@ -67,8 +72,8 @@ async function obterToken(): Promise<string> {
 
 async function chamarApi<T>(path: string): Promise<T> {
   const token = await obterToken();
-  const res = await fetch(`${BASE_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`Fortuna API ${path} -> HTTP ${res.status}`);
+  const res = await fetch(`${BASE_URL}${path}`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": USER_AGENT } });
+  if (!res.ok) throw new Error(`Fortuna API ${path} -> HTTP ${res.status} - ${(await res.text()).slice(0, 200)}`);
   return res.json() as Promise<T>;
 }
 
@@ -111,9 +116,9 @@ export async function fortunaCreditarSaldo(clientId: number, branchId: number, a
 
   const res = await fetch(`${BASE_URL}/balance/with-receipt`, {
     method: "PUT",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": USER_AGENT },
     body: JSON.stringify({ clientId, branchId, balance: novoSaldo, amount, method, operatorId }),
   });
-  if (!res.ok) throw new Error(`Fortuna credit -> HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`Fortuna credit -> HTTP ${res.status} - ${(await res.text()).slice(0, 200)}`);
   return res.json() as Promise<FortunaCreditResult>;
 }
