@@ -50,10 +50,27 @@ export async function asaasFindOrCreateCustomer(nome: string, cpf: string, email
   const existentes = await chamarApi<{ data: AsaasCustomer[] }>(`/customers?cpfCnpj=${cpfLimpo}`);
   if (existentes.data.length > 0) return existentes.data[0];
 
-  return chamarApi<AsaasCustomer>("/customers", {
+  const cliente = await chamarApi<AsaasCustomer>("/customers", {
     method: "POST",
     body: JSON.stringify({ name: nome, cpfCnpj: cpfLimpo, email, notificationDisabled: true }),
   });
+  // `notificationDisabled: true` acima NÃO é suficiente sozinho — confirmado
+  // ao vivo em 2026-09-22: mesmo com esse flag, o Asaas cria 8 regras de
+  // notificação padrão pro cliente (PAYMENT_CREATED, PAYMENT_RECEIVED etc.)
+  // já vindo com `enabled: true` e email pro cliente ligado — foi assim que
+  // uma cobrança de teste mandou e-mail em nome da nossa empresa (não da
+  // escola) pro aluno, gerando desconfiança. Desliga cada uma explicitamente
+  // (best-effort — não trava a criação da cobrança se isso falhar).
+  await asaasDisableCustomerNotifications(cliente.id).catch(() => {});
+  return cliente;
+}
+
+/** Ver comentário em asaasFindOrCreateCustomer — desliga TODAS as notificações padrão do Asaas pra um cliente (o Portal já avisa o membro por conta própria). */
+export async function asaasDisableCustomerNotifications(customerId: string): Promise<void> {
+  const { data } = await chamarApi<{ data: { id: string; enabled: boolean }[] }>(`/customers/${customerId}/notifications`);
+  await Promise.all(
+    data.filter((n) => n.enabled).map((n) => chamarApi(`/notifications/${n.id}`, { method: "PUT", body: JSON.stringify({ enabled: false }) })),
+  );
 }
 
 export interface AsaasPayment {

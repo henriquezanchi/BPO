@@ -1,7 +1,7 @@
 "use client";
 
 import { ativarPixAutomatico, checkPixAutomaticoStatus, desativarPixAutomatico } from "@/lib/actions/pix-automatico-actions";
-import { checkChargeStatus, createContributionCharge } from "@/lib/actions/payment-actions";
+import { cancelarCobrancaContribuicaoPendente, checkChargeStatus, createContributionCharge, getPendingContributionCharge } from "@/lib/actions/payment-actions";
 import { viewReceiptByMercurioRecId } from "@/lib/actions/receipt-actions";
 import { formatBRL } from "@/lib/format";
 import type { FortunaBalanceView } from "@/lib/member-data";
@@ -231,10 +231,32 @@ function RealPaymentScreen({
   const [recargaFortuna, setRecargaFortuna] = useState(0);
   const [cpf, setCpf] = useState("");
   const [charge, setCharge] = useState<ChargeResult | null>(null);
+  const [verificandoPendente, setVerificandoPendente] = useState(true);
   const [pago, setPago] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Bug real relatado pelo usuário 2026-09-22: sair da tela no meio do
+  // pagamento (ex: recebeu uma ligação) deixava a cobrança pendente órfã no
+  // Asaas — voltar e clicar em "pagar outubro" de novo criava uma 2ª
+  // cobrança, arriscando cobrar o aluno duas vezes. Antes de mostrar o
+  // formulário, checa se já existe uma pendente e volta direto pra ela.
+  useEffect(() => {
+    getPendingContributionCharge(memberId, year, mes)
+      .then((res) => res && setCharge(res))
+      .finally(() => setVerificandoPendente(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleCancelarEGerarNova() {
+    if (!charge) return;
+    if (!confirm("Cancelar essa cobrança e gerar uma nova? A cobrança antiga deixa de valer.")) return;
+    startTransition(async () => {
+      await cancelarCobrancaContribuicaoPendente(memberId, charge.chargeId);
+      setCharge(null);
+    });
+  }
 
   function handleGerarCobranca(e: React.FormEvent) {
     e.preventDefault();
@@ -274,6 +296,7 @@ function RealPaymentScreen({
     });
   }
 
+  const recargaEfetiva = charge?.fortunaTopUpAmount ?? recargaFortuna;
   const totalCobrado = charge?.totalCobrado ?? amount + recargaFortuna;
 
   return (
@@ -288,16 +311,20 @@ function RealPaymentScreen({
         {totalCobrado !== amount && (
           <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
             {formatBRL(amount)} de contribuição
-            {recargaFortuna > 0 && ` + ${formatBRL(recargaFortuna)} de recarga Fortuna`}
-            {charge?.metodo === "CREDIT_CARD" && charge.totalCobrado > amount + recargaFortuna && " + taxa do cartão"}
+            {recargaEfetiva > 0 && ` + ${formatBRL(recargaEfetiva)} de recarga Fortuna`}
+            {charge?.metodo === "CREDIT_CARD" && charge.totalCobrado > amount + recargaEfetiva && " + taxa do cartão"}
           </p>
         )}
       </div>
 
-      {pago ? (
+      {verificandoPendente ? (
+        <p className="flex items-center justify-center gap-1.5 py-10 text-center text-[11px] text-gray-400 dark:text-gray-500">
+          <Loader2 size={12} className="animate-spin" /> Verificando se já existe uma cobrança pendente...
+        </p>
+      ) : pago ? (
         <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-center text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
           Pagamento confirmado! O lançamento no Mercúrio foi disparado automaticamente
-          {recargaFortuna > 0 && ", e a recarga no Fortuna também."}
+          {recargaEfetiva > 0 && ", e a recarga no Fortuna também."}
         </div>
       ) : charge?.metodo === "PIX" ? (
         <div className="flex flex-col items-center gap-3">
@@ -312,6 +339,9 @@ function RealPaymentScreen({
           <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
             <Loader2 size={12} className="animate-spin" /> Aguardando confirmação do pagamento...
           </p>
+          <button onClick={handleCancelarEGerarNova} disabled={isPending} className="text-[11px] font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
+            Cancelar essa cobrança e gerar outra
+          </button>
         </div>
       ) : charge?.metodo === "CREDIT_CARD" ? (
         <div className="flex flex-col items-center gap-3">
@@ -329,6 +359,9 @@ function RealPaymentScreen({
           <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
             <Loader2 size={12} className="animate-spin" /> Aguardando confirmação do pagamento...
           </p>
+          <button onClick={handleCancelarEGerarNova} disabled={isPending} className="text-[11px] font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
+            Cancelar essa cobrança e gerar outra
+          </button>
         </div>
       ) : (
         <form onSubmit={handleGerarCobranca} className="flex flex-col gap-3">

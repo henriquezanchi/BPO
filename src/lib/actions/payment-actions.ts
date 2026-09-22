@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  asaasCancelPayment,
   asaasCreateCreditCardCharge,
   asaasCreatePixCharge,
   asaasFindOrCreateCustomer,
@@ -13,9 +14,36 @@ import { calcularSplitEscola, calcularSplitEscolaCartao } from "@/lib/asaas/spli
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatBRL } from "@/lib/format";
+import type { PaymentCharge } from "@prisma/client";
 
 const FORTUNA_TOPUP_MINIMO = 5;
 const FORTUNA_TOPUP_MAXIMO = 1000;
+
+/** Converte uma linha do banco pro mesmo formato que createContributionCharge devolve — usado tanto pro reaproveitamento quanto pra recuperação de cobrança pendente (ver getPendingContributionCharge). */
+function paraResultadoCobranca(charge: PaymentCharge) {
+  const amount = Number(charge.amount);
+  const fortunaTopUpAmount = charge.fortunaTopUpAmount ? Number(charge.fortunaTopUpAmount) : 0;
+  if (charge.billingType === "CREDIT_CARD") {
+    const cardSurcharge = charge.cardSurcharge ? Number(charge.cardSurcharge) : 0;
+    return {
+      chargeId: charge.id,
+      metodo: "CREDIT_CARD" as const,
+      invoiceUrl: charge.invoiceUrl!,
+      amount,
+      fortunaTopUpAmount,
+      totalCobrado: amount + fortunaTopUpAmount + cardSurcharge,
+    };
+  }
+  return {
+    chargeId: charge.id,
+    metodo: "PIX" as const,
+    pixPayload: charge.pixPayload!,
+    pixQrCodeBase64: charge.pixQrCodeBase64!,
+    amount,
+    fortunaTopUpAmount,
+    totalCobrado: amount + fortunaTopUpAmount,
+  };
+}
 
 /**
  * Cria (ou reaproveita) uma cobrança real no Asaas pra 1 mês de
@@ -51,26 +79,20 @@ export async function createContributionCharge(
     if (!member.fortunaClientId) throw new Error("Sua conta ainda não está vinculada ao Fortuna — fale com a secretaria.");
   }
 
-  // Reaproveita cobrança pendente só no caminho simples (PIX, sem recarga
-  // combinada) — com valores extra envolvidos, mais seguro sempre gerar de
-  // novo do que arriscar reusar uma cobrança com uma combinação diferente.
-  if (metodo === "PIX" && fortunaTopUpAmount === 0) {
-    const existente = await db.paymentCharge.findFirst({
-      where: { memberId, referenceYear: year, referenceMonth: month, status: "pendente", billingType: "PIX", fortunaTopUpAmount: null },
-      orderBy: { createdAt: "desc" },
-    });
-    if (existente?.pixPayload && existente.pixQrCodeBase64) {
-      return {
-        chargeId: existente.id,
-        metodo: "PIX" as const,
-        pixPayload: existente.pixPayload,
-        pixQrCodeBase64: existente.pixQrCodeBase64,
-        amount: Number(existente.amount),
-        fortunaTopUpAmount: 0,
-        totalCobrado: Number(existente.amount),
-      };
-    }
-  }
+  // SEMPRE reaproveita uma cobrança pendente já existente pro mês, seja
+  // qual for o método/recarga combinada dela — bug real relatado pelo
+  // usuário 2026-09-22: saiu da tela no meio do pagamento (contribuição +
+  // recarga Fortuna), a tela não voltou mais, e clicar em "pagar outubro"
+  // de novo criava uma cobrança NOVA (a antiga ficava órfã, pendente pra
+  // sempre no Asaas, arriscando cobrar o aluno 2x). Ver também
+  // getPendingContributionCharge (chamada ao abrir a tela) e
+  // cancelarCobrancaContribuicaoPendente (escape hatch se a cobrança antiga
+  // estiver mesmo obsoleta).
+  const existente = await db.paymentCharge.findFirst({
+    where: { memberId, referenceYear: year, referenceMonth: month, status: "pendente" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existente) return paraResultadoCobranca(existente);
 
   const itens = await db.contributionCompositionItem.findMany({ where: { memberId } });
   const valor = itens.reduce((soma, i) => soma + Number(i.amount), 0);
@@ -160,4 +182,31 @@ export async function checkChargeStatus(memberId: string, chargeId: string) {
     return { status: "pago" as const };
   }
   return { status: "pendente" as const };
+}
+
+/**
+ * Chamada ao ABRIR a tela de pagamento de um mês (antes de mostrar o
+ * formulário) — se já existe uma cobrança pendente pra esse mês (aluno
+ * saiu no meio do fluxo antes, ver createContributionCharge), volta direto
+ * pra ela em vez de deixar o aluno preencher tudo de novo e arriscar gerar
+ * uma 2ª cobrança pro mesmo mês.
+ */
+export async function getPendingContributionCharge(memberId: string, year: number, month: number) {
+  await requireAuthenticatedMember(memberId);
+  const existente = await db.paymentCharge.findFirst({
+    where: { memberId, referenceYear: year, referenceMonth: month, status: "pendente" },
+    orderBy: { createdAt: "desc" },
+  });
+  return existente ? paraResultadoCobranca(existente) : null;
+}
+
+/** Escape hatch: cancela a cobrança pendente atual (ex: aluno quer trocar de método, ou a antiga travou) pra poder gerar uma nova do zero. */
+export async function cancelarCobrancaContribuicaoPendente(memberId: string, chargeId: string) {
+  await requireAuthenticatedMember(memberId);
+  const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: chargeId } });
+  if (charge.memberId !== memberId) throw new Error("Cobrança não pertence a este membro.");
+  if (charge.status !== "pendente") throw new Error("Só é possível cancelar uma cobrança pendente.");
+
+  await asaasCancelPayment(charge.asaasPaymentId);
+  await db.paymentCharge.update({ where: { id: chargeId }, data: { status: "cancelado" } });
 }
