@@ -12,11 +12,29 @@
  * pra chamar ao vivo por requisição sem problema de escala/sessão única.
  */
 const BASE_URL = "https://oinabnfortunaback.acropolebrasil.com.br/api";
-// Sem isso, alguma proteção (Cloudflare?) do lado do Fortuna rejeita com
-// 403 quando a chamada vem de IP de datacenter serverless (confirmado ao
-// vivo: funciona normal do Railway/local, mas dá 403 no Vercel) — um
-// User-Agent "de navegador" contorna.
+// User-Agent "de navegador" não resolveu: confirmado ao vivo em 2026-09-22
+// que o corpo do 403 vindo da Vercel é a própria página de desafio JS do
+// Cloudflare ("Just a moment..."), não um bloqueio simples por header —
+// nenhum fetch() (com qualquer header) resolve esse desafio. O Railway não
+// é desafiado (IP diferente). Por isso, quando FORTUNA_PROXY_URL está
+// configurado (só na Vercel), TODAS as chamadas abaixo são delegadas pra
+// um endpoint interno que roda no Railway (src/app/api/internal/fortuna-proxy/route.ts),
+// que aí sim fala com o Fortuna direto.
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+const PROXY_URL = process.env.FORTUNA_PROXY_URL;
+const PROXY_SECRET = process.env.FORTUNA_PROXY_SECRET;
+
+async function chamarProxy<T>(fn: string, args: unknown[]): Promise<T> {
+  const res = await fetch(PROXY_URL!, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${PROXY_SECRET}` },
+    body: JSON.stringify({ fn, args }),
+  });
+  if (!res.ok) throw new Error(`Fortuna proxy (${fn}) -> HTTP ${res.status} - ${(await res.text()).slice(0, 300)}`);
+  const data = (await res.json()) as { ok: boolean; result?: T; error?: string };
+  if (!data.ok) throw new Error(data.error ?? `Erro desconhecido no proxy Fortuna (${fn})`);
+  return data.result as T;
+}
 
 export interface FortunaCashier {
   id: number;
@@ -78,15 +96,18 @@ async function chamarApi<T>(path: string): Promise<T> {
 }
 
 export async function fortunaGetBranches(): Promise<FortunaBranch[]> {
+  if (PROXY_URL) return chamarProxy<FortunaBranch[]>("getBranches", []);
   return chamarApi<FortunaBranch[]>("/branch");
 }
 
 export async function fortunaGetClient(fortunaClientId: number): Promise<FortunaClient> {
+  if (PROXY_URL) return chamarProxy<FortunaClient>("getClient", [fortunaClientId]);
   return chamarApi<FortunaClient>(`/client/${fortunaClientId}`);
 }
 
 /** Busca por nome (mesma limitação de confiabilidade do casamento por nome no Mercúrio) — usar só pra RESOLVER o fortunaClientId 1x, confirmando por e-mail/telefone antes de vincular. */
 export async function fortunaSearchClientsByName(name: string): Promise<FortunaClient[]> {
+  if (PROXY_URL) return chamarProxy<FortunaClient[]>("searchClientsByName", [name]);
   return chamarApi<FortunaClient[]>(`/clients/search?name=${encodeURIComponent(name)}`);
 }
 
@@ -106,6 +127,8 @@ export interface FortunaCreditResult {
  * FORTUNA_INSCRICAO/FORTUNA_SENHA) — o Fortuna registra quem lançou.
  */
 export async function fortunaCreditarSaldo(clientId: number, branchId: number, amount: number, method: string = "PIX"): Promise<FortunaCreditResult> {
+  if (PROXY_URL) return chamarProxy<FortunaCreditResult>("creditarSaldo", [clientId, branchId, amount, method]);
+
   const token = await obterToken();
   const payloadB64 = token.split(".")[1];
   const operatorId = (JSON.parse(Buffer.from(payloadB64, "base64").toString()) as { payload: { id: number } }).payload.id;
