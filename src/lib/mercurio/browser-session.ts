@@ -134,6 +134,32 @@ export async function abrirSessaoMercurio(): Promise<SessaoMercurio> {
   return { browser, page };
 }
 
+const TENTATIVAS_PADRAO = 5;
+const ESPERA_ENTRE_TENTATIVAS_MS = 3 * 60_000;
+
+/**
+ * Igual a abrirSessaoMercurio, mas tenta de novo (com espera) se a trava de
+ * concorrência estiver ativa — usado pelos crons diários (scripts/sync-*.ts
+ * chamados a partir de "barra do gar"), que antes falhavam de vez até o dia
+ * seguinte sempre que colidiam com uma rodada do scraper agendado de OUTRA
+ * filial (achado real: 3 crons diários falhando ao colidir com uma rodada
+ * em "Goiânia - Jardim América"). O worker da fila (sync-worker.ts) NÃO usa
+ * isso — ele já tem sua própria lógica de retry no próximo ciclo de 10min
+ * via `retryable`, mais barato que esperar minutos dentro do processo.
+ */
+export async function abrirSessaoMercurioComRetry(tentativas = TENTATIVAS_PADRAO, esperaMs = ESPERA_ENTRE_TENTATIVAS_MS): Promise<SessaoMercurio> {
+  for (let i = 0; i < tentativas; i++) {
+    try {
+      return await abrirSessaoMercurio();
+    } catch (e) {
+      if (!(e instanceof RodadaEmAndamentoError) || i === tentativas - 1) throw e;
+      console.warn(`Rodada do scraper em andamento — tentativa ${i + 1}/${tentativas}, aguardando ${esperaMs / 1000}s antes de tentar de novo...`);
+      await new Promise((r) => setTimeout(r, esperaMs));
+    }
+  }
+  throw new RodadaEmAndamentoError("Todas as tentativas de login esgotadas — rodada do scraper continuou ativa.");
+}
+
 /**
  * Navega até a lista de Ativos de uma filial (dentro de "PROGRAMA BRANCO"
  * — a mesma navegação usada em toda leitura/escrita de contato). O

@@ -23,7 +23,7 @@
  */
 import { db } from "../src/lib/db";
 import {
-  abrirSessaoMercurio,
+  abrirSessaoMercurioComRetry,
   abrirTelaRecibos,
   extrairRubricaSimplificada,
   lerConteudoRecibo,
@@ -50,7 +50,7 @@ async function main() {
   console.log(`Membros conhecidos localmente com matrícula: ${membrosConhecidos.length}`);
   const membrosPorNomeRegex = membrosConhecidos.map((m) => ({ member: m, regex: new RegExp(m.name, "i") }));
 
-  const { browser, page } = await abrirSessaoMercurio();
+  const { browser, page } = await abrirSessaoMercurioComRetry();
   const candidatos: { membro: Member; linha: ReciboMercurio }[] = [];
 
   try {

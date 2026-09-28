@@ -8,7 +8,7 @@
  * Uso: npx tsx --env-file=.env scripts/sync-active-status.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirListaAtivos, abrirSessaoMercurio, listarMatriculasAtivas, reabrirCirculoDeAmigos } from "../src/lib/mercurio/browser-session";
+import { abrirListaAtivos, abrirSessaoMercurioComRetry, listarMatriculasAtivas, reabrirCirculoDeAmigos } from "../src/lib/mercurio/browser-session";
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -20,7 +20,7 @@ async function main() {
   const membrosConhecidos = await db.member.findMany({ where: { schoolId: school.id, mercurioId: { not: null } } });
   console.log(`Membros conhecidos localmente com matrícula: ${membrosConhecidos.length}`);
 
-  const { browser, page } = await abrirSessaoMercurio();
+  const { browser, page } = await abrirSessaoMercurioComRetry();
   let matriculasAtivas: string[];
   try {
     // Ativos (PROGRAMA BRANCO) + C. de Amigos — bug real corrigido

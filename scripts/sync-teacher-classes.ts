@@ -12,7 +12,7 @@
  * Uso: npx tsx --env-file=.env scripts/sync-teacher-classes.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirEscalaProfessores, abrirSessaoMercurio, lerEscalaProfessores } from "../src/lib/mercurio/browser-session";
+import { abrirEscalaProfessores, abrirSessaoMercurioComRetry, lerEscalaProfessores } from "../src/lib/mercurio/browser-session";
 
 function normalizar(s: string) {
   return s
@@ -33,7 +33,7 @@ async function main() {
   console.log(`Pedagogos conhecidos localmente: ${professoresConhecidos.map((p) => p.name).join(", ") || "(nenhum)"}`);
   const porNomeNormalizado = new Map(professoresConhecidos.map((p) => [normalizar(p.name), p]));
 
-  const { browser, page } = await abrirSessaoMercurio();
+  const { browser, page } = await abrirSessaoMercurioComRetry();
   let escala: Awaited<ReturnType<typeof lerEscalaProfessores>>;
   try {
     const frame = await abrirEscalaProfessores(page, new RegExp(filialLabel, "i"));

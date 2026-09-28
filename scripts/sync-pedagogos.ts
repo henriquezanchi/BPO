@@ -9,7 +9,7 @@
  * Uso: npx tsx --env-file=.env scripts/sync-pedagogos.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirListaPedagogos, abrirSessaoMercurio, lerListaPedagogos } from "../src/lib/mercurio/browser-session";
+import { abrirListaPedagogos, abrirSessaoMercurioComRetry, lerListaPedagogos } from "../src/lib/mercurio/browser-session";
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -21,7 +21,7 @@ async function main() {
   const membrosConhecidos = await db.member.findMany({ where: { schoolId: school.id, mercurioId: { not: null } } });
   console.log(`Membros conhecidos localmente com matrícula: ${membrosConhecidos.length}`);
 
-  const { browser, page } = await abrirSessaoMercurio();
+  const { browser, page } = await abrirSessaoMercurioComRetry();
   let pedagogos: Awaited<ReturnType<typeof lerListaPedagogos>>;
   try {
     const frame = await abrirListaPedagogos(page, new RegExp(filialLabel, "i"));

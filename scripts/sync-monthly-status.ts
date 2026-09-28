@@ -19,7 +19,7 @@
  * Uso: npx tsx --env-file=.env scripts/sync-monthly-status.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirFichasContribuicao, abrirSessaoMercurio, lerFichasContribuicao } from "../src/lib/mercurio/browser-session";
+import { abrirFichasContribuicao, abrirSessaoMercurioComRetry, lerFichasContribuicao } from "../src/lib/mercurio/browser-session";
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -33,7 +33,7 @@ async function main() {
   const membroPorMatricula = new Map(membrosConhecidos.map((m) => [m.mercurioId!, m]));
   console.log(`Membros conhecidos localmente com matrícula: ${membrosConhecidos.length}`);
 
-  const { browser, page } = await abrirSessaoMercurio();
+  const { browser, page } = await abrirSessaoMercurioComRetry();
   let fichas: Awaited<ReturnType<typeof lerFichasContribuicao>>;
   try {
     const frame = await abrirFichasContribuicao(page, new RegExp(filialLabel, "i"));

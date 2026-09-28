@@ -8,7 +8,7 @@
  * Uso: npx tsx --env-file=.env scripts/sync-diretoria.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirDadosUnidade, abrirSessaoMercurio, lerDadosUnidade } from "../src/lib/mercurio/browser-session";
+import { abrirDadosUnidade, abrirSessaoMercurioComRetry, lerDadosUnidade } from "../src/lib/mercurio/browser-session";
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -17,7 +17,7 @@ async function main() {
   const school = await db.school.findFirstOrThrow({ where: { mercurioFilialLabel: filialLabel } });
   console.log(`Escola: ${school.name}`);
 
-  const { browser, page } = await abrirSessaoMercurio();
+  const { browser, page } = await abrirSessaoMercurioComRetry();
   let dados: Awaited<ReturnType<typeof lerDadosUnidade>>;
   try {
     const frame = await abrirDadosUnidade(page, new RegExp(filialLabel, "i"));

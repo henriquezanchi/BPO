@@ -19,7 +19,7 @@
  * Uso: npx tsx --env-file=.env scripts/sync-composition.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirComposicao, abrirFichaDaListaAtivos, abrirListaAtivos, abrirSessaoMercurio, lerCatalogoItensDisponiveis, lerComposicao, reabrirListaAtivos } from "../src/lib/mercurio/browser-session";
+import { abrirComposicao, abrirFichaDaListaAtivos, abrirListaAtivos, abrirSessaoMercurioComRetry, lerCatalogoItensDisponiveis, lerComposicao, reabrirListaAtivos } from "../src/lib/mercurio/browser-session";
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -31,7 +31,7 @@ async function main() {
   const membrosConhecidos = await db.member.findMany({ where: { schoolId: school.id, mercurioId: { not: null } } });
   console.log(`Membros conhecidos localmente com matrícula: ${membrosConhecidos.length}`);
 
-  const { browser, page } = await abrirSessaoMercurio();
+  const { browser, page } = await abrirSessaoMercurioComRetry();
   const catalogoUniao = new Map<string, string>(); // mercurioGroupId -> label
   let processados = 0;
 
