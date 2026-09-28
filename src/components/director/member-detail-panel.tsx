@@ -1,7 +1,7 @@
 "use client";
 
 import { getMemberDetail, updateMemberEconomicNotes } from "@/lib/actions/director-actions";
-import { formatBRL, whatsappHref } from "@/lib/format";
+import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import { CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
@@ -69,6 +69,18 @@ export function MemberDetailPanel({ schoolId, memberId }: { schoolId: string; me
         <div className="rounded-lg bg-amber-50 p-3 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
           <strong>Em negociação:</strong> {detail.negociacaoAberta.notes}
           {detail.negociacaoAberta.promisedPaymentDate && ` — promessa: ${new Date(detail.negociacaoAberta.promisedPaymentDate).toLocaleDateString("pt-BR")}`}
+        </div>
+      )}
+
+      {detail.gafSolicitadoEm && (
+        <div className="rounded-lg bg-purple-50 p-3 text-[11px] text-purple-800 dark:bg-purple-950/30 dark:text-purple-300">
+          <strong>Interesse no GAF</strong> — solicitado em {formatDateBR(detail.gafSolicitadoEm)}
+        </div>
+      )}
+
+      {detail.voluntariadoOferecido && (
+        <div className="rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
+          <strong>Ofereceu apoio voluntário</strong> em {formatDateBR(detail.voluntariadoOferecido.createdAt)}: {detail.voluntariadoOferecido.secretarias.join(", ")}
         </div>
       )}
 

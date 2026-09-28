@@ -232,6 +232,8 @@ model Member {
   monthlyStatus           ContributionMonthlyStatus[]
   fortunaTx               FortunaTransaction[]
   crmContacts             CrmContact[]
+  gafRequests             GafRequest[]
+  volunteerOffers         VolunteerOffer[]
   eventRegistr            EventRegistration[]
   classMemberships        ClassMembership[]
   createdActivities       Activity[]                    @relation("ActivityCreator")
@@ -466,6 +468,30 @@ model CrmContact {
   promisedPaymentDate DateTime?
   resolvedAt          DateTime?
   createdAt           DateTime  @default(now())
+
+  @@index([memberId])
+}
+
+// ===================== GAF / Voluntariado =====================
+// Bug real encontrado 2026-09-22: os botões "Solicitar adesão ao GAF" e "Me
+// oferecer para apoiar" (misc-panels.tsx) só mudavam um estado local do
+// React — nada era salvo, ninguém na escola via o pedido. Agora persiste de
+// verdade e aparece no detalhe do membro no Painel do Diretor.
+model GafRequest {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+}
+
+model VolunteerOffer {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id])
+  secretarias String[] // ex: ["Economia", "Difusão"] — ver SECRETARIAS em misc-panels.tsx
+  createdAt   DateTime @default(now())
 
   @@index([memberId])
 }

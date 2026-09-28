@@ -20,6 +20,8 @@ export async function getMemberDetail(schoolId: string, memberId: string) {
       compositionItems: true,
       monthlyStatus: { where: { year: new Date().getFullYear() }, orderBy: { month: "asc" } },
       crmContacts: { where: { resolvedAt: null }, orderBy: { createdAt: "desc" }, take: 1 },
+      gafRequests: { orderBy: { createdAt: "desc" }, take: 1 },
+      volunteerOffers: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
   if (member.schoolId !== schoolId) throw new Error("Membro não pertence a esta escola.");
@@ -36,6 +38,10 @@ export async function getMemberDetail(schoolId: string, memberId: string) {
     monthlyStatus: member.monthlyStatus.map((s) => ({ month: s.month, status: s.status })),
     negociacaoAberta: member.crmContacts[0]
       ? { id: member.crmContacts[0].id, notes: member.crmContacts[0].notes, promisedPaymentDate: member.crmContacts[0].promisedPaymentDate }
+      : null,
+    gafSolicitadoEm: member.gafRequests[0]?.createdAt ?? null,
+    voluntariadoOferecido: member.volunteerOffers[0]
+      ? { secretarias: member.volunteerOffers[0].secretarias, createdAt: member.volunteerOffers[0].createdAt }
       : null,
   };
 }

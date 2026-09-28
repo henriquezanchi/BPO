@@ -74,10 +74,14 @@ export async function getDirectorDashboard(schoolId: string) {
   const todasReais = await db.payable.findMany({ where: { schoolId, predicted: false }, include: { documents: true } });
   const percentualConciliado = todasReais.length > 0 ? (todasReais.filter((p) => p.documents.length > 0).length / todasReais.length) * 100 : 100;
 
-  // Resultado financeiro do mês corrente — receita prevista (recorrente,
-  // mensal) vs. despesas do mês (previstas com vencimento este mês +
-  // realizadas pagas este mês), pra dar 1 número só de "estamos indo bem
-  // ou mal este mês" no topo da Visão Geral.
+  // Resultado financeiro do mês corrente — decisão do usuário 2026-09-22:
+  // MESMA lógica dos dois lados (projeção nos dois, não um realizado e
+  // outro projetado). Receita prevista = contribuições recorrentes
+  // (receitaPrevista, já é projeção — todo membro ativo, pago ou não) +
+  // eventos previstos pra este mês (preço × inscritos, pago ou não —
+  // mesmo raciocínio: é projeção, não o já recebido). Despesas previstas =
+  // já gasto este mês + o que está programado pra vencer este mês (não
+  // muda, já era assim).
   const agora = new Date();
   const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
   const fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 1);
@@ -90,6 +94,13 @@ export async function getDirectorDashboard(schoolId: string) {
   });
   const despesasRealizadasMes = Number(despesasRealizadasMesAgg._sum.amount ?? 0);
   const despesasTotaisMes = despesasPendentesMes + despesasRealizadasMes;
+
+  const eventosMes = await db.event.findMany({
+    where: { schoolId, startsAt: { gte: inicioMes, lt: fimMes } },
+    include: { registrations: true },
+  });
+  const receitaEventosMes = eventosMes.reduce((soma, e) => soma + Number(e.price) * e.registrations.length, 0);
+  const receitaPrevistaMes = receitaPrevista + receitaEventosMes;
 
   // Saldo Fortuna NÃO é buscado aqui — bug real medido ao vivo (2026-09-21):
   // /diretor levava 7-9s porque isso rodava 1 chamada HTTP por membro
@@ -182,10 +193,12 @@ export async function getDirectorDashboard(schoolId: string) {
   return {
     kpis: {
       receitaPrevista,
+      receitaEventosMes,
+      receitaPrevistaMes,
       despesasPrevistas,
       despesasRealizadasMes,
       despesasTotaisMes,
-      resultadoFinanceiroMes: receitaPrevista - despesasTotaisMes,
+      resultadoFinanceiroMes: receitaPrevistaMes - despesasTotaisMes,
       taxaInadimplencia,
       totalEmAtraso,
       membrosAtivos: ativos.length,

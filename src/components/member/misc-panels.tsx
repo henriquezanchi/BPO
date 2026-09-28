@@ -1,41 +1,87 @@
 "use client";
 
-import { useState } from "react";
-import { HandHeart } from "lucide-react";
-import { whatsappHref } from "@/lib/format";
+import { getMinhasSolicitacoes, oferecerApoioVoluntario, solicitarAdesaoGaf } from "@/lib/actions/misc-request-actions";
+import { formatDateBR, whatsappHref } from "@/lib/format";
+import { HandHeart, Loader2 } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
 
 const SECRETARIAS = ["Economia", "Difusão", "Abertura de Turma", "Café Sophia", "Artes", "Manutenção", "Escolástica"];
 
-export function GafPanel() {
-  const [sent, setSent] = useState(false);
+/**
+ * Antes só mudava um estado local do React — nada era salvo, ninguém na
+ * escola via o pedido (bug real encontrado 2026-09-22). Agora persiste de
+ * verdade (ver misc-request-actions.ts) e aparece no detalhe do membro no
+ * Painel do Diretor.
+ */
+export function GafPanel({ memberId }: { memberId: string }) {
+  const [solicitadoEm, setSolicitadoEm] = useState<Date | null | undefined>(undefined);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    getMinhasSolicitacoes(memberId).then((r) => setSolicitadoEm(r.gafSolicitadoEm));
+  }, [memberId]);
+
+  function handleSolicitar() {
+    startTransition(async () => {
+      await solicitarAdesaoGaf(memberId);
+      setSolicitadoEm(new Date());
+    });
+  }
+
   return (
     <div className="text-left">
       <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">
         O <strong>Grupo de Acompanhamento Filosófico (GAF)</strong> é um espaço criado para apoiar o aluno em sua
         jornada de vivência prática da filosofia, com encontros periódicos e acompanhamento próximo por instrutores.
       </p>
+      {solicitadoEm && (
+        <p className="mb-2 text-[11px] text-gray-400 dark:text-gray-500">Última solicitação: {formatDateBR(solicitadoEm)}</p>
+      )}
       <button
-        disabled={sent}
-        onClick={() => setSent(true)}
+        disabled={isPending || solicitadoEm === undefined}
+        onClick={handleSolicitar}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
       >
-        <HandHeart size={16} /> {sent ? "Intenção registrada!" : "Solicitar adesão ao GAF"}
+        {isPending ? <Loader2 size={16} className="animate-spin" /> : <HandHeart size={16} />}
+        {solicitadoEm ? "Solicitar de novo" : "Solicitar adesão ao GAF"}
       </button>
     </div>
   );
 }
 
-export function VolunteerPanel() {
+export function VolunteerPanel({ memberId }: { memberId: string }) {
   const [active, setActive] = useState<string[]>([]);
-  const [sent, setSent] = useState(false);
+  const [oferecidoEm, setOferecidoEm] = useState<Date | null | undefined>(undefined);
+  const [erro, setErro] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    getMinhasSolicitacoes(memberId).then((r) => setOferecidoEm(r.voluntariadoOferecidoEm));
+  }, [memberId]);
 
   function toggle(tag: string) {
     setActive((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   }
 
+  function handleOferecer() {
+    if (active.length === 0) {
+      setErro("Selecione pelo menos uma secretaria.");
+      return;
+    }
+    setErro(null);
+    startTransition(async () => {
+      await oferecerApoioVoluntario(memberId, active);
+      setOferecidoEm(new Date());
+      setActive([]);
+    });
+  }
+
   return (
     <div className="text-left">
       <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">Ofereça-se para ajudar no funcionamento da escola:</p>
+      {oferecidoEm && (
+        <p className="mb-2 text-[11px] text-gray-400 dark:text-gray-500">Última oferta: {formatDateBR(oferecidoEm)}</p>
+      )}
       <div className="mb-4 flex flex-wrap gap-2">
         {SECRETARIAS.map((s) => (
           <button
@@ -51,12 +97,13 @@ export function VolunteerPanel() {
           </button>
         ))}
       </div>
+      {erro && <p className="mb-2 text-[11px] text-red-700 dark:text-red-400">{erro}</p>}
       <button
-        disabled={sent}
-        onClick={() => setSent(true)}
+        disabled={isPending || oferecidoEm === undefined}
+        onClick={handleOferecer}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
       >
-        <HandHeart size={16} /> {sent ? "Obrigado pelo apoio!" : "Me oferecer para apoiar"}
+        {isPending ? <Loader2 size={16} className="animate-spin" /> : <HandHeart size={16} />} Me oferecer para apoiar
       </button>
     </div>
   );

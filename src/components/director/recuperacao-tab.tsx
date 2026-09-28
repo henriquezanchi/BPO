@@ -11,14 +11,26 @@ import {
   toggleChargeTrigger,
 } from "@/lib/actions/charging-actions";
 import { CHARGE_TRIGGER_LABEL } from "@/lib/charging-labels";
-import type { DirectorDashboard } from "@/lib/director-data";
-import { formatDateBR } from "@/lib/format";
+import type { DirectorDashboard, MemberRow } from "@/lib/director-data";
+import { formatBRL, formatDateBR } from "@/lib/format";
 import type { ChargeTriggerType } from "@prisma/client";
 import { CircleCheck, Loader2, Send, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { EmptyState } from "./diretor-dashboard";
 
 const TIPOS_GATILHO = Object.keys(CHARGE_TRIGGER_LABEL);
+
+// Mesma granularidade dos gatilhos "1 mês / 2+ meses" da régua de cobrança
+// (ver charging-labels.ts), só que quebrando o "2+" em colunas pra dar mais
+// sinal visual de urgência num kanban — pedido do usuário 2026-09-22: trocar
+// o dropdown de seleção de membro por um kanban organizado por quantidade
+// de contribuições em atraso.
+const COLUNAS_ATRASO = [
+  { min: 1, max: 1, label: "1 mês em atraso" },
+  { min: 2, max: 2, label: "2 meses em atraso" },
+  { min: 3, max: 3, label: "3 meses em atraso" },
+  { min: 4, max: Infinity, label: "4+ meses em atraso" },
+];
 
 export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: DirectorDashboard }) {
   const [isPending, startTransition] = useTransition();
@@ -193,11 +205,29 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <h3 className="mb-1 text-sm font-bold text-na-green-dark dark:text-emerald-400">Atrasados por Tempo de Atraso</h3>
+        <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
+          Só matrículas ativas no Mercúrio (quem trancou não aparece aqui). Clique num card pra abrir uma negociação.
+        </p>
+        <NegociacaoKanban
+          membros={data.membros}
+          negMemberId={negMemberId}
+          negNota={negNota}
+          negData={negData}
+          isPending={isPending}
+          onSelecionar={setNegMemberId}
+          onNotaChange={setNegNota}
+          onDataChange={setNegData}
+          onAbrir={handleAbrirNegociacao}
+        />
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
         <h3 className="mb-4 text-sm font-bold text-na-green-dark dark:text-emerald-400">Em Negociação</h3>
         {data.negociacoesAbertas.length === 0 ? (
           <EmptyState text="Nenhuma negociação em aberto." />
         ) : (
-          <ul className="mb-4 flex flex-col gap-2">
+          <ul className="flex flex-col gap-2">
             {data.negociacoesAbertas.map((n) => (
               <li key={n.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3 text-sm dark:border-gray-800">
                 <div>
@@ -224,45 +254,115 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
             ))}
           </ul>
         )}
-
-        <div className="flex flex-wrap items-end gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
-          <select
-            value={negMemberId}
-            onChange={(e) => setNegMemberId(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-2 py-2 text-[13px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-          >
-            <option value="" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">
-              Selecione o membro...
-            </option>
-            {data.membros
-              .filter((m) => m.status === "atrasado" || m.status === "negociando")
-              .map((m) => (
-                <option key={m.id} value={m.id} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">
-                  {m.name}
-                </option>
-              ))}
-          </select>
-          <input
-            value={negNota}
-            onChange={(e) => setNegNota(e.target.value)}
-            placeholder="Nota da negociação..."
-            className="min-w-[200px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-[13px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-          />
-          <input
-            type="date"
-            value={negData}
-            onChange={(e) => setNegData(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-[13px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-          />
-          <button onClick={handleAbrirNegociacao} disabled={isPending} className="rounded-lg bg-na-green px-3 py-2 text-sm font-semibold text-white hover:bg-na-green-dark disabled:opacity-60">
-            Abrir negociação
-          </button>
-        </div>
       </div>
 
       <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-900">
         <p className="text-sm text-gray-500 dark:text-gray-400">Antecipação de recebíveis (factoring) não faz parte desta versão.</p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Kanban por quantidade de meses em atraso (decisão do usuário 2026-09-22:
+ * substitui o dropdown plano que existia antes — mais fácil de ver quem
+ * precisa de atenção urgente vs. quem está só 1 mês atrasado). Só mostra
+ * quem já está "atrasado" de verdade (não "negociando" — esses já aparecem
+ * na lista "Em Negociação" logo abaixo, evita duplicar a mesma pessoa nos
+ * dois lugares) E com matrícula ativa no Mercúrio (mesmo bug de mostrar
+ * quem trancou como atrasado já corrigido em Gestão de Membros/Visão
+ * Geral, faltava aqui).
+ */
+function NegociacaoKanban({
+  membros,
+  negMemberId,
+  negNota,
+  negData,
+  isPending,
+  onSelecionar,
+  onNotaChange,
+  onDataChange,
+  onAbrir,
+}: {
+  membros: MemberRow[];
+  negMemberId: string;
+  negNota: string;
+  negData: string;
+  isPending: boolean;
+  onSelecionar: (id: string) => void;
+  onNotaChange: (v: string) => void;
+  onDataChange: (v: string) => void;
+  onAbrir: () => void;
+}) {
+  const atrasados = membros.filter((m) => m.mercurioAtivo && m.status === "atrasado" && m.overdueCount > 0);
+
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {COLUNAS_ATRASO.map((col) => {
+        const membrosColuna = atrasados
+          .filter((m) => m.overdueCount >= col.min && m.overdueCount <= col.max)
+          .sort((a, b) => b.overdueCount - a.overdueCount || a.name.localeCompare(b.name));
+        return (
+          <div key={col.label} className="flex flex-col gap-2 rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50">
+            <div className="flex items-center justify-between px-0.5">
+              <h4 className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{col.label}</h4>
+              <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                {membrosColuna.length}
+              </span>
+            </div>
+            {membrosColuna.length === 0 ? (
+              <p className="py-6 text-center text-[11px] text-gray-400 dark:text-gray-500">Ninguém aqui.</p>
+            ) : (
+              membrosColuna.map((m) => (
+                <div key={m.id} className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-900">
+                  <p className="text-[12px] font-medium text-gray-900 dark:text-gray-100">{m.name}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">{formatBRL(m.compositionTotal * m.overdueCount)} em atraso</p>
+
+                  {negMemberId === m.id ? (
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      <input
+                        value={negNota}
+                        onChange={(e) => onNotaChange(e.target.value)}
+                        placeholder="Nota da negociação..."
+                        className="rounded border border-gray-300 px-2 py-1 text-[11px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        autoFocus
+                      />
+                      <input
+                        type="date"
+                        value={negData}
+                        onChange={(e) => onDataChange(e.target.value)}
+                        className="rounded border border-gray-300 px-2 py-1 text-[11px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                      />
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={onAbrir}
+                          disabled={isPending || !negNota.trim()}
+                          className="flex-1 rounded bg-na-green px-2 py-1 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+                        >
+                          Registrar
+                        </button>
+                        <button
+                          onClick={() => onSelecionar("")}
+                          className="rounded border border-gray-300 px-2 py-1 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => onSelecionar(m.id)}
+                      className="mt-2 text-[11px] font-semibold text-na-green hover:underline dark:text-emerald-400"
+                    >
+                      Abrir negociação
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -179,7 +179,8 @@ function VisaoGeralTab({
           {formatBRL(kpis.resultadoFinanceiroMes)}
         </p>
         <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-          Receita prevista {formatBRL(kpis.receitaPrevista)} − Despesas do mês {formatBRL(kpis.despesasTotaisMes)}
+          Contribuições {formatBRL(kpis.receitaPrevista)} + Eventos {formatBRL(kpis.receitaEventosMes)} − Despesas do mês{" "}
+          {formatBRL(kpis.despesasTotaisMes)}
         </p>
       </div>
 
