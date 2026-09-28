@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { notificarErroSuporte } from "@/lib/error-notify";
 import type { MercurioContactChanges, MercurioWriteResult } from "./adapter";
 import { abrirSessaoMercurio, lerRubricasDePagamentoHoje, RodadaEmAndamentoError } from "./browser-session";
 import { mercurioAdapter } from "./index";
@@ -164,6 +165,16 @@ export async function processMercurioSyncQueue(limit = 20) {
             : { status: "falhou", attempts: { increment: 1 }, lastError: result.error ?? "Erro desconhecido" },
       }),
     );
+
+    // Falha DEFINITIVA (não retryable) — antes só ficava visível na fila de
+    // exceção do próprio membro, sem avisar ninguém em tempo real (ver
+    // decisão do usuário 2026-09-22 sobre alertas de erro).
+    if (!result.ok && !result.retryable) {
+      await notificarErroSuporte({
+        message: `Falha ao sincronizar "${task.taskType}" pro Mercúrio (membro ${member.name}): ${result.error ?? "erro desconhecido"}`,
+        path: "processMercurioSyncQueue",
+      });
+    }
   }
 
   return results;
@@ -198,7 +209,12 @@ export async function processSchoolRubricaSyncRequests() {
     } catch (e) {
       // Best-effort — deixa rubricaSyncRequestedAt setado pra tentar de novo
       // no próximo ciclo do worker (10min depois), em vez de perder o pedido.
-      resultados.push({ schoolId: school.id, ok: false, error: (e as Error).message });
+      const message = (e as Error).message;
+      resultados.push({ schoolId: school.id, ok: false, error: message });
+      // Dedupe de error-notify.ts (mesmo fingerprint por ~20min) evita
+      // floodar se ficar falhando ciclo após ciclo — só avisa de novo se
+      // continuar depois desse tempo.
+      await notificarErroSuporte({ message: `Falha ao sincronizar rubricas de pagamento (escola ${school.id}): ${message}`, path: "processSchoolRubricaSyncRequests" });
     }
   }
 

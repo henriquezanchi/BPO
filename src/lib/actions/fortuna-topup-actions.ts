@@ -4,6 +4,7 @@ import { asaasCreatePixCharge, asaasFindOrCreateCustomer, asaasGetPaymentStatus,
 import { calcularSplitEscola } from "@/lib/asaas/split";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notificarErroSuporte } from "@/lib/error-notify";
 import { fortunaCreditarSaldo } from "@/lib/fortuna/client";
 
 const VALOR_MINIMO = 5;
@@ -84,7 +85,9 @@ export async function checkFortunaTopUpStatus(memberId: string, chargeId: string
       data: { launchedAt: new Date(), launchedBy: "Automático (Asaas → Fortuna)" },
     });
   } catch (e) {
-    await db.fortunaTopUpCharge.update({ where: { id: chargeId }, data: { autoCreditError: (e as Error).message } });
+    const message = (e as Error).message;
+    await db.fortunaTopUpCharge.update({ where: { id: chargeId }, data: { autoCreditError: message } });
+    await notificarErroSuporte({ message: `Falha ao creditar recarga Fortuna dedicada (charge ${chargeId}): ${message}`, path: "checkFortunaTopUpStatus" });
   }
 
   return { status: "pago" as const };

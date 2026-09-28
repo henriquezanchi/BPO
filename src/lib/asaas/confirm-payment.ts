@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { notificarErroSuporte } from "@/lib/error-notify";
 import { fortunaCreditarSaldo, fortunaGetClient } from "@/lib/fortuna/client";
 import { enqueueMercurioContributionLaunch } from "@/lib/mercurio/sync-queue";
 
@@ -45,7 +46,13 @@ export async function confirmarPagamento(chargeId: string): Promise<void> {
       await fortunaCreditarSaldo(member.fortunaClientId, cliente.branch.id, Number(charge.fortunaTopUpAmount));
       await db.paymentCharge.update({ where: { id: charge.id }, data: { fortunaTopUpLaunchedAt: new Date() } });
     } catch (e) {
-      await db.paymentCharge.update({ where: { id: charge.id }, data: { fortunaTopUpError: (e as Error).message } });
+      const message = (e as Error).message;
+      await db.paymentCharge.update({ where: { id: charge.id }, data: { fortunaTopUpError: message } });
+      // Esse catch é justamente pra NÃO derrubar a confirmação do pagamento
+      // (dinheiro real já recebido) — mas isso significa que, sem isso, o
+      // erro só aparece na fila de exceção do painel, e ninguém é avisado
+      // até checar lá (ver decisão do usuário 2026-09-22 sobre alertas).
+      await notificarErroSuporte({ message: `Falha ao creditar recarga Fortuna combinada (charge ${charge.id}): ${message}`, path: "confirmarPagamento" });
     }
   }
 }
