@@ -234,6 +234,16 @@ model Member {
   pixAutomaticStatus          String?
   pixAutomaticActivatedAt     DateTime?
 
+  // Tour guiado do 1º login (ver onboarding-tour.tsx) — null = ainda não
+  // viu. Decisão do usuário 2026-09-28.
+  tourCompletedAt DateTime?
+  // Data real de entrada na escola, pra Jornada Filosófica — não achamos
+  // fonte confiável no Mercúrio pra isso ainda, então por ora é só
+  // preenchimento manual pelo diretor (ver member-detail-panel.tsx). Se
+  // ficar null, a jornada usa createdAt (quando entrou no Portal) como
+  // aproximação, deixando claro que é uma estimativa.
+  dataEntradaEscola DateTime?
+
   contributions           Contribution[]
   compositionItems        ContributionCompositionItem[]
   receipts                ContributionReceipt[]
@@ -241,6 +251,8 @@ model Member {
   fortunaTx               FortunaTransaction[]
   crmContacts             CrmContact[]
   gafRequests             GafRequest[]
+  badges                  MemberBadge[]
+  levelHistory            MemberLevelHistory[]
   volunteerOffers         VolunteerOffer[]
   eventRegistr            EventRegistration[]
   classMemberships        ClassMembership[]
@@ -500,6 +512,39 @@ model VolunteerOffer {
   member      Member   @relation(fields: [memberId], references: [id])
   secretarias String[] // ex: ["Economia", "Difusão"] — ver SECRETARIAS em misc-panels.tsx
   createdAt   DateTime @default(now())
+
+  @@index([memberId])
+}
+
+// ===================== Gamificação / Jornada Filosófica =====================
+// Decisão do usuário 2026-09-28: conquistas/selos incentivam sem
+// discriminar quem está em atraso (diferente da ideia descartada de
+// conteúdo exclusivo pra quem paga em dia) — catálogo de tipos vive em
+// código (src/lib/badges.ts), aqui só guarda QUANDO cada membro conquistou
+// cada um, permanentemente (não some se a condição deixar de valer depois).
+model MemberBadge {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  badgeType String
+  earnedAt  DateTime @default(now())
+
+  @@unique([memberId, badgeType])
+  @@index([memberId])
+}
+
+// Histórico de mudança de nível (Mercúrio expõe esse campo na tela de
+// Fichas — tesoura/tes_conficha.php — mas era descartado até agora, ver
+// sync-monthly-status.ts). Usado na Jornada Filosófica pra mostrar quando
+// o membro passou pro 2º nível etc. Só existe registro a partir de quando
+// começamos a capturar (2026-09-28 em diante) — não dá pra saber
+// retroativamente a data exata de mudanças passadas.
+model MemberLevelHistory {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  nivel     String
+  changedAt DateTime @default(now())
 
   @@index([memberId])
 }

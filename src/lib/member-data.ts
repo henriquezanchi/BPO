@@ -1,3 +1,4 @@
+import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
 import { db } from "@/lib/db";
 import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
 
@@ -205,6 +206,16 @@ export async function getMemberDashboard(memberId: string) {
     ),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
+  // Best-effort — uma falha aqui não pode derrubar o carregamento do
+  // Portal inteiro (ver decisão do usuário 2026-09-28 sobre conquistas).
+  await verificarEAtribuirConquistas(memberId).catch(() => {});
+
+  const [streakMeses, badges, levelHistory] = await Promise.all([
+    calcularStreakMeses(memberId),
+    db.memberBadge.findMany({ where: { memberId }, orderBy: { earnedAt: "asc" } }),
+    db.memberLevelHistory.findMany({ where: { memberId }, orderBy: { changedAt: "asc" } }),
+  ]);
+
   return {
     member: {
       ...member,
@@ -215,6 +226,9 @@ export async function getMemberDashboard(memberId: string) {
     fortunaBalances,
     agendaItems,
     availableToAdd,
+    streakMeses,
+    badges: badges.map((b) => ({ badgeType: b.badgeType, earnedAt: b.earnedAt, ...BADGE_CATALOG[b.badgeType] })),
+    levelHistory: levelHistory.map((l) => ({ nivel: l.nivel, changedAt: l.changedAt })),
   };
 }
 

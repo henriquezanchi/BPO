@@ -34,6 +34,7 @@ export async function getMemberDetail(schoolId: string, memberId: string) {
     email: member.email,
     status: member.status,
     economicNotes: member.economicNotes,
+    dataEntradaEscola: member.dataEntradaEscola,
     compositionItems: member.compositionItems.map((i) => ({ id: i.id, label: i.label, amount: Number(i.amount) })),
     monthlyStatus: member.monthlyStatus.map((s) => ({ month: s.month, status: s.status })),
     negociacaoAberta: member.crmContacts[0]
@@ -60,5 +61,19 @@ export async function updateMemberEconomicNotes(schoolId: string, memberId: stri
   await db.member.update({ where: { id: memberId }, data: { economicNotes: textoLimitado } });
   await enqueueMercurioEconomicNotesUpdate(memberId, textoLimitado);
 
+  revalidatePath("/diretor");
+}
+
+/**
+ * Data real de entrada do membro na escola, pra Jornada Filosófica (ver
+ * badges.ts/jornada-panel.tsx) — não achamos fonte confiável disso no
+ * Mercúrio ainda, então é preenchimento manual do diretor por ora.
+ */
+export async function updateMemberDataEntrada(schoolId: string, memberId: string, data: string) {
+  await requireDirector(schoolId);
+  const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
+  if (member.schoolId !== schoolId) throw new Error("Membro não pertence a esta escola.");
+
+  await db.member.update({ where: { id: memberId }, data: { dataEntradaEscola: data ? new Date(data) : null } });
   revalidatePath("/diretor");
 }

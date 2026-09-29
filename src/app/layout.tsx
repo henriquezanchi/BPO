@@ -15,6 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Portal do Membro - Nova Acrópole",
   description: "Autogestão, carteira digital e agenda de atividades para membros e professores.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Portal NA",
+  },
 };
 
 // Roda ANTES da hidratação (script síncrono no <head>) pra aplicar a

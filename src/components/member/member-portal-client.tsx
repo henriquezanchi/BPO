@@ -10,6 +10,7 @@ import {
   BookOpen,
   CalendarCheck,
   CheckCircle2,
+  Compass,
   HandHeart,
   Leaf,
   LifeBuoy,
@@ -23,9 +24,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
+import { InstallPrompt } from "./install-prompt";
+import { OnboardingTour } from "./onboarding-tour";
 import { AgendaPanel } from "./panels/agenda-panel";
 import { ContributionStatusPanel } from "./panels/contribution-status-panel";
 import { FortunaTopUpPanel } from "./panels/fortuna-topup-panel";
+import { JornadaPanel } from "./panels/jornada-panel";
 import { MyContributionPanel } from "./panels/my-contribution-panel";
 import { ProfileEditPanel } from "./panels/profile-edit-panel";
 import { StudyAreaPanel } from "./panels/study-area-panel";
@@ -40,7 +44,8 @@ type ModalKey =
   | "estudos"
   | "voluntariado"
   | "ajuda"
-  | "gaf";
+  | "gaf"
+  | "jornada";
 
 const MODAL_TITLES: Record<ModalKey, string> = {
   cadastro: "Atualizar Cadastro",
@@ -52,6 +57,7 @@ const MODAL_TITLES: Record<ModalKey, string> = {
   voluntariado: "Voluntariado",
   ajuda: "Central de Ajuda",
   gaf: "Conhecer o GAF",
+  jornada: "Minha Jornada",
 };
 
 export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }) {
@@ -59,6 +65,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
   const [modal, setModal] = useState<ModalKey | null>(null);
   const [fortunaBalances, setFortunaBalances] = useState(dashboard.fortunaBalances);
   const [fortunaCarregando, setFortunaCarregando] = useState(true);
+  const [tourVisivel, setTourVisivel] = useState(!member.tourCompletedAt);
 
   function carregarSaldoFortuna() {
     getFortunaBalancesForMember(member.id)
@@ -82,6 +89,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
+      {tourVisivel && <OnboardingTour memberId={member.id} onFechar={() => setTourVisivel(false)} />}
       <header className="relative border-b border-gray-100 bg-white px-5 pt-6 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
         <div className="absolute top-4 right-4 flex items-center gap-1">
           <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
@@ -129,6 +137,8 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           </div>
         </div>
       </header>
+
+      <InstallPrompt />
 
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         {/* Status financeiro */}
@@ -197,6 +207,12 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           <FeatureTile icon={<HandHeart size={16} />} title="Voluntariado" subtitle="Secretarias e mutirões" onClick={() => setModal("voluntariado")} />
           <FeatureTile icon={<UsersRound size={16} />} title="Grupo de Acompanhamento" subtitle="Conheça e faça sua adesão ao GAF" onClick={() => setModal("gaf")} />
           <FeatureTile icon={<LifeBuoy size={16} />} title="Central de Ajuda" subtitle="Fale com a Economia" onClick={() => setModal("ajuda")} />
+          <FeatureTile
+            icon={<Compass size={16} />}
+            title="Minha Jornada"
+            subtitle={dashboard.streakMeses > 0 ? `${dashboard.streakMeses} meses em dia` : "Sua caminhada na escola"}
+            onClick={() => setModal("jornada")}
+          />
         </section>
       </main>
 
@@ -249,6 +265,14 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}
           {modal === "gaf" && <GafPanel memberId={member.id} />}
+          {modal === "jornada" && (
+            <JornadaPanel
+              dataEntrada={member.dataEntradaEscola ?? member.createdAt}
+              streakMeses={dashboard.streakMeses}
+              levelHistory={dashboard.levelHistory}
+              badges={dashboard.badges}
+            />
+          )}
         </BottomSheet>
       )}
     </div>

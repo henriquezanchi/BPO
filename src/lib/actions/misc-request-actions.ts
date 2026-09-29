@@ -20,6 +20,12 @@ export async function oferecerApoioVoluntario(memberId: string, secretarias: str
   await db.volunteerOffer.create({ data: { memberId, secretarias } });
 }
 
+/** Marca o tour guiado do 1º login como visto — ver onboarding-tour.tsx. Chamado ao terminar ou pular. */
+export async function marcarTourConcluido(memberId: string) {
+  await requireAuthenticatedMember(memberId);
+  await db.member.update({ where: { id: memberId }, data: { tourCompletedAt: new Date() } });
+}
+
 /** Chamado ao abrir os painéis do GAF/voluntariado — evita reoferecer um pedido já feito recentemente sem dar essa informação ao membro. */
 export async function getMinhasSolicitacoes(memberId: string) {
   await requireAuthenticatedMember(memberId);

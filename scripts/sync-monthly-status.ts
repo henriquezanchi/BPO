@@ -69,6 +69,18 @@ async function main() {
       await db.member.update({ where: { id: membro.id }, data: { status: statusDerivado } });
       console.log(`${membro.name}: status ${membro.status} -> ${statusDerivado}`);
     }
+
+    // Jornada Filosófica (ver src/lib/badges.ts): registra mudança de
+    // nível — só a partir de agora (2026-09-28), não retroativo. O 1º
+    // registro de cada membro não é uma "mudança" de verdade, só a
+    // linha de base a partir daqui.
+    if (ficha.nivel) {
+      const ultimoNivel = await db.memberLevelHistory.findFirst({ where: { memberId: membro.id }, orderBy: { changedAt: "desc" } });
+      if (ultimoNivel?.nivel !== ficha.nivel) {
+        await db.memberLevelHistory.create({ data: { memberId: membro.id, nivel: ficha.nivel } });
+        console.log(`${membro.name}: nível -> ${ficha.nivel}`);
+      }
+    }
     processados++;
   }
 

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FortunaTab } from "./fortuna-tab";
 import { MemberDetailPanel } from "./member-detail-panel";
+import { QrCodeCadastroCard } from "./qr-code-cadastro-card";
 import { RecuperacaoTab } from "./recuperacao-tab";
 import { ContasConciliacoesTab } from "./contas-conciliacoes-tab";
 
@@ -234,6 +235,8 @@ function VisaoGeralTab({
           onClick={() => onNavigate("fortuna")}
         />
       </div>
+
+      <QrCodeCadastroCard />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
         <h3 className="mb-4 text-sm font-bold text-na-green-dark dark:text-emerald-400">Últimos Pagamentos PIX Confirmados</h3>

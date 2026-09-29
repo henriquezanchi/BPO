@@ -1,6 +1,6 @@
 "use client";
 
-import { getMemberDetail, updateMemberEconomicNotes } from "@/lib/actions/director-actions";
+import { getMemberDetail, updateMemberDataEntrada, updateMemberEconomicNotes } from "@/lib/actions/director-actions";
 import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import { CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
@@ -19,12 +19,15 @@ export function MemberDetailPanel({ schoolId, memberId }: { schoolId: string; me
   const [detail, setDetail] = useState<MemberDetail | null>(null);
   const [notas, setNotas] = useState("");
   const [salvo, setSalvo] = useState(false);
+  const [dataEntrada, setDataEntrada] = useState("");
+  const [dataEntradaSalva, setDataEntradaSalva] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     getMemberDetail(schoolId, memberId).then((d) => {
       setDetail(d);
       setNotas(d.economicNotes ?? "");
+      setDataEntrada(d.dataEntradaEscola ? new Date(d.dataEntradaEscola).toISOString().slice(0, 10) : "");
     });
   }, [schoolId, memberId]);
 
@@ -43,6 +46,13 @@ export function MemberDetailPanel({ schoolId, memberId }: { schoolId: string; me
     startTransition(async () => {
       await updateMemberEconomicNotes(schoolId, memberId, notas);
       setSalvo(true);
+    });
+  }
+
+  function handleSalvarDataEntrada() {
+    startTransition(async () => {
+      await updateMemberDataEntrada(schoolId, memberId, dataEntrada);
+      setDataEntradaSalva(true);
     });
   }
 
@@ -113,6 +123,31 @@ export function MemberDetailPanel({ schoolId, memberId }: { schoolId: string; me
             );
           })}
         </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+          Data de Entrada na Escola <span className="font-normal text-gray-400">(pra Jornada Filosófica do aluno)</span>
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={dataEntrada}
+            onChange={(e) => {
+              setDataEntrada(e.target.value);
+              setDataEntradaSalva(false);
+            }}
+            className="rounded-lg border border-gray-300 p-2 text-[13px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+          />
+          <button
+            onClick={handleSalvarDataEntrada}
+            disabled={isPending}
+            className="inline-flex items-center gap-1 rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+          >
+            {isPending ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Salvar
+          </button>
+        </div>
+        {dataEntradaSalva && <p className="mt-1 text-[11px] text-na-green-dark dark:text-emerald-400">Salvo.</p>}
       </div>
 
       <div>
