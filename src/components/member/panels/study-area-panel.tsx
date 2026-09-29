@@ -1,6 +1,11 @@
+"use client";
+
 import { BookOpen, BookOpenText, Clapperboard, FileText, PlaySquare } from "lucide-react";
+import { useState } from "react";
 
 export function StudyAreaPanel() {
+  const [apostilasAvisoAtivo, setApostilasAvisoAtivo] = useState(false);
+
   return (
     <div className="flex flex-col items-center gap-5 py-2 text-center">
       <BookOpen size={32} className="text-na-gold" />
@@ -26,9 +31,15 @@ export function StudyAreaPanel() {
         >
           <BookOpenText size={16} /> Acessar Biblioteca
         </a>
-        <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+        <button
+          onClick={() => setApostilasAvisoAtivo(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+        >
           <FileText size={16} /> Acessar Apostilas
         </button>
+        {apostilasAvisoAtivo && (
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">As apostilas ainda não estão disponíveis por aqui — em breve.</p>
+        )}
         <a
           href="https://www.youtube.com/novaacropole"
           target="_blank"

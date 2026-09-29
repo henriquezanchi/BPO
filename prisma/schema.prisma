@@ -124,6 +124,14 @@ model School {
   // conta que criou a cobrança automaticamente. Enquanto null, nenhum
   // split é aplicado (100% fica na conta do BPO, comportamento antigo).
   asaasWalletId           String?
+  // apiKey da PRÓPRIA subconta — só existe pra escolas onde decidimos
+  // emitir a cobrança pela subconta dela mesma (não só receber o split),
+  // pra que o nome mostrado ao aluno na confirmação do PIX seja o da
+  // escola, não da conta raiz do BPO (regra do Banco Central: o nome
+  // exibido é sempre de quem EMITE a cobrança, split não muda isso).
+  // Asaas só entrega essa chave 1x, na criação da subconta — por isso
+  // persistimos aqui em vez de só logar no terminal como antes.
+  asaasSubaccountApiKey   String?  @db.Text
 
   members            Member[]
   events             Event[]

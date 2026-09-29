@@ -9,17 +9,30 @@
  * registra uma identidade financeira real no Asaas; revisar os dados
  * antes é importante.
  *
- * Uso: npx tsx --env-file=.env scripts/create-asaas-subaccount.ts "<mercurioFilialLabel>" [--confirm]
+ * Usa @next/env (não --env-file/dotenv) porque ASAAS_API_KEY no .env vem
+ * escapado (`\$aact_prod_...`) especificamente pra expansão do Next —
+ * outros loaders mandam a chave quebrada, com a barra invertida incluída
+ * (confirmado ao vivo: 401 "chave de API inválida"). Import dinâmico
+ * DEPOIS do loadEnvConfig — import estático seria hoisted pro topo do
+ * arquivo (antes do loadEnvConfig rodar), quebrando db.ts (lê
+ * DATABASE_URL de cara, no module load).
+ *
+ * Uso: npx tsx scripts/create-asaas-subaccount.ts "<mercurioFilialLabel>" [--confirm] [--email=<email>] [--phone=<celular>]
  */
-import { db } from "../src/lib/db";
-import { asaasCreateSubaccount } from "../src/lib/asaas/client";
-import { abrirDadosUnidade, abrirSessaoMercurio, lerDadosUnidade } from "../src/lib/mercurio/browser-session";
-import { parseLogradouro } from "../src/lib/mercurio/parse-logradouro";
+import { loadEnvConfig } from "@next/env";
+loadEnvConfig(process.cwd());
 
 async function main() {
+  const { db } = await import("../src/lib/db");
+  const { asaasCreateSubaccount } = await import("../src/lib/asaas/client");
+  const { abrirDadosUnidade, abrirSessaoMercurio, lerDadosUnidade } = await import("../src/lib/mercurio/browser-session");
+  const { parseLogradouro } = await import("../src/lib/mercurio/parse-logradouro");
+
   const filialLabel = process.argv[2];
   const confirmar = process.argv.includes("--confirm");
-  if (!filialLabel) throw new Error('Uso: npx tsx scripts/create-asaas-subaccount.ts "<mercurioFilialLabel>" [--confirm]');
+  const emailOverride = process.argv.find((a) => a.startsWith("--email="))?.slice("--email=".length);
+  const phoneOverride = process.argv.find((a) => a.startsWith("--phone="))?.slice("--phone=".length);
+  if (!filialLabel) throw new Error('Uso: npx tsx scripts/create-asaas-subaccount.ts "<mercurioFilialLabel>" [--confirm] [--email=<email>] [--phone=<celular>]');
 
   const school = await db.school.findFirstOrThrow({ where: { mercurioFilialLabel: filialLabel } });
   if (school.asaasWalletId) {
@@ -44,8 +57,8 @@ async function main() {
   const payload = {
     name: dados.razaoSocial || school.name,
     cpfCnpj: dados.cnpj,
-    email: dados.emailDiretor,
-    mobilePhone: dados.telefone.replace(/\D/g, ""),
+    email: emailOverride || dados.emailDiretor,
+    mobilePhone: (phoneOverride ?? dados.telefone).replace(/\D/g, ""),
     incomeValue: receitaPrevista || 1000, // estimativa conservadora se ainda não tiver composição suficiente sincronizada
     address: street || dados.endereco,
     addressNumber: number || "0",
@@ -65,18 +78,19 @@ async function main() {
   console.log("\nCriando subconta de verdade...");
   const subconta = await asaasCreateSubaccount(payload);
   console.log("\n✅ Subconta criada:", { id: subconta.id, walletId: subconta.walletId });
-  if (subconta.accessToken?.value) {
-    console.log(`⚠ apiKey da subconta (guardar se for gerenciar ela separadamente — não recuperável depois): ${subconta.accessToken.value}`);
-  }
 
-  await db.school.update({ where: { id: school.id }, data: { asaasWalletId: subconta.walletId } });
+  // O Asaas só entrega essa chave 1x, nesta resposta — se não salvar agora,
+  // não tem como recuperar depois (só regenerando, invalidando a antiga).
+  await db.school.update({
+    where: { id: school.id },
+    data: { asaasWalletId: subconta.walletId, asaasSubaccountApiKey: subconta.accessToken?.value ?? null },
+  });
   console.log(`\n✅ School.asaasWalletId salvo — próximas cobranças dessa escola já vão dividir automaticamente.`);
+  console.log(subconta.accessToken?.value ? "✅ apiKey da subconta salva em School.asaasSubaccountApiKey." : "⚠ Asaas não retornou apiKey — emitir cobrança pela subconta vai precisar gerar uma depois.");
+  await db.$disconnect();
 }
 
-main()
-  .then(() => db.$disconnect())
-  .catch(async (e) => {
-    console.error("ERRO:", e);
-    await db.$disconnect();
-    process.exit(1);
-  });
+main().catch((e) => {
+  console.error("ERRO:", e);
+  process.exit(1);
+});
