@@ -7,7 +7,8 @@ import { formatBRL } from "@/lib/format";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import type { FortunaBalanceView } from "@/lib/member-data";
 import type { ContributionMonthlyStatus } from "@prisma/client";
-import { AlertTriangle, Check, Coffee, Copy, CreditCard, ExternalLink, Loader2, Printer, QrCode, RefreshCw, Zap } from "lucide-react";
+import jsPDF from "jspdf";
+import { AlertTriangle, Check, Coffee, Copy, CreditCard, Download, ExternalLink, Loader2, QrCode, RefreshCw, Zap } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -26,30 +27,32 @@ const LABEL_POR_STATUS: Record<string, string> = {
   em_branco: "—",
 };
 
-function escapeHtml(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+/**
+ * PDF de verdade (não só a caixa de diálogo de impressão do navegador) —
+ * pedido do usuário 2026-09-30. Mantém o texto cru exatamente como veio do
+ * Mercúrio (fonte monoespaçada, sem tentar reformatar) — é um comprovante
+ * financeiro oficial, arriscado reinterpretar o layout dele.
+ */
+function handleBaixarPdf(rawText: string, nomeArquivo: string) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  doc.setFont("courier", "normal");
+  doc.setFontSize(9);
+  const margin = 40;
+  const maxWidth = doc.internal.pageSize.getWidth() - margin * 2;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const lineHeight = 12;
 
-function handleImprimir(rawText: string) {
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  document.body.appendChild(iframe);
-  const doc = iframe.contentDocument;
-  if (!doc) {
-    document.body.removeChild(iframe);
-    return;
+  const linhas = doc.splitTextToSize(rawText, maxWidth);
+  let y = margin;
+  for (const linha of linhas) {
+    if (y > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.text(linha, margin, y);
+    y += lineHeight;
   }
-  doc.open();
-  doc.write(`<pre style="font-family: monospace; font-size: 12px; white-space: pre-wrap; margin: 0;">${escapeHtml(rawText)}</pre>`);
-  doc.close();
-  iframe.contentWindow?.focus();
-  iframe.contentWindow?.print();
-  setTimeout(() => document.body.removeChild(iframe), 1000);
+  doc.save(nomeArquivo);
 }
 
 /**
@@ -113,10 +116,10 @@ export function ContributionStatusPanel({
           <p className="text-xs text-gray-500 dark:text-gray-400">Comprovante</p>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => handleImprimir(recibo)}
+              onClick={() => handleBaixarPdf(recibo, "comprovante-contribuicao.pdf")}
               className="flex items-center gap-1 text-[11px] font-semibold text-na-green dark:text-emerald-400"
             >
-              <Printer size={12} /> Imprimir
+              <Download size={12} /> Baixar PDF
             </button>
             <button onClick={() => setRecibo(null)} className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
               Voltar

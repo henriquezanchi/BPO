@@ -1,12 +1,13 @@
 "use client";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { criarEvento, excluirEvento, marcarPresencaEvento } from "@/lib/actions/event-actions";
 import { getFortunaBalancesForDirector, type FortunaBalancesForDirector } from "@/lib/actions/fortuna-actions";
 import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import type { DirectorDashboard } from "@/lib/director-data";
-import { ArrowLeft, ArrowUpDown, BadgePercent, Coffee, FileWarning, Handshake, LayoutDashboard, Search, Ticket, Users, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, BadgePercent, Coffee, FileWarning, Handshake, LayoutDashboard, Search, Ticket, Trash2, Users, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { FortunaTab } from "./fortuna-tab";
 import { MemberDetailPanel } from "./member-detail-panel";
 import { QrCodeCadastroCard } from "./qr-code-cadastro-card";
@@ -100,7 +101,7 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
             <VisaoGeralTab data={data} onNavigate={navegarPara} saldoFortunaConsolidado={fortunaBalances.saldoConsolidado} fortunaCarregando={fortunaCarregando} />
           )}
           {aba === "membros" && <MembrosTab schoolId={schoolId} data={data} filtroInicial={membrosFiltroInicial} />}
-          {aba === "eventos" && <EventosTab data={data} />}
+          {aba === "eventos" && <EventosTab schoolId={schoolId} data={data} />}
           {aba === "recuperacao" && <RecuperacaoTab schoolId={schoolId} data={data} />}
           {aba === "fortuna" && <FortunaTab schoolId={schoolId} data={data} balances={fortunaBalances} carregando={fortunaCarregando} />}
           {aba === "repasses" && <ContasConciliacoesTab schoolId={schoolId} data={data} />}
@@ -387,8 +388,20 @@ function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data:
               className="cursor-pointer border-t border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/60"
             >
               <td className="px-5 py-3">
-                <div className="font-semibold text-gray-900 dark:text-gray-100">{m.name}</div>
-                <div className="text-[10px] text-gray-500 dark:text-gray-400">Matrícula: #{m.registrationNo ?? "—"}</div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                    {m.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- vem do Supabase Storage, não é um asset local
+                      <img src={m.avatarUrl} alt={m.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">{m.name.charAt(0)}</span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">{m.name}</div>
+                    <div className="text-[10px] text-gray-500 dark:text-gray-400">Matrícula: #{m.registrationNo ?? "—"}</div>
+                  </div>
+                </div>
               </td>
               <td className="py-3">
                 <div className="flex flex-wrap gap-1">
@@ -443,53 +456,89 @@ function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data:
   );
 }
 
-function EventosTab({ data }: { data: DirectorDashboard }) {
-  if (data.eventos.length === 0) {
-    return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
-        <Ticket size={28} className="mx-auto mb-3 text-gray-300" />
-        <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum evento com inscrições registradas ainda.</p>
-        <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-          Controle de portaria (check-in) e inscrição na recepção com PIX na hora ainda não foram construídos — esta aba já mostra dados reais quando existirem.
-        </p>
-      </div>
-    );
+function EventosTab({ schoolId, data }: { schoolId: string; data: DirectorDashboard }) {
+  const [isPending, startTransition] = useTransition();
+
+  function handleCriarEvento(formData: FormData) {
+    const title = String(formData.get("title") ?? "");
+    const startsAt = String(formData.get("startsAt") ?? "");
+    const price = Number(formData.get("price") ?? 0);
+    if (!title || !startsAt) return;
+    startTransition(() => criarEvento(schoolId, title, startsAt, price));
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {data.eventos.map((e) => (
-        <div key={e.id} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-na-green-dark dark:text-emerald-400">{e.title}</h3>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">{formatDateBR(e.startsAt)}</p>
-            </div>
-            <div className="text-right text-xs text-gray-500 dark:text-gray-400">
-              {e.presentes}/{e.inscritos} presentes
-            </div>
-          </div>
-          <table className="w-full text-left text-xs">
-            <tbody>
-              {e.registrations.map((r) => (
-                <tr key={r.id} className="border-t border-gray-100 dark:border-gray-800">
-                  <td className="py-2 font-medium text-gray-900 dark:text-gray-100">{r.memberName}</td>
-                  <td className="py-2 text-right">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${r.paid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                      {r.paid ? "Pago" : "Pendente"}
-                    </span>
-                  </td>
-                  <td className="py-2 text-right">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${r.checkedIn ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                      {r.checkedIn ? "Presente" : "Aguardando"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <h3 className="mb-4 text-sm font-bold text-na-green-dark dark:text-emerald-400">Novo Evento</h3>
+        <form action={handleCriarEvento} className="flex flex-wrap items-end gap-2">
+          <input name="title" placeholder="Título do evento" required className="min-w-[180px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
+          <input name="startsAt" type="datetime-local" required className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
+          <input name="price" type="number" step="0.01" min="0" placeholder="Preço (0 = grátis)" className="w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
+          <button type="submit" disabled={isPending} className="rounded-lg bg-na-green px-3 py-2 text-sm font-semibold text-white hover:bg-na-green-dark disabled:opacity-60">
+            + Evento
+          </button>
+        </form>
+      </div>
+
+      {data.eventos.length === 0 ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
+          <Ticket size={28} className="mx-auto mb-3 text-gray-300" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum evento cadastrado ainda.</p>
         </div>
-      ))}
+      ) : (
+        data.eventos.map((e) => (
+          <div key={e.id} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-na-green-dark dark:text-emerald-400">{e.title}</h3>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {formatDateBR(e.startsAt)} {e.price > 0 && `· ${formatBRL(e.price)}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {e.presentes}/{e.inscritos} presentes
+                </span>
+                <button
+                  onClick={() => confirm(`Excluir "${e.title}"? Isso também remove as inscrições.`) && startTransition(() => excluirEvento(schoolId, e.id))}
+                  disabled={isPending}
+                  className="text-gray-400 hover:text-red-600"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+            {e.registrations.length === 0 ? (
+              <EmptyState text="Nenhuma inscrição ainda." />
+            ) : (
+              <table className="w-full text-left text-xs">
+                <tbody>
+                  {e.registrations.map((r) => (
+                    <tr key={r.id} className="border-t border-gray-100 dark:border-gray-800">
+                      <td className="py-2 font-medium text-gray-900 dark:text-gray-100">{r.memberName}</td>
+                      <td className="py-2 text-right">
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${r.paid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                          {r.paid ? "Pago" : "Pendente"}
+                        </span>
+                      </td>
+                      <td className="py-2 text-right">
+                        <button
+                          onClick={() => startTransition(() => marcarPresencaEvento(schoolId, r.id, !r.checkedIn))}
+                          disabled={isPending}
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${r.checkedIn ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                        >
+                          {r.checkedIn ? "Presente" : "Marcar presença"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 }

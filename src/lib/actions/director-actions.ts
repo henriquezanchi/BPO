@@ -1,6 +1,7 @@
 "use server";
 
 import { requireDirector } from "@/lib/auth";
+import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import { enqueueMercurioEconomicNotesUpdate } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
@@ -35,6 +36,7 @@ export async function getMemberDetail(schoolId: string, memberId: string) {
     status: member.status,
     economicNotes: member.economicNotes,
     dataEntradaEscola: member.dataEntradaEscola,
+    avatarUrl: getAvatarUrl(member.avatarPath),
     compositionItems: member.compositionItems.map((i) => ({ id: i.id, label: i.label, amount: Number(i.amount) })),
     monthlyStatus: member.monthlyStatus.map((s) => ({ month: s.month, status: s.status })),
     negociacaoAberta: member.crmContacts[0]

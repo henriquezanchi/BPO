@@ -1,3 +1,4 @@
+import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 
 export interface MemberRow {
@@ -10,6 +11,7 @@ export interface MemberRow {
   compositionLabels: string[];
   compositionTotal: number;
   overdueCount: number;
+  avatarUrl: string | null;
 }
 
 export interface TransacaoRecente {
@@ -167,6 +169,7 @@ export async function getDirectorDashboard(schoolId: string) {
     compositionLabels: m.compositionItems.map((i) => i.label),
     compositionTotal: totalComposicao(m),
     overdueCount: atrasosMap.get(m.id) ?? 0,
+    avatarUrl: getAvatarUrl(m.avatarPath),
   }));
 
   const eventos = await db.event.findMany({

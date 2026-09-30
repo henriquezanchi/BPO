@@ -1,7 +1,8 @@
 "use client";
 
+import { removerAvatar, uploadAvatar } from "@/lib/actions/avatar-actions";
 import { updateMemberContact } from "@/lib/actions/member-actions";
-import { AlertTriangle, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, Loader2, Trash2, Upload, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
@@ -17,6 +18,7 @@ interface ProfileEditPanelProps {
   addressCity: string | null;
   addressState: string | null;
   addressZip: string | null;
+  avatarUrl: string | null;
 }
 
 // Classe repetida nos inputs de texto do formulário.
@@ -24,8 +26,63 @@ const INPUT_CLASS =
   "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100";
 const LABEL_CLASS = "text-[11px] font-semibold text-gray-800 dark:text-gray-300";
 
+/** Foto de perfil — pedido do usuário 2026-09-30: deixa o Portal mais pessoal e ajuda a diretoria a reconhecer quem é quem. */
+function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; avatarUrl: string | null }) {
+  const [avatarUrl, setAvatarUrl] = useState(inicial);
+  const [isPending, startTransition] = useTransition();
+  const [erro, setErro] = useState<string | null>(null);
+
+  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setErro(null);
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await uploadAvatar(memberId, formData);
+        setAvatarUrl(res.avatarUrl);
+      } catch (err) {
+        setErro((err as Error).message);
+      }
+    });
+  }
+
+  function handleRemover() {
+    startTransition(async () => {
+      await removerAvatar(memberId);
+      setAvatarUrl(null);
+    });
+  }
+
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- vem do Supabase Storage, não é um asset local
+          <img src={avatarUrl} alt="Foto de perfil" className="h-full w-full object-cover" />
+        ) : (
+          <UserRound size={28} className="text-gray-300 dark:text-gray-600" />
+        )}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+          {isPending ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} {avatarUrl ? "Trocar foto" : "Adicionar foto"}
+          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={isPending} />
+        </label>
+        {avatarUrl && (
+          <button onClick={handleRemover} disabled={isPending} className="inline-flex w-fit items-center gap-1 text-[11px] text-gray-400 hover:text-red-600">
+            <Trash2 size={11} /> Remover foto
+          </button>
+        )}
+        {erro && <span className="text-[10px] text-red-600 dark:text-red-400">{erro}</span>}
+      </div>
+    </div>
+  );
+}
+
 export function ProfileEditPanel(props: ProfileEditPanelProps) {
-  const { memberId, name } = props;
+  const { memberId, name, avatarUrl } = props;
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ changed: boolean; alerted: boolean } | null>(null);
 
@@ -56,6 +113,8 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
     // (iOS/Android) e o Chrome oferecerem autopreenchimento do endereço
     // salvo no Google/no sistema, em vez de 1 campo de texto livre.
     <form action={handleSubmit} autoComplete="on" className="flex flex-col text-left">
+      <AvatarUploader memberId={memberId} avatarUrl={avatarUrl} />
+
       <p className="mb-4 text-xs text-gray-500">
         Mantenha seus dados atualizados para receber os comunicados e informativos da escola.
       </p>

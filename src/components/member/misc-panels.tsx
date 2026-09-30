@@ -109,21 +109,75 @@ export function VolunteerPanel({ memberId }: { memberId: string }) {
   );
 }
 
+const FAQ: { pergunta: string; resposta: string }[] = [
+  {
+    pergunta: "Como funciona o débito automático (Pix Automático)?",
+    resposta:
+      'Na tela "Situação da Contribuição", ative o débito automático e autorize uma vez (pagando o primeiro QR code). A partir daí, sua contribuição é cobrada sozinha todo mês, sem precisar abrir o Portal de novo.',
+  },
+  {
+    pergunta: "Como recarrego minha carteira Fortuna?",
+    resposta: 'Pelo menu "Adicionar Créditos" no Portal, ou aproveitando o pagamento da contribuição (o Portal sugere recarregar junto).',
+  },
+  {
+    pergunta: "Esqueci minha senha, e agora?",
+    resposta:
+      "A senha inicial são os 6 primeiros números do seu CPF. Se você já trocou e não lembra mais, fale com a secretaria da escola pra redefinir.",
+  },
+  {
+    pergunta: "Como baixo o comprovante de uma contribuição paga?",
+    resposta: 'Em "Situação da Contribuição", clique no mês já pago (verde) e depois em "Baixar PDF".',
+  },
+  {
+    pergunta: "Posso pagar com cartão de crédito?",
+    resposta: "Sim — ao gerar a cobrança, escolha Cartão de Crédito em vez de PIX. O valor fica um pouco maior, cobrindo a taxa do cartão.",
+  },
+  {
+    pergunta: "Como me inscrevo em um evento da escola?",
+    resposta: 'Na Agenda, encontre o evento e toque em "Inscrever-se". Eventos pagos geram um PIX na hora; gratuitos confirmam na hora.',
+  },
+  {
+    pergunta: "O que é o GAF?",
+    resposta: "O Grupo de Acompanhamento Filosófico é um espaço de apoio na jornada filosófica, com encontros e acompanhamento por instrutores.",
+  },
+  {
+    pergunta: "O que é a Transparência Financeira?",
+    resposta: "Mostra, mês a mês, de onde vem e pra onde vai o dinheiro da escola — contribuições, eventos, despesas por categoria e mais.",
+  },
+];
+
+/**
+ * Central de Ajuda com FAQ — decisão do usuário 2026-09-30: perguntas
+ * repetitivas respondidas ali mesmo, sem precisar de contato humano;
+ * WhatsApp continua disponível pro que não estiver coberto.
+ */
 export function HelpPanel({ whatsapp }: { whatsapp: string }) {
   return (
-    <div className="py-2 text-center">
-      <p className="mb-4 text-xs text-gray-600 dark:text-gray-400">
-        Precisa de ajuda com sua composição, recibos ou tem alguma dúvida? Nossa equipe está pronta para te
-        atender via WhatsApp.
-      </p>
-      <a
-        href={whatsappHref(whatsapp, "Olá, preciso de ajuda com o Portal do Membro")}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex items-center justify-center gap-2 rounded-xl bg-na-green px-5 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark"
-      >
-        Chamar no WhatsApp
-      </a>
+    <div className="text-left">
+      <ul className="mb-4 flex flex-col gap-2">
+        {FAQ.map((item, i) => (
+          <li key={i}>
+            <details className="group rounded-lg border border-gray-100 dark:border-gray-800">
+              <summary className="cursor-pointer list-none p-2.5 text-[12px] font-semibold text-gray-800 marker:content-none dark:text-gray-200">
+                {item.pergunta}
+              </summary>
+              <p className="border-t border-gray-100 p-2.5 text-[11px] text-gray-600 dark:border-gray-800 dark:text-gray-400">{item.resposta}</p>
+            </details>
+          </li>
+        ))}
+      </ul>
+
+      <div className="rounded-xl border border-gray-200 p-3 text-center dark:border-gray-700">
+        <p className="mb-3 text-[11px] text-gray-500 dark:text-gray-400">Não achou o que precisava? Fale com a Economia:</p>
+        <a
+          href={whatsappHref(whatsapp, "Olá, preciso de ajuda com o Portal do Membro")}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-na-green px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-na-green-dark"
+        >
+          Chamar no WhatsApp
+        </a>
+      </div>
     </div>
   );
 }

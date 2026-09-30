@@ -1,12 +1,14 @@
 "use client";
 
+import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/event-actions";
 import { toggleAgendaReaction } from "@/lib/actions/reaction-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
 import { EMOJIS_PERMITIDOS } from "@/lib/agenda-reactions";
+import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem, AgendaReactionSummary } from "@/lib/member-data";
-import { GraduationCap, ListChecks, PartyPopper } from "lucide-react";
-import { useState, useTransition } from "react";
+import { Check, Copy, GraduationCap, ListChecks, Loader2, PartyPopper } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   prova: "Prova",
@@ -130,6 +132,141 @@ function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaIt
   );
 }
 
+/**
+ * Inscrição em evento pelo Portal — decisão do usuário 2026-09-30. Evento
+ * gratuito: 1 clique, sem CPF. Evento pago: mesmo padrão de CPF + QR PIX
+ * já usado no pagamento de contribuição, com polling até confirmar.
+ */
+function InscricaoEvento({
+  memberId,
+  eventId,
+  price,
+  inscricaoInicial,
+}: {
+  memberId: string;
+  eventId: string;
+  price: number;
+  inscricaoInicial: Extract<AgendaItem, { kind: "evento" }>["minhaInscricao"];
+}) {
+  const [inscricao, setInscricao] = useState(inscricaoInicial);
+  const [cpf, setCpf] = useState("");
+  const [mostrarCpf, setMostrarCpf] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!inscricao || inscricao.pago) return;
+    const intervalo = setInterval(async () => {
+      const res = await checkStatusInscricaoEvento(memberId, inscricao.registrationId);
+      if (res.status === "pago") {
+        setInscricao((prev) => (prev ? { ...prev, pago: true } : prev));
+        clearInterval(intervalo);
+      }
+    }, 5000);
+    return () => clearInterval(intervalo);
+  }, [inscricao, memberId]);
+
+  function handleInscrever(cpfLimpo?: string) {
+    setErro(null);
+    startTransition(async () => {
+      try {
+        const res = await inscreverEmEvento(memberId, eventId, cpfLimpo);
+        setInscricao(
+          res.pago
+            ? { registrationId: res.registrationId ?? "", pago: true, pixPayload: null, pixQrCodeBase64: null }
+            : { registrationId: res.registrationId, pago: false, pixPayload: res.pixPayload, pixQrCodeBase64: res.pixQrCodeBase64 },
+        );
+      } catch (e) {
+        setErro(mensagemErroAmigavel(e));
+      }
+    });
+  }
+
+  function handleClickInscrever() {
+    if (price > 0) {
+      setMostrarCpf(true);
+      return;
+    }
+    handleInscrever();
+  }
+
+  function handleConfirmarCpf(e: React.FormEvent) {
+    e.preventDefault();
+    const cpfLimpo = cpf.replace(/\D/g, "");
+    if (cpfLimpo.length !== 11) {
+      setErro("Digite um CPF válido (11 números).");
+      return;
+    }
+    handleInscrever(cpfLimpo);
+  }
+
+  function handleCopiar() {
+    if (!inscricao?.pixPayload) return;
+    navigator.clipboard.writeText(inscricao.pixPayload).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    });
+  }
+
+  if (inscricao?.pago) {
+    return <p className="mt-2 text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">✓ Você está inscrito</p>;
+  }
+
+  if (inscricao?.pixQrCodeBase64) {
+    return (
+      <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+        {/* eslint-disable-next-line @next/next/no-img-element -- base64 dinâmico do Asaas */}
+        <img src={`data:image/png;base64,${inscricao.pixQrCodeBase64}`} alt="QR Code PIX" className="h-40 w-40 rounded-lg border border-gray-200" />
+        <button
+          onClick={handleCopiar}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+        >
+          {copiado ? <Check size={12} /> : <Copy size={12} />} {copiado ? "Copiado!" : "Copiar código PIX"}
+        </button>
+        <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+          <Loader2 size={12} className="animate-spin" /> Aguardando confirmação...
+        </p>
+      </div>
+    );
+  }
+
+  if (mostrarCpf) {
+    return (
+      <form onSubmit={handleConfirmarCpf} className="mt-2 flex flex-col gap-1.5">
+        <input
+          value={cpf}
+          onChange={(e) => setCpf(e.target.value)}
+          placeholder="CPF de quem vai pagar"
+          inputMode="numeric"
+          className="rounded-lg border border-gray-300 p-2 text-[12px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+        />
+        {erro && <span className="text-[11px] text-red-700 dark:text-red-400">{erro}</span>}
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+        >
+          {isPending ? "Gerando..." : "Gerar PIX"}
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        onClick={handleClickInscrever}
+        disabled={isPending}
+        className="rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+      >
+        {isPending ? <Loader2 size={12} className="animate-spin" /> : "Inscrever-se"}
+      </button>
+      {erro && <p className="mt-1 text-[11px] text-red-700 dark:text-red-400">{erro}</p>}
+    </div>
+  );
+}
+
 export function AgendaPanel({ memberId, items }: { memberId: string; items: AgendaItem[] }) {
   if (items.length === 0) {
     return (
@@ -157,6 +294,7 @@ export function AgendaPanel({ memberId, items }: { memberId: string; items: Agen
             <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
               {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
             </div>
+            <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} />
             <ReactionBar memberId={memberId} itemType="evento" itemId={item.id} reactions={item.reactions} />
           </div>
         ) : (

@@ -1,4 +1,5 @@
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
+import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
 
@@ -44,6 +45,9 @@ export type AgendaItem =
       date: Date;
       price: number;
       reactions: AgendaReactionSummary[];
+      // Inscrição do próprio membro (ver event-actions.ts) — null = ainda
+      // não se inscreveu.
+      minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null } | null;
     }
   | {
       kind: "atividade";
@@ -158,6 +162,17 @@ export async function getMemberDashboard(memberId: string) {
     },
   });
 
+  // Inscrição do próprio membro nos eventos listados (ver event-actions.ts)
+  // — pra decidir se mostra "Inscrever-se", o QR pendente, ou "Inscrito".
+  const minhasInscricoes = await db.eventRegistration.findMany({
+    where: { memberId, eventId: { in: schoolEvents.map((e) => e.id) } },
+  });
+  function inscricaoDoEvento(eventId: string): Extract<AgendaItem, { kind: "evento" }>["minhaInscricao"] {
+    const r = minhasInscricoes.find((i) => i.eventId === eventId);
+    if (!r) return null;
+    return { registrationId: r.id, pago: r.paid, pixPayload: r.pixPayload, pixQrCodeBase64: r.pixQrCodeBase64 };
+  }
+
   function resumoReacoes(itemId: string): AgendaReactionSummary[] {
     const contagemPorEmoji = new Map<string, number>();
     const minhasReacoes = new Set<string>();
@@ -178,6 +193,7 @@ export async function getMemberDashboard(memberId: string) {
         date: e.startsAt,
         price: Number(e.price),
         reactions: resumoReacoes(e.id),
+        minhaInscricao: inscricaoDoEvento(e.id),
       }),
     ),
     ...classActivities.map(
@@ -221,6 +237,7 @@ export async function getMemberDashboard(memberId: string) {
       ...member,
       contributions: member.contributions.map(serializeContribution),
       compositionItems: member.compositionItems.map((i) => serializeCompositionItem(i, gruposComTarefaPendente)),
+      avatarUrl: getAvatarUrl(member.avatarPath),
     },
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     fortunaBalances,

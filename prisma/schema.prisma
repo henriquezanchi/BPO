@@ -244,6 +244,10 @@ model Member {
   // ficar null, a jornada usa createdAt (quando entrou no Portal) como
   // aproximação, deixando claro que é uma estimativa.
   dataEntradaEscola DateTime?
+  // Foto de perfil (Supabase Storage, bucket privado "member-avatars" — ver
+  // profile-actions.ts) — pedido do usuário 2026-09-30: deixa o Portal
+  // mais pessoal e ajuda a diretoria a reconhecer quem é quem.
+  avatarPath        String?
 
   contributions           Contribution[]
   compositionItems        ContributionCompositionItem[]
@@ -650,6 +654,17 @@ model EventRegistration {
   checkedIn Boolean  @default(false)
   createdAt DateTime @default(now())
 
+  // Pagamento real via Asaas (PIX) — decisão do usuário 2026-09-30:
+  // inscrição em evento pelo próprio Portal, igual ao fluxo de
+  // contribuição. null = evento gratuito (paid=true direto, nada a
+  // cobrar) ou inscrição lançada pela secretaria sem cobrança própria.
+  asaasCustomerId String?
+  asaasPaymentId  String?   @unique
+  pixPayload      String?   @db.Text
+  pixQrCodeBase64 String?   @db.Text
+  paidAt          DateTime?
+
+  @@unique([eventId, memberId])
   @@index([eventId])
   @@index([memberId])
 }

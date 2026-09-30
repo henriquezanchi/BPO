@@ -59,11 +59,21 @@ export function MemberDetailPanel({ schoolId, memberId }: { schoolId: string; me
   return (
     <div className="flex flex-col gap-4 text-[13px]">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="font-semibold text-gray-900 dark:text-gray-100">{detail.name}</p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            Matrícula: #{detail.registrationNo ?? "—"} {detail.email && `· ${detail.email}`}
-          </p>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+            {detail.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- vem do Supabase Storage, não é um asset local
+              <img src={detail.avatarUrl} alt={detail.name} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-sm font-bold text-gray-400 dark:text-gray-500">{detail.name.charAt(0)}</span>
+            )}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{detail.name}</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Matrícula: #{detail.registrationNo ?? "—"} {detail.email && `· ${detail.email}`}
+            </p>
+          </div>
         </div>
         <a
           href={whatsappHref(detail.whatsapp)}

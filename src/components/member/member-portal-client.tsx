@@ -64,6 +64,33 @@ const MODAL_TITLES: Record<ModalKey, string> = {
   jornada: "Minha Jornada",
 };
 
+const DIA_VENCIMENTO = 10;
+
+/**
+ * Resumo do próximo vencimento (dia 10, mesma convenção já usada pelo
+ * worker do Pix Automático — ver process-pix-automatico.ts) pro topo do
+ * Portal — pedido do usuário 2026-09-30: saber "quantos dias faltam" sem
+ * precisar entrar em "Situação da Contribuição".
+ */
+function calcularProximoVencimento(monthlyStatus: { year: number; month: number; status: string }[]) {
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = hoje.getMonth() + 1;
+
+  const statusMesAtual = monthlyStatus.find((m) => m.year === anoAtual && m.month === mesAtual)?.status ?? "em_branco";
+  const jaResolvidoEsseMes = statusMesAtual === "paga" || statusMesAtual === "isento";
+
+  const [ano, mes] = jaResolvidoEsseMes
+    ? mesAtual === 12
+      ? [anoAtual + 1, 1]
+      : [anoAtual, mesAtual + 1]
+    : [anoAtual, mesAtual];
+
+  const vencimento = new Date(ano, mes - 1, DIA_VENCIMENTO);
+  const diasRestantes = Math.round((vencimento.getTime() - new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime()) / 86400000);
+  return { vencimento, diasRestantes, jaResolvidoEsseMes };
+}
+
 export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }) {
   const { member, agendaItems, availableToAdd } = dashboard;
   const [modal, setModal] = useState<ModalKey | null>(null);
@@ -90,6 +117,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
   const isDelayed = member.status === "atrasado" || member.status === "negociando";
   const schoolWhatsapp = member.school.whatsapp ?? member.whatsapp;
   const compositionTotal = member.compositionItems.reduce((soma, i) => soma + i.amount, 0);
+  const proximoVencimento = calcularProximoVencimento(member.monthlyStatus);
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
@@ -132,7 +160,17 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               <Pencil size={11} /> Editar Dados
             </button>
           </div>
-          <div className="mt-3 mb-1 text-base font-bold">{member.name}</div>
+          <div className="mt-3 mb-1 flex items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/30 bg-white/15">
+              {member.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- vem do Supabase Storage, não é um asset local
+                <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-sm font-bold">{member.name.charAt(0)}</span>
+              )}
+            </div>
+            <span className="text-base font-bold">{member.name}</span>
+          </div>
           <div className="flex justify-between border-t border-white/15 pt-2.5 text-[11px] text-green-100">
             <span>{member.school.city ?? member.school.name}</span>
             <span>
@@ -174,6 +212,13 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               <p className="mt-0.5 text-xs text-gray-700 dark:text-gray-400">
                 Olá, {member.name.split(" ")[0]}. Sua contribuição deste mês está{" "}
                 {isDelayed ? "atrasada" : "em dia"}.
+              </p>
+              <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-500">
+                {proximoVencimento.diasRestantes < 0
+                  ? `Venceu há ${Math.abs(proximoVencimento.diasRestantes)} dia(s) — vencimento dia ${proximoVencimento.vencimento.getDate()}/${proximoVencimento.vencimento.getMonth() + 1}`
+                  : proximoVencimento.diasRestantes === 0
+                    ? "Vence hoje"
+                    : `Próximo vencimento: dia ${proximoVencimento.vencimento.getDate()}/${proximoVencimento.vencimento.getMonth() + 1} (em ${proximoVencimento.diasRestantes} dia${proximoVencimento.diasRestantes === 1 ? "" : "s"})`}
               </p>
             </div>
           </div>
@@ -251,6 +296,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               addressCity={member.addressCity}
               addressState={member.addressState}
               addressZip={member.addressZip}
+              avatarUrl={member.avatarUrl}
             />
           )}
           {modal === "contribuicao" && (
