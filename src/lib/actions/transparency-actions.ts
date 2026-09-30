@@ -2,13 +2,13 @@
 
 import { requireAuthenticatedMember, requireDirector } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getTransparenciaFinanceira } from "@/lib/transparency-data";
+import { getTransparenciaFechada } from "@/lib/transparency-data";
 import { revalidatePath } from "next/cache";
 
 /** Chamado pelo Portal do Membro — qualquer membro autenticado vê a transparência da própria escola. */
 export async function getTransparenciaParaMembro(memberId: string, ano: number, mes: number) {
   const member = await requireAuthenticatedMember(memberId);
-  return getTransparenciaFinanceira(member.schoolId, ano, mes);
+  return getTransparenciaFechada(member.schoolId, ano, mes);
 }
 
 /** Lançamento manual de receita que não passa pelo Portal (livraria, cursos, doações) — ver finance-categories.ts. */

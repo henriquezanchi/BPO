@@ -137,7 +137,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           <Image src="/na-logo.png" alt={member.school.name} width={160} height={48} className="h-auto w-40 dark:brightness-0 dark:invert" />
         </div>
 
-        <div className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-left text-white">
+        <div data-tour-id="welcome" className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-left text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-semibold text-na-gold">PORTAL DO MEMBRO</span>
@@ -185,6 +185,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         {/* Status financeiro */}
         <div
+          data-tour-id="contribuicao-status"
           className={`flex flex-col gap-3 rounded-2xl border p-4 ${
             isDelayed
               ? "border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
@@ -236,17 +237,20 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
         </div>
 
         {/* Carteira Fortuna */}
-        <FortunaWalletCard
-          balances={fortunaBalances}
-          loading={fortunaCarregando}
-          onAdicionarCreditos={() => setModal("fortuna_recarga")}
-          onAtualizar={buscarSaldoFortuna}
-        />
+        <div data-tour-id="fortuna">
+          <FortunaWalletCard
+            balances={fortunaBalances}
+            loading={fortunaCarregando}
+            onAdicionarCreditos={() => setModal("fortuna_recarga")}
+            onAtualizar={buscarSaldoFortuna}
+          />
+        </div>
 
         {/* Grid de funcionalidades */}
         <section className="grid grid-cols-2 gap-2.5">
           <FeatureTile icon={<Leaf size={16} />} title="Minha Contribuição" subtitle="Composição e apoios" onClick={() => setModal("contribuicao")} />
           <FeatureTile
+            tourId="agenda"
             icon={<CalendarCheck size={16} />}
             title="Agenda & Eventos"
             subtitle={agendaItems.length > 0 ? `${agendaItems.length} próximos` : "Palestras e Turmas"}
@@ -342,14 +346,17 @@ function FeatureTile({
   title,
   subtitle,
   onClick,
+  tourId,
 }: {
   icon: React.ReactNode;
   title: string;
   subtitle: string;
   onClick: () => void;
+  tourId?: string;
 }) {
   return (
     <button
+      data-tour-id={tourId}
       onClick={onClick}
       className="flex flex-col items-start gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold dark:border-gray-800 dark:bg-gray-900"
     >

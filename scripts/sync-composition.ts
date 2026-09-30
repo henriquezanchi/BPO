@@ -28,8 +28,37 @@ import {
   lerCatalogoItensDisponiveis,
   lerComposicao,
   lerCursosIntegracao,
+  lerHistorico,
   reabrirListaAtivos,
 } from "../src/lib/mercurio/browser-session";
+import { diaMesAnoParaData } from "../src/lib/mercurio/playwright-adapter";
+
+/**
+ * Corrige Member.dataEntradaEscola (antes só preenchimento manual do
+ * diretor) e o "baseline" aproximado de MemberLevelHistory (antes só
+ * changedAt=now() na 1ª vez que o membro foi visto, ver
+ * sync-monthly-status.ts) com as datas REAIS da aba HISTÓRICO do Mercúrio —
+ * achado ao vivo 2026-09-30. Só corrige o baseline (nunca mexe numa
+ * história já com mais de 1 registro real de mudança de nível — essa já é
+ * confiável, capturada ao vivo desde 2026-09-28).
+ */
+async function corrigirEntradaENivel(memberId: string, historico: Awaited<ReturnType<typeof lerHistorico>>) {
+  const dataIngresso = diaMesAnoParaData(historico.ingressoDia, historico.ingressoMes, historico.ingressoAno);
+  if (dataIngresso) {
+    await db.member.update({ where: { id: memberId }, data: { dataEntradaEscola: dataIngresso } });
+  }
+
+  if (!historico.concluiu1Nivel) return;
+  const dataNivel2 = diaMesAnoParaData(historico.inicio2NivelDia, historico.inicio2NivelMes, historico.inicio2NivelAno);
+  if (!dataNivel2) return;
+
+  const historicoNiveis = await db.memberLevelHistory.findMany({ where: { memberId }, orderBy: { changedAt: "asc" } });
+  if (historicoNiveis.length === 0) {
+    await db.memberLevelHistory.create({ data: { memberId, nivel: "N2", changedAt: dataNivel2 } });
+  } else if (historicoNiveis.length === 1 && historicoNiveis[0].nivel === "N2") {
+    await db.memberLevelHistory.update({ where: { id: historicoNiveis[0].id }, data: { changedAt: dataNivel2 } });
+  }
+}
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -52,6 +81,10 @@ async function main() {
       try {
         if (i > 0) frameAtivos = await reabrirListaAtivos(page);
         const frameFicha = await abrirFichaDaListaAtivos(page, frameAtivos, new RegExp(membro.name, "i"));
+
+        const historico = await lerHistorico(frameFicha);
+        await corrigirEntradaENivel(membro.id, historico);
+
         const cursos = await lerCursosIntegracao(frameFicha);
         await db.$transaction(
           cursos.map((c) =>

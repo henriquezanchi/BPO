@@ -63,3 +63,27 @@ export const LABEL_OUTRAS_RECEITAS: Record<CategoriaOutraReceita, string> = {
   doacoes: "Doações",
   outras: "Outras Receitas",
 };
+
+/**
+ * Agrupamento das rubricas de RECEITA do relatório "Movimento do Período"
+ * (Tesouraria > Movimento, ver mercurio/browser-session.ts#lerMovimentoSintetico)
+ * nos mesmos 4 baldes que a Transparência Financeira já usa pro lado da
+ * receita — achado ao vivo 2026-09-30: esse relatório é a fonte de verdade
+ * real do Mercúrio (entradas E saídas por rubrica), substitui a composição
+ * anterior (PaymentCharge/Event/FortunaTopUpCharge do banco local, que não
+ * pegava pagamento feito direto na secretaria fora do Portal).
+ */
+const REGRAS_RECEITA: [RegExp, CategoriaOutraReceita | "contribuicoes" | "eventos" | "lanchonete"][] = [
+  [/^CONTRIBUI[ÇC][ÃA]O/i, "contribuicoes"],
+  [/EVENTO|FESTA|INSCRI[ÇC][ÃA]O CURSO|DI[ÁA]RIAS/i, "eventos"],
+  [/LANCHONETE|CAF[ÉE] SOPHIA|RESTAURANTE|BAZAR|EMP[ÓO]RIO/i, "lanchonete"],
+  [/DOA[ÇC][ÃA]O/i, "doacoes"],
+  [/LIVRO|APOSTILA/i, "livraria"],
+];
+
+export function categorizarReceita(label: string): "contribuicoes" | "eventos" | "lanchonete" | CategoriaOutraReceita {
+  for (const [regex, categoria] of REGRAS_RECEITA) {
+    if (regex.test(label)) return categoria;
+  }
+  return "outras";
+}

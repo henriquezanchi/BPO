@@ -134,8 +134,18 @@ export async function abrirSessaoMercurio(): Promise<SessaoMercurio> {
   return { browser, page };
 }
 
-const TENTATIVAS_PADRAO = 5;
-const ESPERA_ENTRE_TENTATIVAS_MS = 3 * 60_000;
+// Achado real 2026-09-30: os crons diários de sync-active-status e
+// sync-monthly-status no Railway estavam CRASHANDO todo santo dia — o
+// orçamento antigo (5 tentativas × 3min = 15min) sempre estourava colidindo
+// com a rodada do scraper externo nacional (Windows Task Scheduler,
+// "C:\Scrapper\mercurio-tesouraria"/scraper irmão), que às vezes passa de
+// 15min pra sincronizar Turmas de uma filial só. Consequência prática: o
+// Painel do Diretor ficava com mercurioAtivo desatualizado indefinidamente
+// (o cron nunca chegava a rodar de verdade). Orçamento bem mais folgado
+// agora (10 tentativas × 5min = 50min) — ainda dá tempo de sobra num cron
+// que roda 1x por dia, sem precisar saber o horário exato do scraper externo.
+const TENTATIVAS_PADRAO = 10;
+const ESPERA_ENTRE_TENTATIVAS_MS = 5 * 60_000;
 
 /**
  * Igual a abrirSessaoMercurio, mas tenta de novo (com espera) se a trava de
@@ -792,6 +802,50 @@ export async function escreverAbaIdentificacao(frame: Frame, dados: Partial<Dado
   await frame.page().waitForTimeout(1500);
 }
 
+// ===================== Aba HISTÓRICO =====================
+// Aba "HISTÓRICO" da ficha (unidade/uni_cadhst.php) — tem a data REAL de
+// ingresso na escola e de início do 2º Nível (campos readonly, calculados
+// pelo próprio Mercúrio a partir do histórico de matrícula/promoção — não
+// são preenchíveis manualmente). Fonte encontrada ao vivo 2026-09-30 (print
+// do usuário contra a ficha de Luiz Henrique Zanchi Borges, matrícula
+// 21596: "Ingresso em NA" 01/03/2018, "Início 2º Nível" 30/05/2019) —
+// substitui o preenchimento manual de Member.dataEntradaEscola
+// (member-detail-panel.tsx) e a aproximação de MemberLevelHistory (que só
+// tinha registro a partir de quando passamos a capturar, 2026-09-28) por
+// dado de verdade. Campos confirmados ao vivo por nome: txtdiai/txtmesi/
+// txtanoi (Ingresso), chkcon (concluiu o 1º Nível — só faz sentido usar
+// txtdia2/txtmes2/txtano2 se estiver marcado).
+
+export interface HistoricoMercurio {
+  ingressoDia: string;
+  ingressoMes: string;
+  ingressoAno: string;
+  concluiu1Nivel: boolean;
+  inicio2NivelDia: string;
+  inicio2NivelMes: string;
+  inicio2NivelAno: string;
+}
+
+async function abrirAbaHistorico(frame: Frame): Promise<void> {
+  await frame.getByText(/^HIST[ÓO]RICO$/i).first().click();
+  await frame.page().waitForTimeout(800);
+}
+
+export async function lerHistorico(frame: Frame): Promise<HistoricoMercurio> {
+  await abrirAbaHistorico(frame);
+  const valor = async (nome: string) => (await frame.locator(`[name="${nome}"]`).first().inputValue().catch(() => "")).trim();
+  const marcado = async (nome: string) => frame.locator(`[name="${nome}"]`).first().isChecked().catch(() => false);
+  return {
+    ingressoDia: await valor("txtdiai"),
+    ingressoMes: await valor("txtmesi"),
+    ingressoAno: await valor("txtanoi"),
+    concluiu1Nivel: await marcado("chkcon"),
+    inicio2NivelDia: await valor("txtdia2"),
+    inicio2NivelMes: await valor("txtmes2"),
+    inicio2NivelAno: await valor("txtano2"),
+  };
+}
+
 // ===================== Cursos de Formação e Integração =====================
 // Aba "CURSOS INTEGRAÇÃO" da ficha (mesmo frame de ENDEREÇOS/PESSOAIS/
 // IDENTIFICAÇÃO, ver abrirFichaDaListaAtivos) — tabela Curso de Formação /
@@ -1252,6 +1306,65 @@ export async function lerAlunosDaTurma(frame: Frame): Promise<AlunoTurmaMercurio
     }
     return [];
   });
+}
+
+// ===================== Tesouraria > Relatórios > Movimento =====================
+// "Movimento do Período" (tesoura/tes_relmov.php -> tes_relmov2.php,
+// formulário "Sintético") — relatório REAL de entradas E saídas por
+// rubrica, direto do caixa do Mercúrio. Achado ao vivo 2026-09-30: essa é
+// a fonte de verdade que faltava pra Transparência Financeira (antes
+// juntava tabelas locais pro lado da receita — que não pegava pagamento
+// feito direto na secretaria, fora do Portal — e dependia de upload manual
+// de extrato OFX pro lado da despesa, ver src/lib/actions/bank-import-actions.ts,
+// que continua existindo só pra conciliação bancária do diretor, sem
+// relação com este relatório). `cmbper` usa o formato "AAAAM" (ano + mês
+// SEM zero à esquerda, ex: "20268" = Agosto/2026, confirmado ao vivo
+// inspecionando o <select>).
+
+export interface MovimentoRubrica {
+  rubrica: string;
+  entradas: number;
+  saidas: number;
+}
+
+export async function lerMovimentoSintetico(page: Page, filialLabelRegex: RegExp, ano: number, mes: number): Promise<MovimentoRubrica[]> {
+  await abrirTesouraria(page, filialLabelRegex);
+  const frameIndice = await esperarFrame(page, "indice", /tes_indice\.php/, 15000);
+  await frameIndice.getByText("Movimento", { exact: true }).click();
+  await page.waitForTimeout(1000);
+
+  // 2º <form> da página (o 1º é um relatório "Sintético Anual" diferente,
+  // só com Ano — confirmado ao vivo inspecionando os forms da página).
+  const formularioMovimento = page.frame({ name: "principal" })!.locator("form").nth(1);
+  await formularioMovimento.locator('select[name="cmbper"]').selectOption(`${ano}${mes}`);
+  await formularioMovimento.locator('select[name="cmbcai"]').selectOption("0"); // Todos os caixas
+  await formularioMovimento.locator('select[name="cmbrd"]').selectOption("A"); // Receita/Despesas
+  await formularioMovimento.locator('input[name="cmdSintetico"]').click();
+  await page.waitForTimeout(1500);
+
+  const frameResultado = page.frame({ name: "principal" })!;
+  const linhasCruas = await frameResultado.evaluate(() => {
+    const tabela = Array.from(document.querySelectorAll("table")).find((t) => {
+      const cabecalhos = Array.from(t.rows[0]?.cells ?? []).map((c) => (c as HTMLElement).innerText.trim());
+      return cabecalhos.includes("Descrição") && cabecalhos.includes("Entradas") && cabecalhos.includes("Saídas");
+    });
+    if (!tabela) return [];
+    return Array.from(tabela.rows)
+      .slice(1)
+      // A linha "Totais" só tem 3 células (Totais/Entradas/Saídas, sem a
+      // coluna "S" numérica das linhas de dado) — sem este filtro, ela
+      // desalinha as colunas e vaza o total de saídas pro lado da receita
+      // (achado ao vivo 2026-09-30: bug real, receita saía dobrada).
+      .filter((linha) => linha.cells.length === 4)
+      .map((linha) => {
+        const celulas = Array.from(linha.cells).map((c) => (c as HTMLElement).innerText.trim());
+        return { rubrica: celulas[1] ?? "", entradasTexto: celulas[2] ?? "", saidasTexto: celulas[3] ?? "" };
+      })
+      .filter((r) => r.rubrica && !/^totais$/i.test(r.rubrica));
+  });
+
+  const paraNumero = (texto: string) => parseFloat(texto.replace(/\./g, "").replace(",", ".")) || 0;
+  return linhasCruas.map((l) => ({ rubrica: l.rubrica, entradas: paraNumero(l.entradasTexto), saidas: paraNumero(l.saidasTexto) }));
 }
 
 // ===================== Tesouraria > Caixas (lançamento de contribuição) =====================

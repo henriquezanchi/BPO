@@ -143,6 +143,7 @@ model School {
   compositionCatalog SchoolCompositionCatalogItem[]
   paymentRubricas    SchoolPaymentRubrica[]
   scholasticPendencies ScholasticPendency[]
+  financialSnapshots FinancialSnapshot[]
 }
 
 model Member {
@@ -607,6 +608,27 @@ model ScholasticPendency {
 
   @@index([schoolId])
   @@index([memberId])
+}
+
+// Snapshot cacheado da Transparência Financeira — pedido do usuário
+// 2026-09-30: (a) parar de recalcular a cada clique de membro (todos da
+// escola devem ver o MESMO número, vindo do mesmo lugar); (b) só existe
+// pra mês já FECHADO (mês corrente nunca tem snapshot — ver
+// transparency-data.ts). Gerado por scripts/sync-financial-snapshot.ts a
+// partir do relatório real "Movimento do Período" do Mercúrio (Tesouraria >
+// Movimento > Sintético), não mais de tabelas locais (Payable/OFX
+// dependiam de upload manual de extrato, que nem sempre acontece).
+model FinancialSnapshot {
+  id          String   @id @default(cuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+  ano         Int
+  mes         Int
+  payload     Json
+  generatedAt DateTime @default(now())
+
+  @@unique([schoolId, ano, mes])
+  @@index([schoolId])
 }
 
 model ChargingRule {
