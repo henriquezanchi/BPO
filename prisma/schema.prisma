@@ -137,6 +137,7 @@ model School {
   events             Event[]
   payables           Payable[]
   repasses           Repasse[]
+  otherIncomes       OtherIncome[]
   chargingRules      ChargingRule[]
   classGroups        ClassGroup[]
   compositionCatalog SchoolCompositionCatalogItem[]
@@ -732,6 +733,24 @@ model Repasse {
   referenceMonth Int
   note           String?
   registeredAt   DateTime @default(now())
+
+  @@index([schoolId])
+}
+
+// Receita que não passa pelo Portal (livraria, cursos avulsos, doações
+// etc — ver finance-categories.ts) — lançamento manual do diretor, pra
+// alimentar a Transparência Financeira (contribuições e eventos já são
+// medidos automaticamente, isso cobre o resto). Decisão do usuário
+// 2026-09-30.
+model OtherIncome {
+  id         String   @id @default(cuid())
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id])
+  category   String
+  amount     Decimal  @db.Decimal(10, 2)
+  receivedAt DateTime
+  note       String?
+  createdAt  DateTime @default(now())
 
   @@index([schoolId])
 }

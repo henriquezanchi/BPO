@@ -17,6 +17,7 @@ import {
   LogOut,
   MessageCircle,
   Pencil,
+  PiggyBank,
   TriangleAlert,
   UsersRound,
 } from "lucide-react";
@@ -33,6 +34,7 @@ import { JornadaPanel } from "./panels/jornada-panel";
 import { MyContributionPanel } from "./panels/my-contribution-panel";
 import { ProfileEditPanel } from "./panels/profile-edit-panel";
 import { StudyAreaPanel } from "./panels/study-area-panel";
+import { TransparenciaPanel } from "./panels/transparencia-panel";
 import { GafPanel, HelpPanel, VolunteerPanel } from "./misc-panels";
 
 type ModalKey =
@@ -45,7 +47,8 @@ type ModalKey =
   | "voluntariado"
   | "ajuda"
   | "gaf"
-  | "jornada";
+  | "jornada"
+  | "transparencia";
 
 const MODAL_TITLES: Record<ModalKey, string> = {
   cadastro: "Atualizar Cadastro",
@@ -57,6 +60,7 @@ const MODAL_TITLES: Record<ModalKey, string> = {
   voluntariado: "Voluntariado",
   ajuda: "Central de Ajuda",
   gaf: "Conhecer o GAF",
+  transparencia: "Transparência Financeira",
   jornada: "Minha Jornada",
 };
 
@@ -213,6 +217,12 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             subtitle={dashboard.streakMeses > 0 ? `${dashboard.streakMeses} meses em dia` : "Sua caminhada na escola"}
             onClick={() => setModal("jornada")}
           />
+          <FeatureTile
+            icon={<PiggyBank size={16} />}
+            title="Transparência Financeira"
+            subtitle="Veja como o dinheiro da escola é usado"
+            onClick={() => setModal("transparencia")}
+          />
         </section>
       </main>
 
@@ -273,6 +283,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               badges={dashboard.badges}
             />
           )}
+          {modal === "transparencia" && <TransparenciaPanel memberId={member.id} />}
         </BottomSheet>
       )}
     </div>

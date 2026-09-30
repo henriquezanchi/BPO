@@ -4,13 +4,99 @@ import { excluirAccountantDocument, getAccountantDocumentUrl, uploadAccountantDo
 import { confirmarPrevisao, importarExtratoOfx, removerPrevisao } from "@/lib/actions/bank-import-actions";
 import { criarContaAPagar, desmarcarContaComoPaga, editarContaAPagar, excluirContaAPagar, marcarContaComoPaga } from "@/lib/actions/repasse-actions";
 import { atribuirRubrica, sincronizarRubricasDePagamento } from "@/lib/actions/rubrica-actions";
+import { excluirOutraReceita, lancarOutraReceita, listarOutrasReceitas } from "@/lib/actions/transparency-actions";
 import type { DirectorDashboard } from "@/lib/director-data";
+import { CATEGORIAS_OUTRAS_RECEITAS, LABEL_OUTRAS_RECEITAS } from "@/lib/finance-categories";
 import { formatBRL, formatDateBR } from "@/lib/format";
 import { RECURRENCE_FREQUENCY_LABEL } from "@/lib/recurrence-labels";
 import type { RecurrenceFrequency } from "@prisma/client";
 import { ChevronDown, Loader2, Paperclip, Pencil, FileText, RefreshCw, Repeat, Sparkles, Tag, Trash2, Upload, X } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { EmptyState } from "./diretor-dashboard";
+
+/**
+ * Receita que não passa pelo Portal (livraria, cursos, doações — ver
+ * finance-categories.ts) — lançamento manual do diretor, alimenta a
+ * Transparência Financeira mostrada aos membros (contribuições e eventos
+ * já são medidos sozinhos). Pedido de dirigentes repassado pelo usuário
+ * 2026-09-30.
+ */
+function OutrasReceitasCard({ schoolId }: { schoolId: string }) {
+  const [isPending, startTransition] = useTransition();
+  const hoje = new Date();
+  const [registros, setRegistros] = useState<Awaited<ReturnType<typeof listarOutrasReceitas>>>([]);
+  const [recarregar, setRecarregar] = useState(0);
+
+  useEffect(() => {
+    listarOutrasReceitas(schoolId, hoje.getFullYear(), hoje.getMonth() + 1).then(setRegistros);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schoolId, recarregar]);
+
+  function handleLancar(formData: FormData) {
+    const category = String(formData.get("category") ?? "");
+    const amount = Number(formData.get("amount"));
+    const receivedAt = String(formData.get("receivedAt") ?? "");
+    const note = String(formData.get("note") ?? "");
+    if (!category || !amount || !receivedAt) return;
+    startTransition(async () => {
+      await lancarOutraReceita(schoolId, category, amount, receivedAt, note);
+      setRecarregar((n) => n + 1);
+    });
+  }
+
+  function handleExcluir(id: string) {
+    startTransition(async () => {
+      await excluirOutraReceita(schoolId, id);
+      setRecarregar((n) => n + 1);
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+      <h3 className="mb-1 text-sm font-bold text-na-green-dark dark:text-emerald-400">Outras Receitas do Mês</h3>
+      <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
+        Livraria, cursos avulsos, doações — dinheiro que não passa pelo Portal, lançado aqui pra aparecer na Transparência Financeira que os membros veem.
+      </p>
+      {registros.length === 0 ? (
+        <EmptyState text="Nenhuma receita lançada neste mês ainda." />
+      ) : (
+        <ul className="mb-4 flex flex-col gap-2">
+          {registros.map((r) => (
+            <li key={r.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3 text-sm dark:border-gray-800">
+              <div>
+                <span className="font-medium text-gray-900 dark:text-gray-100">{LABEL_OUTRAS_RECEITAS[r.category as keyof typeof LABEL_OUTRAS_RECEITAS] ?? r.category}</span>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {formatDateBR(r.receivedAt)} {r.note && `— ${r.note}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-na-green dark:text-emerald-400">{formatBRL(r.amount)}</span>
+                <button onClick={() => handleExcluir(r.id)} disabled={isPending} className="text-gray-400 hover:text-red-600">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form action={handleLancar} className="flex flex-wrap items-end gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+        <select name="category" required className="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+          {CATEGORIAS_OUTRAS_RECEITAS.map((c) => (
+            <option key={c} value={c} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">
+              {LABEL_OUTRAS_RECEITAS[c]}
+            </option>
+          ))}
+        </select>
+        <input name="amount" type="number" step="0.01" placeholder="Valor" required className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
+        <input name="receivedAt" type="date" defaultValue={hoje.toISOString().slice(0, 10)} required className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
+        <input name="note" placeholder="Nota (opcional)" className="min-w-[140px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
+        <button type="submit" disabled={isPending} className="rounded-lg bg-na-green px-3 py-2 text-sm font-semibold text-white hover:bg-na-green-dark disabled:opacity-60">
+          + Receita
+        </button>
+      </form>
+    </div>
+  );
+}
 
 type PayableRow = DirectorDashboard["despesasPendentes"][number] | DirectorDashboard["despesasRealizadas"][number];
 
@@ -289,6 +375,8 @@ export function ContasConciliacoesTab({ schoolId, data }: { schoolId: string; da
   return (
     <div className="flex flex-col gap-5">
       <MedidorConciliacao percentual={data.kpis.percentualConciliado} />
+
+      <OutrasReceitasCard schoolId={schoolId} />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
         <h3 className="mb-1 text-sm font-bold text-na-green-dark dark:text-emerald-400">Importar Extrato Bancário (OFX)</h3>
