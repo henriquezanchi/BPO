@@ -226,10 +226,11 @@ export async function getMemberDashboard(memberId: string) {
   // Portal inteiro (ver decisão do usuário 2026-09-28 sobre conquistas).
   await verificarEAtribuirConquistas(memberId).catch(() => {});
 
-  const [streakMeses, badges, levelHistory] = await Promise.all([
+  const [streakMeses, badges, levelHistory, integrationCourses] = await Promise.all([
     calcularStreakMeses(memberId),
     db.memberBadge.findMany({ where: { memberId }, orderBy: { earnedAt: "asc" } }),
     db.memberLevelHistory.findMany({ where: { memberId }, orderBy: { changedAt: "asc" } }),
+    db.memberIntegrationCourse.findMany({ where: { memberId }, orderBy: { syncedAt: "asc" } }),
   ]);
 
   return {
@@ -246,6 +247,11 @@ export async function getMemberDashboard(memberId: string) {
     streakMeses,
     badges: badges.map((b) => ({ badgeType: b.badgeType, earnedAt: b.earnedAt, ...BADGE_CATALOG[b.badgeType] })),
     levelHistory: levelHistory.map((l) => ({ nivel: l.nivel, changedAt: l.changedAt })),
+    integrationCourses: integrationCourses.map((c) => ({
+      courseName: c.courseName,
+      instructor: c.instructor,
+      date: c.courseDate ?? c.syncedAt,
+    })),
   };
 }
 

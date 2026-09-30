@@ -19,7 +19,17 @@
  * Uso: npx tsx --env-file=.env scripts/sync-composition.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirComposicao, abrirFichaDaListaAtivos, abrirListaAtivos, abrirSessaoMercurioComRetry, lerCatalogoItensDisponiveis, lerComposicao, reabrirListaAtivos } from "../src/lib/mercurio/browser-session";
+import {
+  abrirComposicao,
+  abrirFichaDaListaAtivos,
+  abrirListaAtivos,
+  abrirSessaoMercurioComRetry,
+  dataBRParaData,
+  lerCatalogoItensDisponiveis,
+  lerComposicao,
+  lerCursosIntegracao,
+  reabrirListaAtivos,
+} from "../src/lib/mercurio/browser-session";
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -42,6 +52,23 @@ async function main() {
       try {
         if (i > 0) frameAtivos = await reabrirListaAtivos(page);
         const frameFicha = await abrirFichaDaListaAtivos(page, frameAtivos, new RegExp(membro.name, "i"));
+        const cursos = await lerCursosIntegracao(frameFicha);
+        await db.$transaction(
+          cursos.map((c) =>
+            db.memberIntegrationCourse.upsert({
+              where: { memberId_courseName_dateBR: { memberId: membro.id, courseName: c.curso, dateBR: c.dataBR } },
+              update: { instructor: c.instrutor, courseDate: dataBRParaData(c.dataBR), syncedAt: new Date() },
+              create: {
+                memberId: membro.id,
+                courseName: c.curso,
+                dateBR: c.dataBR,
+                courseDate: dataBRParaData(c.dataBR),
+                instructor: c.instrutor,
+              },
+            }),
+          ),
+        );
+
         const frame = await abrirComposicao(page, frameFicha, membro.mercurioId!);
         const [itens, disponiveis] = await Promise.all([lerComposicao(frame), lerCatalogoItensDisponiveis(frame)]);
 

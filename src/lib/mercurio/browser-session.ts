@@ -181,6 +181,38 @@ export async function abrirListaAtivos(page: Page, filialLabelRegex: RegExp): Pr
 }
 
 /**
+ * Lista de Inativos de uma filial (dentro de "PROGRAMA BRANCO", mesmo
+ * frame "indice" que Ativos/Membros/Inativos/C. de Amigos — ver comentário
+ * em abrirCirculoDeAmigos). Mesmo formato de tabela (Matr./Nome), então
+ * listarAtivosResumo/abrirFichaDaListaAtivos já funcionam aqui sem mudança.
+ * Usado quando um membro saiu do relatório de Ativos mas ainda não foi
+ * incluído em nenhuma outra lista (ex: Glaubia Rocha Barbosa Relvas,
+ * 2026-09-30 — perdeu a baixa de membro antes de virar Círculo de Amigos).
+ */
+export async function abrirListaInativos(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  const cadastros = await listarLinksMenu(page, "CADASTRO");
+  const filial = cadastros.find((c) => filialLabelRegex.test(c.label));
+  if (!filial) {
+    throw new Error(`Filial batendo com ${filialLabelRegex} não encontrada entre: ${cadastros.map((c) => c.label).join(", ")}`);
+  }
+
+  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
+  await framePrincipal0.getByRole("link", { name: "CADASTRO", exact: true }).nth(filial.indice).click();
+
+  const frameIndice = await esperarFrame(page, "indice", /uni_indice\.php/, 15000);
+  await frameIndice.getByText("Inativos", { exact: true }).click();
+  // Nome do script ainda não confirmado ao vivo (só Ativos/uni_newati.php
+  // e C. de Amigos/uni_esccir.php foram checados até agora) — regex
+  // deliberadamente ampla (só exige sair do placeholder uni_contato.html e
+  // do menu uni_indice.php) pra não quebrar se o nome real divergir do
+  // palpite. uni_contato.html é a página padrão do frame "principal" logo
+  // depois de entrar em CADASTRO, antes de qualquer submenu ser clicado
+  // (confirmado ao vivo, 2026-09-30 — achado real: sem excluir também esse
+  // placeholder, a corrida pega o frame ERRADO, antes do clique navegar).
+  return esperarFrame(page, "principal", /^(?!.*uni_indice\.php)(?!.*uni_contato\.html).*\/unidade\/uni_/, 15000);
+}
+
+/**
  * Reabre a lista de Ativos da filial JÁ SELECIONADA (ver abrirListaAtivos) —
  * o frame "indice" continua mostrando o menu da filial mesmo depois de
  * abrir a ficha de um aluno, então clicar em "Ativos" de novo nele volta
@@ -758,6 +790,57 @@ export async function escreverAbaIdentificacao(frame: Frame, dados: Partial<Dado
 
   await frame.getByRole("button", { name: /gravar/i }).first().click();
   await frame.page().waitForTimeout(1500);
+}
+
+// ===================== Cursos de Formação e Integração =====================
+// Aba "CURSOS INTEGRAÇÃO" da ficha (mesmo frame de ENDEREÇOS/PESSOAIS/
+// IDENTIFICAÇÃO, ver abrirFichaDaListaAtivos) — tabela Curso de Formação /
+// Data / Instrutor. Fonte indicada pelo usuário 2026-09-30 pra completar a
+// Jornada Filosófica (print ao vivo da ficha de ANDREIA FERREIRA MAGNO
+// ZACARI, matrícula 41152, mostrando "O DISCIPULADO E AS ETAPAS DE
+// FORMAÇÃO DO INDIVÍDUO" em 26/07/2025).
+
+export interface CursoIntegracaoMercurio {
+  curso: string;
+  dataBR: string; // "dd/mm/yyyy"
+  instrutor: string;
+}
+
+/** A partir da ficha já aberta (qualquer aba), clica na aba CURSOS INTEGRAÇÃO. */
+export async function abrirAbaCursosIntegracao(frame: Frame): Promise<void> {
+  await frame.getByText(/^CURSOS INTEGRA[ÇC][ÃA]O$/i).first().click();
+  await frame.page().waitForTimeout(800);
+}
+
+export async function lerCursosIntegracao(frame: Frame): Promise<CursoIntegracaoMercurio[]> {
+  await abrirAbaCursosIntegracao(frame);
+  return frame.evaluate(() => {
+    const tabelas = Array.from(document.querySelectorAll("table"));
+    const tabela = tabelas.find((t) => {
+      const cabecalhos = Array.from(t.rows[0]?.cells ?? []).map((c) => (c as HTMLElement).innerText.trim());
+      return cabecalhos.some((c) => /curso de forma[çc][ãa]o/i.test(c)) && cabecalhos.some((c) => /^data$/i.test(c));
+    });
+    if (!tabela) return [];
+    return Array.from(tabela.rows)
+      .slice(1)
+      .map((linha) => {
+        const celulas = Array.from(linha.cells);
+        const curso = (celulas[0] as HTMLElement | undefined)?.innerText.trim() ?? "";
+        const dataBR = (celulas[1] as HTMLElement | undefined)?.innerText.trim() ?? "";
+        const instrutor = (celulas[2] as HTMLElement | undefined)?.innerText.trim() ?? "";
+        return { curso, dataBR, instrutor };
+      })
+      .filter((c) => c.curso && /^\d{2}\/\d{2}\/\d{4}$/.test(c.dataBR));
+  });
+}
+
+/** Converte "dd/mm/yyyy" (formato usado na tabela de Cursos de Integração) numa Date, ou null se inválido. */
+export function dataBRParaData(dataBR: string): Date | null {
+  const m = dataBR.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const [, dia, mes, ano] = m;
+  const data = new Date(Number(ano), Number(mes) - 1, Number(dia));
+  return Number.isNaN(data.getTime()) ? null : data;
 }
 
 // ===================== Composição das Contribuições =====================

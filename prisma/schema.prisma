@@ -258,6 +258,7 @@ model Member {
   gafRequests             GafRequest[]
   badges                  MemberBadge[]
   levelHistory            MemberLevelHistory[]
+  integrationCourses      MemberIntegrationCourse[]
   volunteerOffers         VolunteerOffer[]
   eventRegistr            EventRegistration[]
   classMemberships        ClassMembership[]
@@ -551,6 +552,27 @@ model MemberLevelHistory {
   nivel     String
   changedAt DateTime @default(now())
 
+  @@index([memberId])
+}
+
+// Cursos de Formação e Integração (aba "CURSOS INTEGRAÇÃO" da ficha do
+// aluno no Mercúrio, unidade/uni_dircur.php?matr=X) — fonte indicada pelo
+// usuário 2026-09-30 pra completar a Jornada Filosófica. O Mercúrio não
+// expõe um id estável por curso (só a tabela Curso/Data/Instrutor), então a
+// unicidade é pelo conjunto dos 3 campos — sincronizado junto com a
+// composição (ver scripts/sync-composition.ts), já que ambos exigem abrir a
+// ficha do aluno na mesma sessão.
+model MemberIntegrationCourse {
+  id         String   @id @default(cuid())
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id])
+  courseName String
+  dateBR     String // "dd/mm/aaaa" como o Mercúrio exibe
+  courseDate DateTime? // dateBR convertido, pra ordenar a timeline — null se a data vier num formato inesperado
+  instructor String
+  syncedAt   DateTime @default(now())
+
+  @@unique([memberId, courseName, dateBR])
   @@index([memberId])
 }
 

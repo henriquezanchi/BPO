@@ -1,11 +1,12 @@
 import { formatDateBR } from "@/lib/format";
-import { Award, Flame, MapPin } from "lucide-react";
+import { Award, BookOpen, Flame, MapPin } from "lucide-react";
 
 interface JornadaPanelProps {
   dataEntrada: Date;
   streakMeses: number;
   levelHistory: { nivel: string; changedAt: Date }[];
   badges: { badgeType: string; label: string; description: string; earnedAt: Date }[];
+  integrationCourses: { courseName: string; instructor: string; date: Date }[];
 }
 
 /**
@@ -14,14 +15,16 @@ interface JornadaPanelProps {
  * pelo diretor, senão Member.createdAt como aproximação — ver
  * member-data.ts). Mudança de nível só existe a partir de quando passamos
  * a capturar (2026-09-28 em diante, ver sync-monthly-status.ts) — não dá
- * pra saber retroativamente. "Cursos de integração" ainda não entra aqui —
- * falta identificar a fonte certa no Mercúrio.
+ * pra saber retroativamente. Cursos de integração vêm da aba "CURSOS
+ * INTEGRAÇÃO" da ficha do Mercúrio, fonte indicada pelo usuário
+ * 2026-09-30 — ver src/lib/mercurio/browser-session.ts#lerCursosIntegracao.
  */
-export function JornadaPanel({ dataEntrada, streakMeses, levelHistory, badges }: JornadaPanelProps) {
+export function JornadaPanel({ dataEntrada, streakMeses, levelHistory, badges, integrationCourses }: JornadaPanelProps) {
   const eventos = [
     { data: dataEntrada, titulo: "Entrou na Nova Acrópole", tipo: "entrada" as const },
     ...levelHistory.map((l) => ({ data: l.changedAt, titulo: `Passou para o nível "${l.nivel}"`, tipo: "nivel" as const })),
     ...badges.map((b) => ({ data: b.earnedAt, titulo: b.label, subtitulo: b.description, tipo: "conquista" as const })),
+    ...integrationCourses.map((c) => ({ data: c.date, titulo: c.courseName, subtitulo: `Instrutor: ${c.instructor}`, tipo: "curso" as const })),
   ].sort((a, b) => a.data.getTime() - b.data.getTime());
 
   return (
@@ -46,6 +49,7 @@ export function JornadaPanel({ dataEntrada, streakMeses, levelHistory, badges }:
             <span className="absolute top-1 -left-[21px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-na-green dark:bg-emerald-500">
               {e.tipo === "entrada" && <MapPin size={8} className="text-white" />}
               {e.tipo === "conquista" && <Award size={8} className="text-white" />}
+              {e.tipo === "curso" && <BookOpen size={8} className="text-white" />}
             </span>
             <p className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{e.titulo}</p>
             {"subtitulo" in e && e.subtitulo && <p className="text-[11px] text-gray-500 dark:text-gray-400">{e.subtitulo}</p>}

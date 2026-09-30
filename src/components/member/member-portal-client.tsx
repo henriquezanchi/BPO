@@ -327,6 +327,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               streakMeses={dashboard.streakMeses}
               levelHistory={dashboard.levelHistory}
               badges={dashboard.badges}
+              integrationCourses={dashboard.integrationCourses}
             />
           )}
           {modal === "transparencia" && <TransparenciaPanel memberId={member.id} />}
