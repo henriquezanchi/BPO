@@ -5,7 +5,8 @@ import { criarEvento, excluirEvento, marcarPresencaEvento } from "@/lib/actions/
 import { getFortunaBalancesForDirector, type FortunaBalancesForDirector } from "@/lib/actions/fortuna-actions";
 import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import type { DirectorDashboard } from "@/lib/director-data";
-import { ArrowLeft, ArrowUpDown, BadgePercent, Coffee, FileWarning, Handshake, LayoutDashboard, Search, Ticket, Trash2, Users, Wallet } from "lucide-react";
+import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
+import { ArrowLeft, ArrowUpDown, BadgePercent, CalendarClock, Coffee, FileWarning, Handshake, LayoutDashboard, Search, Ticket, Trash2, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { FortunaTab } from "./fortuna-tab";
@@ -19,6 +20,7 @@ const ABAS = [
   { id: "membros", label: "Gestão de Membros", icon: Users },
   { id: "eventos", label: "Gestão de Eventos", icon: Ticket },
   { id: "recuperacao", label: "Recup. de Crédito", icon: Handshake },
+  { id: "escolastica", label: "Escolástica", icon: CalendarClock },
   { id: "fortuna", label: "Caixa Fortuna", icon: Coffee },
   { id: "repasses", label: "Contas e Conciliações", icon: Wallet },
 ] as const;
@@ -103,6 +105,7 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
           {aba === "membros" && <MembrosTab schoolId={schoolId} data={data} filtroInicial={membrosFiltroInicial} />}
           {aba === "eventos" && <EventosTab schoolId={schoolId} data={data} />}
           {aba === "recuperacao" && <RecuperacaoTab schoolId={schoolId} data={data} />}
+          {aba === "escolastica" && <EscolasticaPanel schoolId={schoolId} />}
           {aba === "fortuna" && <FortunaTab schoolId={schoolId} data={data} balances={fortunaBalances} carregando={fortunaCarregando} />}
           {aba === "repasses" && <ContasConciliacoesTab schoolId={schoolId} data={data} />}
         </div>

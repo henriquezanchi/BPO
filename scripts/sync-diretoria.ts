@@ -8,7 +8,13 @@
  * Uso: npx tsx --env-file=.env scripts/sync-diretoria.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
-import { abrirDadosUnidade, abrirSessaoMercurioComRetry, lerDadosUnidade } from "../src/lib/mercurio/browser-session";
+import {
+  abrirDadosUnidade,
+  abrirListaColaboradores,
+  abrirSessaoMercurioComRetry,
+  lerDadosUnidade,
+  lerListaColaboradores,
+} from "../src/lib/mercurio/browser-session";
 
 async function main() {
   const filialLabel = process.argv[2];
@@ -69,6 +75,35 @@ async function main() {
   }
 
   console.log(`\n✅ Diretoria sincronizada — ${vinculados} vínculo(s) de papel, dados da unidade atualizados.`);
+
+  // Sessão NOVA (não reaproveita a de Dados da Unidade) — mesmo motivo já
+  // documentado em abrirCirculoDeAmigos: o menu de topo (ger_funcao.php) só
+  // existe logo depois do login, uma navegação anterior no MESMO frame
+  // "principal"/"indice" já o deixou pra trás.
+  const { browser: browser2, page: page2 } = await abrirSessaoMercurioComRetry();
+  let colaboradores: Awaited<ReturnType<typeof lerListaColaboradores>>;
+  try {
+    const frame = await abrirListaColaboradores(page2, new RegExp(filialLabel, "i"));
+    colaboradores = await lerListaColaboradores(frame);
+  } finally {
+    await browser2.close();
+  }
+
+  // Reset-então-marca (mesmo padrão de Diretor/Sub-Chefe acima).
+  await db.member.updateMany({ where: { schoolId: school.id }, data: { isSecretarioEscolastica: false } });
+  let secretarios = 0;
+  for (const c of colaboradores) {
+    if (!/escol[aá]stica/i.test(c.funcao)) continue;
+    const membro = await db.member.findFirst({ where: { schoolId: school.id, mercurioId: c.matricula } });
+    if (!membro) {
+      console.log(`⚠ Matrícula ${c.matricula} (Secretário de Escolástica) não tem Member local ainda.`);
+      continue;
+    }
+    await db.member.update({ where: { id: membro.id }, data: { isSecretarioEscolastica: true } });
+    console.log(`✓ ${membro.name}: isSecretarioEscolastica = true`);
+    secretarios++;
+  }
+  console.log(`Colaboradores lidos: ${colaboradores.length} — Secretário(s) de Escolástica vinculado(s): ${secretarios}.`);
 }
 
 main()

@@ -142,6 +142,7 @@ model School {
   classGroups        ClassGroup[]
   compositionCatalog SchoolCompositionCatalogItem[]
   paymentRubricas    SchoolPaymentRubrica[]
+  scholasticPendencies ScholasticPendency[]
 }
 
 model Member {
@@ -201,6 +202,12 @@ model Member {
   isDiretor             Boolean      @default(false)
   isSubChefe            Boolean      @default(false)
   direcaoSyncedAt       DateTime?
+  // Aparece em "DIRETOR > Colaboradores" (diretor/dir_unicar.php) com
+  // Função contendo "ESCOLÁSTICA" — voluntário responsável pela agenda de
+  // pendências acadêmicas (ex: transições pro Círculo de Amigos). Pedido do
+  // usuário 2026-09-30, mesmo padrão de isPedagogo/isDiretor (sinal real do
+  // Mercúrio, não bit local) — ver scripts/sync-diretoria.ts.
+  isSecretarioEscolastica Boolean    @default(false)
   // Id do cliente na carteira digital Fortuna (oinabnfortuna.acropolebrasil.com.br)
   // — numeração própria, SEM relação com mercurioId. Resolvido 1x por
   // e-mail/telefone (scripts/link-fortuna-client.ts), não por nome (mais
@@ -259,6 +266,7 @@ model Member {
   badges                  MemberBadge[]
   levelHistory            MemberLevelHistory[]
   integrationCourses      MemberIntegrationCourse[]
+  scholasticPendencies    ScholasticPendency[]
   volunteerOffers         VolunteerOffer[]
   eventRegistr            EventRegistration[]
   classMemberships        ClassMembership[]
@@ -573,6 +581,31 @@ model MemberIntegrationCourse {
   syncedAt   DateTime @default(now())
 
   @@unique([memberId, courseName, dateBR])
+  @@index([memberId])
+}
+
+// Agenda de pendências do Secretário de Escolástica — pedido do usuário
+// 2026-09-30 (caso real: Glaubia Rocha Barbosa Relvas, que precisa ser
+// incluída no Círculo de Amigos no Mercúrio numa data futura). Por ora é só
+// lembrete manual (ver conversa: não achamos, explorando ao vivo, a tela do
+// Mercúrio que executa "incluir no Círculo de Amigos" pra automatizar com
+// segurança) — `tipo` já vem com um valor conhecido ("inclusao_circulo_amigos",
+// "baixa_membro") pra facilitar filtrar/automatizar depois, se a tela certa
+// for encontrada.
+model ScholasticPendency {
+  id          String    @id @default(cuid())
+  schoolId    String
+  school      School    @relation(fields: [schoolId], references: [id])
+  memberId    String?
+  member      Member?   @relation(fields: [memberId], references: [id])
+  tipo        String
+  title       String
+  notes       String?
+  dueDate     DateTime
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([schoolId])
   @@index([memberId])
 }
 

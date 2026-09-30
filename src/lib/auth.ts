@@ -55,6 +55,22 @@ export async function requireDirector(schoolId: string) {
 }
 
 /**
+ * Confirma que quem está logado é Secretário de Escolástica OU Direção da
+ * escola informada — usado pela agenda de pendências (ver
+ * escolastica-actions.ts). Direção também gerencia porque, no piloto, ainda
+ * não existe ninguém nomeado Secretário de Escolástica em algumas filiais
+ * (ver scripts/sync-diretoria.ts) — sem isso, a agenda ficaria sem dono
+ * nenhum até o cargo ser preenchido no Mercúrio.
+ */
+export async function requireEscolasticaOuDirecao(schoolId: string) {
+  const member = await getAuthenticatedMember();
+  if (!member || member.schoolId !== schoolId || (!member.isSecretarioEscolastica && !member.isDiretor && !member.isSubChefe)) {
+    throw new Error("Não autenticado ou sem permissão de Escolástica/Direção nesta escola.");
+  }
+  return member;
+}
+
+/**
  * Confirma que o membro logado é professor da turma informada — nunca
  * confiar num createdById vindo do client (mesma lógica de defesa em
  * profundidade de requireAuthenticatedMember, aplicada ao papel de

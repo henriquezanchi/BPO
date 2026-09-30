@@ -1049,6 +1049,59 @@ export async function lerDadosUnidade(frame: Frame): Promise<DadosUnidadeMercuri
   };
 }
 
+// ===================== Diretor > Colaboradores =====================
+// "DIRETOR > Colaboradores" (diretor/dir_unicar.php) — lista as "OUTRAS
+// FUNÇÕES" da filial (voluntários com um papel formal: Colaborador da
+// Economia, da Manutenção, de Abertura de Turmas, de Eventos etc — inclui
+// "Secretário de Escolástica" quando alguém tiver esse papel atribuído,
+// confirmado ao vivo 2026-09-30 contra Barra do Garças, ainda sem ninguém
+// nessa função lá). Cada linha tem MATRÍCULA real (link pra
+// integra/int_cadfic.php?matr=X), então cruza com o Member local sem
+// heurística de nome — mesmo padrão de Diretor/Sub-Chefe.
+
+export interface ColaboradorMercurio {
+  matricula: string;
+  nome: string;
+  funcao: string;
+}
+
+/** Abre "Diretor > Colaboradores" de uma filial. */
+export async function abrirListaColaboradores(page: Page, filialLabelRegex: RegExp): Promise<Frame> {
+  const diretores = await listarLinksMenu(page, "DIRETOR");
+  const filial = diretores.find((d) => filialLabelRegex.test(d.label));
+  if (!filial) {
+    throw new Error(`Filial batendo com ${filialLabelRegex} sem link de DIRETOR entre: ${diretores.map((d) => d.label).join(", ")}`);
+  }
+
+  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
+  await framePrincipal0.getByRole("link", { name: "DIRETOR", exact: true }).nth(filial.indice).click();
+  const frameIndice = await esperarFrame(page, "indice", /_indice\.php/, 15000);
+  await frameIndice.getByText("Colaboradores", { exact: true }).click();
+  return esperarFrame(page, "principal", /dir_unicar\.php/, 15000);
+}
+
+/** Lê a tabela de Colaboradores já aberta (ver abrirListaColaboradores). */
+export async function lerListaColaboradores(frame: Frame): Promise<ColaboradorMercurio[]> {
+  return frame.evaluate(() => {
+    const tabela = Array.from(document.querySelectorAll("table")).find((t) => {
+      const cabecalhos = Array.from(t.rows[0]?.cells ?? []).map((c) => (c as HTMLElement).innerText.trim());
+      return cabecalhos.includes("Função") && cabecalhos.includes("Nome");
+    });
+    if (!tabela) return [];
+    return Array.from(tabela.rows)
+      .slice(1)
+      .map((linha) => {
+        const celulas = Array.from(linha.cells);
+        const funcao = (celulas[2] as HTMLElement | undefined)?.innerText.trim() ?? "";
+        const linkNome = linha.querySelector("a");
+        const nome = (linkNome?.textContent ?? "").trim();
+        const matricula = linkNome?.getAttribute("href")?.match(/matr=(\d+)/)?.[1] ?? "";
+        return { matricula, nome, funcao };
+      })
+      .filter((c) => c.matricula && c.funcao);
+  });
+}
+
 // ===================== Integração > Pedagogos =====================
 // Módulo diferente de novo (não Cadastro/Tesouraria) — confirmado ao vivo
 // (2026-09-15): clicar em "INTEGRAÇÃO" no menu de topo troca a página
