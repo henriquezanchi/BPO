@@ -124,11 +124,12 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
       {tourVisivel && <OnboardingTour memberId={member.id} onFechar={() => setTourVisivel(false)} />}
       <header className="relative border-b border-gray-100 bg-white px-5 pt-6 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
         <div className="absolute top-4 right-4 flex items-center gap-1">
-          <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
+          <ThemeToggle className="flex h-11 w-11 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
           <button
             onClick={() => logout()}
             title="Sair"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800"
+            aria-label="Sair"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800"
           >
             <LogOut size={16} />
           </button>
@@ -155,7 +156,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             </div>
             <button
               onClick={() => setModal("cadastro")}
-              className="flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[10px] font-semibold transition hover:bg-white/25"
+              className="flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-2 text-[10px] font-semibold transition hover:bg-white/25"
             >
               <Pencil size={11} /> Editar Dados
             </button>
@@ -279,8 +280,8 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
         href={whatsappHref(schoolWhatsapp)}
         target="_blank"
         rel="noreferrer"
-        className="fixed bottom-6 right-6 flex h-13 w-13 items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg transition hover:scale-105 sm:absolute"
-        style={{ width: 52, height: 52 }}
+        aria-label="Falar com a escola no WhatsApp"
+        className="fixed bottom-6 right-6 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg transition hover:scale-105 sm:absolute"
       >
         <MessageCircle size={26} />
       </a>
