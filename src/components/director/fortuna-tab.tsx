@@ -73,7 +73,7 @@ export function FortunaTab({
       />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-1 text-sm font-bold text-na-green-dark dark:text-emerald-400">Recargas Pagas — Falha no Crédito Automático</h3>
+        <h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Recargas Pagas — Falha no Crédito Automático</h3>
         <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
           O crédito no Fortuna já é automático assim que o PIX é confirmado. Só aparece aqui quando essa chamada falhou (membro
           desvinculado, API fora do ar etc.) — tente de novo, e só use o lançamento manual se a nova tentativa também falhar.
@@ -118,7 +118,7 @@ export function FortunaTab({
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-4 text-sm font-bold text-na-green-dark dark:text-emerald-400">Saldo por Membro</h3>
+        <h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Saldo por Membro</h3>
         {carregando ? (
           <p className="flex items-center gap-1.5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
             <Loader2 size={14} className="animate-spin" /> Buscando saldos no Fortuna...
@@ -138,7 +138,7 @@ export function FortunaTab({
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-1 text-sm font-bold text-na-green-dark dark:text-emerald-400">Membros sem vínculo Fortuna</h3>
+        <h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Membros sem vínculo Fortuna</h3>
         <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">Busca por nome direto na API do Fortuna — confirme e-mail/telefone antes de vincular (nome sozinho pode bater errado).</p>
         {data.fortunaNaoVinculados.length === 0 ? (
           <EmptyState text="Todos os membros ativos já estão vinculados." />
@@ -199,7 +199,7 @@ export function FortunaTab({
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-4 text-sm font-bold text-na-green-dark dark:text-emerald-400">Movimentações Recentes</h3>
+        <h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Movimentações Recentes</h3>
         {data.fortunaTransacoes.length === 0 ? (
           <EmptyState text="Nenhuma movimentação Fortuna registrada localmente ainda — a API do Fortuna não tem endpoint de extrato hoje, só saldo." />
         ) : (

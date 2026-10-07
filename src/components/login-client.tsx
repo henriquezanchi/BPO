@@ -53,7 +53,7 @@ export function LoginClient({ next }: { next: string }) {
           <Image src="/na-logo.png" alt="Nova Acrópole" width={160} height={48} className="h-auto w-36 dark:brightness-0 dark:invert" />
         </div>
 
-        <h1 className="mb-1 text-center text-base font-bold text-na-green-dark dark:text-emerald-400">
+        <h1 className="mb-1 text-center text-base font-black text-na-green-dark dark:text-emerald-400">
           Entrar no Portal do Membro
         </h1>
         <p className="mb-5 text-center text-xs text-gray-500 dark:text-gray-400">

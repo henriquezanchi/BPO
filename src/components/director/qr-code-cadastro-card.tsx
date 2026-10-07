@@ -26,7 +26,7 @@ export function QrCodeCadastroCard() {
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-      <h3 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-na-green-dark dark:text-emerald-400">
+      <h3 className="mb-1 flex items-center gap-1.5 text-sm font-black text-na-green-dark dark:text-emerald-400">
         <QrCode size={16} /> QR Code de Cadastro
       </h3>
       <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">

@@ -8,7 +8,7 @@ export function StudyAreaPanel() {
 
   return (
     <div className="flex flex-col items-center gap-5 py-2 text-center">
-      <BookOpen size={32} className="text-na-gold" />
+      <BookOpen size={32} className="text-na-gold-dark" />
       <div>
         <div className="mb-1 text-[15px] font-semibold text-gray-900 dark:text-gray-100">Área de Estudos</div>
         <p className="text-xs text-gray-500 dark:text-gray-400">Bons estudos!</p>

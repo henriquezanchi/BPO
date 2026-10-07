@@ -8,13 +8,13 @@ export async function GET() {
         style={{
           fontSize: 96,
           fontWeight: 700,
-          background: "#005a4b",
+          background: "#086357",
           width: "100%",
           height: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#c5a059",
+          color: "#ffca00",
         }}
       >
         NA

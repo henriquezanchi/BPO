@@ -25,7 +25,7 @@ export default async function ProfessorPage() {
       </Link>
 
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-na-green-dark">Minhas Turmas</h1>
+        <h1 className="text-xl font-black text-na-green-dark">Minhas Turmas</h1>
         <a
           href="https://pedagogia.acropolebrasil.com.br/#/home"
           target="_blank"

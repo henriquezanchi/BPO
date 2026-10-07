@@ -132,7 +132,7 @@ export function OnboardingTour({ memberId, onFechar }: { memberId: string; onFec
           <Icon size={22} className="text-na-green-dark dark:text-emerald-400" />
         </div>
 
-        <h2 className="mb-2 text-[15px] font-bold text-na-green-dark dark:text-emerald-400">{titulo}</h2>
+        <h2 className="mb-2 text-[15px] font-black text-na-green-dark dark:text-emerald-400">{titulo}</h2>
         <p className="mb-5 text-[13px] text-gray-600 dark:text-gray-400">{texto}</p>
 
         <div className="mb-4 flex items-center justify-center gap-1.5">

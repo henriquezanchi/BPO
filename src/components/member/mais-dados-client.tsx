@@ -56,7 +56,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
           >
             <ArrowLeft size={18} />
           </Link>
-          <h1 className="text-base font-bold text-na-green-dark dark:text-emerald-400">Mais Dados</h1>
+          <h1 className="text-base font-black text-na-green-dark dark:text-emerald-400">Mais Dados</h1>
         </div>
         <ThemeToggle />
       </header>

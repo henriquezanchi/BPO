@@ -22,7 +22,7 @@ export default async function EscolasticaPage() {
       <Link href="/voluntario" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700">
         <ArrowLeft size={14} /> Portal do Voluntário
       </Link>
-      <h1 className="text-xl font-bold text-na-green-dark">Escolástica</h1>
+      <h1 className="text-xl font-black text-na-green-dark">Escolástica</h1>
       <EscolasticaPanel schoolId={member.schoolId} />
     </main>
   );

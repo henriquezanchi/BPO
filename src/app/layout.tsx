@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Noto_Sans } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Fonte oficial da marca Nova Acrópole (Guia de uso de marca 2025, seção 8):
+// Noto Sans Black para títulos, Noto Sans Regular para corpo de texto — a
+// mesma fonte em todas as comunicações, escolhida pela organização por
+// cobrir a maioria dos alfabetos usados nos 50+ países onde atua.
+const notoSans = Noto_Sans({
+  variable: "--font-noto-sans",
   subsets: ["latin"],
+  weight: "variable", // dá os pesos 400 (corpo) e 900/Black (títulos) do mesmo arquivo, sem negrito sintético
 });
 
 const geistMono = Geist_Mono({
@@ -38,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${notoSans.variable} ${geistMono.variable} h-full antialiased`}
       // O script no <head> abaixo pode acrescentar "dark" a essa classe
       // antes da hidratação (evita flash do tema errado) — isso é
       // ESPERADO e sempre vai diferir do HTML renderizado pelo servidor,

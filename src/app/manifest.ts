@@ -14,7 +14,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/portal",
     display: "standalone",
     background_color: "#f4f6f8",
-    theme_color: "#005a4b",
+    theme_color: "#086357",
     icons: [
       { src: "/pwa-icon-192", sizes: "192x192", type: "image/png" },
       { src: "/pwa-icon-512", sizes: "512x512", type: "image/png" },

@@ -35,7 +35,7 @@ export function FortunaWalletCard({
   if (!atual) {
     return (
       <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <span className="mb-3 block text-[11px] font-semibold text-na-gold">
+        <span className="mb-3 block text-[11px] font-semibold text-na-gold-dark">
           <Coffee size={12} className="mr-1 inline" /> CARTEIRA DIGITAL FORTUNA
         </span>
         {loading ? (
@@ -52,7 +52,7 @@ export function FortunaWalletCard({
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-na-gold">
+        <span className="text-[11px] font-semibold text-na-gold-dark">
           <Coffee size={12} className="mr-1 inline" /> CARTEIRA DIGITAL FORTUNA
         </span>
         {balances.length > 1 && (

@@ -25,7 +25,7 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
       </Link>
 
       <div>
-        <h1 className="text-xl font-bold text-na-green-dark">{turma.name}</h1>
+        <h1 className="text-xl font-black text-na-green-dark">{turma.name}</h1>
         <p className="text-xs text-gray-500">{turma.students.length} alunos</p>
       </div>
 

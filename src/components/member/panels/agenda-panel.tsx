@@ -94,7 +94,7 @@ function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaIt
 
   return (
     <div className="rounded-xl border border-na-gold/30 bg-na-gold/5 p-3 dark:bg-na-gold/10">
-      <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold">
+      <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
         <ListChecks size={14} /> ENQUETE · {item.className}
       </div>
       <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.question}</div>
@@ -286,7 +286,7 @@ export function AgendaPanel({ memberId, items }: { memberId: string; items: Agen
             key={`evento-${item.id}`}
             className="rounded-xl border border-gray-200 p-3 dark:border-gray-700"
           >
-            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold">
+            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
               <PartyPopper size={14} /> EVENTO DA ESCOLA
             </div>
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>

@@ -13,7 +13,7 @@ export function InactiveMemberNotice({ schoolWhatsapp }: { schoolWhatsapp: strin
   return (
     <div className="flex min-h-screen items-center justify-center bg-na-bg p-5 dark:bg-gray-950">
       <div className="w-full max-w-[380px] rounded-[28px] border border-gray-200 bg-white p-6 text-center shadow-xl dark:border-gray-800 dark:bg-gray-900">
-        <h1 className="mb-2 text-base font-bold text-na-green-dark dark:text-emerald-400">Matrícula não está mais ativa</h1>
+        <h1 className="mb-2 text-base font-black text-na-green-dark dark:text-emerald-400">Matrícula não está mais ativa</h1>
         <p className="mb-5 text-sm text-gray-600 dark:text-gray-400">
           Seu login funcionou, mas seu cadastro consta como inativo na escola. Se isso não deveria ter acontecido,
           fale com a secretaria.

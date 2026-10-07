@@ -93,7 +93,7 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
       <main className="flex-1 overflow-y-auto">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-8 py-4 dark:border-gray-800 dark:bg-gray-900">
           <div>
-            <h2 className="text-lg font-bold text-na-green-dark dark:text-emerald-400">{abaAtual.label}</h2>
+            <h2 className="text-lg font-black text-na-green-dark dark:text-emerald-400">{abaAtual.label}</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">Governança Financeira — {schoolName}</p>
           </div>
         </header>
@@ -243,7 +243,7 @@ function VisaoGeralTab({
       <QrCodeCadastroCard />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-4 text-sm font-bold text-na-green-dark dark:text-emerald-400">Últimos Pagamentos PIX Confirmados</h3>
+        <h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Últimos Pagamentos PIX Confirmados</h3>
         {transacoesRecentes.length === 0 ? (
           <EmptyState text="Nenhum pagamento confirmado pelo Portal ainda." />
         ) : (
@@ -473,7 +473,7 @@ function EventosTab({ schoolId, data }: { schoolId: string; data: DirectorDashbo
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-4 text-sm font-bold text-na-green-dark dark:text-emerald-400">Novo Evento</h3>
+        <h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Novo Evento</h3>
         <form action={handleCriarEvento} className="flex flex-wrap items-end gap-2">
           <input name="title" placeholder="Título do evento" required className="min-w-[180px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
           <input name="startsAt" type="datetime-local" required className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
@@ -494,7 +494,7 @@ function EventosTab({ schoolId, data }: { schoolId: string; data: DirectorDashbo
           <div key={e.id} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-na-green-dark dark:text-emerald-400">{e.title}</h3>
+                <h3 className="text-sm font-black text-na-green-dark dark:text-emerald-400">{e.title}</h3>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   {formatDateBR(e.startsAt)} {e.price > 0 && `· ${formatBRL(e.price)}`}
                 </p>

@@ -13,27 +13,44 @@
   --background: #ffffff;
   --foreground: #171717;
 
-  /* Design tokens extraídos dos protótipos (identidade visual Nova Acrópole) */
-  --na-green: #005a4b;
-  --na-green-dark: #003d33;
-  --na-green-light: #e6f2f0;
-  --na-gold: #c5a059;
-  --na-bg: #f4f6f8;
-  --na-danger: #ef4444;
-  --na-success: #10b981;
-  --na-warning: #f59e0b;
+  /*
+   * Design tokens — valores reais do "Guia de uso de marca Nova Acrópole
+   * 2025" (seção 6, Nossas Cores), não mais aproximação dos protótipos.
+   * Verde Heket conferido pixel a pixel contra public/na-logo.png (bate
+   * exato: #086357). Dark/light são tons derivados do Heket (sem variante
+   * própria no guia); gold-dark idem, derivado do Amarelo Helios só pra
+   * uso como TEXTO sobre fundo claro — o Helios puro (#FFCA00) tem
+   * contraste 1.53:1 contra branco, bem abaixo do mínimo de 4.5:1 (WCAG
+   * AA), por isso nunca usar <na-gold> como cor de texto em fundo claro.
+   */
+  --na-green: #086357; /* Verde Heket — cor primária */
+  --na-green-dark: #054039; /* Heket escurecido ~35% */
+  --na-green-light: #e6efee; /* Heket a ~10% sobre branco */
+  --na-turquesa: #009485; /* Turquesa Kefer — cor primária */
+  --na-gold: #ffca00; /* Amarelo Helios — cor primária */
+  --na-gold-dark: #806500; /* Helios escurecido — só pra texto sobre fundo claro (contraste 5.56:1) */
+  --na-laranja: #f39300; /* Laranja Amon — cor primária */
+  --na-cinza: #d8d9db; /* Cinza Delfos — cor primária */
+  --na-bg: #f4f6f8; /* fundo neutro do app — não especificado no guia, mantido */
+  --na-danger: #da0e15; /* vermelho da paleta secundária (C4) */
+  --na-success: #017948; /* verde da paleta secundária (C9) */
+  --na-warning: #f39300; /* Laranja Amon */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-noto-sans);
   --font-mono: var(--font-geist-mono);
 
   --color-na-green: var(--na-green);
   --color-na-green-dark: var(--na-green-dark);
   --color-na-green-light: var(--na-green-light);
+  --color-na-turquesa: var(--na-turquesa);
   --color-na-gold: var(--na-gold);
+  --color-na-gold-dark: var(--na-gold-dark);
+  --color-na-laranja: var(--na-laranja);
+  --color-na-cinza: var(--na-cinza);
   --color-na-bg: var(--na-bg);
   --color-na-danger: var(--na-danger);
   --color-na-success: var(--na-success);

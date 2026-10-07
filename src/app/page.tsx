@@ -18,7 +18,7 @@ export default function Home() {
           <Image src="/na-logo.png" alt="Nova Acrópole" width={160} height={48} className="h-auto w-36 dark:brightness-0 dark:invert" />
         </div>
 
-        <h1 className="mb-1 text-lg font-bold text-na-green-dark dark:text-emerald-400">Portal do Membro</h1>
+        <h1 className="mb-1 text-lg font-black text-na-green-dark dark:text-emerald-400">Portal do Membro</h1>
         <p className="mb-6 text-xs text-gray-500 dark:text-gray-400">
           Tudo o que você precisa da sua jornada na Nova Acrópole, num só lugar.
         </p>
@@ -29,7 +29,7 @@ export default function Home() {
             <span className="text-[12px] text-gray-700 dark:text-gray-300">Pague sua contribuição por PIX, cartão ou débito automático</span>
           </div>
           <div className="flex items-center gap-3 rounded-xl bg-na-bg p-3 dark:bg-gray-800">
-            <Coffee size={18} className="shrink-0 text-na-gold" />
+            <Coffee size={18} className="shrink-0 text-na-gold-dark" />
             <span className="text-[12px] text-gray-700 dark:text-gray-300">Acompanhe e recarregue sua carteira Fortuna</span>
           </div>
           <div className="flex items-center gap-3 rounded-xl bg-na-bg p-3 dark:bg-gray-800">

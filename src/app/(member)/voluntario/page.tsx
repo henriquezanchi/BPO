@@ -28,7 +28,7 @@ export default async function VoluntarioPage() {
       <Link href="/portal" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700">
         <ArrowLeft size={14} /> Voltar ao Portal
       </Link>
-      <h1 className="text-xl font-bold text-na-green-dark">Portal do Voluntário</h1>
+      <h1 className="text-xl font-black text-na-green-dark">Portal do Voluntário</h1>
 
       <div className="flex flex-col gap-3">
         {member.isPedagogo && (
@@ -36,7 +36,7 @@ export default async function VoluntarioPage() {
             href="/professor"
             className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
               <GraduationCap size={18} />
             </div>
             <div>
@@ -51,7 +51,7 @@ export default async function VoluntarioPage() {
             href="/diretor"
             className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
               <Crown size={18} />
             </div>
             <div>
@@ -65,7 +65,7 @@ export default async function VoluntarioPage() {
           href="/voluntario/termo"
           className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
             <FileSignature size={18} />
           </div>
           <div>
@@ -79,7 +79,7 @@ export default async function VoluntarioPage() {
             href="/escolastica"
             className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
               <CalendarClock size={18} />
             </div>
             <div>
