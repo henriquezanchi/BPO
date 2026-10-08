@@ -2,18 +2,22 @@
 
 import { aprovarSolicitacaoComposicao, getSolicitacoesComposicaoPendentes, rejeitarSolicitacaoComposicao } from "@/lib/actions/economia-actions";
 import { formatBRL, formatDateBR } from "@/lib/format";
-import { Check, Loader2, X } from "lucide-react";
+import { Check, Loader2, Minus, Plus, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 type Solicitacao = Awaited<ReturnType<typeof getSolicitacoesComposicaoPendentes>>[number];
 
 /**
  * Fila de aprovação do Secretário de Economia (ou Direção, enquanto ninguém
- * tiver esse cargo no Mercúrio — ver requireEconomiaOuDirecao): item de
- * composição que o próprio membro pediu pra incluir vira um compromisso
- * financeiro que a escola ainda não sabia que existia, então fica pendente
- * aqui até alguém aprovar (grava de verdade + propaga pro Mercúrio) ou
- * rejeitar (não aplica nada).
+ * tiver esse cargo no Mercúrio — ver requireEconomiaOuDirecao). Dois tipos
+ * de pedido (ver contribution-actions.ts):
+ * - "inclusao": item novo que o membro pediu — compromisso financeiro que a
+ *   escola ainda não sabia que existia.
+ * - "remocao": item que a ESCOLA lançou direto no Mercúrio e o membro quer
+ *   tirar — precisa de aprovação porque não é self-service (diferente de
+ *   remover um item que o próprio membro incluiu).
+ * Aprovar aplica de verdade (grava/apaga + propaga pro Mercúrio); rejeitar
+ * não aplica nada.
  */
 export function EconomiaPanel({ schoolId }: { schoolId: string }) {
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[] | null>(null);
@@ -59,35 +63,48 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
         <p className="text-xs text-gray-400">Nenhuma solicitação pendente.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {solicitacoes.map((s) => (
-            <div
-              key={s.id}
-              className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[13px] dark:border-amber-900 dark:bg-amber-950/30"
-            >
-              <p className="font-semibold text-gray-900 dark:text-gray-100">{s.member.name}</p>
-              <p className="mt-1 flex justify-between text-[12px] text-gray-700 dark:text-gray-300">
-                <span>{s.label}</span>
-                <span className="font-semibold">{formatBRL(s.amount)}/mês</span>
-              </p>
-              <p className="mt-1 text-[10px] text-gray-400">Solicitado em {formatDateBR(s.createdAt)}</p>
-              <div className="mt-2 flex gap-2">
-                <button
-                  onClick={() => handleAprovar(s.id)}
-                  disabled={isPending}
-                  className="inline-flex items-center gap-1 rounded-lg bg-na-green px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
-                >
-                  <Check size={12} /> Aprovar
-                </button>
-                <button
-                  onClick={() => handleRejeitar(s.id)}
-                  disabled={isPending}
-                  className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  <X size={12} /> Rejeitar
-                </button>
+          {solicitacoes.map((s) => {
+            const ehRemocao = s.tipo === "remocao";
+            return (
+              <div
+                key={s.id}
+                className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[13px] dark:border-amber-900 dark:bg-amber-950/30"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">{s.member.name}</p>
+                  <span
+                    className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                      ehRemocao ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                    }`}
+                  >
+                    {ehRemocao ? <Minus size={10} /> : <Plus size={10} />}
+                    {ehRemocao ? "Remover" : "Incluir"}
+                  </span>
+                </div>
+                <p className="mt-1 flex justify-between text-[12px] text-gray-700 dark:text-gray-300">
+                  <span>{s.label}</span>
+                  <span className="font-semibold">{formatBRL(s.amount)}/mês</span>
+                </p>
+                <p className="mt-1 text-[10px] text-gray-400">Solicitado em {formatDateBR(s.createdAt)}</p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => handleAprovar(s.id)}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-1 rounded-lg bg-na-green px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+                  >
+                    <Check size={12} /> Aprovar
+                  </button>
+                  <button
+                    onClick={() => handleRejeitar(s.id)}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    <X size={12} /> Rejeitar
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

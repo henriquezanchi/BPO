@@ -2,8 +2,33 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
+
+/** Doação é exceção à trava de inclusão — ver solicitarItemComposicao. */
+const REGEX_DOACAO = /doa[cç][aã]o/i;
+
+/**
+ * Quantos dias ÚTEIS (seg-sex, sem feriados) se passaram ESTRITAMENTE depois
+ * do dia de "desde" até o dia de "ate" (ambos considerados na data, não na
+ * hora). Ex: inclusão numa sexta, hoje é segunda seguinte -> 1 dia útil
+ * (só a própria segunda conta; sábado/domingo não contam).
+ */
+function diasUteisDecorridos(desde: Date, ate: Date): number {
+  const cursor = new Date(Date.UTC(desde.getUTCFullYear(), desde.getUTCMonth(), desde.getUTCDate()));
+  const fim = new Date(Date.UTC(ate.getUTCFullYear(), ate.getUTCMonth(), ate.getUTCDate()));
+  let dias = 0;
+  while (cursor < fim) {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    const diaSemana = cursor.getUTCDay();
+    if (diaSemana !== 0 && diaSemana !== 6) dias++;
+  }
+  return dias;
+}
+
+function mesmoDiaUTC(a: Date, b: Date): boolean {
+  return a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth() && a.getUTCDate() === b.getUTCDate();
+}
 
 /**
  * Solicita a inclusão de um item novo (categoria escolhida pelo membro, do
@@ -13,9 +38,11 @@ import { revalidatePath } from "next/cache";
  * sabe que existe, então vira uma SOLICITAÇÃO (CompositionChangeRequest,
  * status "pendente") em vez de aplicar direto — só o Secretário de
  * Economia aprovando (ver economia-actions.ts) grava de verdade em
- * ContributionCompositionItem e propaga pro Mercúrio. Editar/remover um
- * item que o próprio membro já incluiu continua self-service (funções
- * abaixo, inalteradas) — baixo risco, já tem a trava de addedViaPortal.
+ * ContributionCompositionItem e propaga pro Mercúrio.
+ *
+ * EXCEÇÃO (pedido do usuário 2026-10-08): doação aplica direto, sem
+ * aprovação — não é um compromisso recorrente que preocupe a Economia, só
+ * entra na fila de sincronização normal, igual a editar/remover.
  */
 export async function solicitarItemComposicao(memberId: string, mercurioGroupId: string, label: string, valor: number) {
   await requireAuthenticatedMember(memberId);
@@ -24,21 +51,37 @@ export async function solicitarItemComposicao(memberId: string, mercurioGroupId:
     return { ok: false as const, error: "Valor inválido." };
   }
 
+  if (REGEX_DOACAO.test(label)) {
+    const item = await db.contributionCompositionItem.create({
+      data: { memberId, mercurioGroupId, label, amount: valor, addedViaPortal: true },
+    });
+    await enqueueMercurioCompositionAdd(memberId, mercurioGroupId, label, valor);
+    revalidatePath("/portal");
+    return { ok: true as const, aplicadoDireto: true as const, item: { ...item, amount: Number(item.amount), pendingSync: true } };
+  }
+
   const solicitacao = await db.compositionChangeRequest.create({
-    data: { memberId, mercurioGroupId, label, amount: valor },
+    data: { memberId, mercurioGroupId, label, amount: valor, tipo: "inclusao" },
   });
   revalidatePath("/portal");
   return { ok: true as const, solicitado: true as const, id: solicitacao.id };
 }
 
-/** Pra UI mostrar as solicitações do próprio membro ainda não revisadas. */
+/** Pra UI mostrar as solicitações do próprio membro ainda não revisadas (inclusão E remoção). */
 export async function getSolicitacoesComposicaoDoMembro(memberId: string) {
   await requireAuthenticatedMember(memberId);
   const pendentes = await db.compositionChangeRequest.findMany({
     where: { memberId, status: "pendente" },
     orderBy: { createdAt: "desc" },
   });
-  return pendentes.map((p) => ({ id: p.id, label: p.label, amount: Number(p.amount), createdAt: p.createdAt }));
+  return pendentes.map((p) => ({
+    id: p.id,
+    tipo: p.tipo as "inclusao" | "remocao",
+    compositionItemId: p.compositionItemId,
+    label: p.label,
+    amount: Number(p.amount),
+    createdAt: p.createdAt,
+  }));
 }
 
 /**
@@ -68,18 +111,57 @@ export async function updateContributionItemValue(memberId: string, compositionI
   return { ok: true as const, pending: true as const, item: { ...salvo, amount: Number(salvo.amount), pendingSync: true } };
 }
 
+const DIAS_UTEIS_MINIMOS_PARA_REMOVER = 3;
+
 /**
- * Remove um item — só permitido se o PRÓPRIO membro o incluiu pelo Portal
- * (addedViaPortal). Remove local na hora (otimista) e só enfileira a
- * exclusão real no Mercúrio — mesmo motivo do updateContributionItemValue.
+ * Remove um item. Duas situações bem diferentes (pedido do usuário
+ * 2026-10-08):
+ *
+ * 1) Item que o PRÓPRIO membro incluiu pelo Portal (addedViaPortal) — self-
+ *    service, MAS com janela de segurança: no mesmo dia da inclusão ainda
+ *    não sensibilizou o Mercúrio, então remove na hora; depois do mesmo dia,
+ *    só libera de novo depois de 3 dias úteis (tempo de sobra pra qualquer
+ *    cobrança gerada nesse meio-tempo aparecer e ser tratada à parte) — no
+ *    meio do caminho (dia 1 até o 3º dia útil) fica bloqueado de propósito.
+ *
+ * 2) Item que a ESCOLA lançou direto no Mercúrio (!addedViaPortal) — nunca
+ *    foi self-service, mas antes simplesmente não tinha caminho nenhum. Agora
+ *    vira uma SOLICITAÇÃO de remoção (CompositionChangeRequest, tipo
+ *    "remocao"), que só o Secretário de Economia aprova — mesma fila da
+ *    inclusão, só que pra tirar em vez de incluir.
  */
 export async function removeContributionItem(memberId: string, compositionItemId: string) {
   await requireAuthenticatedMember(memberId);
 
   const item = await db.contributionCompositionItem.findUniqueOrThrow({ where: { id: compositionItemId } });
   if (item.memberId !== memberId) throw new Error("Este item não pertence a este membro.");
+
   if (!item.addedViaPortal) {
-    return { ok: false as const, error: "Este item foi lançado pela secretaria e não pode ser removido pelo Portal." };
+    const jaTemPedido = await db.compositionChangeRequest.findFirst({
+      where: { compositionItemId, status: "pendente", tipo: "remocao" },
+    });
+    if (jaTemPedido) return { ok: false as const, error: "Já existe uma solicitação de remoção deste item aguardando aprovação." };
+
+    await db.compositionChangeRequest.create({
+      data: {
+        memberId,
+        tipo: "remocao",
+        compositionItemId: item.id,
+        mercurioGroupId: item.mercurioGroupId,
+        label: item.label,
+        amount: item.amount,
+      },
+    });
+    revalidatePath("/portal");
+    return { ok: true as const, solicitado: true as const };
+  }
+
+  const agora = new Date();
+  if (!mesmoDiaUTC(item.createdAt, agora) && diasUteisDecorridos(item.createdAt, agora) < DIAS_UTEIS_MINIMOS_PARA_REMOVER) {
+    return {
+      ok: false as const,
+      error: `Esse item já foi sincronizado com o Mercúrio — só dá pra remover no mesmo dia da inclusão ou depois de ${DIAS_UTEIS_MINIMOS_PARA_REMOVER} dias úteis (garante que nenhuma cobrança gerada nesse meio-tempo fique sem tratamento).`,
+    };
   }
 
   await db.contributionCompositionItem.delete({ where: { id: compositionItemId } });

@@ -4,7 +4,7 @@ import { getSolicitacoesComposicaoDoMembro, removeContributionItem, solicitarIte
 import { formatBRL } from "@/lib/format";
 import type { SerializedCompositionItem } from "@/lib/member-data";
 import type { MercurioCatalogItem } from "@/lib/mercurio";
-import { AlertTriangle, Check, Clock, Loader2, Lock, Pencil, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, Clock, Loader2, Lock, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 export function MyContributionPanel({
@@ -31,6 +31,7 @@ export function MyContributionPanel({
   const [isSavingEdit, startSaveEdit] = useTransition();
 
   const total = items.reduce((soma, i) => soma + i.amount, 0);
+  const idsComRemocaoPendente = new Set(solicitacoes.filter((s) => s.tipo === "remocao").map((s) => s.compositionItemId));
 
   useEffect(() => {
     getSolicitacoesComposicaoDoMembro(memberId).then(setSolicitacoes);
@@ -53,10 +54,16 @@ export function MyContributionPanel({
         return;
       }
       setCatalog((prev) => prev.filter((c) => c.value !== selectedGroup));
-      setSolicitacoes((prev) => [...prev, { id: res.id, label, amount: valor, createdAt: new Date() }]);
       setSelectedGroup("");
       setNewItemValue("");
-      setNotice(`Solicitação de "${label}" enviada — aguardando aprovação da Economia.`);
+      if (res.aplicadoDireto) {
+        // Doação: aplica direto, sem aprovação (ver solicitarItemComposicao).
+        setItems((prev) => [...prev, res.item]);
+        setNotice(`"${label}" incluído — a confirmação no Mercúrio pode levar até 24h.`);
+      } else {
+        setSolicitacoes((prev) => [...prev, { id: res.id, tipo: "inclusao" as const, compositionItemId: null, label, amount: valor, createdAt: new Date() }]);
+        setNotice(`Solicitação de "${label}" enviada — aguardando aprovação da Economia.`);
+      }
     });
   }
 
@@ -96,6 +103,15 @@ export function MyContributionPanel({
         setError(res.error ?? "Falha ao excluir item.");
         return;
       }
+      if (res.solicitado) {
+        // Item lançado pela escola no Mercúrio — vira pedido pra Economia aprovar, não some da lista.
+        setSolicitacoes((prev) => [
+          ...prev,
+          { id: `temp-${item.id}`, tipo: "remocao" as const, compositionItemId: item.id, label: item.label, amount: item.amount, createdAt: new Date() },
+        ]);
+        setNotice(`Solicitação pra remover "${item.label}" enviada — aguardando aprovação da Economia.`);
+        return;
+      }
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       setNotice("Item removido — a confirmação no Mercúrio pode levar até 24h.");
     });
@@ -110,61 +126,83 @@ export function MyContributionPanel({
           <p className="p-3 text-xs text-gray-500 dark:text-gray-400">Nenhum item na sua composição ainda.</p>
         ) : (
           <div className="flex flex-col divide-y divide-gray-100 dark:divide-gray-800">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className={`flex items-center justify-between gap-2 p-2.5 text-[13px] ${
-                  item.pendingSync ? "bg-amber-50 dark:bg-amber-950/20" : ""
-                }`}
-              >
-                <span className="flex flex-col gap-0.5">
-                  <span className="flex items-center gap-1.5">
-                    {!item.addedViaPortal && <Lock size={11} className="shrink-0 text-gray-400" />}
-                    {item.label}
-                  </span>
-                  {item.pendingSync && (
-                    <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                      <Clock size={10} /> Aguardando confirmação no Mercúrio
+            {items.map((item) => {
+              const remocaoPendente = idsComRemocaoPendente.has(item.id);
+              return (
+                <div
+                  key={item.id}
+                  className={`flex items-center justify-between gap-2 p-2.5 text-[13px] ${
+                    item.pendingSync || remocaoPendente ? "bg-amber-50 dark:bg-amber-950/20" : ""
+                  }`}
+                >
+                  <span className="flex flex-col gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      {!item.addedViaPortal && <Lock size={11} className="shrink-0 text-gray-400" />}
+                      {item.label}
                     </span>
-                  )}
-                </span>
-                {editingId === item.id ? (
-                  <div className="flex items-center gap-1">
-                    <input
-                      autoFocus
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSaveEdit(item)}
-                      className="w-20 rounded-md border border-gray-200 p-1 text-right text-[13px] outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                    />
-                    <button
-                      onClick={() => handleSaveEdit(item)}
-                      disabled={isSavingEdit}
-                      title="Salvar"
-                      className="text-gray-400 transition hover:text-na-green disabled:opacity-60"
-                    >
-                      {isSavingEdit ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-                    </button>
-                    <button onClick={() => setEditingId(null)} title="Cancelar" className="text-gray-400 transition hover:text-red-600">
-                      <X size={13} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <strong>{formatBRL(item.amount)}</strong>
-                    {item.addedViaPortal && (
-                      <>
-                        <button
-                          onClick={() => handleStartEdit(item)}
-                          title="Alterar valor deste item"
-                          className="text-gray-400 transition hover:text-na-green"
-                        >
-                          <Pencil size={13} />
-                        </button>
+                    {item.pendingSync && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                        <Clock size={10} /> Aguardando confirmação no Mercúrio
+                      </span>
+                    )}
+                    {remocaoPendente && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                        <Clock size={10} /> Remoção aguardando aprovação da Economia
+                      </span>
+                    )}
+                  </span>
+                  {editingId === item.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSaveEdit(item)}
+                        className="w-20 rounded-md border border-gray-200 p-1 text-right text-[13px] outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                      />
+                      <button
+                        onClick={() => handleSaveEdit(item)}
+                        disabled={isSavingEdit}
+                        title="Salvar"
+                        className="text-gray-400 transition hover:text-na-green disabled:opacity-60"
+                      >
+                        {isSavingEdit ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                      </button>
+                      <button onClick={() => setEditingId(null)} title="Cancelar" className="text-gray-400 transition hover:text-red-600">
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <strong>{formatBRL(item.amount)}</strong>
+                      {item.addedViaPortal && (
+                        <>
+                          <button
+                            onClick={() => handleStartEdit(item)}
+                            title="Alterar valor deste item"
+                            className="text-gray-400 transition hover:text-na-green"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleRemove(item)}
+                            disabled={isRemoving && removingId === item.id}
+                            title="Excluir item incluído por você"
+                            className="text-gray-400 transition hover:text-red-600 disabled:opacity-60"
+                          >
+                            {isRemoving && removingId === item.id ? (
+                              <Loader2 size={13} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={13} />
+                            )}
+                          </button>
+                        </>
+                      )}
+                      {!item.addedViaPortal && (
                         <button
                           onClick={() => handleRemove(item)}
-                          disabled={isRemoving && removingId === item.id}
-                          title="Excluir item incluído por você"
+                          disabled={(isRemoving && removingId === item.id) || remocaoPendente}
+                          title="Solicitar remoção deste item à Economia"
                           className="text-gray-400 transition hover:text-red-600 disabled:opacity-60"
                         >
                           {isRemoving && removingId === item.id ? (
@@ -173,12 +211,12 @@ export function MyContributionPanel({
                             <Trash2 size={13} />
                           )}
                         </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
         {items.length > 0 && (
@@ -190,7 +228,7 @@ export function MyContributionPanel({
       </div>
 
       <p className="mb-2 flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
-        <Lock size={10} /> Itens com cadeado foram lançados pela secretaria e não podem ser alterados por aqui.
+        <Lock size={10} /> Itens com cadeado foram lançados pela secretaria — remover exige aprovação da Economia.
       </p>
 
       {solicitacoes.length > 0 && (
@@ -200,8 +238,11 @@ export function MyContributionPanel({
           </div>
           <ul className="flex flex-col gap-1">
             {solicitacoes.map((s) => (
-              <li key={s.id} className="flex justify-between text-[12px] text-amber-800 dark:text-amber-300">
-                <span>{s.label}</span>
+              <li key={s.id} className="flex items-center justify-between gap-2 text-[12px] text-amber-800 dark:text-amber-300">
+                <span className="flex items-center gap-1">
+                  {s.tipo === "remocao" ? <Minus size={11} /> : <Plus size={11} />}
+                  {s.label}
+                </span>
                 <span className="font-semibold">{formatBRL(s.amount)}</span>
               </li>
             ))}
@@ -245,6 +286,7 @@ export function MyContributionPanel({
                 Incluir
               </button>
             </div>
+            <p className="text-[10px] text-gray-400">Doações entram direto, sem precisar de aprovação. Outros itens ficam pendentes até a Economia aprovar.</p>
           </div>
         )}
       </div>

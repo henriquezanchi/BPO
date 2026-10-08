@@ -314,15 +314,16 @@ model Contribution {
 // esses podem ser editados/excluídos por ele; itens que já vieram do
 // Mercúrio (lançados pela tesouraria) são só leitura no Portal.
 model ContributionCompositionItem {
-  id              String   @id @default(cuid())
-  memberId        String
-  member          Member   @relation(fields: [memberId], references: [id])
-  mercurioGroupId String // "grp" no Mercúrio
-  label           String // "CONTRIBUIÇÃO BIBLIOTECA"
-  amount          Decimal  @db.Decimal(10, 2)
-  addedViaPortal  Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String                     @id @default(cuid())
+  memberId          String
+  member            Member                     @relation(fields: [memberId], references: [id])
+  mercurioGroupId   String // "grp" no Mercúrio
+  label             String // "CONTRIBUIÇÃO BIBLIOTECA"
+  amount            Decimal                    @db.Decimal(10, 2)
+  addedViaPortal    Boolean                    @default(false)
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  removalRequests   CompositionChangeRequest[]
 
   @@unique([memberId, mercurioGroupId])
   @@index([memberId])
@@ -335,17 +336,26 @@ model ContributionCompositionItem {
 // "valor antigo" (é sempre inclusão, nunca edição). Editar/remover um item
 // que o próprio membro já incluiu continua self-service (ver
 // contribution-actions.ts) — baixo risco, já tem a trava de
-// addedViaPortal.
+// addedViaPortal. Doação é exceção à inclusão (ver solicitarItemComposicao):
+// aplica direto, sem passar por aqui.
+//
+// Também cobre REMOÇÃO (tipo="remocao", pedido do usuário 2026-10-08): tirar
+// um item que a ESCOLA lançou direto no Mercúrio (addedViaPortal=false) não é
+// self-service — vira pedido aqui também, referenciando compositionItemId. O
+// item continua existindo normalmente até a aprovação.
 model CompositionChangeRequest {
-  id              String    @id @default(cuid())
-  memberId        String
-  member          Member    @relation(fields: [memberId], references: [id])
-  mercurioGroupId String
-  label           String
-  amount          Decimal   @db.Decimal(10, 2)
-  status          String    @default("pendente") // "pendente" | "aprovado" | "rejeitado"
-  reviewedAt      DateTime?
-  createdAt       DateTime  @default(now())
+  id                String                    @id @default(cuid())
+  memberId          String
+  member            Member                    @relation(fields: [memberId], references: [id])
+  tipo              String                    @default("inclusao") // "inclusao" | "remocao"
+  compositionItemId String? // só em "remocao" — item de verdade que será removido se aprovado
+  compositionItem   ContributionCompositionItem? @relation(fields: [compositionItemId], references: [id])
+  mercurioGroupId   String
+  label             String
+  amount            Decimal                   @db.Decimal(10, 2)
+  status            String                    @default("pendente") // "pendente" | "aprovado" | "rejeitado"
+  reviewedAt        DateTime?
+  createdAt         DateTime                  @default(now())
 
   @@index([memberId])
 }
