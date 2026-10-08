@@ -1162,3 +1162,17 @@ model ErrorNotification {
   firstSeenAt    DateTime @default(now())
   lastNotifiedAt DateTime
 }
+
+// Pedido do usuário 2026-10-08: card de divulgação da Acrópole Play no
+// Portal (lançamento/série em destaque) — SINGLETON (id fixo "global", não
+// por escola: é a mesma plataforma nacional pra todo mundo). Atualizado
+// manualmente (não raspado do site deles — conteúdo deles muda toda hora e
+// é frágil demais pra depender de scraping aqui). Sem registro = card não
+// aparece (ver acropoleplay-highlight-actions.ts).
+model AcropolePlayHighlight {
+  id          String   @id @default("global")
+  titulo      String
+  descricao   String
+  imagemUrl   String?
+  updatedAt   DateTime @updatedAt
+}

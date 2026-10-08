@@ -26,6 +26,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
 import { InstallPrompt } from "./install-prompt";
+import { AcropolePlayHighlightCard } from "./acropoleplay-highlight-card";
 import { NudgeCard } from "./nudge-card";
 import { OnboardingTour } from "./onboarding-tour";
 import { AgendaPanel } from "./panels/agenda-panel";
@@ -186,6 +187,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
 
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         <NudgeCard memberId={member.id} />
+        <AcropolePlayHighlightCard memberId={member.id} />
 
         {/* Status financeiro */}
         <div
