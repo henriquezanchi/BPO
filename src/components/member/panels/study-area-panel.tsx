@@ -1,9 +1,10 @@
 "use client";
 
-import { BookOpen, BookOpenText, Clapperboard, FileText, PlaySquare } from "lucide-react";
+import { AcropolePlayButton } from "@/components/member/acropoleplay-button";
+import { BookOpen, BookOpenText, FileText, PlaySquare } from "lucide-react";
 import { useState } from "react";
 
-export function StudyAreaPanel() {
+export function StudyAreaPanel({ memberId }: { memberId: string }) {
   const [apostilasAvisoAtivo, setApostilasAvisoAtivo] = useState(false);
 
   return (
@@ -15,14 +16,7 @@ export function StudyAreaPanel() {
       </div>
 
       <div className="flex w-full flex-col gap-2.5">
-        <a
-          href="https://acropoleplay.com"
-          target="_blank"
-          rel="noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green-dark px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-        >
-          <Clapperboard size={16} /> Acrópole Play — vídeos e séries
-        </a>
+        <AcropolePlayButton memberId={memberId} />
         <a
           href="https://biblioteca.acropolebrasil.com.br/"
           target="_blank"

@@ -285,6 +285,15 @@ model Member {
   // mais pessoal e ajuda a diretoria a reconhecer quem é quem.
   avatarPath        String?
 
+  // Login da Acrópole Play (membros.acropoleplay.com) — pedido do usuário
+  // 2026-10-08: solução PROVISÓRIA até confirmar se existe API/SSO oficial
+  // (ver acropoleplay-actions.ts). Senha cifrada (AES-256-GCM, ver
+  // src/lib/crypto-secrets.ts) — NUNCA logada nem devolvida em texto puro
+  // fora da própria ação de login automático, que só roda pro dono
+  // autenticado da conta.
+  acropolePlayEmail       String?
+  acropolePlaySenhaCifrada String?
+
   contributions           Contribution[]
   compositionItems        ContributionCompositionItem[]
   compositionRequests     CompositionChangeRequest[]
