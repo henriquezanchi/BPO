@@ -21,6 +21,11 @@
 import { db } from "../src/lib/db";
 import { abrirFichasContribuicao, abrirSessaoMercurioComRetry, lerFichasContribuicao } from "../src/lib/mercurio/browser-session";
 
+const inicio = Date.now();
+function duracao(): string {
+  return `${((Date.now() - inicio) / 60_000).toFixed(1)}min`;
+}
+
 async function main() {
   const filialLabel = process.argv[2];
   if (!filialLabel) throw new Error('Uso: npx tsx scripts/sync-monthly-status.ts "<mercurioFilialLabel>"');
@@ -85,13 +90,13 @@ async function main() {
   }
 
   console.log(`\nSituação mensal sincronizada pra ${processados}/${membrosConhecidos.length} membros conhecidos.`);
-  console.log("\n✅ Sincronização concluída.");
+  console.log(`\n✅ Sincronização concluída em ${duracao()}.`);
 }
 
 main()
   .then(() => db.$disconnect())
   .catch(async (e) => {
-    console.error("ERRO:", e);
+    console.error(`ERRO após ${duracao()}:`, e);
     await db.$disconnect();
     process.exit(1);
   });

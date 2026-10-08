@@ -38,6 +38,11 @@ function dataBrParaData(dateBR: string): Date {
   return new Date(Date.UTC(ano, mes - 1, dia, 12));
 }
 
+const inicio = Date.now();
+function duracao(): string {
+  return `${((Date.now() - inicio) / 60_000).toFixed(1)}min`;
+}
+
 async function main() {
   const filialLabel = process.argv[2];
   const meses = parseInt(process.argv[3] ?? "3", 10);
@@ -142,13 +147,13 @@ async function main() {
     await browser.close();
   }
 
-  console.log("\n✅ Sincronização concluída.");
+  console.log(`\n✅ Sincronização concluída em ${duracao()}.`);
 }
 
 main()
   .then(() => db.$disconnect())
   .catch(async (e) => {
-    console.error("ERRO:", e);
+    console.error(`ERRO após ${duracao()}:`, e);
     await db.$disconnect();
     process.exit(1);
   });

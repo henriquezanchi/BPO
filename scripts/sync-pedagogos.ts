@@ -11,6 +11,11 @@
 import { db } from "../src/lib/db";
 import { abrirListaPedagogos, abrirSessaoMercurioComRetry, lerListaPedagogos } from "../src/lib/mercurio/browser-session";
 
+const inicio = Date.now();
+function duracao(): string {
+  return `${((Date.now() - inicio) / 60_000).toFixed(1)}min`;
+}
+
 async function main() {
   const filialLabel = process.argv[2];
   if (!filialLabel) throw new Error('Uso: npx tsx scripts/sync-pedagogos.ts "<mercurioFilialLabel>"');
@@ -42,13 +47,13 @@ async function main() {
     await db.member.update({ where: { id: membro.id }, data: { isPedagogo, pedagogoSyncedAt: agora } });
   }
 
-  console.log("\n✅ Sincronização concluída.");
+  console.log(`\n✅ Sincronização concluída em ${duracao()}.`);
 }
 
 main()
   .then(() => db.$disconnect())
   .catch(async (e) => {
-    console.error("ERRO:", e);
+    console.error(`ERRO após ${duracao()}:`, e);
     await db.$disconnect();
     process.exit(1);
   });

@@ -22,6 +22,11 @@ function normalizar(s: string) {
     .replace(/[̀-ͯ]/g, "");
 }
 
+const inicio = Date.now();
+function duracao(): string {
+  return `${((Date.now() - inicio) / 60_000).toFixed(1)}min`;
+}
+
 async function main() {
   const filialLabel = process.argv[2];
   if (!filialLabel) throw new Error('Uso: npx tsx scripts/sync-teacher-classes.ts "<mercurioFilialLabel>"');
@@ -74,7 +79,7 @@ async function main() {
     }
   }
 
-  console.log(`\n✅ ${vinculosCriados} vínculo(s) novo(s) criado(s).`);
+  console.log(`\n✅ ${vinculosCriados} vínculo(s) novo(s) criado(s) em ${duracao()}.`);
   if (semMatch.size > 0) {
     console.log(`⚠ Professor(es) na Escala sem Member local (isPedagogo=true) correspondente: ${[...semMatch].join(", ")}`);
   }
@@ -83,7 +88,7 @@ async function main() {
 main()
   .then(() => db.$disconnect())
   .catch(async (e) => {
-    console.error("ERRO:", e);
+    console.error(`ERRO após ${duracao()}:`, e);
     await db.$disconnect();
     process.exit(1);
   });
