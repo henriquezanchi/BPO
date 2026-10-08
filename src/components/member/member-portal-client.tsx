@@ -26,6 +26,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
 import { InstallPrompt } from "./install-prompt";
+import { NudgeCard } from "./nudge-card";
 import { OnboardingTour } from "./onboarding-tour";
 import { AgendaPanel } from "./panels/agenda-panel";
 import { ContributionStatusPanel } from "./panels/contribution-status-panel";
@@ -184,6 +185,8 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
       <InstallPrompt />
 
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
+        <NudgeCard memberId={member.id} />
+
         {/* Status financeiro */}
         <div
           data-tour-id="contribuicao-status"

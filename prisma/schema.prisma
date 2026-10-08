@@ -219,6 +219,15 @@ model Member {
   // Mercúrio, a API do Fortuna é rápida (REST normal, sem RPA) — o saldo é
   // lido ao vivo a cada carregamento do Portal, não sincronizado/cacheado.
   fortunaClientId       Int?         @unique
+  // Valor fixo mensal de crédito Fortuna cobrado JUNTO de toda cobrança
+  // futura (manual ou automática via Pix Automático) — pedido do usuário
+  // 2026-10-08, oferecido como nudge (ver nudge-actions.ts). Null = sem
+  // recorrência (comportamento de sempre); quando preenchido,
+  // process-pix-automatico.ts soma isso no ciclo automático e
+  // PaymentCharge.fortunaTopUpAmount credita na confirmação (mesmo
+  // mecanismo já usado pro avulso).
+  fortunaTopUpRecorrente Decimal?    @db.Decimal(10, 2)
+  nudgeStates           MemberNudgeState[]
   status                MemberStatus @default(em_dia)
   createdAt             DateTime     @default(now())
   // "Anotações Econômicas sobre o Aluno" — textarea da tela de Composição
@@ -360,6 +369,24 @@ model CompositionChangeRequest {
   @@index([memberId])
 }
 
+// Pedido do usuário 2026-10-08: estado de "nudge" de contribuição extra
+// (crédito recorrente no Fortuna, doação Biblioteca, Criança pelo Bem — ver
+// catálogo fixo em nudge-actions.ts) por membro, pra não repetir uma
+// sugestão que ele já adiou ou recusou. "adiado" só esconde até
+// snoozedUntil (1º dia do mês seguinte); "recusado" esconde pra sempre.
+model MemberNudgeState {
+  id           String    @id @default(cuid())
+  memberId     String
+  member       Member    @relation(fields: [memberId], references: [id])
+  suggestionId String // chave fixa do catálogo, ex: "fortuna-recorrente"
+  status       String // "adiado" | "recusado"
+  snoozedUntil DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([memberId, suggestionId])
+}
+
 // Catálogo de tipos de rubrica ("Itens de Contribuição") de uma filial,
 // sincronizado periodicamente (scripts/sync-composition.ts) em vez de lido
 // ao vivo a cada clique no Portal — na prática são poucos tipos fixos por
@@ -478,6 +505,13 @@ model PaymentCharge {
   // só pra transparência no Painel do Diretor (distinguir de cobrança
   // manual criada quando o aluno clicou em "pagar").
   autoDebito             Boolean      @default(false)
+  // Snapshot do Member.status NA HORA em que esta cobrança foi criada —
+  // pedido do usuário 2026-10-08: "reversão de inadimplência" (ver
+  // getCrescimentoContribuicoes em economia-actions.ts) é a soma de
+  // cobranças PAGAS que foram criadas enquanto o membro estava "atrasado"
+  // ou "negociando". Não dá pra inferir isso depois pelo status atual
+  // (ele já mudou pra "em_dia" assim que pagou) — precisa do snapshot.
+  memberWasOverdue Boolean      @default(false)
   paidAt          DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt

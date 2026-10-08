@@ -21,6 +21,7 @@ import { asaasCreatePixAutomaticCharge, asaasGetPaymentStatus } from "../src/lib
 import { confirmarPagamento } from "../src/lib/asaas/confirm-payment";
 import { calcularSplitEscola } from "../src/lib/asaas/split";
 import { db } from "../src/lib/db";
+import { OVERDUE_STATUSES } from "../src/lib/member-data";
 
 const DIA_VENCIMENTO = 10;
 const JANELA_MIN_DIAS_UTEIS = 2;
@@ -90,13 +91,20 @@ async function criarCicloSeguinte() {
     const valor = itens.reduce((soma, i) => soma + Number(i.amount), 0);
     if (valor <= 0) continue;
 
+    // Crédito Fortuna recorrente (ver nudge-actions.ts) — mesmo "gross-up" do
+    // fluxo avulso em createContributionCharge: soma no valor cobrado, mas
+    // amount/fortunaTopUpAmount ficam separados no registro pra
+    // confirmarPagamento creditar o Fortuna automaticamente na confirmação.
+    const fortunaTopUpAmount = membro.fortunaTopUpRecorrente ? Number(membro.fortunaTopUpRecorrente) : 0;
+    const valorBase = valor + fortunaTopUpAmount;
+
     try {
       const nomeMes = vencimento.toLocaleDateString("pt-BR", { month: "long", timeZone: "UTC" });
-      const split = membro.school.asaasWalletId ? [await calcularSplitEscola(valor, membro.school.asaasWalletId)] : undefined;
+      const split = membro.school.asaasWalletId ? [await calcularSplitEscola(valorBase, membro.school.asaasWalletId)] : undefined;
       const pagamento = await asaasCreatePixAutomaticCharge(
         membro.asaasCustomerId!,
         membro.pixAutomaticAuthorizationId!,
-        valor,
+        valorBase,
         `Contribuição ${nomeMes}/${year} — ${membro.name}`,
         vencimento.toISOString().slice(0, 10),
         split,
@@ -109,8 +117,10 @@ async function criarCicloSeguinte() {
           amount: valor,
           billingType: "PIX",
           autoDebito: true,
+          fortunaTopUpAmount: fortunaTopUpAmount > 0 ? fortunaTopUpAmount : null,
           asaasCustomerId: membro.asaasCustomerId!,
           asaasPaymentId: pagamento.id,
+          memberWasOverdue: OVERDUE_STATUSES.has(membro.status),
         },
       });
       criadas++;

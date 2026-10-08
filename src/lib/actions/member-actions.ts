@@ -2,6 +2,7 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { OVERDUE_STATUSES } from "@/lib/member-data";
 import { enqueueMercurioContactUpdate } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
@@ -31,8 +32,6 @@ const CAMPOS_ENDERECO = [
 ] as const;
 
 const CAMPOS_SENSIVEIS = ["whatsapp", "email"] as const;
-
-const OVERDUE_STATUSES = new Set(["atrasado", "negociando"]);
 
 /**
  * Atualiza SÓ o endereço do membro — edição direta, igual sempre foi.

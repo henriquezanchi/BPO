@@ -1,11 +1,31 @@
 "use client";
 
-import { aprovarSolicitacaoComposicao, getSolicitacoesComposicaoPendentes, rejeitarSolicitacaoComposicao } from "@/lib/actions/economia-actions";
+import {
+  aprovarSolicitacaoComposicao,
+  getCrescimentoContribuicoes,
+  getSolicitacoesComposicaoPendentes,
+  rejeitarSolicitacaoComposicao,
+} from "@/lib/actions/economia-actions";
 import { formatBRL, formatDateBR } from "@/lib/format";
-import { Check, Loader2, Minus, Plus, X } from "lucide-react";
+import { Check, Loader2, Minus, Plus, TrendingUp, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 type Solicitacao = Awaited<ReturnType<typeof getSolicitacoesComposicaoPendentes>>[number];
+type Crescimento = Awaited<ReturnType<typeof getCrescimentoContribuicoes>>;
+
+const NOMES_MES = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+/** Mês atual e anterior, em UTC (mesma convenção usada no resto do projeto). */
+function mesAtualEAnterior(): [{ ano: number; mes: number }, { ano: number; mes: number }] {
+  const hoje = new Date();
+  const ano = hoje.getUTCFullYear();
+  const mes = hoje.getUTCMonth() + 1;
+  const anterior = mes === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mes - 1 };
+  return [{ ano, mes }, anterior];
+}
 
 /**
  * Fila de aprovação do Secretário de Economia (ou Direção, enquanto ninguém
@@ -20,6 +40,8 @@ type Solicitacao = Awaited<ReturnType<typeof getSolicitacoesComposicaoPendentes>
  */
 export function EconomiaPanel({ schoolId }: { schoolId: string }) {
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[] | null>(null);
+  const [crescimentoAtual, setCrescimentoAtual] = useState<Crescimento | null>(null);
+  const [crescimentoAnterior, setCrescimentoAnterior] = useState<Crescimento | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function recarregar() {
@@ -28,6 +50,9 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
 
   useEffect(() => {
     recarregar();
+    const [atual, anterior] = mesAtualEAnterior();
+    getCrescimentoContribuicoes(schoolId, atual.ano, atual.mes).then(setCrescimentoAtual);
+    getCrescimentoContribuicoes(schoolId, anterior.ano, anterior.mes).then(setCrescimentoAnterior);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schoolId]);
 
@@ -55,6 +80,29 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {crescimentoAtual && (
+        <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-gray-900 dark:text-gray-100">
+            <TrendingUp size={14} className="text-na-green-dark" /> Crescimento de {NOMES_MES[crescimentoAtual.mes - 1]}
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-[13px]">
+            <div>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">Novas rubricas/doações</p>
+              <p className="font-semibold text-na-green-dark dark:text-emerald-400">{formatBRL(crescimentoAtual.crescimentoComposicao)}/mês</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">Reversão de inadimplência</p>
+              <p className="font-semibold text-na-green-dark dark:text-emerald-400">{formatBRL(crescimentoAtual.reversaoInadimplencia)}</p>
+            </div>
+          </div>
+          {crescimentoAnterior && (
+            <p className="mt-2 text-[10px] text-gray-400">
+              Em {NOMES_MES[crescimentoAnterior.mes - 1]}: {formatBRL(crescimentoAnterior.crescimentoComposicao)}/mês em rubricas/doações, {formatBRL(crescimentoAnterior.reversaoInadimplencia)} em reversão de inadimplência.
+            </p>
+          )}
+        </div>
+      )}
+
       <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
         Solicitações de remoção de item de composição ({solicitacoes.length})
       </p>

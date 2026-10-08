@@ -14,6 +14,7 @@ import { calcularSplitEscola, calcularSplitEscolaCartao } from "@/lib/asaas/spli
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatBRL } from "@/lib/format";
+import { OVERDUE_STATUSES } from "@/lib/member-data";
 import type { PaymentCharge } from "@prisma/client";
 
 const FORTUNA_TOPUP_MINIMO = 5;
@@ -94,6 +95,10 @@ export async function createContributionCharge(
   });
   if (existente) return paraResultadoCobranca(existente);
 
+  // Snapshot pro relatório de "reversão de inadimplência" — ver
+  // getCrescimentoContribuicoes em economia-actions.ts.
+  const memberWasOverdue = OVERDUE_STATUSES.has(member.status);
+
   const itens = await db.contributionCompositionItem.findMany({ where: { memberId } });
   const valor = itens.reduce((soma, i) => soma + Number(i.amount), 0);
   if (valor <= 0) throw new Error("Composição da contribuição está vazia — nada a cobrar.");
@@ -133,6 +138,7 @@ export async function createContributionCharge(
         asaasCustomerId: cliente.id,
         asaasPaymentId: pagamento.id,
         invoiceUrl: pagamento.invoiceUrl,
+        memberWasOverdue,
       },
     });
     return { chargeId: charge.id, metodo: "CREDIT_CARD" as const, invoiceUrl: pagamento.invoiceUrl, amount: valor, fortunaTopUpAmount, totalCobrado: valorCartao };
@@ -154,6 +160,7 @@ export async function createContributionCharge(
       asaasPaymentId: pagamento.id,
       pixPayload: qrcode.payload,
       pixQrCodeBase64: qrcode.encodedImage,
+      memberWasOverdue,
     },
   });
 

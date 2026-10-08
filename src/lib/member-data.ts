@@ -3,6 +3,9 @@ import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
 
+/** Status que contam como "inadimplente" — usado tanto pra alertar a Economia quanto pro snapshot de PaymentCharge.memberWasOverdue. */
+export const OVERDUE_STATUSES = new Set(["atrasado", "negociando"]);
+
 export interface FortunaBalanceView {
   branchId: number;
   branchTitle: string;

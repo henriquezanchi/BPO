@@ -63,3 +63,48 @@ export async function rejeitarSolicitacaoComposicao(schoolId: string, requestId:
   await db.compositionChangeRequest.update({ where: { id: requestId }, data: { status: "rejeitado", reviewedAt: new Date() } });
   revalidatePath("/economia");
 }
+
+function limitesDoMes(ano: number, mes: number) {
+  const inicio = new Date(Date.UTC(ano, mes - 1, 1));
+  const fim = new Date(Date.UTC(mes === 12 ? ano + 1 : ano, mes === 12 ? 0 : mes, 1));
+  return { inicio, fim };
+}
+
+/**
+ * Pedido do usuário 2026-10-08: mostrar pro Secretário de Economia (e pro
+ * Diretor) o quanto a contribuição cresceu num mês, em duas frentes:
+ * - "crescimentoComposicao": inclusões aprovadas menos remoções aprovadas de
+ *   itens de composição (todo o histórico fica em CompositionChangeRequest,
+ *   mesmo quando aplicado direto — ver contribution-actions.ts).
+ * - "reversaoInadimplencia": soma de PaymentCharge PAGAS que foram criadas
+ *   enquanto o membro estava "atrasado"/"negociando" (memberWasOverdue) —
+ *   definição exata do usuário: "pagamentos recebidos de quem estava
+ *   inadimplente na hora da cobrança". Agrupado pelo mês do PAGAMENTO
+ *   (paidAt), não da criação da cobrança.
+ */
+export async function getCrescimentoContribuicoes(schoolId: string, ano: number, mes: number) {
+  await requireEconomiaOuDirecao(schoolId);
+  const { inicio, fim } = limitesDoMes(ano, mes);
+
+  const [inclusoes, remocoes, reversoes] = await Promise.all([
+    db.compositionChangeRequest.aggregate({
+      where: { tipo: "inclusao", status: "aprovado", createdAt: { gte: inicio, lt: fim }, member: { schoolId } },
+      _sum: { amount: true },
+    }),
+    db.compositionChangeRequest.aggregate({
+      where: { tipo: "remocao", status: "aprovado", createdAt: { gte: inicio, lt: fim }, member: { schoolId } },
+      _sum: { amount: true },
+    }),
+    db.paymentCharge.aggregate({
+      where: { status: "pago", memberWasOverdue: true, paidAt: { gte: inicio, lt: fim }, member: { schoolId } },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  return {
+    ano,
+    mes,
+    crescimentoComposicao: Number(inclusoes._sum.amount ?? 0) - Number(remocoes._sum.amount ?? 0),
+    reversaoInadimplencia: Number(reversoes._sum.amount ?? 0),
+  };
+}
