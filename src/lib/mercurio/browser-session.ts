@@ -223,6 +223,36 @@ export async function abrirListaInativos(page: Page, filialLabelRegex: RegExp): 
 }
 
 /**
+ * Versão genérica de abrirListaAtivos/abrirListaInativos/abrirCirculoDeAmigos
+ * — pro resto das listas de grupo/programa que o menu da filial tem
+ * (PROGRAMA BRANCO > Provacionistas/Membros, COMPLEMENTAR > Correntinha/
+ * Távolas/Janos — ver comentário em abrirCirculoDeAmigos), mesmo formato de
+ * tabela (Matr./Nome) que listarMatriculasAtivas já lê. Script real de cada
+ * uma ainda não confirmado ao vivo — mesma regex ampla de abrirListaInativos.
+ * `nomeLink` precisa bater exatamente com o texto do menu (ex: "Membros",
+ * "Correntinha", "Távolas", "Janos").
+ */
+export async function abrirListaPorNome(page: Page, filialLabelRegex: RegExp, nomeLink: string): Promise<Frame> {
+  const cadastros = await listarLinksMenu(page, "CADASTRO");
+  const filial = cadastros.find((c) => filialLabelRegex.test(c.label));
+  if (!filial) {
+    throw new Error(`Filial batendo com ${filialLabelRegex} não encontrada entre: ${cadastros.map((c) => c.label).join(", ")}`);
+  }
+
+  const framePrincipal0 = await esperarFrame(page, "principal", /ger_funcao\.php/, 15000);
+  await framePrincipal0.getByRole("link", { name: "CADASTRO", exact: true }).nth(filial.indice).click();
+
+  return reabrirListaPorNome(page, nomeLink);
+}
+
+/** Reabre uma lista de grupo/programa da filial JÁ SELECIONADA (ver abrirListaPorNome) — mesmo motivo/uso de reabrirListaAtivos. */
+export async function reabrirListaPorNome(page: Page, nomeLink: string): Promise<Frame> {
+  const frameIndice = await esperarFrame(page, "indice", /uni_indice\.php/, 15000);
+  await frameIndice.getByText(nomeLink, { exact: true }).click();
+  return esperarFrame(page, "principal", /^(?!.*uni_indice\.php)(?!.*uni_contato\.html).*\/unidade\/uni_/, 15000);
+}
+
+/**
  * Reabre a lista de Ativos da filial JÁ SELECIONADA (ver abrirListaAtivos) —
  * o frame "indice" continua mostrando o menu da filial mesmo depois de
  * abrir a ficha de um aluno, então clicar em "Ativos" de novo nele volta

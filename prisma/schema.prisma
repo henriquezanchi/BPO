@@ -212,6 +212,22 @@ model Member {
   // Mesmo padrão acima, mas Função contendo "ECONOMIA" — aprova alterações
   // de cadastro ligadas à contribuição (pedido do usuário 2026-10-08).
   isSecretarioEconomia    Boolean    @default(false)
+  // Grupo/programa dentro da filial (PROGRAMA BRANCO > Provacionistas/
+  // Membros, COMPLEMENTAR > C. de Amigos/Correntinha/Távolas/Janos) — cada
+  // um é uma listagem própria no Mercúrio (mesmo formato Matr./Nome de
+  // Ativos), sincronizada por scripts/sync-perfil-grupos.ts. Pedido do
+  // usuário 2026-10-08: usado pra limitar quais rubricas de contribuição
+  // aparecem pra cada membro (ver rubrica-visibilidade.ts) — ex: a rubrica
+  // "CONTRIBUIÇÃO JANOS" só deve aparecer pra quem tem isJanos=true. Não é
+  // mutuamente exclusivo (uma pessoa pode, em teoria, aparecer em mais de
+  // uma lista) — por isso são booleans separados, não um enum único.
+  isProvacionista       Boolean      @default(false)
+  isMembroPrograma      Boolean      @default(false)
+  isCirculoDeAmigos     Boolean      @default(false)
+  isCorrentinha         Boolean      @default(false)
+  isTavolas             Boolean      @default(false)
+  isJanos               Boolean      @default(false)
+  perfilGruposSyncedAt  DateTime?
   // Id do cliente na carteira digital Fortuna (oinabnfortuna.acropolebrasil.com.br)
   // — numeração própria, SEM relação com mercurioId. Resolvido 1x por
   // e-mail/telefone (scripts/link-fortuna-client.ts), não por nome (mais

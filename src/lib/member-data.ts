@@ -1,6 +1,7 @@
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
+import { rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
 import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
 
 /** Status que contam como "inadimplente" — usado tanto pra alertar a Economia quanto pro snapshot de PaymentCharge.memberWasOverdue. */
@@ -115,7 +116,7 @@ export async function getMemberDashboard(memberId: string) {
   // carregamento do Portal (ver discussão de escala em CLAUDE.md/histórico).
   const gruposJaTidos = new Set(member.compositionItems.map((i) => i.mercurioGroupId));
   const availableToAdd = member.school.compositionCatalog
-    .filter((c) => !gruposJaTidos.has(c.mercurioGroupId))
+    .filter((c) => !gruposJaTidos.has(c.mercurioGroupId) && rubricaVisivelPara(c.label, member))
     .map((c) => ({ value: c.mercurioGroupId, label: c.label }));
 
   const walletAgg = await db.fortunaTransaction.aggregate({
