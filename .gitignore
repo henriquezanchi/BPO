@@ -43,6 +43,11 @@ scripts/.mercurio-test-output/
 # logs do worker agendado (Task Scheduler) — pode conter PII de membros
 /logs/
 
+# cópia local da skill Impeccable (devia ser symlink pra .agents/skills/,
+# mas no Windows virou cópia real de arquivo — máquina-específica, não
+# versionar; .claude/settings.json continua rastreado normalmente)
+/.claude/skills/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
