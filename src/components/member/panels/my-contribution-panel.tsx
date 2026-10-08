@@ -1,11 +1,11 @@
 "use client";
 
-import { addContributionItem, removeContributionItem, updateContributionItemValue } from "@/lib/actions/contribution-actions";
+import { getSolicitacoesComposicaoDoMembro, removeContributionItem, solicitarItemComposicao, updateContributionItemValue } from "@/lib/actions/contribution-actions";
 import { formatBRL } from "@/lib/format";
 import type { SerializedCompositionItem } from "@/lib/member-data";
 import type { MercurioCatalogItem } from "@/lib/mercurio";
 import { AlertTriangle, Check, Clock, Loader2, Lock, Pencil, Plus, Trash2, X } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 export function MyContributionPanel({
   memberId,
@@ -18,6 +18,7 @@ export function MyContributionPanel({
 }) {
   const [items, setItems] = useState(compositionItems);
   const [catalog, setCatalog] = useState(initialAvailableToAdd);
+  const [solicitacoes, setSolicitacoes] = useState<Awaited<ReturnType<typeof getSolicitacoesComposicaoDoMembro>>>([]);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [newItemValue, setNewItemValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +32,10 @@ export function MyContributionPanel({
 
   const total = items.reduce((soma, i) => soma + i.amount, 0);
 
+  useEffect(() => {
+    getSolicitacoesComposicaoDoMembro(memberId).then(setSolicitacoes);
+  }, [memberId]);
+
   function handleAdd() {
     if (!selectedGroup) return;
     const valor = parseFloat(newItemValue.replace(/\./g, "").replace(",", "."));
@@ -42,16 +47,16 @@ export function MyContributionPanel({
     setNotice(null);
     const label = catalog.find((c) => c.value === selectedGroup)?.label ?? "";
     startAdd(async () => {
-      const res = await addContributionItem(memberId, selectedGroup, label, valor);
+      const res = await solicitarItemComposicao(memberId, selectedGroup, label, valor);
       if (!res.ok) {
-        setError(res.error ?? "Falha ao incluir item.");
+        setError(res.error ?? "Falha ao enviar solicitação.");
         return;
       }
-      setItems((prev) => [...prev, res.item]);
       setCatalog((prev) => prev.filter((c) => c.value !== selectedGroup));
+      setSolicitacoes((prev) => [...prev, { id: res.id, label, amount: valor, createdAt: new Date() }]);
       setSelectedGroup("");
       setNewItemValue("");
-      setNotice(`"${label}" incluído — a confirmação no Mercúrio pode levar até 24h.`);
+      setNotice(`Solicitação de "${label}" enviada — aguardando aprovação da Economia.`);
     });
   }
 
@@ -188,8 +193,24 @@ export function MyContributionPanel({
         <Lock size={10} /> Itens com cadeado foram lançados pela secretaria e não podem ser alterados por aqui.
       </p>
 
+      {solicitacoes.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
+            <Clock size={12} /> Aguardando aprovação da Economia
+          </div>
+          <ul className="flex flex-col gap-1">
+            {solicitacoes.map((s) => (
+              <li key={s.id} className="flex justify-between text-[12px] text-amber-800 dark:text-amber-300">
+                <span>{s.label}</span>
+                <span className="font-semibold">{formatBRL(s.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="mb-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-        <div className="mb-2 text-[11px] font-bold text-gray-900 dark:text-gray-100">Incluir novo item</div>
+        <div className="mb-2 text-[11px] font-bold text-gray-900 dark:text-gray-100">Solicitar novo item</div>
         {catalog.length === 0 ? (
           <p className="text-xs text-gray-500 dark:text-gray-400">Nenhum item novo disponível pra incluir.</p>
         ) : (

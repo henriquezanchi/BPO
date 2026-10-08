@@ -262,6 +262,7 @@ model Member {
 
   contributions           Contribution[]
   compositionItems        ContributionCompositionItem[]
+  compositionRequests     CompositionChangeRequest[]
   receipts                ContributionReceipt[]
   monthlyStatus           ContributionMonthlyStatus[]
   fortunaTx               FortunaTransaction[]
@@ -324,6 +325,28 @@ model ContributionCompositionItem {
   updatedAt       DateTime @updatedAt
 
   @@unique([memberId, mercurioGroupId])
+  @@index([memberId])
+}
+
+// Pedido do usuário 2026-10-08: incluir um item NOVO de composição (cria um
+// compromisso financeiro que a escola ainda não sabe que existe) passa a
+// exigir aprovação do Secretário de Economia — mesmo espírito do
+// ContactChangeLog pro Cadastro, mas em modelo próprio porque aqui não há
+// "valor antigo" (é sempre inclusão, nunca edição). Editar/remover um item
+// que o próprio membro já incluiu continua self-service (ver
+// contribution-actions.ts) — baixo risco, já tem a trava de
+// addedViaPortal.
+model CompositionChangeRequest {
+  id              String    @id @default(cuid())
+  memberId        String
+  member          Member    @relation(fields: [memberId], references: [id])
+  mercurioGroupId String
+  label           String
+  amount          Decimal   @db.Decimal(10, 2)
+  status          String    @default("pendente") // "pendente" | "aprovado" | "rejeitado"
+  reviewedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
   @@index([memberId])
 }
 

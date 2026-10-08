@@ -6,7 +6,8 @@ import { getFortunaBalancesForDirector, type FortunaBalancesForDirector } from "
 import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import type { DirectorDashboard } from "@/lib/director-data";
 import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
-import { ArrowLeft, ArrowUpDown, BadgePercent, CalendarClock, Coffee, FileWarning, Handshake, LayoutDashboard, Search, Ticket, Trash2, Users, Wallet } from "lucide-react";
+import { EconomiaPanel } from "@/components/economia/economia-panel";
+import { ArrowLeft, ArrowUpDown, BadgePercent, Banknote, CalendarClock, Coffee, FileWarning, Handshake, LayoutDashboard, Search, Ticket, Trash2, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { FortunaTab } from "./fortuna-tab";
@@ -21,6 +22,7 @@ const ABAS = [
   { id: "eventos", label: "Gestão de Eventos", icon: Ticket },
   { id: "recuperacao", label: "Recup. de Crédito", icon: Handshake },
   { id: "escolastica", label: "Escolástica", icon: CalendarClock },
+  { id: "economia", label: "Economia", icon: Banknote },
   { id: "fortuna", label: "Caixa Fortuna", icon: Coffee },
   { id: "repasses", label: "Contas e Conciliações", icon: Wallet },
 ] as const;
@@ -106,6 +108,7 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
           {aba === "eventos" && <EventosTab schoolId={schoolId} data={data} />}
           {aba === "recuperacao" && <RecuperacaoTab schoolId={schoolId} data={data} />}
           {aba === "escolastica" && <EscolasticaPanel schoolId={schoolId} />}
+          {aba === "economia" && <EconomiaPanel schoolId={schoolId} />}
           {aba === "fortuna" && <FortunaTab schoolId={schoolId} data={data} balances={fortunaBalances} carregando={fortunaCarregando} />}
           {aba === "repasses" && <ContasConciliacoesTab schoolId={schoolId} data={data} />}
         </div>

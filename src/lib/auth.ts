@@ -70,6 +70,15 @@ export async function requireEscolasticaOuDirecao(schoolId: string) {
   return member;
 }
 
+/** Mesmo padrão de requireEscolasticaOuDirecao, pro Secretário de Economia (aprova inclusão de item de composição — ver contribution-actions.ts). */
+export async function requireEconomiaOuDirecao(schoolId: string) {
+  const member = await getAuthenticatedMember();
+  if (!member || member.schoolId !== schoolId || (!member.isSecretarioEconomia && !member.isDiretor && !member.isSubChefe)) {
+    throw new Error("Não autenticado ou sem permissão de Economia/Direção nesta escola.");
+  }
+  return member;
+}
+
 /**
  * Confirma que o membro logado é professor da turma informada — nunca
  * confiar num createdById vindo do client (mesma lógica de defesa em

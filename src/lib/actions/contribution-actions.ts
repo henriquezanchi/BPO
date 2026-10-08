@@ -2,32 +2,43 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
 /**
- * Inclui um item novo (categoria escolhida pelo membro, do catálogo já
- * sincronizado da escola — ver scripts/sync-composition.ts), com o valor
- * que o próprio membro escolheu (decisão do usuário 2026-09-21: melhor
- * pedir o valor ANTES de incluir do que deixar o item aparecer sem valor
- * definido). Escreve local já (mesmo padrão de updateContributionItemValue)
- * e só enfileira a propagação real pro Mercúrio — quem escreve de verdade
- * é o worker separado (scripts/process-mercurio-queue.ts), pra não travar a
- * navegação esperando uma sessão de navegador inteira.
+ * Solicita a inclusão de um item novo (categoria escolhida pelo membro, do
+ * catálogo já sincronizado da escola — ver scripts/sync-composition.ts),
+ * com o valor que o próprio membro escolheu. Pedido do usuário 2026-10-08:
+ * incluir item novo cria um compromisso financeiro que a escola ainda não
+ * sabe que existe, então vira uma SOLICITAÇÃO (CompositionChangeRequest,
+ * status "pendente") em vez de aplicar direto — só o Secretário de
+ * Economia aprovando (ver economia-actions.ts) grava de verdade em
+ * ContributionCompositionItem e propaga pro Mercúrio. Editar/remover um
+ * item que o próprio membro já incluiu continua self-service (funções
+ * abaixo, inalteradas) — baixo risco, já tem a trava de addedViaPortal.
  */
-export async function addContributionItem(memberId: string, mercurioGroupId: string, label: string, valor: number) {
+export async function solicitarItemComposicao(memberId: string, mercurioGroupId: string, label: string, valor: number) {
   await requireAuthenticatedMember(memberId);
 
   if (!Number.isFinite(valor) || valor <= 0) {
     return { ok: false as const, error: "Valor inválido." };
   }
 
-  const salvo = await db.contributionCompositionItem.create({
-    data: { memberId, mercurioGroupId, label, amount: valor, addedViaPortal: true },
+  const solicitacao = await db.compositionChangeRequest.create({
+    data: { memberId, mercurioGroupId, label, amount: valor },
   });
-  await enqueueMercurioCompositionAdd(memberId, mercurioGroupId, label, valor);
   revalidatePath("/portal");
-  return { ok: true as const, pending: true as const, item: { ...salvo, amount: Number(salvo.amount), pendingSync: true } };
+  return { ok: true as const, solicitado: true as const, id: solicitacao.id };
+}
+
+/** Pra UI mostrar as solicitações do próprio membro ainda não revisadas. */
+export async function getSolicitacoesComposicaoDoMembro(memberId: string) {
+  await requireAuthenticatedMember(memberId);
+  const pendentes = await db.compositionChangeRequest.findMany({
+    where: { memberId, status: "pendente" },
+    orderBy: { createdAt: "desc" },
+  });
+  return pendentes.map((p) => ({ id: p.id, label: p.label, amount: Number(p.amount), createdAt: p.createdAt }));
 }
 
 /**

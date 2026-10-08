@@ -1,7 +1,7 @@
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { VOLUNTEER_TERM_VERSION } from "@/lib/volunteer-term";
-import { ArrowLeft, CalendarClock, Crown, FileSignature, GraduationCap } from "lucide-react";
+import { ArrowLeft, Banknote, CalendarClock, Crown, FileSignature, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -11,13 +11,21 @@ export const dynamic = "force-dynamic";
  * Hub pros diferentes tipos de voluntário (instrutor, direção, secretário,
  * etc — ver conversa). Instrutor (isPedagogo, "Integração > Pedagogos"),
  * Direção (isDiretor/isSubChefe, "Diretor > Dados da Unidade") e Secretário
- * de Escolástica (isSecretarioEscolastica, "Diretor > Colaboradores") têm
- * sinal real do Mercúrio — ver scripts/sync-diretoria.ts.
+ * de Escolástica (isSecretarioEscolastica) e de Economia
+ * (isSecretarioEconomia), ambos de "Diretor > Colaboradores", têm sinal real
+ * do Mercúrio — ver scripts/sync-diretoria.ts.
  */
 export default async function VoluntarioPage() {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/voluntario");
-  if (!member.isPedagogo && !member.isDiretor && !member.isSubChefe && !member.isSecretarioEscolastica) redirect("/portal");
+  if (
+    !member.isPedagogo &&
+    !member.isDiretor &&
+    !member.isSubChefe &&
+    !member.isSecretarioEscolastica &&
+    !member.isSecretarioEconomia
+  )
+    redirect("/portal");
 
   const termoAssinado = await db.volunteerTermSignature.findUnique({
     where: { memberId_termVersion: { memberId: member.id, termVersion: VOLUNTEER_TERM_VERSION } },
@@ -85,6 +93,21 @@ export default async function VoluntarioPage() {
             <div>
               <h2 className="text-sm font-semibold text-gray-900">Escolástica</h2>
               <p className="text-xs text-gray-500">Agenda de pendências (ex: transições pro Círculo de Amigos)</p>
+            </div>
+          </Link>
+        )}
+
+        {member.isSecretarioEconomia && (
+          <Link
+            href="/economia"
+            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
+              <Banknote size={18} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Economia</h2>
+              <p className="text-xs text-gray-500">Aprovar novos itens de composição da contribuição</p>
             </div>
           </Link>
         )}
