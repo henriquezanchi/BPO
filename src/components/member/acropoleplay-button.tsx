@@ -4,12 +4,16 @@ import { gerarAutoLoginAcropolePlay, getAcropolePlayStatus, salvarCredencialAcro
 import { Clapperboard, Loader2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
-// URL e nomes de campo do formulário de login — CONFIRMAR ao vivo contra
-// https://membros.acropoleplay.com/auth/login (inspecionar os <input name="...">
-// reais) antes de considerar isso definitivo. Só um palpite razoável por ora.
+// URL e nomes de campo confirmados ao vivo em 2026-10-08 (inspecionado
+// direto no HTML de https://membros.acropoleplay.com/auth/login) — é um
+// form Laravel-like, mas a rota NÃO valida de verdade o token CSRF (testado
+// ao vivo: POST com _token proposital errado, numa janela anônima sem
+// nenhuma sessão prévia, ainda assim loga e redireciona pra /area/vitrine/
+// home) — por isso um valor fixo/qualquer no campo _token é suficiente.
 const LOGIN_URL = "https://membros.acropoleplay.com/auth/login";
-const CAMPO_EMAIL = "email";
-const CAMPO_SENHA = "password";
+const CAMPO_EMAIL = "Acesso[email]";
+const CAMPO_SENHA = "Acesso[senha]";
+const CAMPO_TOKEN = "_token";
 
 /** Monta e submete um form escondido no PRÓPRIO navegador do membro — é o navegador dele que precisa logar de verdade, não o nosso servidor (cookie de sessão é por domínio, não dá pra "transferir" de outro jeito). */
 function autoSubmeterLogin(email: string, senha: string) {
@@ -18,17 +22,18 @@ function autoSubmeterLogin(email: string, senha: string) {
   form.action = LOGIN_URL;
   form.target = "_blank";
 
-  const campoEmail = document.createElement("input");
-  campoEmail.type = "hidden";
-  campoEmail.name = CAMPO_EMAIL;
-  campoEmail.value = email;
-  form.appendChild(campoEmail);
-
-  const campoSenha = document.createElement("input");
-  campoSenha.type = "hidden";
-  campoSenha.name = CAMPO_SENHA;
-  campoSenha.value = senha;
-  form.appendChild(campoSenha);
+  const campos: [string, string][] = [
+    [CAMPO_TOKEN, "portal-na"],
+    [CAMPO_EMAIL, email],
+    [CAMPO_SENHA, senha],
+  ];
+  for (const [nome, valor] of campos) {
+    const campo = document.createElement("input");
+    campo.type = "hidden";
+    campo.name = nome;
+    campo.value = valor;
+    form.appendChild(campo);
+  }
 
   document.body.appendChild(form);
   form.submit();
