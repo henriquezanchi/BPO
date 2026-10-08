@@ -25,6 +25,15 @@ ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+# Mesmo motivo, achado real em 2026-10-08: `src/lib/supabase/admin.ts`
+# (supabaseAdmin, usado por avatar-url.ts) é importado num caminho que o
+# `next build` analisa estaticamente ao coletar dados da página /diretor —
+# sem essa variável também como ARG, o build quebra com "supabaseKey is
+# required" mesmo a variável existindo no serviço (ela só não chega em
+# build time sem isso, igual às duas de cima).
+ARG SUPABASE_SERVICE_ROLE_KEY
+ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+
 RUN npm run build
 
 ENV NODE_ENV=production
