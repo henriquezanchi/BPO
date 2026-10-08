@@ -27,10 +27,13 @@ interface RegraRubrica {
 
 const REGRAS: RegraRubrica[] = [
   { labelRegex: /c[íi]rculo de amigos/i, permitido: (m) => m.isCirculoDeAmigos },
-  { labelRegex: /^contribui[cç][ãa]o membro$/i, permitido: (m) => m.isMembroPrograma },
+  // "AP" (ex: "CONTRIBUIÇÃO MEMBRO AP", "CONTRIBUIÇÃO JANOS AP") é a mesma
+  // regra de acesso, só que também dá direito à AcrópolePlay (confirmado
+  // pelo usuário 2026-10-08) — trata igual ao grupo base.
+  { labelRegex: /^contribui[cç][ãa]o membro( ap)?$/i, permitido: (m) => m.isMembroPrograma },
   { labelRegex: /correntinha/i, permitido: (m) => m.isCorrentinha },
   { labelRegex: /t[áa]volas/i, permitido: (m) => m.isTavolas },
-  { labelRegex: /^contribui[cç][ãa]o janos$/i, permitido: (m) => m.isJanos },
+  { labelRegex: /^contribui[cç][ãa]o janos( ap)?$/i, permitido: (m) => m.isJanos },
   { labelRegex: /dirigente/i, permitido: (m) => m.isDiretor || m.isSubChefe },
 ];
 
