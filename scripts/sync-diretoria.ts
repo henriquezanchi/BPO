@@ -90,20 +90,28 @@ async function main() {
   }
 
   // Reset-então-marca (mesmo padrão de Diretor/Sub-Chefe acima).
-  await db.member.updateMany({ where: { schoolId: school.id }, data: { isSecretarioEscolastica: false } });
-  let secretarios = 0;
+  await db.member.updateMany({ where: { schoolId: school.id }, data: { isSecretarioEscolastica: false, isSecretarioEconomia: false } });
+  let secretariosEscolastica = 0;
+  let secretariosEconomia = 0;
   for (const c of colaboradores) {
-    if (!/escol[aá]stica/i.test(c.funcao)) continue;
+    const ehEscolastica = /escol[aá]stica/i.test(c.funcao);
+    const ehEconomia = /economia/i.test(c.funcao);
+    if (!ehEscolastica && !ehEconomia) continue;
+
+    const campo = ehEscolastica ? "isSecretarioEscolastica" : "isSecretarioEconomia";
     const membro = await db.member.findFirst({ where: { schoolId: school.id, mercurioId: c.matricula } });
     if (!membro) {
-      console.log(`⚠ Matrícula ${c.matricula} (Secretário de Escolástica) não tem Member local ainda.`);
+      console.log(`⚠ Matrícula ${c.matricula} (${campo}) não tem Member local ainda.`);
       continue;
     }
-    await db.member.update({ where: { id: membro.id }, data: { isSecretarioEscolastica: true } });
-    console.log(`✓ ${membro.name}: isSecretarioEscolastica = true`);
-    secretarios++;
+    await db.member.update({ where: { id: membro.id }, data: { [campo]: true } });
+    console.log(`✓ ${membro.name}: ${campo} = true`);
+    if (ehEscolastica) secretariosEscolastica++;
+    else secretariosEconomia++;
   }
-  console.log(`Colaboradores lidos: ${colaboradores.length} — Secretário(s) de Escolástica vinculado(s): ${secretarios}.`);
+  console.log(
+    `Colaboradores lidos: ${colaboradores.length} — Escolástica vinculado(s): ${secretariosEscolastica}, Economia vinculado(s): ${secretariosEconomia}.`,
+  );
 }
 
 main()

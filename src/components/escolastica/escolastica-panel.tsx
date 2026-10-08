@@ -1,8 +1,16 @@
 "use client";
 
-import { concluirPendenciaEscolastica, criarPendenciaEscolastica, getMembrosParaPendencia, getPendenciasEscolastica } from "@/lib/actions/escolastica-actions";
+import {
+  aprovarSolicitacaoCadastro,
+  concluirPendenciaEscolastica,
+  criarPendenciaEscolastica,
+  getMembrosParaPendencia,
+  getPendenciasEscolastica,
+  getSolicitacoesCadastroPendentes,
+  rejeitarSolicitacaoCadastro,
+} from "@/lib/actions/escolastica-actions";
 import { formatDateBR } from "@/lib/format";
-import { CheckCircle2, Loader2, Plus } from "lucide-react";
+import { Check, CheckCircle2, Loader2, Plus, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 const TIPOS = [
@@ -11,8 +19,11 @@ const TIPOS = [
   { value: "outro", label: "Outro" },
 ];
 
+const LABEL_CAMPO: Record<string, string> = { whatsapp: "WhatsApp", email: "E-mail" };
+
 type Pendencia = Awaited<ReturnType<typeof getPendenciasEscolastica>>[number];
 type MembroOpcao = Awaited<ReturnType<typeof getMembrosParaPendencia>>[number];
+type SolicitacaoCadastro = Awaited<ReturnType<typeof getSolicitacoesCadastroPendentes>>[number];
 
 /**
  * Agenda de pendências do Secretário de Escolástica (ou Direção, enquanto
@@ -25,12 +36,14 @@ type MembroOpcao = Awaited<ReturnType<typeof getMembrosParaPendencia>>[number];
  */
 export function EscolasticaPanel({ schoolId }: { schoolId: string }) {
   const [pendencias, setPendencias] = useState<Pendencia[] | null>(null);
+  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoCadastro[] | null>(null);
   const [membros, setMembros] = useState<MembroOpcao[]>([]);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function recarregar() {
     getPendenciasEscolastica(schoolId).then(setPendencias);
+    getSolicitacoesCadastroPendentes(schoolId).then(setSolicitacoes);
   }
 
   useEffect(() => {
@@ -38,6 +51,20 @@ export function EscolasticaPanel({ schoolId }: { schoolId: string }) {
     getMembrosParaPendencia(schoolId).then(setMembros);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schoolId]);
+
+  function handleAprovar(logId: string) {
+    startTransition(async () => {
+      await aprovarSolicitacaoCadastro(schoolId, logId);
+      recarregar();
+    });
+  }
+
+  function handleRejeitar(logId: string) {
+    startTransition(async () => {
+      await rejeitarSolicitacaoCadastro(schoolId, logId);
+      recarregar();
+    });
+  }
 
   function handleCriar(formData: FormData) {
     startTransition(async () => {
@@ -60,7 +87,7 @@ export function EscolasticaPanel({ schoolId }: { schoolId: string }) {
     });
   }
 
-  if (!pendencias) {
+  if (!pendencias || !solicitacoes) {
     return (
       <div className="flex justify-center py-10">
         <Loader2 size={20} className="animate-spin text-gray-400" />
@@ -74,7 +101,53 @@ export function EscolasticaPanel({ schoolId }: { schoolId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div>
+        <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+          Solicitações de correção de cadastro ({solicitacoes.length})
+        </p>
+        {solicitacoes.length === 0 ? (
+          <p className="text-xs text-gray-400">Nenhuma solicitação pendente.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {solicitacoes.map((s) => {
+              const oldValues = s.oldValues as Record<string, string | null>;
+              const newValues = s.newValues as Record<string, string>;
+              return (
+                <div key={s.id} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[13px] dark:border-amber-900 dark:bg-amber-950/30">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">{s.member.name}</p>
+                  <ul className="mt-1 flex flex-col gap-0.5">
+                    {Object.keys(newValues).map((campo) => (
+                      <li key={campo} className="text-[11px] text-gray-700 dark:text-gray-300">
+                        {LABEL_CAMPO[campo] ?? campo}: <span className="text-gray-400 line-through">{oldValues[campo] || "—"}</span>{" "}
+                        → <span className="font-semibold">{newValues[campo]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-1 text-[10px] text-gray-400">Solicitado em {formatDateBR(s.createdAt)}</p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => handleAprovar(s.id)}
+                      disabled={isPending}
+                      className="inline-flex items-center gap-1 rounded-lg bg-na-green px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+                    >
+                      <Check size={12} /> Aprovar
+                    </button>
+                    <button
+                      onClick={() => handleRejeitar(s.id)}
+                      disabled={isPending}
+                      className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                    >
+                      <X size={12} /> Rejeitar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-800">
         <p className="text-xs text-gray-500 dark:text-gray-400">
           Lembretes de ações a fazer no Mercúrio (ex: transições pro Círculo de Amigos) — marcar como feito é manual, depois de você mesmo executar a ação lá.
         </p>

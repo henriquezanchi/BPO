@@ -1,10 +1,10 @@
 "use client";
 
 import { removerAvatar, uploadAvatar } from "@/lib/actions/avatar-actions";
-import { updateMemberContact } from "@/lib/actions/member-actions";
-import { AlertTriangle, CheckCircle2, ChevronRight, Loader2, Trash2, Upload, UserRound } from "lucide-react";
+import { getSolicitacaoContatoPendente, solicitarAlteracaoContato, updateMemberAddress } from "@/lib/actions/member-actions";
+import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Loader2, Pencil, Trash2, Upload, UserRound } from "lucide-react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 interface ProfileEditPanelProps {
   memberId: string;
@@ -81,6 +81,78 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
   );
 }
 
+/**
+ * WhatsApp e e-mail — pedido do usuário 2026-10-08: são os dados sensíveis
+ * de contato, não editáveis direto (diferente do endereço). O membro só
+ * pode SOLICITAR a correção, informando o valor certo; o Secretário de
+ * Escolástica aprova ou rejeita (ver escolastica-panel.tsx) antes de
+ * qualquer coisa ser gravada de verdade.
+ */
+function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; whatsapp: string; email: string | null }) {
+  const [editando, setEditando] = useState(false);
+  const [pendente, setPendente] = useState<Awaited<ReturnType<typeof getSolicitacaoContatoPendente>>>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    getSolicitacaoContatoPendente(memberId).then(setPendente);
+  }, [memberId]);
+
+  function handleSolicitar(formData: FormData) {
+    startTransition(async () => {
+      const novoWhatsapp = String(formData.get("whatsapp") ?? "").trim();
+      const novoEmail = String(formData.get("email") ?? "").trim();
+      const res = await solicitarAlteracaoContato(memberId, { whatsapp: novoWhatsapp, email: novoEmail });
+      if (res.solicitado) {
+        setEditando(false);
+        getSolicitacaoContatoPendente(memberId).then(setPendente);
+      }
+    });
+  }
+
+  return (
+    <div className="mb-4 flex flex-col gap-1">
+      {pendente ? (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          <Clock size={14} className="mt-0.5 shrink-0" />
+          <span>Você já tem uma solicitação de correção em análise com a secretaria — aguarde a aprovação antes de enviar outra.</span>
+        </div>
+      ) : editando ? (
+        <form action={handleSolicitar} className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+          <div className="flex flex-col gap-1">
+            <label className={LABEL_CLASS}>WhatsApp correto</label>
+            <input name="whatsapp" type="tel" inputMode="tel" defaultValue={whatsapp} className={INPUT_CLASS} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={LABEL_CLASS}>E-mail correto</label>
+            <input name="email" type="email" defaultValue={email ?? ""} className={INPUT_CLASS} />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={isPending} className="rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60">
+              {isPending ? <Loader2 size={12} className="animate-spin" /> : "Enviar solicitação"}
+            </button>
+            <button type="button" onClick={() => setEditando(false)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+          <div className="text-[13px]">
+            <p className="text-gray-900 dark:text-gray-100">{whatsapp}</p>
+            <p className="text-gray-500 dark:text-gray-400">{email || "Sem e-mail cadastrado"}</p>
+          </div>
+          <button
+            onClick={() => setEditando(true)}
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <Pencil size={11} /> Solicitar correção
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProfileEditPanel(props: ProfileEditPanelProps) {
   const { memberId, name, avatarUrl } = props;
   const [isPending, startTransition] = useTransition();
@@ -92,9 +164,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         const v = String(formData.get(k) ?? "").trim();
         return v === "" ? "" : v;
       };
-      const res = await updateMemberContact(memberId, {
-        whatsapp: campo("whatsapp"),
-        email: campo("email"),
+      const res = await updateMemberAddress(memberId, {
         addressStreet: campo("addressStreet"),
         addressNumber: campo("addressNumber"),
         addressComplement: campo("addressComplement"),
@@ -128,28 +198,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         />
       </div>
 
-      <div className="mb-3 flex flex-col gap-1">
-        <label className={LABEL_CLASS}>WhatsApp</label>
-        <input
-          name="whatsapp"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          defaultValue={props.whatsapp}
-          className={INPUT_CLASS}
-        />
-      </div>
-
-      <div className="mb-3 flex flex-col gap-1">
-        <label className={LABEL_CLASS}>E-mail</label>
-        <input
-          name="email"
-          type="email"
-          autoComplete="email"
-          defaultValue={props.email ?? ""}
-          className={INPUT_CLASS}
-        />
-      </div>
+      <ContatoSensivelCard memberId={memberId} whatsapp={props.whatsapp} email={props.email} />
 
       <div className="mb-1 text-[11px] font-bold text-gray-900 dark:text-gray-100">Endereço</div>
 
@@ -243,13 +292,13 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
       >
         {isPending && <Loader2 size={14} className="animate-spin" />}
-        {isPending ? "Salvando e enviando ao Mercúrio..." : "Salvar Alterações"}
+        {isPending ? "Salvando e enviando ao Mercúrio..." : "Salvar Endereço"}
       </button>
 
       {result?.changed && (
         <div className="mt-3 flex items-start gap-2 rounded-lg bg-green-50 p-3 text-[11px] text-green-800 dark:bg-green-950/30 dark:text-green-300">
           <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-          <span>Dados atualizados com sucesso. A alteração pode levar até 24h para ser confirmada no Mercúrio.</span>
+          <span>Endereço atualizado com sucesso. A alteração pode levar até 24h para ser confirmada no Mercúrio.</span>
         </div>
       )}
 

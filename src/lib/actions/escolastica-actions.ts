@@ -2,6 +2,7 @@
 
 import { requireEscolasticaOuDirecao } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { enqueueMercurioContactUpdate } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -60,4 +61,48 @@ export async function concluirPendenciaEscolastica(schoolId: string, pendencyId:
   await db.scholasticPendency.update({ where: { id: pendencyId }, data: { completedAt: new Date() } });
   revalidatePath("/escolastica");
   revalidatePath("/diretor");
+}
+
+/**
+ * Solicitações de correção de WhatsApp/e-mail (campos sensíveis — ver
+ * solicitarAlteracaoContato em member-actions.ts) pendentes de aprovação.
+ */
+export async function getSolicitacoesCadastroPendentes(schoolId: string) {
+  await requireEscolasticaOuDirecao(schoolId);
+  return db.contactChangeLog.findMany({
+    where: { status: "pendente", member: { schoolId } },
+    include: { member: { select: { id: true, name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+/** Aprova: aplica de verdade em Member e enfileira a propagação pro Mercúrio. */
+export async function aprovarSolicitacaoCadastro(schoolId: string, logId: string) {
+  await requireEscolasticaOuDirecao(schoolId);
+  const log = await db.contactChangeLog.findUniqueOrThrow({ where: { id: logId }, include: { member: true } });
+  if (log.member.schoolId !== schoolId) throw new Error("Solicitação não pertence a esta escola.");
+  if (log.status !== "pendente") throw new Error("Solicitação já foi revisada.");
+
+  const newValues = log.newValues as Record<string, string>;
+
+  await db.$transaction([
+    db.member.update({ where: { id: log.memberId }, data: newValues }),
+    db.contactChangeLog.update({ where: { id: logId }, data: { status: "aprovado", reviewedAt: new Date() } }),
+  ]);
+
+  await enqueueMercurioContactUpdate(log.memberId, newValues);
+
+  revalidatePath("/escolastica");
+  revalidatePath("/portal");
+}
+
+/** Rejeita: nada é aplicado, só marca como revisado. */
+export async function rejeitarSolicitacaoCadastro(schoolId: string, logId: string) {
+  await requireEscolasticaOuDirecao(schoolId);
+  const log = await db.contactChangeLog.findUniqueOrThrow({ where: { id: logId }, include: { member: true } });
+  if (log.member.schoolId !== schoolId) throw new Error("Solicitação não pertence a esta escola.");
+  if (log.status !== "pendente") throw new Error("Solicitação já foi revisada.");
+
+  await db.contactChangeLog.update({ where: { id: logId }, data: { status: "rejeitado", reviewedAt: new Date() } });
+  revalidatePath("/escolastica");
 }

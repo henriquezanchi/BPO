@@ -209,6 +209,9 @@ model Member {
   // usuário 2026-09-30, mesmo padrão de isPedagogo/isDiretor (sinal real do
   // Mercúrio, não bit local) — ver scripts/sync-diretoria.ts.
   isSecretarioEscolastica Boolean    @default(false)
+  // Mesmo padrão acima, mas Função contendo "ECONOMIA" — aprova alterações
+  // de cadastro ligadas à contribuição (pedido do usuário 2026-10-08).
+  isSecretarioEconomia    Boolean    @default(false)
   // Id do cliente na carteira digital Fortuna (oinabnfortuna.acropolebrasil.com.br)
   // — numeração própria, SEM relação com mercurioId. Resolvido 1x por
   // e-mail/telefone (scripts/link-fortuna-client.ts), não por nome (mais
@@ -987,15 +990,24 @@ model ActivityNotification {
 // Toda alteração de contato feita pelo aluno no Portal gera um registro
 // com o antes/depois. Se o aluno estiver com contribuição em atraso no
 // momento da alteração, a secretaria de economia é alertada (alertedEconomia).
+//
+// `status` — pedido do usuário 2026-10-08: campos sensíveis (WhatsApp,
+// e-mail) deixam de ser editados direto pelo aluno — viram uma SOLICITAÇÃO
+// (status "pendente", `newValues` ainda não aplicado em Member) que o
+// Secretário de Escolástica aprova ou rejeita (ver escolastica-actions.ts).
+// Endereço continua de edição direta (status "aplicado" — mesmo
+// comportamento de sempre, newValues já foi gravado em Member na hora).
 model ContactChangeLog {
   id               String    @id @default(cuid())
   memberId         String
   member           Member    @relation(fields: [memberId], references: [id])
   oldValues        Json
   newValues        Json
+  status           String    @default("aplicado") // "aplicado" | "pendente" | "aprovado" | "rejeitado"
   memberWasOverdue Boolean   @default(false)
   alertedEconomia  Boolean   @default(false)
   acknowledgedAt   DateTime?
+  reviewedAt       DateTime?
   createdAt        DateTime  @default(now())
 
   @@index([memberId])
