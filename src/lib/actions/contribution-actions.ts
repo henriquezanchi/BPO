@@ -5,9 +5,6 @@ import { db } from "@/lib/db";
 import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
-/** Doação é exceção à trava de inclusão — ver solicitarItemComposicao. */
-const REGEX_DOACAO = /doa[cç][aã]o/i;
-
 /**
  * Quantos dias ÚTEIS (seg-sex, sem feriados) se passaram ESTRITAMENTE depois
  * do dia de "desde" até o dia de "ate" (ambos considerados na data, não na
@@ -31,18 +28,20 @@ function mesmoDiaUTC(a: Date, b: Date): boolean {
 }
 
 /**
- * Solicita a inclusão de um item novo (categoria escolhida pelo membro, do
- * catálogo já sincronizado da escola — ver scripts/sync-composition.ts),
- * com o valor que o próprio membro escolheu. Pedido do usuário 2026-10-08:
- * incluir item novo cria um compromisso financeiro que a escola ainda não
- * sabe que existe, então vira uma SOLICITAÇÃO (CompositionChangeRequest,
- * status "pendente") em vez de aplicar direto — só o Secretário de
- * Economia aprovando (ver economia-actions.ts) grava de verdade em
- * ContributionCompositionItem e propaga pro Mercúrio.
+ * Inclui um item novo (categoria escolhida pelo membro, do catálogo já
+ * sincronizado da escola — ver scripts/sync-composition.ts), com o valor que
+ * o próprio membro escolheu.
  *
- * EXCEÇÃO (pedido do usuário 2026-10-08): doação aplica direto, sem
- * aprovação — não é um compromisso recorrente que preocupe a Economia, só
- * entra na fila de sincronização normal, igual a editar/remover.
+ * Regra do usuário 2026-10-08, generalizada a partir da exceção de doação:
+ * qualquer inclusão SÓ AUMENTA o quanto o membro paga à escola — "a crédito
+ * da escola" — então aplica direto, sem precisar de aprovação da Economia.
+ * (A trava de aprovação continua existindo só pro lado que DIMINUI o que a
+ * escola recebe — ver removeContributionItem.)
+ *
+ * Mesmo aplicando direto, grava um CompositionChangeRequest com
+ * status "aprovado" (não "pendente") — vira o registro histórico usado pro
+ * relatório de "quanto a contribuição cresceu" (ver
+ * getCrescimentoComposicao em economia-actions.ts).
  */
 export async function solicitarItemComposicao(memberId: string, mercurioGroupId: string, label: string, valor: number) {
   await requireAuthenticatedMember(memberId);
@@ -51,20 +50,15 @@ export async function solicitarItemComposicao(memberId: string, mercurioGroupId:
     return { ok: false as const, error: "Valor inválido." };
   }
 
-  if (REGEX_DOACAO.test(label)) {
-    const item = await db.contributionCompositionItem.create({
-      data: { memberId, mercurioGroupId, label, amount: valor, addedViaPortal: true },
-    });
-    await enqueueMercurioCompositionAdd(memberId, mercurioGroupId, label, valor);
-    revalidatePath("/portal");
-    return { ok: true as const, aplicadoDireto: true as const, item: { ...item, amount: Number(item.amount), pendingSync: true } };
-  }
-
-  const solicitacao = await db.compositionChangeRequest.create({
-    data: { memberId, mercurioGroupId, label, amount: valor, tipo: "inclusao" },
+  const item = await db.contributionCompositionItem.create({
+    data: { memberId, mercurioGroupId, label, amount: valor, addedViaPortal: true },
   });
+  await db.compositionChangeRequest.create({
+    data: { memberId, tipo: "inclusao", mercurioGroupId, label, amount: valor, status: "aprovado", reviewedAt: new Date() },
+  });
+  await enqueueMercurioCompositionAdd(memberId, mercurioGroupId, label, valor);
   revalidatePath("/portal");
-  return { ok: true as const, solicitado: true as const, id: solicitacao.id };
+  return { ok: true as const, aplicadoDireto: true as const, item: { ...item, amount: Number(item.amount), pendingSync: true } };
 }
 
 /** Pra UI mostrar as solicitações do próprio membro ainda não revisadas (inclusão E remoção). */
@@ -165,6 +159,17 @@ export async function removeContributionItem(memberId: string, compositionItemId
   }
 
   await db.contributionCompositionItem.delete({ where: { id: compositionItemId } });
+  await db.compositionChangeRequest.create({
+    data: {
+      memberId,
+      tipo: "remocao",
+      mercurioGroupId: item.mercurioGroupId,
+      label: item.label,
+      amount: item.amount,
+      status: "aprovado",
+      reviewedAt: agora,
+    },
+  });
   await enqueueMercurioCompositionRemove(memberId, item.mercurioGroupId);
 
   revalidatePath("/portal");

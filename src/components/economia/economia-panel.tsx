@@ -9,14 +9,13 @@ type Solicitacao = Awaited<ReturnType<typeof getSolicitacoesComposicaoPendentes>
 
 /**
  * Fila de aprovação do Secretário de Economia (ou Direção, enquanto ninguém
- * tiver esse cargo no Mercúrio — ver requireEconomiaOuDirecao). Dois tipos
- * de pedido (ver contribution-actions.ts):
- * - "inclusao": item novo que o membro pediu — compromisso financeiro que a
- *   escola ainda não sabia que existia.
- * - "remocao": item que a ESCOLA lançou direto no Mercúrio e o membro quer
- *   tirar — precisa de aprovação porque não é self-service (diferente de
- *   remover um item que o próprio membro incluiu).
- * Aprovar aplica de verdade (grava/apaga + propaga pro Mercúrio); rejeitar
+ * tiver esse cargo no Mercúrio — ver requireEconomiaOuDirecao). Regra do
+ * usuário 2026-10-08: qualquer coisa que AUMENTA o quanto o membro paga à
+ * escola aplica direto (não passa mais por aqui, nunca fica "pendente") — só
+ * remoção de item que a ESCOLA lançou direto no Mercúrio (!addedViaPortal)
+ * continua precisando de aprovação, porque diminui o que a escola recebe e
+ * não é self-service (diferente de remover um item que o próprio membro
+ * incluiu). Aprovar apaga o item de verdade + propaga pro Mercúrio; rejeitar
  * não aplica nada.
  */
 export function EconomiaPanel({ schoolId }: { schoolId: string }) {
@@ -57,7 +56,7 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-        Solicitações de novo item de composição ({solicitacoes.length})
+        Solicitações de remoção de item de composição ({solicitacoes.length})
       </p>
       {solicitacoes.length === 0 ? (
         <p className="text-xs text-gray-400">Nenhuma solicitação pendente.</p>

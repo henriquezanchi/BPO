@@ -56,14 +56,9 @@ export function MyContributionPanel({
       setCatalog((prev) => prev.filter((c) => c.value !== selectedGroup));
       setSelectedGroup("");
       setNewItemValue("");
-      if (res.aplicadoDireto) {
-        // Doação: aplica direto, sem aprovação (ver solicitarItemComposicao).
-        setItems((prev) => [...prev, res.item]);
-        setNotice(`"${label}" incluído — a confirmação no Mercúrio pode levar até 24h.`);
-      } else {
-        setSolicitacoes((prev) => [...prev, { id: res.id, tipo: "inclusao" as const, compositionItemId: null, label, amount: valor, createdAt: new Date() }]);
-        setNotice(`Solicitação de "${label}" enviada — aguardando aprovação da Economia.`);
-      }
+      // Toda inclusão só aumenta o que o membro paga — aplica direto, sem aprovação (ver solicitarItemComposicao).
+      setItems((prev) => [...prev, res.item]);
+      setNotice(`"${label}" incluído — a confirmação no Mercúrio pode levar até 24h.`);
     });
   }
 
@@ -234,7 +229,7 @@ export function MyContributionPanel({
       {solicitacoes.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
           <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
-            <Clock size={12} /> Aguardando aprovação da Economia
+            <Clock size={12} /> Remoção aguardando aprovação da Economia
           </div>
           <ul className="flex flex-col gap-1">
             {solicitacoes.map((s) => (
@@ -251,7 +246,7 @@ export function MyContributionPanel({
       )}
 
       <div className="mb-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-        <div className="mb-2 text-[11px] font-bold text-gray-900 dark:text-gray-100">Solicitar novo item</div>
+        <div className="mb-2 text-[11px] font-bold text-gray-900 dark:text-gray-100">Incluir novo item</div>
         {catalog.length === 0 ? (
           <p className="text-xs text-gray-500 dark:text-gray-400">Nenhum item novo disponível pra incluir.</p>
         ) : (
@@ -286,7 +281,7 @@ export function MyContributionPanel({
                 Incluir
               </button>
             </div>
-            <p className="text-[10px] text-gray-400">Doações entram direto, sem precisar de aprovação. Outros itens ficam pendentes até a Economia aprovar.</p>
+            <p className="text-[10px] text-gray-400">Qualquer item novo é incluído na hora — só a remoção de item lançado pela secretaria passa pela Economia.</p>
           </div>
         )}
       </div>
