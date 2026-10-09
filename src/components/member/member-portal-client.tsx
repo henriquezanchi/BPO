@@ -26,7 +26,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
 import { InstallPrompt } from "./install-prompt";
-import { AcropolePlayHighlightCard } from "./acropoleplay-highlight-card";
 import { NudgeCard } from "./nudge-card";
 import { OnboardingTour } from "./onboarding-tour";
 import { AgendaPanel } from "./panels/agenda-panel";
@@ -137,7 +136,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           </button>
         </div>
         <div className="mb-5 flex justify-center">
-          <Image src="/na-logo.png" alt={member.school.name} width={160} height={48} className="h-auto w-40 dark:brightness-0 dark:invert" />
+          <Image src="/na-logo.png" alt={member.school.name} width={160} height={104} className="h-auto w-40 dark:brightness-0 dark:invert" />
         </div>
 
         <div data-tour-id="welcome" className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-left text-white">
@@ -187,7 +186,6 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
 
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         <NudgeCard memberId={member.id} />
-        <AcropolePlayHighlightCard memberId={member.id} />
 
         {/* Status financeiro */}
         <div
