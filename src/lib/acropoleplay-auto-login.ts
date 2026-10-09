@@ -34,7 +34,7 @@ export function abrirJanelaAcropolePlay(): Window | null {
  * navegador PROCESSE o Set-Cookie da resposta, que acontece
  * independentemente do JS conseguir ler o corpo ou não.
  */
-export async function autoLoginAcropolePlay(email: string, senha: string, janela: Window | null) {
+export async function autoLoginAcropolePlay(email: string, senha: string, janela: Window | null, destino: string = DESTINO_URL) {
   try {
     await fetch(LOGIN_URL, {
       method: "POST",
@@ -48,5 +48,5 @@ export async function autoLoginAcropolePlay(email: string, senha: string, janela
     // processado — segue pro destino de qualquer forma.
   }
 
-  if (janela && !janela.closed) janela.location.href = DESTINO_URL;
+  if (janela && !janela.closed) janela.location.href = destino;
 }

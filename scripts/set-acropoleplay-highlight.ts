@@ -4,20 +4,22 @@
  * por ora (pedido do usuário 2026-10-08) — atualização manual, via este
  * script, até ficar claro que precisa de algo mais frequente.
  *
- * Uso: npx tsx --env-file=.env scripts/set-acropoleplay-highlight.ts "<título>" "<descrição>" ["<url da imagem>"]
+ * Uso: npx tsx --env-file=.env scripts/set-acropoleplay-highlight.ts "<título>" "<descrição>" ["<url da imagem>"] ["<link direto do conteúdo>"]
  */
 import { db } from "../src/lib/db";
 
 async function main() {
-  const [titulo, descricao, imagemUrl] = process.argv.slice(2);
+  const [titulo, descricao, imagemUrl, linkUrl] = process.argv.slice(2);
   if (!titulo || !descricao) {
-    throw new Error('Uso: npx tsx scripts/set-acropoleplay-highlight.ts "<título>" "<descrição>" ["<url da imagem>"]');
+    throw new Error(
+      'Uso: npx tsx scripts/set-acropoleplay-highlight.ts "<título>" "<descrição>" ["<url da imagem>"] ["<link direto do conteúdo>"]',
+    );
   }
 
   const highlight = await db.acropolePlayHighlight.upsert({
     where: { id: "global" },
-    update: { titulo, descricao, imagemUrl: imagemUrl ?? null },
-    create: { id: "global", titulo, descricao, imagemUrl: imagemUrl ?? null },
+    update: { titulo, descricao, imagemUrl: imagemUrl ?? null, linkUrl: linkUrl ?? null },
+    create: { id: "global", titulo, descricao, imagemUrl: imagemUrl ?? null, linkUrl: linkUrl ?? null },
   });
 
   console.log("✅ Destaque atualizado:", highlight);

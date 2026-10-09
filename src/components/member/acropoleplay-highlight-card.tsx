@@ -25,7 +25,11 @@ export function AcropolePlayHighlightCard({ memberId }: { memberId: string }) {
     startTransition(async () => {
       const res = await gerarAutoLoginAcropolePlay(memberId);
       if (res.ok) {
-        autoLoginAcropolePlay(res.email, res.senha, janela);
+        if (highlight?.linkUrl) {
+          autoLoginAcropolePlay(res.email, res.senha, janela, highlight.linkUrl);
+        } else {
+          autoLoginAcropolePlay(res.email, res.senha, janela);
+        }
       } else if (janela) {
         janela.location.href = "https://membros.acropoleplay.com/auth/login";
       }

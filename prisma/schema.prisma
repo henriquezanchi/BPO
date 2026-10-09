@@ -1174,5 +1174,9 @@ model AcropolePlayHighlight {
   titulo      String
   descricao   String
   imagemUrl   String?
+  // URL de dentro da Acrópole Play pra abrir DEPOIS do login automático (ex:
+  // a página da série em destaque) — null/vazio cai no destino genérico
+  // (vitrine/home). Pedido do usuário 2026-10-08.
+  linkUrl     String?
   updatedAt   DateTime @updatedAt
 }
