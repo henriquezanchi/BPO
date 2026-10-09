@@ -30,7 +30,7 @@ export default async function VolunteerTermPage() {
       </div>
 
       {signature ? (
-        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+        <div className="flex items-center gap-2 rounded-xl border border-na-success/40 bg-na-success-light p-4 text-sm text-na-success-dark dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
           <CheckCircle2 size={18} className="shrink-0" />
           <span>
             Assinado por <strong>{signature.signedName}</strong> em {formatDateTimeBR(signature.signedAt)}.

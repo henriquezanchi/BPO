@@ -1,5 +1,6 @@
 "use client";
 
+import { getFortunaRecorrenteNudge, responderNudge } from "@/lib/actions/nudge-actions";
 import { ativarPixAutomatico, checkPixAutomaticoStatus, desativarPixAutomatico } from "@/lib/actions/pix-automatico-actions";
 import { cancelarCobrancaContribuicaoPendente, checkChargeStatus, createContributionCharge, getPendingContributionCharge } from "@/lib/actions/payment-actions";
 import { viewReceiptByMercurioRecId } from "@/lib/actions/receipt-actions";
@@ -8,14 +9,14 @@ import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import type { FortunaBalanceView } from "@/lib/member-data";
 import type { ContributionMonthlyStatus } from "@prisma/client";
 import jsPDF from "jspdf";
-import { AlertTriangle, Check, Coffee, Copy, CreditCard, Download, ExternalLink, Loader2, QrCode, RefreshCw, Zap } from "lucide-react";
+import { AlertTriangle, Check, Coffee, Copy, CreditCard, Download, ExternalLink, HeartHandshake, Loader2, QrCode, RefreshCw, Zap } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 const ESTILO_POR_STATUS: Record<string, string> = {
-  paga: "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400",
-  atrasado: "border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400",
+  paga: "border-na-success/40 bg-na-success-light text-na-success-dark dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400",
+  atrasado: "border-na-danger/40 bg-na-danger-light text-na-danger-dark dark:border-red-800 dark:bg-red-950/30 dark:text-red-400",
   isento: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400",
   em_branco: "border-gray-200 bg-white text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-500",
 };
@@ -179,7 +180,7 @@ export function ContributionStatusPanel({
       </div>
 
       {erro && (
-        <div className="mb-3 flex items-start gap-2 rounded-lg bg-red-50 p-3 text-[11px] text-red-800 dark:bg-red-950/30 dark:text-red-300">
+        <div className="mb-3 flex items-start gap-2 rounded-lg bg-na-danger-light p-3 text-[11px] text-na-danger-dark dark:bg-red-950/30 dark:text-red-300">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           <span>{erro}</span>
         </div>
@@ -240,6 +241,8 @@ function RealPaymentScreen({
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [fortunaNudge, setFortunaNudge] = useState<Awaited<ReturnType<typeof getFortunaRecorrenteNudge>>>(null);
+  const [respondendoNudge, setRespondendoNudge] = useState(false);
 
   // Bug real relatado pelo usuário 2026-09-22: sair da tela no meio do
   // pagamento (ex: recebeu uma ligação) deixava a cobrança pendente órfã no
@@ -252,6 +255,24 @@ function RealPaymentScreen({
       .finally(() => setVerificandoPendente(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Pop-up do crédito recorrente Fortuna na hora de pagar — pedido do
+  // usuário 2026-10-09: não fica mais fixo na Home, só aparece aqui pra
+  // quem ainda não tem o item registrado (ver getFortunaRecorrenteNudge).
+  useEffect(() => {
+    if (podeRecarregarFortuna) getFortunaRecorrenteNudge(memberId).then(setFortunaNudge);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function responderFortunaNudge(resposta: "sim" | "depois" | "nao", valor?: number) {
+    if (!fortunaNudge) return;
+    setRespondendoNudge(true);
+    startTransition(async () => {
+      await responderNudge(memberId, fortunaNudge.id, resposta, valor);
+      setRespondendoNudge(false);
+      setFortunaNudge(null);
+    });
+  }
 
   function handleCancelarEGerarNova() {
     if (!charge) return;
@@ -305,6 +326,48 @@ function RealPaymentScreen({
 
   return (
     <div className="text-left">
+      {fortunaNudge && !verificandoPendente && !charge && !pago && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="flex w-full max-w-sm flex-col gap-2.5 rounded-2xl border border-na-gold/40 bg-white p-4 dark:bg-gray-900">
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-na-gold/20 text-na-gold-dark">
+                <HeartHandshake size={16} />
+              </div>
+              <div>
+                <h3 className="text-[13px] font-bold text-gray-900 dark:text-gray-100">{fortunaNudge.titulo}</h3>
+                <p className="text-[12px] text-gray-600 dark:text-gray-400">{fortunaNudge.descricao}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {fortunaNudge.opcoes.map((opcao) => (
+                <button
+                  key={opcao.label}
+                  onClick={() => responderFortunaNudge("sim", opcao.valor)}
+                  disabled={respondendoNudge}
+                  className="rounded-lg bg-na-green px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
+                >
+                  {respondendoNudge ? <Loader2 size={13} className="animate-spin" /> : fortunaNudge.opcoes.length === 1 ? "Sim" : opcao.label}
+                </button>
+              ))}
+              <button
+                onClick={() => responderFortunaNudge("depois")}
+                disabled={respondendoNudge}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-[12px] font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Lembrar mês que vem
+              </button>
+              <button
+                onClick={() => responderFortunaNudge("nao")}
+                disabled={respondendoNudge}
+                className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-gray-500 transition hover:bg-gray-100 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-800"
+              >
+                Não
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <button onClick={onVoltar} className="mb-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
         ← Voltar
       </button>
@@ -326,7 +389,7 @@ function RealPaymentScreen({
           <Loader2 size={12} className="animate-spin" /> Verificando se já existe uma cobrança pendente...
         </p>
       ) : pago ? (
-        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-center text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+        <div className="rounded-xl border border-na-success/40 bg-na-success-light p-4 text-center text-sm text-na-success-dark dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
           Pagamento confirmado! O lançamento no Mercúrio foi disparado automaticamente
           {recargaEfetiva > 0 && ", e a recarga no Fortuna também."}
         </div>
@@ -400,8 +463,8 @@ function RealPaymentScreen({
           )}
 
           {podeRecarregarFortuna && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+            <div className="rounded-lg border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
+              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">
                 <Coffee size={13} /> Aproveite e recarregue o Fortuna junto (evita fila na lanchonete)
               </p>
               <div className="flex gap-1.5">
@@ -412,8 +475,8 @@ function RealPaymentScreen({
                     onClick={() => setRecargaFortuna(v)}
                     className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition ${
                       recargaFortuna === v
-                        ? "border-amber-500 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
-                        : "border-amber-200 bg-white text-amber-700 dark:border-amber-900 dark:bg-transparent dark:text-amber-400"
+                        ? "border-na-warning bg-na-warning-light text-na-warning-dark dark:bg-amber-900/40 dark:text-amber-200"
+                        : "border-na-warning/40 bg-white text-na-warning-dark dark:border-amber-900 dark:bg-transparent dark:text-amber-400"
                     }`}
                   >
                     {v === 0 ? "Não" : `+${formatBRL(v)}`}
@@ -434,7 +497,7 @@ function RealPaymentScreen({
             />
           </div>
           {erro && (
-            <div className="flex items-start gap-2 rounded-lg bg-red-50 p-2.5 text-[11px] text-red-800 dark:bg-red-950/30 dark:text-red-300">
+            <div className="flex items-start gap-2 rounded-lg bg-na-danger-light p-2.5 text-[11px] text-na-danger-dark dark:bg-red-950/30 dark:text-red-300">
               <AlertTriangle size={14} className="mt-0.5 shrink-0" />
               <span>{erro}</span>
             </div>
@@ -508,8 +571,8 @@ function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: s
 
   if (statusAtual === "ACTIVE") {
     return (
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] dark:border-emerald-900 dark:bg-emerald-950/30">
-        <span className="flex items-center gap-1.5 font-semibold text-emerald-800 dark:text-emerald-300">
+      <div className="mb-4 flex items-center justify-between rounded-lg border border-na-success/30 bg-na-success-light p-3 text-[11px] dark:border-emerald-900 dark:bg-emerald-950/30">
+        <span className="flex items-center gap-1.5 font-semibold text-na-success-dark dark:text-emerald-300">
           <Zap size={13} /> Débito automático ativo — sua contribuição é cobrada sozinha todo mês.
         </span>
         <button onClick={handleDesativar} disabled={isPending} className="shrink-0 font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
@@ -521,8 +584,8 @@ function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: s
 
   if (autorizacao?.encodedImage) {
     return (
-      <div className="mb-4 flex flex-col items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-center dark:border-amber-900 dark:bg-amber-950/30">
-        <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">Escaneie pra confirmar — esse pagamento também autoriza os próximos meses</p>
+      <div className="mb-4 flex flex-col items-center gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 text-center dark:border-amber-900 dark:bg-amber-950/30">
+        <p className="text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">Escaneie pra confirmar — esse pagamento também autoriza os próximos meses</p>
         {/* eslint-disable-next-line @next/next/no-img-element -- base64 dinâmico do Asaas */}
         <img src={`data:image/png;base64,${autorizacao.encodedImage}`} alt="QR Code Pix Automático" className="h-40 w-40 rounded-lg border border-gray-200" />
         <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
@@ -534,25 +597,25 @@ function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: s
 
   if (ativando) {
     return (
-      <form onSubmit={handleAtivar} className="mb-4 flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-        <label className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">CPF de quem vai pagar</label>
+      <form onSubmit={handleAtivar} className="mb-4 flex flex-col gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
+        <label className="text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">CPF de quem vai pagar</label>
         <input
           value={cpf}
           onChange={(e) => setCpf(e.target.value)}
           placeholder="000.000.000-00"
           inputMode="numeric"
-          className="rounded-lg border border-amber-300 bg-white p-2 text-sm dark:border-amber-800 dark:bg-gray-900"
+          className="rounded-lg border border-na-warning/50 bg-white p-2 text-sm dark:border-amber-800 dark:bg-gray-900"
         />
-        {erro && <span className="text-[11px] text-red-700 dark:text-red-400">{erro}</span>}
+        {erro && <span className="text-[11px] text-na-danger-dark dark:text-red-400">{erro}</span>}
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={isPending}
-            className="flex-1 rounded-lg bg-amber-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+            className="flex-1 rounded-lg bg-na-warning px-3 py-2 text-[11px] font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
           >
             {isPending ? "Gerando..." : "Gerar autorização"}
           </button>
-          <button type="button" onClick={() => setAtivando(false)} className="rounded-lg border border-amber-300 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+          <button type="button" onClick={() => setAtivando(false)} className="rounded-lg border border-na-warning/50 px-3 py-2 text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">
             Cancelar
           </button>
         </div>
@@ -563,10 +626,10 @@ function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: s
   return (
     <button
       onClick={() => setAtivando(true)}
-      className="mb-4 flex w-full items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-left text-[11px] transition hover:brightness-95 dark:border-amber-900 dark:bg-amber-950/30"
+      className="mb-4 flex w-full items-center gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 text-left text-[11px] transition hover:brightness-95 dark:border-amber-900 dark:bg-amber-950/30"
     >
-      <RefreshCw size={14} className="shrink-0 text-amber-700 dark:text-amber-400" />
-      <span className="text-amber-800 dark:text-amber-300">
+      <RefreshCw size={14} className="shrink-0 text-na-warning-dark dark:text-amber-400" />
+      <span className="text-na-warning-dark dark:text-amber-300">
         <span className="font-semibold">Ative o débito automático</span> — nunca mais esqueça de pagar. Autoriza uma vez, cobramos sozinhos todo mês.
       </span>
     </button>

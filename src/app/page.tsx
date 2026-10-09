@@ -15,7 +15,7 @@ export default function Home() {
     <div className="flex min-h-screen items-center justify-center bg-na-bg p-5 dark:bg-gray-950">
       <div className="w-full max-w-[380px] rounded-[28px] border border-gray-200 bg-white p-6 text-center shadow-xl dark:border-gray-800 dark:bg-gray-900">
         <div className="mb-5 flex justify-center">
-          <Image src="/na-logo.png" alt="Nova Acrópole" width={160} height={48} className="h-auto w-36 dark:brightness-0 dark:invert" />
+          <Image src="/na-logo.png" alt="Nova Acrópole" width={160} height={104} className="h-auto w-36 dark:brightness-0 dark:invert" />
         </div>
 
         <h1 className="mb-1 text-lg font-black text-na-green-dark dark:text-emerald-400">Portal do Membro</h1>

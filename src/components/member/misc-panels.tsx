@@ -97,7 +97,7 @@ export function VolunteerPanel({ memberId }: { memberId: string }) {
           </button>
         ))}
       </div>
-      {erro && <p className="mb-2 text-[11px] text-red-700 dark:text-red-400">{erro}</p>}
+      {erro && <p className="mb-2 text-[11px] text-na-danger-dark dark:text-red-400">{erro}</p>}
       <button
         disabled={isPending || oferecidoEm === undefined}
         onClick={handleOferecer}

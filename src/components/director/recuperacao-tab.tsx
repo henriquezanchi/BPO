@@ -116,7 +116,7 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
                       <button
                         onClick={() => startTransition(() => toggleChargeTrigger(schoolId, t.id, !t.active))}
                         className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold ${
-                          t.active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                          t.active ? "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-400" : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
                         }`}
                       >
                         {t.active ? "Ativo" : "Inativo"}
@@ -239,13 +239,13 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
                 <div className="flex shrink-0 gap-2">
                   <button
                     onClick={() => startTransition(() => resolverNegociacao(schoolId, n.id, "em_dia"))}
-                    className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                    className="inline-flex items-center gap-1 rounded bg-na-success-light px-2 py-1 text-[10px] font-semibold text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-400"
                   >
                     <CircleCheck size={12} /> Pagou
                   </button>
                   <button
                     onClick={() => startTransition(() => resolverNegociacao(schoolId, n.id, "atrasado"))}
-                    className="rounded bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-400"
+                    className="rounded bg-na-danger-light px-2 py-1 text-[10px] font-semibold text-na-danger-dark dark:bg-red-950/40 dark:text-red-400"
                   >
                     Não cumpriu
                   </button>

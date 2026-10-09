@@ -192,16 +192,16 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           data-tour-id="contribuicao-status"
           className={`flex flex-col gap-3 rounded-2xl border p-4 ${
             isDelayed
-              ? "border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
-              : "border-emerald-300 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30"
+              ? "border-na-danger/40 bg-na-danger-light dark:border-red-900 dark:bg-red-950/30"
+              : "border-na-success/40 bg-na-success-light dark:border-emerald-900 dark:bg-emerald-950/30"
           }`}
         >
           <div className="flex items-center gap-2.5">
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full ${
                 isDelayed
-                  ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"
-                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+                  ? "bg-na-danger-light text-na-danger-dark dark:bg-red-900/50 dark:text-red-300"
+                  : "bg-na-success-light text-na-success-dark dark:bg-emerald-900/50 dark:text-emerald-300"
               }`}
             >
               {isDelayed ? <TriangleAlert size={16} /> : <CheckCircle2 size={16} />}
@@ -209,7 +209,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             <div>
               <h4
                 className={`text-[13px] font-bold ${
-                  isDelayed ? "text-red-800 dark:text-red-300" : "text-emerald-800 dark:text-emerald-300"
+                  isDelayed ? "text-na-danger-dark dark:text-red-300" : "text-na-success-dark dark:text-emerald-300"
                 }`}
               >
                 {isDelayed ? "Contribuição Pendente" : "Contribuição em Dia"}
@@ -232,8 +232,8 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             onClick={() => setModal("situacao")}
             className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold transition ${
               isDelayed
-                ? "bg-red-600 text-white hover:bg-red-700"
-                : "bg-white/70 text-emerald-800 hover:bg-white dark:bg-black/20 dark:text-emerald-300"
+                ? "bg-na-danger text-white hover:bg-red-700"
+                : "bg-white/70 text-na-success-dark hover:bg-white dark:bg-black/20 dark:text-emerald-300"
             }`}
           >
             Ver Situação

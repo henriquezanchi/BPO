@@ -115,13 +115,13 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
             return (
               <div
                 key={s.id}
-                className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[13px] dark:border-amber-900 dark:bg-amber-950/30"
+                className="rounded-xl border border-na-warning/30 bg-na-warning-light p-3 text-[13px] dark:border-amber-900 dark:bg-amber-950/30"
               >
                 <div className="flex items-center justify-between">
                   <p className="font-semibold text-gray-900 dark:text-gray-100">{s.member.name}</p>
                   <span
                     className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                      ehRemocao ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      ehRemocao ? "bg-na-danger-light text-na-danger-dark dark:bg-red-950/40 dark:text-red-400" : "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-400"
                     }`}
                   >
                     {ehRemocao ? <Minus size={10} /> : <Plus size={10} />}

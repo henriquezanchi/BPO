@@ -71,8 +71,8 @@ export function ChangePasswordForm() {
           <div
             className={`flex items-start gap-2 rounded-lg p-3 text-[11px] ${
               status.ok
-                ? "bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300"
-                : "bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300"
+                ? "bg-na-success-light text-na-success-dark dark:bg-green-950/30 dark:text-green-300"
+                : "bg-na-danger-light text-na-danger-dark dark:bg-red-950/30 dark:text-red-300"
             }`}
           >
             {status.ok ? <CheckCircle2 size={14} className="mt-0.5 shrink-0" /> : <AlertTriangle size={14} className="mt-0.5 shrink-0" />}

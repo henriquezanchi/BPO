@@ -113,7 +113,7 @@ export function EscolasticaPanel({ schoolId }: { schoolId: string }) {
               const oldValues = s.oldValues as Record<string, string | null>;
               const newValues = s.newValues as Record<string, string>;
               return (
-                <div key={s.id} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[13px] dark:border-amber-900 dark:bg-amber-950/30">
+                <div key={s.id} className="rounded-xl border border-na-warning/30 bg-na-warning-light p-3 text-[13px] dark:border-amber-900 dark:bg-amber-950/30">
                   <p className="font-semibold text-gray-900 dark:text-gray-100">{s.member.name}</p>
                   <ul className="mt-1 flex flex-col gap-0.5">
                     {Object.keys(newValues).map((campo) => (
@@ -198,12 +198,12 @@ export function EscolasticaPanel({ schoolId }: { schoolId: string }) {
             <div
               key={p.id}
               className={`flex items-center justify-between gap-3 rounded-xl border p-3 text-[13px] ${
-                atrasada ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30" : "border-gray-200 dark:border-gray-700"
+                atrasada ? "border-na-danger/30 bg-na-danger-light dark:border-red-900 dark:bg-red-950/30" : "border-gray-200 dark:border-gray-700"
               }`}
             >
               <div>
                 <p className="font-semibold text-gray-900 dark:text-gray-100">{p.title}</p>
-                <p className={`text-[11px] ${atrasada ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"}`}>
+                <p className={`text-[11px] ${atrasada ? "text-na-danger dark:text-red-400" : "text-gray-500 dark:text-gray-400"}`}>
                   Previsto: {formatDateBR(p.dueDate)} {p.member && `· ${p.member.name}`} {atrasada && "· ATRASADA"}
                 </p>
                 {p.notes && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{p.notes}</p>}

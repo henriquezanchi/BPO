@@ -1,6 +1,7 @@
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { VOLUNTEER_TERM_VERSION } from "@/lib/volunteer-term";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ArrowLeft, Banknote, CalendarClock, Crown, FileSignature, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -33,9 +34,12 @@ export default async function VoluntarioPage() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-      <Link href="/portal" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700">
-        <ArrowLeft size={14} /> Voltar ao Portal
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/portal" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700">
+          <ArrowLeft size={14} /> Voltar ao Portal
+        </Link>
+        <ThemeToggle />
+      </div>
       <h1 className="text-xl font-black text-na-green-dark">Portal do Voluntário</h1>
 
       <div className="flex flex-col gap-3">

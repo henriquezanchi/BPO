@@ -29,9 +29,14 @@ async function catalogoDoMembro(memberId: string, sugestao: NudgeSuggestion) {
 }
 
 /**
- * Qual sugestão mostrar agora pro membro — só UMA de cada vez (pedido do
- * usuário: não ser inconveniente), pulando quem já está ativo, quem foi
- * recusado, e quem foi adiado pra depois de hoje.
+ * Qual sugestão mostrar agora na Home pro membro — só UMA de cada vez
+ * (pedido do usuário: não ser inconveniente), pulando quem já está ativo,
+ * quem foi recusado, e quem foi adiado pra depois de hoje.
+ *
+ * Só sugestões tipo "composicao" (Biblioteca, Criança pelo Bem) — o crédito
+ * recorrente do Fortuna NÃO entra aqui (pedido do usuário 2026-10-09: não
+ * fica na Home, só aparece na hora de pagar a contribuição — ver
+ * getFortunaRecorrenteNudge, usado em contribution-status-panel.tsx).
  */
 export async function getNudgeAtivo(memberId: string) {
   await requireAuthenticatedMember(memberId);
@@ -40,23 +45,43 @@ export async function getNudgeAtivo(memberId: string) {
   const estadoPorId = new Map(estados.map((e) => [e.suggestionId, e]));
   const agora = new Date();
 
-  const member = await db.member.findUniqueOrThrow({ where: { id: memberId }, select: { fortunaClientId: true } });
-
   for (const sugestao of NUDGE_CATALOGO) {
+    if (sugestao.tipo !== "composicao") continue;
     const estado = estadoPorId.get(sugestao.id);
     if (estado?.status === "recusado") continue;
     if (estado?.status === "adiado" && estado.snoozedUntil && estado.snoozedUntil > agora) continue;
 
-    if (sugestao.tipo === "fortuna" && !member.fortunaClientId) continue; // sem Fortuna vinculado, não oferece
-    if (sugestao.tipo === "composicao") {
-      const catalogo = await catalogoDoMembro(memberId, sugestao);
-      if (!catalogo) continue; // essa escola não tem esse item no catálogo — não oferece
-    }
+    const catalogo = await catalogoDoMembro(memberId, sugestao);
+    if (!catalogo) continue; // essa escola não tem esse item no catálogo — não oferece
     if (await jaAtivo(memberId, sugestao)) continue;
 
     return { id: sugestao.id, titulo: sugestao.titulo, descricao: sugestao.descricao, opcoes: sugestao.opcoes };
   }
   return null;
+}
+
+/**
+ * Sugestão do crédito Fortuna recorrente, mostrada como pop-up na hora de
+ * pagar a contribuição (não mais na Home — pedido do usuário 2026-10-09).
+ * Mesma regra de recusado/adiado/já-ativo da Home, restrita ao item
+ * "fortuna-recorrente".
+ */
+export async function getFortunaRecorrenteNudge(memberId: string) {
+  await requireAuthenticatedMember(memberId);
+  const sugestao = NUDGE_CATALOGO.find((s) => s.id === "fortuna-recorrente")!;
+
+  const member = await db.member.findUniqueOrThrow({ where: { id: memberId }, select: { fortunaClientId: true } });
+  if (!member.fortunaClientId) return null; // sem Fortuna vinculado, não oferece
+
+  const estado = await db.memberNudgeState.findUnique({
+    where: { memberId_suggestionId: { memberId, suggestionId: sugestao.id } },
+  });
+  const agora = new Date();
+  if (estado?.status === "recusado") return null;
+  if (estado?.status === "adiado" && estado.snoozedUntil && estado.snoozedUntil > agora) return null;
+  if (await jaAtivo(memberId, sugestao)) return null;
+
+  return { id: sugestao.id, titulo: sugestao.titulo, descricao: sugestao.descricao, opcoes: sugestao.opcoes };
 }
 
 /** 1º dia do mês seguinte, meio-dia UTC (mesma convenção de "data pura" do resto do projeto). */

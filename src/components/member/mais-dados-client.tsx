@@ -142,7 +142,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
         </button>
 
         {result?.changed && (
-          <div className="flex items-start gap-2 rounded-lg bg-green-50 p-3 text-[11px] text-green-800 dark:bg-green-950/30 dark:text-green-300">
+          <div className="flex items-start gap-2 rounded-lg bg-na-success-light p-3 text-[11px] text-na-success-dark dark:bg-green-950/30 dark:text-green-300">
             <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
             <span>Dados atualizados com sucesso. A alteração pode levar até 24h para ser confirmada no Mercúrio.</span>
           </div>

@@ -26,7 +26,7 @@ export function SignTermForm({ memberId }: { memberId: string }) {
 
   if (done) {
     return (
-      <div className="flex items-center gap-2 rounded-lg bg-green-50 p-3 text-xs text-green-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+      <div className="flex items-center gap-2 rounded-lg bg-na-success-light p-3 text-xs text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">
         <CheckCircle2 size={16} /> Termo assinado com sucesso!
       </div>
     );
@@ -57,7 +57,7 @@ export function SignTermForm({ memberId }: { memberId: string }) {
         />
       </div>
 
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-xs text-na-danger dark:text-red-400">{error}</p>}
 
       <button
         type="submit"

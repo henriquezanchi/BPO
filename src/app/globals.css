@@ -32,9 +32,23 @@
   --na-laranja: #f39300; /* Laranja Amon — cor primária */
   --na-cinza: #d8d9db; /* Cinza Delfos — cor primária */
   --na-bg: #f4f6f8; /* fundo neutro do app — não especificado no guia, mantido */
+  /*
+   * Danger/success/warning — pedido do usuário 2026-10-09 (auditoria
+   * Impeccable): esses 3 tokens existiam mas nunca eram usados, então todo
+   * alerta/badge do app usava red/emerald/amber genéricos do Tailwind em
+   * vez da paleta secundária real do guia. Dark/light aqui seguem o MESMO
+   * padrão já usado pro Heket (--na-green-dark/-light): escurecido ~35%
+   * pra texto sobre fundo claro, clareado ~90% pra fundo de alerta suave.
+   */
   --na-danger: #da0e15; /* vermelho da paleta secundária (C4) */
+  --na-danger-dark: #8e0a0e; /* C4 escurecido — texto sobre fundo claro */
+  --na-danger-light: #fbe7e7; /* C4 a ~10% sobre branco — fundo de alerta suave */
   --na-success: #017948; /* verde da paleta secundária (C9) */
+  --na-success-dark: #014e2f; /* C9 escurecido — texto sobre fundo claro */
+  --na-success-light: #e5f1ec; /* C9 a ~10% sobre branco — fundo de alerta suave */
   --na-warning: #f39300; /* Laranja Amon */
+  --na-warning-dark: #995c00; /* Laranja escurecido — texto sobre fundo claro */
+  --na-warning-light: #fdf0e0; /* Laranja a ~10% sobre branco — fundo de alerta suave */
 }
 
 @theme inline {
@@ -53,8 +67,14 @@
   --color-na-cinza: var(--na-cinza);
   --color-na-bg: var(--na-bg);
   --color-na-danger: var(--na-danger);
+  --color-na-danger-dark: var(--na-danger-dark);
+  --color-na-danger-light: var(--na-danger-light);
   --color-na-success: var(--na-success);
+  --color-na-success-dark: var(--na-success-dark);
+  --color-na-success-light: var(--na-success-light);
   --color-na-warning: var(--na-warning);
+  --color-na-warning-dark: var(--na-warning-dark);
+  --color-na-warning-light: var(--na-warning-light);
 }
 
 /*

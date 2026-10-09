@@ -83,7 +83,7 @@ export function FortunaTab({
         ) : (
           <ul className="flex flex-col gap-2">
             {data.recargasFortunaPendentes.map((r) => (
-              <li key={r.id} className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/30">
+              <li key={r.id} className="flex flex-col gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 text-sm dark:border-amber-900 dark:bg-amber-950/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-medium text-gray-900 dark:text-gray-100">{r.memberName}</span>
@@ -94,7 +94,7 @@ export function FortunaTab({
                   </div>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">{formatBRL(r.amount)}</span>
                 </div>
-                {r.autoCreditError && <p className="text-[11px] text-red-700 dark:text-red-400">Erro: {r.autoCreditError}</p>}
+                {r.autoCreditError && <p className="text-[11px] text-na-danger-dark dark:text-red-400">Erro: {r.autoCreditError}</p>}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleTentarNovamente(r.id, r.source)}
@@ -207,7 +207,7 @@ export function FortunaTab({
             {data.fortunaTransacoes.map((t, i) => (
               <li key={i} className="flex items-center justify-between rounded-lg border border-gray-100 p-3 text-sm dark:border-gray-800">
                 <span className="font-medium text-gray-900 dark:text-gray-100">{t.memberName}</span>
-                <span className={`font-semibold ${t.amount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                <span className={`font-semibold ${t.amount >= 0 ? "text-na-success-dark" : "text-na-danger-dark"}`}>
                   {t.amount >= 0 ? "+" : ""}
                   {formatBRL(t.amount)}
                 </span>

@@ -71,7 +71,7 @@ function OutrasReceitasCard({ schoolId }: { schoolId: string }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-na-green dark:text-emerald-400">{formatBRL(r.amount)}</span>
-                <button onClick={() => handleExcluir(r.id)} disabled={isPending} className="text-gray-400 hover:text-red-600">
+                <button onClick={() => handleExcluir(r.id)} disabled={isPending} className="text-gray-400 hover:text-na-danger">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -134,13 +134,13 @@ function DocumentosDaConta({ schoolId, payable }: { schoolId: string; payable: P
           <button onClick={() => handleAbrir(d.id)} className="inline-flex items-center gap-1 hover:underline">
             <FileText size={10} /> {d.title}
           </button>
-          <button onClick={() => startTransition(() => excluirAccountantDocument(schoolId, d.id))} disabled={isPending} className="text-gray-400 hover:text-red-600">
+          <button onClick={() => startTransition(() => excluirAccountantDocument(schoolId, d.id))} disabled={isPending} className="text-gray-400 hover:text-na-danger">
             <Trash2 size={10} />
           </button>
         </span>
       ))}
       {payable.documents.length === 0 && (
-        <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">Comprovante pendente</span>
+        <span className="rounded bg-na-warning-light px-1.5 py-0.5 text-[10px] font-medium text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-400">Comprovante pendente</span>
       )}
       <form action={handleUpload} className="inline-flex items-center gap-1">
         <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-dashed border-gray-300 px-1.5 py-0.5 text-[10px] text-gray-500 hover:border-na-green hover:text-na-green-dark dark:border-gray-700 dark:text-gray-400">
@@ -154,13 +154,13 @@ function DocumentosDaConta({ schoolId, payable }: { schoolId: string; payable: P
 }
 
 function MedidorConciliacao({ percentual }: { percentual: number }) {
-  const cor = percentual >= 80 ? "emerald" : percentual >= 50 ? "amber" : "red";
+  const cor = percentual >= 80 ? "success" : percentual >= 50 ? "warning" : "danger";
   const classes: Record<string, string> = {
-    emerald: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400",
-    amber: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400",
-    red: "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400",
+    success: "border-na-success/30 bg-na-success-light text-na-success-dark dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400",
+    warning: "border-na-warning/30 bg-na-warning-light text-na-warning-dark dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400",
+    danger: "border-na-danger/30 bg-na-danger-light text-na-danger-dark dark:border-red-900 dark:bg-red-950/30 dark:text-red-400",
   };
-  const barra: Record<string, string> = { emerald: "bg-emerald-500", amber: "bg-amber-500", red: "bg-red-500" };
+  const barra: Record<string, string> = { success: "bg-na-success", warning: "bg-na-warning", danger: "bg-na-danger" };
   return (
     <div className={`rounded-2xl border p-5 ${classes[cor]}`}>
       <div className="flex items-center justify-between">
@@ -320,7 +320,7 @@ function ContaRow({
               else if (confirm(`Excluir "${payable.vendor}"? Isso também remove os documentos anexados.`)) startTransition(() => excluirContaAPagar(schoolId, payable.id));
             }}
             disabled={isPending}
-            className="text-gray-400 hover:text-red-600"
+            className="text-gray-400 hover:text-na-danger"
           >
             <Trash2 size={14} />
           </button>

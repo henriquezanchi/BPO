@@ -30,13 +30,13 @@ export function JornadaPanel({ dataEntrada, streakMeses, levelHistory, badges, i
   return (
     <div className="text-left">
       {streakMeses > 0 && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-          <Flame size={24} className="shrink-0 text-amber-500" />
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
+          <Flame size={24} className="shrink-0 text-na-warning" />
           <div>
-            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+            <p className="text-sm font-bold text-na-warning-dark dark:text-amber-300">
               {streakMeses} {streakMeses === 1 ? "mês" : "meses"} em dia
             </p>
-            <p className="text-[11px] text-amber-700 dark:text-amber-400">Continue assim!</p>
+            <p className="text-[11px] text-na-warning-dark dark:text-amber-400">Continue assim!</p>
           </div>
         </div>
       )}

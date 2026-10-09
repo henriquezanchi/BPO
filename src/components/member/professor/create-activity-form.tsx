@@ -83,7 +83,7 @@ export function CreateActivityForm({ classGroupId }: { classGroupId: string }) {
       </button>
 
       {done && (
-        <div className="flex items-center gap-2 rounded-lg bg-green-50 p-2.5 text-xs text-green-800">
+        <div className="flex items-center gap-2 rounded-lg bg-na-success-light p-2.5 text-xs text-na-success-dark">
           <CheckCircle2 size={14} /> Atividade publicada e alunos notificados no WhatsApp.
         </div>
       )}

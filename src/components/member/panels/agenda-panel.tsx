@@ -1,12 +1,10 @@
 "use client";
 
 import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/event-actions";
-import { toggleAgendaReaction } from "@/lib/actions/reaction-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
-import { EMOJIS_PERMITIDOS } from "@/lib/agenda-reactions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
-import type { AgendaItem, AgendaReactionSummary } from "@/lib/member-data";
+import type { AgendaItem } from "@/lib/member-data";
 import { Check, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
@@ -16,61 +14,6 @@ const ACTIVITY_LABEL: Record<string, string> = {
   leitura: "Leitura",
   atividade_turma: "Atividade de turma",
 };
-
-/**
- * Reações de emoji num card da Agenda — visíveis pros outros alunos
- * (contagem agregada, sem expor quem reagiu). Sem tempo real: a
- * atualização de quem reagiu depois de você só aparece quando o Portal
- * recarregar (ver toggleAgendaReaction), não instantaneamente.
- */
-function ReactionBar({
-  memberId,
-  itemType,
-  itemId,
-  reactions,
-}: {
-  memberId: string;
-  itemType: "evento" | "atividade";
-  itemId: string;
-  reactions: AgendaReactionSummary[];
-}) {
-  const [local, setLocal] = useState(reactions);
-  const [isPending, startTransition] = useTransition();
-
-  function handleClick(emoji: string) {
-    startTransition(async () => {
-      const res = await toggleAgendaReaction(memberId, itemType, itemId, emoji);
-      setLocal((prev) => {
-        const semEsse = prev.filter((r) => r.emoji !== emoji);
-        const count = res.counts[emoji] ?? 0;
-        return count > 0 ? [...semEsse, { emoji, count, reactedByMe: res.reactedByMe }] : semEsse;
-      });
-    });
-  }
-
-  return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      {EMOJIS_PERMITIDOS.map((emoji) => {
-        const registro = local.find((r) => r.emoji === emoji);
-        return (
-          <button
-            key={emoji}
-            onClick={() => handleClick(emoji)}
-            disabled={isPending}
-            className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition disabled:opacity-60 ${
-              registro?.reactedByMe
-                ? "border-na-green bg-na-green-light dark:border-emerald-700 dark:bg-emerald-950/40"
-                : "border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
-            }`}
-          >
-            <span>{emoji}</span>
-            {registro && registro.count > 0 && <span className="text-gray-500 dark:text-gray-400">{registro.count}</span>}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 /**
  * Enquete criada pelo professor (ver createPoll) — o resultado (barra e %)
@@ -215,7 +158,7 @@ function InscricaoEvento({
 
   if (inscricao?.pixQrCodeBase64) {
     return (
-      <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+      <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
         {/* eslint-disable-next-line @next/next/no-img-element -- base64 dinâmico do Asaas */}
         <img src={`data:image/png;base64,${inscricao.pixQrCodeBase64}`} alt="QR Code PIX" className="h-40 w-40 rounded-lg border border-gray-200" />
         <button
@@ -241,7 +184,7 @@ function InscricaoEvento({
           inputMode="numeric"
           className="rounded-lg border border-gray-300 p-2 text-[12px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
         />
-        {erro && <span className="text-[11px] text-red-700 dark:text-red-400">{erro}</span>}
+        {erro && <span className="text-[11px] text-na-danger-dark dark:text-red-400">{erro}</span>}
         <button
           type="submit"
           disabled={isPending}
@@ -262,7 +205,7 @@ function InscricaoEvento({
       >
         {isPending ? <Loader2 size={12} className="animate-spin" /> : "Inscrever-se"}
       </button>
-      {erro && <p className="mt-1 text-[11px] text-red-700 dark:text-red-400">{erro}</p>}
+      {erro && <p className="mt-1 text-[11px] text-na-danger-dark dark:text-red-400">{erro}</p>}
     </div>
   );
 }
@@ -315,7 +258,6 @@ export function AgendaPanel({ memberId, items }: { memberId: string; items: Agen
                 <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} />
               </>
             )}
-            <ReactionBar memberId={memberId} itemType="evento" itemId={item.id} reactions={item.reactions} />
           </div>
         ) : (
           <div
@@ -336,7 +278,6 @@ export function AgendaPanel({ memberId, items }: { memberId: string; items: Agen
             {item.description && (
               <p className="mt-2 text-[11px] text-gray-600 dark:text-gray-400">{item.description}</p>
             )}
-            <ReactionBar memberId={memberId} itemType="atividade" itemId={item.id} reactions={item.reactions} />
           </div>
         ),
       )}

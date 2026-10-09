@@ -78,7 +78,7 @@ export function FortunaTopUpPanel({ balances, memberId }: { balances: FortunaBal
   if (pago) {
     return (
       <div className="text-left">
-        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-center text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+        <div className="rounded-xl border border-na-success/40 bg-na-success-light p-4 text-center text-sm text-na-success-dark dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
           Pagamento de {formatBRL(charge?.amount ?? valorNumerico)} confirmado e já creditado em{" "}
           {branch?.branchTitle}! Feche esta tela e atualize seu saldo pra conferir.
         </div>
@@ -106,7 +106,7 @@ export function FortunaTopUpPanel({ balances, memberId }: { balances: FortunaBal
 
   return (
     <form onSubmit={handleGerarCobranca} className="text-left">
-      <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-[11px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+      <div className="mb-4 rounded-xl border border-na-success/40 bg-na-success-light p-3 text-[11px] text-na-success-dark dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
         Assim que o PIX for pago, o crédito cai automaticamente na sua carteira Fortuna.
       </div>
 
@@ -142,7 +142,7 @@ export function FortunaTopUpPanel({ balances, memberId }: { balances: FortunaBal
       />
 
       {erro && (
-        <div className="mb-3 flex items-start gap-2 rounded-lg bg-red-50 p-2.5 text-[11px] text-red-800 dark:bg-red-950/30 dark:text-red-300">
+        <div className="mb-3 flex items-start gap-2 rounded-lg bg-na-danger-light p-2.5 text-[11px] text-na-danger-dark dark:bg-red-950/30 dark:text-red-300">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           <span>{erro}</span>
         </div>

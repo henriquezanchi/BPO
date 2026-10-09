@@ -88,7 +88,7 @@ export function TransparenciaPanel({ memberId }: { memberId: string }) {
           <div className="mb-4 rounded-xl border border-gray-200 p-4 text-center dark:border-gray-700">
             <p className="text-[11px] text-gray-500 dark:text-gray-400">Resultado do Mês</p>
             <p
-              className={`mt-1 text-2xl font-bold ${resposta.dados.resultado >= 0 ? "text-na-green-dark dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
+              className={`mt-1 text-2xl font-bold ${resposta.dados.resultado >= 0 ? "text-na-green-dark dark:text-emerald-400" : "text-na-danger-dark dark:text-red-400"}`}
             >
               {formatBRL(resposta.dados.resultado)}
             </p>
@@ -107,9 +107,9 @@ export function TransparenciaPanel({ memberId }: { memberId: string }) {
             ))}
           </ul>
 
-          <div className="mb-4 flex items-center justify-between rounded-lg bg-amber-50 p-3 text-[11px] dark:bg-amber-950/30">
-            <span className="text-amber-800 dark:text-amber-300">Taxa de inadimplência entre os membros</span>
-            <span className="font-bold text-amber-800 dark:text-amber-300">{resposta.dados.taxaInadimplencia.toFixed(1)}%</span>
+          <div className="mb-4 flex items-center justify-between rounded-lg bg-na-warning-light p-3 text-[11px] dark:bg-amber-950/30">
+            <span className="text-na-warning-dark dark:text-amber-300">Taxa de inadimplência entre os membros</span>
+            <span className="font-bold text-na-warning-dark dark:text-amber-300">{resposta.dados.taxaInadimplencia.toFixed(1)}%</span>
           </div>
 
           <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">Em que foi usado</p>

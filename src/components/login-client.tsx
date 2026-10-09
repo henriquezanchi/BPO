@@ -50,7 +50,7 @@ export function LoginClient({ next }: { next: string }) {
         <ThemeToggle className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
 
         <div className="mb-6 flex justify-center">
-          <Image src="/na-logo.png" alt="Nova Acrópole" width={160} height={48} className="h-auto w-36 dark:brightness-0 dark:invert" />
+          <Image src="/na-logo.png" alt="Nova Acrópole" width={160} height={104} className="h-auto w-36 dark:brightness-0 dark:invert" />
         </div>
 
         <h1 className="mb-1 text-center text-base font-black text-na-green-dark dark:text-emerald-400">
@@ -84,7 +84,7 @@ export function LoginClient({ next }: { next: string }) {
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-[11px] text-red-800 dark:bg-red-950/30 dark:text-red-300">
+            <div className="flex items-start gap-2 rounded-lg bg-na-danger-light p-3 text-[11px] text-na-danger-dark dark:bg-red-950/30 dark:text-red-300">
               <AlertTriangle size={14} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>

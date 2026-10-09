@@ -22,7 +22,10 @@ export function BottomSheet({
         <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[85vh] w-full max-w-[440px] overflow-y-auto rounded-t-3xl bg-white p-5 pb-8 shadow-2xl animate-[sheet-slide-up_0.25s_ease-out] dark:bg-gray-900">
           <div className="mb-5 flex items-center justify-between">
             <Dialog.Title className="text-base font-black text-na-green-dark dark:text-emerald-400">{title}</Dialog.Title>
-            <Dialog.Close className="text-muted-foreground text-lg text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+            <Dialog.Close
+              aria-label="Fechar"
+              className="text-muted-foreground text-lg text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            >
               <X size={18} />
             </Dialog.Close>
           </div>

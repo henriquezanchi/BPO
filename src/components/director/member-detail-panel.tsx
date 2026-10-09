@@ -7,8 +7,8 @@ import { useEffect, useState, useTransition } from "react";
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const ESTILO_MES: Record<string, string> = {
-  paga: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400",
-  atrasado: "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400",
+  paga: "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-400",
+  atrasado: "bg-na-danger-light text-na-danger-dark dark:bg-red-950/40 dark:text-red-400",
   isento: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   em_branco: "bg-gray-50 text-gray-400 dark:bg-gray-800/50 dark:text-gray-500",
 };
@@ -86,7 +86,7 @@ export function MemberDetailPanel({ schoolId, memberId }: { schoolId: string; me
       </div>
 
       {detail.negociacaoAberta && (
-        <div className="rounded-lg bg-amber-50 p-3 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+        <div className="rounded-lg bg-na-warning-light p-3 text-[11px] text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300">
           <strong>Em negociação:</strong> {detail.negociacaoAberta.notes}
           {detail.negociacaoAberta.promisedPaymentDate && ` — promessa: ${new Date(detail.negociacaoAberta.promisedPaymentDate).toLocaleDateString("pt-BR")}`}
         </div>

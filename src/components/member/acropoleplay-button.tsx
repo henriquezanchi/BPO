@@ -117,7 +117,7 @@ export function AcropolePlayButton({ memberId }: { memberId: string }) {
           Cancelar
         </button>
       )}
-      {erro && <p className="text-[11px] text-red-600 dark:text-red-400">{erro}</p>}
+      {erro && <p className="text-[11px] text-na-danger dark:text-red-400">{erro}</p>}
     </div>
   );
 }

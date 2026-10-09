@@ -127,7 +127,7 @@ export function MyContributionPanel({
                 <div
                   key={item.id}
                   className={`flex items-center justify-between gap-2 p-2.5 text-[13px] ${
-                    item.pendingSync || remocaoPendente ? "bg-amber-50 dark:bg-amber-950/20" : ""
+                    item.pendingSync || remocaoPendente ? "bg-na-warning-light dark:bg-amber-950/20" : ""
                   }`}
                 >
                   <span className="flex flex-col gap-0.5">
@@ -136,12 +136,12 @@ export function MyContributionPanel({
                       {item.label}
                     </span>
                     {item.pendingSync && (
-                      <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-na-warning-dark dark:text-amber-400">
                         <Clock size={10} /> Aguardando confirmação no Mercúrio
                       </span>
                     )}
                     {remocaoPendente && (
-                      <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-na-warning-dark dark:text-amber-400">
                         <Clock size={10} /> Remoção aguardando aprovação da Economia
                       </span>
                     )}
@@ -163,7 +163,7 @@ export function MyContributionPanel({
                       >
                         {isSavingEdit ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                       </button>
-                      <button onClick={() => setEditingId(null)} title="Cancelar" className="text-gray-400 transition hover:text-red-600">
+                      <button onClick={() => setEditingId(null)} title="Cancelar" className="text-gray-400 transition hover:text-na-danger">
                         <X size={13} />
                       </button>
                     </div>
@@ -183,7 +183,7 @@ export function MyContributionPanel({
                             onClick={() => handleRemove(item)}
                             disabled={isRemoving && removingId === item.id}
                             title="Excluir item incluído por você"
-                            className="text-gray-400 transition hover:text-red-600 disabled:opacity-60"
+                            className="text-gray-400 transition hover:text-na-danger disabled:opacity-60"
                           >
                             {isRemoving && removingId === item.id ? (
                               <Loader2 size={13} className="animate-spin" />
@@ -198,7 +198,7 @@ export function MyContributionPanel({
                           onClick={() => handleRemove(item)}
                           disabled={(isRemoving && removingId === item.id) || remocaoPendente}
                           title="Solicitar remoção deste item à Economia"
-                          className="text-gray-400 transition hover:text-red-600 disabled:opacity-60"
+                          className="text-gray-400 transition hover:text-na-danger disabled:opacity-60"
                         >
                           {isRemoving && removingId === item.id ? (
                             <Loader2 size={13} className="animate-spin" />
@@ -227,13 +227,13 @@ export function MyContributionPanel({
       </p>
 
       {solicitacoes.length > 0 && (
-        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
+        <div className="mb-4 rounded-xl border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold text-na-warning-dark dark:text-amber-300">
             <Clock size={12} /> Remoção aguardando aprovação da Economia
           </div>
           <ul className="flex flex-col gap-1">
             {solicitacoes.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-2 text-[12px] text-amber-800 dark:text-amber-300">
+              <li key={s.id} className="flex items-center justify-between gap-2 text-[12px] text-na-warning-dark dark:text-amber-300">
                 <span className="flex items-center gap-1">
                   {s.tipo === "remocao" ? <Minus size={11} /> : <Plus size={11} />}
                   {s.label}
@@ -287,13 +287,13 @@ export function MyContributionPanel({
       </div>
 
       {notice && (
-        <div className="flex items-start gap-2 rounded-lg bg-green-50 p-3 text-[11px] text-green-800 dark:bg-green-950/30 dark:text-green-300">
+        <div className="flex items-start gap-2 rounded-lg bg-na-success-light p-3 text-[11px] text-na-success-dark dark:bg-green-950/30 dark:text-green-300">
           <Check size={14} className="mt-0.5 shrink-0" />
           <span>{notice}</span>
         </div>
       )}
       {error && (
-        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-[11px] text-red-800 dark:bg-red-950/30 dark:text-red-300">
+        <div className="flex items-start gap-2 rounded-lg bg-na-danger-light p-3 text-[11px] text-na-danger-dark dark:bg-red-950/30 dark:text-red-300">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>

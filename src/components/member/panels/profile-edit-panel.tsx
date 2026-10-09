@@ -71,11 +71,11 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
           <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={isPending} />
         </label>
         {avatarUrl && (
-          <button onClick={handleRemover} disabled={isPending} className="inline-flex w-fit items-center gap-1 text-[11px] text-gray-400 hover:text-red-600">
+          <button onClick={handleRemover} disabled={isPending} className="inline-flex w-fit items-center gap-1 text-[11px] text-gray-400 hover:text-na-danger">
             <Trash2 size={11} /> Remover foto
           </button>
         )}
-        {erro && <span className="text-[10px] text-red-600 dark:text-red-400">{erro}</span>}
+        {erro && <span className="text-[10px] text-na-danger dark:text-red-400">{erro}</span>}
       </div>
     </div>
   );
@@ -112,7 +112,7 @@ function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; 
   return (
     <div className="mb-4 flex flex-col gap-1">
       {pendente ? (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+        <div className="flex items-start gap-2 rounded-lg bg-na-warning-light p-3 text-[11px] text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300">
           <Clock size={14} className="mt-0.5 shrink-0" />
           <span>Você já tem uma solicitação de correção em análise com a secretaria — aguarde a aprovação antes de enviar outra.</span>
         </div>
@@ -296,14 +296,14 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       </button>
 
       {result?.changed && (
-        <div className="mt-3 flex items-start gap-2 rounded-lg bg-green-50 p-3 text-[11px] text-green-800 dark:bg-green-950/30 dark:text-green-300">
+        <div className="mt-3 flex items-start gap-2 rounded-lg bg-na-success-light p-3 text-[11px] text-na-success-dark dark:bg-green-950/30 dark:text-green-300">
           <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
           <span>Endereço atualizado com sucesso. A alteração pode levar até 24h para ser confirmada no Mercúrio.</span>
         </div>
       )}
 
       {result?.alerted && (
-        <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+        <div className="mt-2 flex items-start gap-2 rounded-lg bg-na-warning-light p-3 text-[11px] text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
           <span>
             Como sua contribuição está em atraso, a secretaria de economia foi notificada desta alteração de
