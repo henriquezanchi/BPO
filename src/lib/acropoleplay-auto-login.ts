@@ -12,23 +12,34 @@ const CAMPO_TOKEN = "_token";
 const JANELA_NOME = "acropoleplay_login";
 
 /**
- * Monta e submete um form escondido no PRÓPRIO navegador do membro — é o
- * navegador dele que precisa logar de verdade, não o nosso servidor (cookie
- * de sessão é por domínio, não dá pra "transferir" de outro jeito).
+ * Abre a aba/janela ANTES de qualquer await (chamar isso direto no onClick,
+ * de forma síncrona) — navegador só trata window.open como ação confiável
+ * do usuário quando ela acontece no mesmo tick do clique; esperar a busca
+ * da credencial (Server Action) antes de abrir faz o Chrome tratar como
+ * pop-up "não confiável", o que pode mudar como cookies de sessão são
+ * aceitos na resposta (achado ao vivo 2026-10-08: tela de erro persistia
+ * mesmo com os campos certos até isso ser corrigido).
+ */
+export function abrirJanelaAcropolePlay(): Window | null {
+  return window.open("", JANELA_NOME);
+}
+
+/**
+ * Monta e submete um form escondido NA JANELA JÁ ABERTA (ver
+ * abrirJanelaAcropolePlay) — é o navegador do próprio membro que precisa
+ * logar de verdade, não o nosso servidor (cookie de sessão é por domínio,
+ * não dá pra "transferir" de outro jeito).
  *
  * Achado ao vivo 2026-10-08: o login em si funciona (a sessão fica
  * autenticada de verdade), mas a resposta deles pra um POST vindo de outro
  * domínio às vezes renderiza uma tela de "erro inesperado" em vez do
  * redirecionamento normal — confirmado que é só cosmético, porque clicar em
  * "ir pra página inicial" nessa tela de erro já leva pro vitrine logado.
- * Contorno: abrir uma janela NOMEADA (não um "_blank" anônimo), mandar o
- * form de login pra ela, e depois de um respiro forçar essa MESMA janela a
- * navegar pro destino certo — `.location` cross-origin pode ser setado
- * mesmo sem poder ser lido, então isso funciona sem violar same-origin.
+ * Contorno: depois de um respiro, forçar essa MESMA janela a navegar pro
+ * destino certo — `.location` cross-origin pode ser setado mesmo sem poder
+ * ser lido, então isso funciona sem violar same-origin.
  */
-export function autoSubmeterLoginAcropolePlay(email: string, senha: string) {
-  const janela = window.open("", JANELA_NOME);
-
+export function autoSubmeterLoginAcropolePlay(email: string, senha: string, janela: Window | null) {
   const form = document.createElement("form");
   form.method = "POST";
   form.action = LOGIN_URL;

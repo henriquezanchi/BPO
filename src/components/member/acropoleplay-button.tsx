@@ -1,7 +1,7 @@
 "use client";
 
 import { gerarAutoLoginAcropolePlay, getAcropolePlayStatus, salvarCredencialAcropolePlay } from "@/lib/actions/acropoleplay-actions";
-import { autoSubmeterLoginAcropolePlay } from "@/lib/acropoleplay-auto-login";
+import { abrirJanelaAcropolePlay, autoSubmeterLoginAcropolePlay } from "@/lib/acropoleplay-auto-login";
 import { Clapperboard, Loader2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
@@ -26,13 +26,18 @@ export function AcropolePlayButton({ memberId }: { memberId: string }) {
 
   function handleAcessar() {
     setErro(null);
+    // Precisa abrir a janela JÁ, de forma síncrona, dentro do clique —
+    // esperar a Server Action antes faz o navegador tratar como pop-up não
+    // confiável (ver acropoleplay-auto-login.ts).
+    const janela = abrirJanelaAcropolePlay();
     startTransition(async () => {
       const res = await gerarAutoLoginAcropolePlay(memberId);
       if (!res.ok) {
+        janela?.close();
         setMostrarForm(true);
         return;
       }
-      autoSubmeterLoginAcropolePlay(res.email, res.senha);
+      autoSubmeterLoginAcropolePlay(res.email, res.senha, janela);
     });
   }
 
@@ -42,13 +47,15 @@ export function AcropolePlayButton({ memberId }: { memberId: string }) {
       return;
     }
     setErro(null);
+    const janela = abrirJanelaAcropolePlay();
     startTransition(async () => {
       const res = await salvarCredencialAcropolePlay(memberId, email, senha);
       if (!res.ok) {
+        janela?.close();
         setErro(res.error ?? "Falha ao salvar.");
         return;
       }
-      autoSubmeterLoginAcropolePlay(email, senha);
+      autoSubmeterLoginAcropolePlay(email, senha, janela);
       setStatus({ configurado: true, email });
       setMostrarForm(false);
       setSenha("");
