@@ -5,14 +5,31 @@ import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
-import { Check, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
+import { Check, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   prova: "Prova",
   trabalho: "Trabalho",
   leitura: "Leitura",
   atividade_turma: "Atividade de turma",
+};
+
+const MESES_NOME = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const DIAS_SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
+
+/** Chave local "aaaa-mm-dd" — agrupa por dia no fuso do navegador, igual ao que formatDateTimeBR já mostra. */
+function chaveDia(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+const COR_PONTO: Record<AgendaItem["kind"], string> = {
+  evento: "bg-na-gold",
+  atividade: "bg-na-green",
+  enquete: "bg-na-turquesa",
 };
 
 /**
@@ -210,7 +227,87 @@ function InscricaoEvento({
   );
 }
 
+function ItemCard({ memberId, item }: { memberId: string; item: AgendaItem }) {
+  if (item.kind === "enquete") return <PollCard memberId={memberId} item={item} />;
+
+  if (item.kind === "evento") {
+    return (
+      <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
+          {item.scope === "filial" ? (
+            <>
+              <PartyPopper size={14} /> EVENTO DA ESCOLA
+            </>
+          ) : (
+            <>
+              <Globe size={14} /> EVENTO {item.scope === "nacional" ? "NACIONAL" : "REGIONAL"}
+            </>
+          )}
+        </div>
+        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
+        <div className="mt-1 text-[11px] capitalize text-gray-500 dark:text-gray-400">
+          {item.allDay ? formatDateBR(item.date) : formatDateTimeBR(item.date)}
+        </div>
+        {item.location && (
+          <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+            <MapPin size={11} className="shrink-0" /> {item.location}
+          </div>
+        )}
+        {item.description && <p className="mt-1.5 text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
+        {item.scope === "filial" && (
+          <>
+            <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
+              {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
+            </div>
+            <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} />
+          </>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-na-green/30 bg-na-green-light/40 p-3 dark:bg-emerald-950/20">
+      <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">
+        <GraduationCap size={14} /> {ACTIVITY_LABEL[item.type] ?? item.type} · {item.className}
+      </div>
+      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
+      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Data: {formatDateTimeBR(item.date)}</div>
+      {item.studyItems && (
+        <div className="mt-2 rounded-lg bg-white p-2 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <span className="font-semibold">Conteúdo a estudar: </span>
+          {item.studyItems}
+        </div>
+      )}
+      {item.description && <p className="mt-2 text-[11px] text-gray-600 dark:text-gray-400">{item.description}</p>}
+    </div>
+  );
+}
+
+function itemKey(item: AgendaItem) {
+  return `${item.kind}-${item.id}`;
+}
+
 export function AgendaPanel({ memberId, items }: { memberId: string; items: AgendaItem[] }) {
+  const porDia = useMemo(() => {
+    const mapa = new Map<string, AgendaItem[]>();
+    for (const item of items) {
+      const chave = chaveDia(item.date);
+      const lista = mapa.get(chave);
+      if (lista) lista.push(item);
+      else mapa.set(chave, [item]);
+    }
+    return mapa;
+  }, [items]);
+
+  const hoje = useMemo(() => new Date(), []);
+
+  // Abre direto no 1º dia com algo agendado (hoje, se tiver; senão o próximo
+  // item futuro) — evita abrir a agenda numa data vazia sem o membro saber
+  // pra onde navegar. O mês exibido acompanha esse mesmo dia.
+  const [diaSelecionado, setDiaSelecionado] = useState(() => (items.length > 0 ? items[0].date : hoje));
+  const [mesExibido, setMesExibido] = useState(() => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1));
+
   if (items.length === 0) {
     return (
       <p className="py-8 text-center text-[13px] text-gray-500 dark:text-gray-400">
@@ -219,68 +316,97 @@ export function AgendaPanel({ memberId, items }: { memberId: string; items: Agen
     );
   }
 
+  const ano = mesExibido.getFullYear();
+  const mes = mesExibido.getMonth();
+  const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
+  const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+  const celulas: (Date | null)[] = [
+    ...Array(primeiroDiaSemana).fill(null),
+    ...Array.from({ length: diasNoMes }, (_, i) => new Date(ano, mes, i + 1)),
+  ];
+
+  const itensDoDiaSelecionado = porDia.get(chaveDia(diaSelecionado)) ?? [];
+
+  function mudarMes(delta: number) {
+    setMesExibido(new Date(ano, mes + delta, 1));
+  }
+
+  function selecionarDia(dia: Date) {
+    setDiaSelecionado(dia);
+    if (dia.getMonth() !== mes || dia.getFullYear() !== ano) setMesExibido(new Date(dia.getFullYear(), dia.getMonth(), 1));
+  }
+
   return (
-    <div className="flex flex-col gap-3">
-      {items.map((item) =>
-        item.kind === "enquete" ? (
-          <PollCard key={`enquete-${item.id}`} memberId={memberId} item={item} />
-        ) : item.kind === "evento" ? (
-          <div
-            key={`evento-${item.id}`}
-            className="rounded-xl border border-gray-200 p-3 dark:border-gray-700"
+    <div className="flex flex-col gap-4">
+      <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+        <div className="mb-2 flex items-center justify-between">
+          <button
+            onClick={() => mudarMes(-1)}
+            aria-label="Mês anterior"
+            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
           >
-            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
-              {item.scope === "filial" ? (
-                <>
-                  <PartyPopper size={14} /> EVENTO DA ESCOLA
-                </>
-              ) : (
-                <>
-                  <Globe size={14} /> EVENTO {item.scope === "nacional" ? "NACIONAL" : "REGIONAL"}
-                </>
-              )}
-            </div>
-            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
-            <div className="mt-1 text-[11px] capitalize text-gray-500 dark:text-gray-400">
-              {item.allDay ? formatDateBR(item.date) : formatDateTimeBR(item.date)}
-            </div>
-            {item.location && (
-              <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-                <MapPin size={11} className="shrink-0" /> {item.location}
-              </div>
-            )}
-            {item.description && <p className="mt-1.5 text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
-            {item.scope === "filial" && (
-              <>
-                <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
-                  {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
-                </div>
-                <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} />
-              </>
-            )}
-          </div>
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-[13px] font-bold text-gray-900 dark:text-gray-100">
+            {MESES_NOME[mes]} {ano}
+          </span>
+          <button
+            onClick={() => mudarMes(1)}
+            aria-label="Próximo mês"
+            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-gray-400 dark:text-gray-500">
+          {DIAS_SEMANA.map((d, i) => (
+            <span key={i}>{d}</span>
+          ))}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {celulas.map((dia, i) => {
+            if (!dia) return <div key={`vazio-${i}`} />;
+            const itensDoDia = porDia.get(chaveDia(dia)) ?? [];
+            const ehHoje = chaveDia(dia) === chaveDia(hoje);
+            const ehSelecionado = chaveDia(dia) === chaveDia(diaSelecionado);
+            const tiposPresentes = [...new Set(itensDoDia.map((it) => it.kind))];
+            return (
+              <button
+                key={chaveDia(dia)}
+                onClick={() => selecionarDia(dia)}
+                className={`flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[12px] transition ${
+                  ehSelecionado
+                    ? "bg-na-green text-white font-semibold"
+                    : ehHoje
+                      ? "border border-na-green text-na-green-dark dark:text-emerald-400"
+                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                }`}
+              >
+                {dia.getDate()}
+                <span className="flex h-2.5 items-center gap-0.5">
+                  {tiposPresentes.map((tipo) => (
+                    <span
+                      key={tipo}
+                      className={`h-1 w-1 rounded-full ${ehSelecionado ? "bg-white" : COR_PONTO[tipo]}`}
+                    />
+                  ))}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {itensDoDiaSelecionado.length === 0 ? (
+          <p className="py-4 text-center text-[12px] text-gray-500 dark:text-gray-400">
+            Nada agendado para {formatDateBR(diaSelecionado)}.
+          </p>
         ) : (
-          <div
-            key={`atividade-${item.id}`}
-            className="rounded-xl border border-na-green/30 bg-na-green-light/40 p-3 dark:bg-emerald-950/20"
-          >
-            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">
-              <GraduationCap size={14} /> {ACTIVITY_LABEL[item.type] ?? item.type} · {item.className}
-            </div>
-            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
-            <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Data: {formatDateTimeBR(item.date)}</div>
-            {item.studyItems && (
-              <div className="mt-2 rounded-lg bg-white p-2 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                <span className="font-semibold">Conteúdo a estudar: </span>
-                {item.studyItems}
-              </div>
-            )}
-            {item.description && (
-              <p className="mt-2 text-[11px] text-gray-600 dark:text-gray-400">{item.description}</p>
-            )}
-          </div>
-        ),
-      )}
+          itensDoDiaSelecionado.map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} />)
+        )}
+      </div>
     </div>
   );
 }
