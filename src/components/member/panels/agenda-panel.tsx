@@ -5,9 +5,9 @@ import { toggleAgendaReaction } from "@/lib/actions/reaction-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
 import { EMOJIS_PERMITIDOS } from "@/lib/agenda-reactions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
-import { formatBRL, formatDateTimeBR } from "@/lib/format";
+import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem, AgendaReactionSummary } from "@/lib/member-data";
-import { Check, Copy, GraduationCap, ListChecks, Loader2, PartyPopper } from "lucide-react";
+import { Check, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -287,14 +287,34 @@ export function AgendaPanel({ memberId, items }: { memberId: string; items: Agen
             className="rounded-xl border border-gray-200 p-3 dark:border-gray-700"
           >
             <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
-              <PartyPopper size={14} /> EVENTO DA ESCOLA
+              {item.scope === "filial" ? (
+                <>
+                  <PartyPopper size={14} /> EVENTO DA ESCOLA
+                </>
+              ) : (
+                <>
+                  <Globe size={14} /> EVENTO {item.scope === "nacional" ? "NACIONAL" : "REGIONAL"}
+                </>
+              )}
             </div>
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
-            <div className="mt-1 text-[11px] capitalize text-gray-500 dark:text-gray-400">{formatDateTimeBR(item.date)}</div>
-            <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
-              {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
+            <div className="mt-1 text-[11px] capitalize text-gray-500 dark:text-gray-400">
+              {item.allDay ? formatDateBR(item.date) : formatDateTimeBR(item.date)}
             </div>
-            <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} />
+            {item.location && (
+              <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                <MapPin size={11} className="shrink-0" /> {item.location}
+              </div>
+            )}
+            {item.description && <p className="mt-1.5 text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
+            {item.scope === "filial" && (
+              <>
+                <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
+                  {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
+                </div>
+                <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} />
+              </>
+            )}
             <ReactionBar memberId={memberId} itemType="evento" itemId={item.id} reactions={item.reactions} />
           </div>
         ) : (

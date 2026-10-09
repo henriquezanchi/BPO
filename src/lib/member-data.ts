@@ -50,8 +50,14 @@ export type AgendaItem =
       price: number;
       reactions: AgendaReactionSummary[];
       // Inscrição do próprio membro (ver event-actions.ts) — null = ainda
-      // não se inscreveu.
+      // não se inscreveu. Sempre null pra scope "nacional"/"regional" (não
+      // têm fluxo de inscrição/pagamento ainda).
       minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null } | null;
+      scope: string; // "nacional" | "regional" | "filial"
+      description: string | null;
+      location: string | null;
+      endsAt: Date | null;
+      allDay: boolean;
     }
   | {
       kind: "atividade";
@@ -135,8 +141,15 @@ export async function getMemberDashboard(memberId: string) {
     .map((cm) => cm.classGroupId);
 
   const [schoolEvents, classActivities, classPolls] = await Promise.all([
+    // Eventos da própria filial + nacionais/regionais (importados — ver
+    // sync-national-calendar.ts). Pedido do usuário 2026-10-09: por ora
+    // nacional/regional aparece pra TODO MUNDO, sem recorte por perfil
+    // ainda (isso fica pra quando resolvermos o modelo de perfis/eventos).
     db.event.findMany({
-      where: { schoolId: member.schoolId, startsAt: { gte: new Date() } },
+      where: {
+        OR: [{ schoolId: member.schoolId }, { scope: { in: ["nacional", "regional"] } }],
+        startsAt: { gte: new Date() },
+      },
       orderBy: { startsAt: "asc" },
     }),
     studentClassGroupIds.length
@@ -198,6 +211,11 @@ export async function getMemberDashboard(memberId: string) {
         price: Number(e.price),
         reactions: resumoReacoes(e.id),
         minhaInscricao: inscricaoDoEvento(e.id),
+        scope: e.scope,
+        description: e.description,
+        location: e.location,
+        endsAt: e.endsAt,
+        allDay: e.allDay,
       }),
     ),
     ...classActivities.map(

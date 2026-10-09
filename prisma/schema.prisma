@@ -802,18 +802,41 @@ model AgendaReaction {
   @@index([itemType, itemId])
 }
 
+// Pedido do usuário 2026-10-09: evento nem sempre é de uma filial só —
+// importamos a agenda nacional (Google Calendar da Diretoria, via
+// scripts/sync-national-calendar.ts) e isso precisa conviver com os
+// eventos de filial que o Diretor já cria em EventosTab. `scope` decide
+// quem vê (ver member-data.ts): "nacional"/"regional" aparecem pra TODO
+// MUNDO por ora (ainda não temos o recorte por perfil/região — ver
+// conversa sobre os 9 perfis), "filial" só pra quem é da escola.
+// `schoolId` null = nacional/regional (sem dono de uma filial só).
 model Event {
-  id        String   @id @default(cuid())
-  schoolId  String
-  school    School   @relation(fields: [schoolId], references: [id])
-  title     String
-  startsAt  DateTime
-  price     Decimal  @db.Decimal(10, 2)
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  schoolId    String?
+  school      School?   @relation(fields: [schoolId], references: [id])
+  scope       String    @default("filial") // "nacional" | "regional" | "filial"
+  title       String
+  description String?   @db.Text
+  location    String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  allDay      Boolean   @default(false)
+  price       Decimal   @default(0) @db.Decimal(10, 2)
+  // "manual" (Diretor cria em EventosTab) | "google_calendar_nacional"
+  // (importado — ver sync-national-calendar.ts, nunca editar à mão um
+  // evento com esse source, o próximo sync sobrescreve).
+  source      String    @default("manual")
+  // UID do VEVENT no Google Calendar — dedupe no re-sync (upsert por
+  // isso, não cria de novo a cada rodada). Só existe em source=
+  // "google_calendar_nacional". Eventos recorrentes (RRULE) viram uma
+  // linha por ocorrência, UID sufixado com a data (ver script).
+  externalUid String?   @unique
+  createdAt   DateTime  @default(now())
 
   registrations EventRegistration[]
 
   @@index([schoolId])
+  @@index([scope])
 }
 
 model EventRegistration {
