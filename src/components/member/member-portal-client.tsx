@@ -325,7 +325,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
           {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} />}
-          {modal === "estudos" && <StudyAreaPanel memberId={member.id} />}
+          {modal === "estudos" && <StudyAreaPanel />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}
           {modal === "gaf" && <GafPanel memberId={member.id} />}
