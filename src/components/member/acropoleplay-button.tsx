@@ -1,7 +1,7 @@
 "use client";
 
 import { gerarAutoLoginAcropolePlay, getAcropolePlayStatus, salvarCredencialAcropolePlay } from "@/lib/actions/acropoleplay-actions";
-import { abrirJanelaAcropolePlay, autoSubmeterLoginAcropolePlay } from "@/lib/acropoleplay-auto-login";
+import { abrirJanelaAcropolePlay, autoLoginAcropolePlay } from "@/lib/acropoleplay-auto-login";
 import { Clapperboard, Loader2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
@@ -37,7 +37,7 @@ export function AcropolePlayButton({ memberId }: { memberId: string }) {
         setMostrarForm(true);
         return;
       }
-      autoSubmeterLoginAcropolePlay(res.email, res.senha, janela);
+      autoLoginAcropolePlay(res.email, res.senha, janela);
     });
   }
 
@@ -55,7 +55,7 @@ export function AcropolePlayButton({ memberId }: { memberId: string }) {
         setErro(res.error ?? "Falha ao salvar.");
         return;
       }
-      autoSubmeterLoginAcropolePlay(email, senha, janela);
+      autoLoginAcropolePlay(email, senha, janela);
       setStatus({ configurado: true, email });
       setMostrarForm(false);
       setSenha("");

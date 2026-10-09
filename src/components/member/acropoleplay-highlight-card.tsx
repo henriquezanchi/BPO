@@ -2,7 +2,7 @@
 
 import { gerarAutoLoginAcropolePlay } from "@/lib/actions/acropoleplay-actions";
 import { getAcropolePlayHighlight } from "@/lib/actions/acropoleplay-highlight-actions";
-import { abrirJanelaAcropolePlay, autoSubmeterLoginAcropolePlay } from "@/lib/acropoleplay-auto-login";
+import { abrirJanelaAcropolePlay, autoLoginAcropolePlay } from "@/lib/acropoleplay-auto-login";
 import { Clapperboard, Loader2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
@@ -25,7 +25,7 @@ export function AcropolePlayHighlightCard({ memberId }: { memberId: string }) {
     startTransition(async () => {
       const res = await gerarAutoLoginAcropolePlay(memberId);
       if (res.ok) {
-        autoSubmeterLoginAcropolePlay(res.email, res.senha, janela);
+        autoLoginAcropolePlay(res.email, res.senha, janela);
       } else if (janela) {
         janela.location.href = "https://membros.acropoleplay.com/auth/login";
       }
