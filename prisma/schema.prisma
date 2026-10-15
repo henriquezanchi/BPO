@@ -94,6 +94,12 @@ model School {
   city                    String?
   whatsapp                String? // número da secretaria/economia, usado no botão de ajuda do Portal
   mercurioFilialLabel     String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
+  // branchId da API externa de leitura "Mercury" (ver src/lib/mercury/client.ts)
+  // — id numérico da filial, mas viaja como STRING no JSON da API (ex: "4"),
+  // guardado igual aqui pra nunca precisar converter/comparar tipo diferente.
+  // Nada a ver com mercurioFilialLabel (que é só pro RPA, que ainda é a
+  // única forma de ESCREVER no Mercúrio — a Mercury API é somente leitura).
+  mercuryBranchId         String?
   createdAt               DateTime  @default(now())
   // "Diretor > Dados da Unidade" do Mercúrio (diretor/dir_frame.php) — só
   // o que alimenta o Painel do Diretor por ora (ver scripts/sync-diretoria.ts).
