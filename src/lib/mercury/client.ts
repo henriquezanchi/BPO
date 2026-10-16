@@ -261,7 +261,7 @@ export interface MercuryInstructor {
   registrationNo: string;
   fullName: string;
   branch: MercuryBranchRef;
-  pedagogue: boolean; // equivalente direto a Member.isPedagogo
+  pedagogue: boolean; // NÃO é "é instrutor" — subconjunto bem menor (6 de 48 em Universitário); Member.isPedagogo = estar nesta lista
   classOpening: boolean;
   livingForces: boolean; // "Forças Vivas" (FV)
 }

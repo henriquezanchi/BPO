@@ -66,7 +66,10 @@ async function main() {
   if (erroListaAuth) throw erroListaAuth;
 
   const instrutores = await mercuryGetInstructors({ branchId });
-  const pedagogos = new Set(instrutores.filter((i) => i.pedagogue).map((i) => i.registrationNo));
+  // Qualquer um em /instructors conta como instrutor (mesmo critério da lista
+  // "Integração > Pedagogos" do RPA). O campo `pedagogue` da API é bem mais
+  // restrito (visto ao vivo 2026-10-16: 6 de 48 em Universitário) — não usar.
+  const pedagogos = new Set(instrutores.map((i) => i.registrationNo));
 
   const staff = await mercuryGetBranchStaff(branchId);
   const cargosPorMatricula = new Map<string, Set<string>>();
