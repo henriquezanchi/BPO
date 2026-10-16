@@ -163,6 +163,14 @@ model Member {
   whatsapp              String
   whatsappAlt           String? // "Telefone Alternativo" do Mercúrio (2º par Celular/Alternativo)
   email                 String?
+  // Dependente de outro Member (ex: filho cadastrado no Mercúrio sem
+  // e-mail próprio, usando o e-mail do responsável) — pedido do usuário
+  // 2026-10-15: quando 2+ Members dividem o mesmo e-mail, só o responsável
+  // tem login de verdade (1 e-mail = 1 conta de Auth, e authUserId já é
+  // único aqui); os demais ficam vinculados aqui, sem tentar logar sozinhos.
+  responsavelId         String?
+  responsavel           Member?   @relation("Dependentes", fields: [responsavelId], references: [id])
+  dependentes           Member[]  @relation("Dependentes")
   // Endereço estruturado (não um campo único de texto) pra permitir
   // autopreenchimento nativo do celular/Google no formulário do Portal —
   // ver src/components/member/panels/profile-edit-panel.tsx. Composto de

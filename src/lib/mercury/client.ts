@@ -46,12 +46,16 @@ function obterChave(): string {
 }
 
 /**
- * GET genérico contra a Mercury API. 1 retry automático em 429 (120
- * req/min por chave, ver PDF seção 10) — espera 1s e tenta de novo; não
- * monta fila/backoff mais elaborado aqui enquanto o volume de chamadas for
- * baixo (scripts de sync periódicos, não tráfego ao vivo do Portal).
+ * GET genérico contra a Mercury API. Até 5 retries em 429 (120 req/min por
+ * chave, ver PDF seção 10), com backoff exponencial (1s, 2s, 4s, 8s, 16s) —
+ * achado ao vivo 2026-10-15: 1 retry só de 1s não é suficiente ao
+ * paginar/varrer listas grandes (estourou o limite várias vezes seguidas
+ * numa varredura global). Não monta fila/throttle preventivo aqui enquanto
+ * o volume de chamadas for baixo (scripts de sync periódicos, não tráfego
+ * ao vivo do Portal).
  */
-async function mercuryGet<T>(path: string, tentativaExtra = true): Promise<T> {
+/** Exportado pra scripts de descoberta ad-hoc (ex: varrer /people com pacing próprio); uso normal é pelas funções mercuryGet* abaixo. */
+export async function mercuryGet<T>(path: string, tentativa = 0): Promise<T> {
   const chave = obterChave();
   const correlationId = crypto.randomUUID();
 
@@ -63,9 +67,9 @@ async function mercuryGet<T>(path: string, tentativaExtra = true): Promise<T> {
     },
   });
 
-  if (res.status === 429 && tentativaExtra) {
-    await new Promise((r) => setTimeout(r, 1000));
-    return mercuryGet<T>(path, false);
+  if (res.status === 429 && tentativa < 5) {
+    await new Promise((r) => setTimeout(r, 1000 * 2 ** tentativa));
+    return mercuryGet<T>(path, tentativa + 1);
   }
 
   if (!res.ok) {
@@ -152,7 +156,7 @@ export interface MercuryPersonDossier {
   educationLevel: string | null;
   educations: unknown[];
   employments: unknown[];
-  documents: unknown[];
+  documents: { type: string; number: string }[]; // visto ao vivo: type "CPF" (sem zero à esquerda, ver client.ts) e "RG"
   admissionDate: string | null;
   memberSince: string | null;
   enrollmentChannel: string | null;
