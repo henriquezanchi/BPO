@@ -46,7 +46,15 @@ async function main() {
       continue;
     }
 
-    await db.member.update({ where: { id: membro.id }, data: { fortunaClientId: achado.id } });
+    try {
+      await db.member.update({ where: { id: membro.id }, data: { fortunaClientId: achado.id } });
+    } catch (e) {
+      // fortunaClientId é único — ex: dependente com o mesmo e-mail do
+      // responsável bate na conta Fortuna dele, que já está vinculada.
+      console.log(`Pulado ${membro.name}: conta Fortuna ${achado.id} já vinculada a outro membro (${(e as Error).message.split("\n")[0]}).`);
+      semMatch++;
+      continue;
+    }
     console.log(`${membro.name} -> fortunaClientId ${achado.id}`);
     vinculados++;
   }
