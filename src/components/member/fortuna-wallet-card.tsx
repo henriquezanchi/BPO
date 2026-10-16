@@ -25,7 +25,7 @@ export function FortunaWalletCard({
 }: {
   balances: FortunaBalanceView[];
   loading?: boolean;
-  onAdicionarCreditos: () => void;
+  onAdicionarCreditos?: () => void;
   onAtualizar: () => void;
 }) {
   const home = balances.find((b) => b.isHome) ?? balances[0];
@@ -80,12 +80,14 @@ export function FortunaWalletCard({
           </div>
           <div className="text-2xl font-bold text-na-green dark:text-emerald-400">{formatBRL(atual.amount)}</div>
         </div>
-        <button
-          onClick={onAdicionarCreditos}
-          className="flex items-center gap-1.5 rounded-xl bg-na-green px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-na-green-dark"
-        >
-          <Plus size={14} /> Adicionar Créditos
-        </button>
+        {onAdicionarCreditos && (
+          <button
+            onClick={onAdicionarCreditos}
+            className="flex items-center gap-1.5 rounded-xl bg-na-green px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-na-green-dark"
+          >
+            <Plus size={14} /> Adicionar Créditos
+          </button>
+        )}
       </div>
     </section>
   );

@@ -227,7 +227,7 @@ function InscricaoEvento({
   );
 }
 
-function ItemCard({ memberId, item }: { memberId: string; item: AgendaItem }) {
+function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean }) {
   if (item.kind === "enquete") return <PollCard memberId={memberId} item={item} />;
 
   if (item.kind === "evento") {
@@ -259,7 +259,11 @@ function ItemCard({ memberId, item }: { memberId: string; item: AgendaItem }) {
             <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
               {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
             </div>
-            <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} />
+            {somenteConsulta ? (
+              <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Online payment isn&apos;t available for your branch yet — please contact your branch.</p>
+            ) : (
+              <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} />
+            )}
           </>
         )}
       </div>
@@ -288,7 +292,7 @@ function itemKey(item: AgendaItem) {
   return `${item.kind}-${item.id}`;
 }
 
-export function AgendaPanel({ memberId, items }: { memberId: string; items: AgendaItem[] }) {
+export function AgendaPanel({ memberId, items, somenteConsulta }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean }) {
   const porDia = useMemo(() => {
     const mapa = new Map<string, AgendaItem[]>();
     for (const item of items) {
@@ -404,7 +408,7 @@ export function AgendaPanel({ memberId, items }: { memberId: string; items: Agen
             Nada agendado para {formatDateBR(diaSelecionado)}.
           </p>
         ) : (
-          itensDoDiaSelecionado.map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} />)
+          itensDoDiaSelecionado.map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} somenteConsulta={somenteConsulta} />)
         )}
       </div>
     </div>

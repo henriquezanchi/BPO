@@ -92,6 +92,13 @@ model School {
   id                      String    @id @default(cuid())
   name                    String
   city                    String?
+  // Idioma do Portal do Membro pra quem é dessa escola — pedido do usuário
+  // 2026-10-15, pras filiais americanas vistas na Mercury API (Austin-TX,
+  // Deerfield Beach, Orlando, South Orange-NJ). Decide o idioma sozinho
+  // (sem seletor manual pro membro) e, por ora, esconde os fluxos de
+  // pagamento (Asaas/PIX é só Brasil) pra quem está em "en" — ver
+  // src/lib/i18n/.
+  language                String    @default("pt") // "pt" | "en"
   whatsapp                String? // número da secretaria/economia, usado no botão de ajuda do Portal
   mercurioFilialLabel     String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
   // branchId da API externa de leitura "Mercury" (ver src/lib/mercury/client.ts)

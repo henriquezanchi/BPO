@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logout } from "@/lib/actions/auth-actions";
 import { getFortunaBalancesForMember } from "@/lib/actions/fortuna-member-actions";
 import { whatsappHref } from "@/lib/format";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { MemberDashboard } from "@/lib/member-data";
 import {
   BookOpen,
@@ -50,20 +51,6 @@ type ModalKey =
   | "gaf"
   | "jornada"
   | "transparencia";
-
-const MODAL_TITLES: Record<ModalKey, string> = {
-  cadastro: "Atualizar Cadastro",
-  contribuicao: "Minha Contribuição",
-  situacao: "Situação da Contribuição",
-  fortuna_recarga: "Adicionar Créditos",
-  agenda: "Agenda & Eventos",
-  estudos: "Área de Estudos",
-  voluntariado: "Voluntariado",
-  ajuda: "Central de Ajuda",
-  gaf: "Conhecer o GAF",
-  transparencia: "Transparência Financeira",
-  jornada: "Minha Jornada",
-};
 
 const DIA_VENCIMENTO = 10;
 
@@ -119,6 +106,12 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
   const schoolWhatsapp = member.school.whatsapp ?? member.whatsapp;
   const compositionTotal = member.compositionItems.reduce((soma, i) => soma + i.amount, 0);
   const proximoVencimento = calcularProximoVencimento(member.monthlyStatus);
+  const t = getDictionary(member.school.language);
+  // Asaas/PIX é só Brasil — decisão do usuário 2026-10-15: 1ª versão do
+  // Portal em inglês não processa pagamento, só consulta (ver
+  // ContributionStatusPanel/FortunaWalletCard/AgendaPanel, que recebem
+  // `somenteConsulta` e escondem qualquer ação de cobrança).
+  const somenteConsulta = member.school.language === "en";
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
@@ -128,8 +121,8 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           <ThemeToggle className="flex h-11 w-11 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
           <button
             onClick={() => logout()}
-            title="Sair"
-            aria-label="Sair"
+            title={t.home.sair}
+            aria-label={t.home.sair}
             className="flex h-11 w-11 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800"
           >
             <LogOut size={16} />
@@ -142,7 +135,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
         <div data-tour-id="welcome" className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-left text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-semibold text-na-gold">PORTAL DO MEMBRO</span>
+              <span className="text-[10px] font-semibold text-na-gold">{t.home.portalDoMembro}</span>
               {(member.isPedagogo || member.isDiretor || member.isSubChefe) && (
                 <>
                   <span className="text-[10px] text-white/30">·</span>
@@ -150,7 +143,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
                     href="/voluntario"
                     className="text-[10px] font-semibold text-white/80 underline decoration-dotted underline-offset-2 transition hover:text-white"
                   >
-                    Portal do Voluntário
+                    {t.home.portalDoVoluntario}
                   </Link>
                 </>
               )}
@@ -159,7 +152,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               onClick={() => setModal("cadastro")}
               className="flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-2 text-[10px] font-semibold transition hover:bg-white/25"
             >
-              <Pencil size={11} /> Editar Dados
+              <Pencil size={11} /> {t.home.editarDados}
             </button>
           </div>
           <div className="mt-3 mb-1 flex items-center gap-2.5">
@@ -176,7 +169,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           <div className="flex justify-between border-t border-white/15 pt-2.5 text-[11px] text-green-100">
             <span>{member.school.city ?? member.school.name}</span>
             <span>
-              Matrícula: <strong>#{member.registrationNo ?? "—"}</strong>
+              {t.home.matricula}: <strong>#{member.registrationNo ?? "—"}</strong>
             </span>
           </div>
         </div>
@@ -212,18 +205,17 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
                   isDelayed ? "text-na-danger-dark dark:text-red-300" : "text-na-success-dark dark:text-emerald-300"
                 }`}
               >
-                {isDelayed ? "Contribuição Pendente" : "Contribuição em Dia"}
+                {isDelayed ? t.home.contribuicaoPendente : t.home.contribuicaoEmDia}
               </h4>
               <p className="mt-0.5 text-xs text-gray-700 dark:text-gray-400">
-                Olá, {member.name.split(" ")[0]}. Sua contribuição deste mês está{" "}
-                {isDelayed ? "atrasada" : "em dia"}.
+                {t.home.ola(member.name.split(" ")[0])} {isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.
               </p>
               <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-500">
                 {proximoVencimento.diasRestantes < 0
-                  ? `Venceu há ${Math.abs(proximoVencimento.diasRestantes)} dia(s) — vencimento dia ${proximoVencimento.vencimento.getDate()}/${proximoVencimento.vencimento.getMonth() + 1}`
+                  ? t.home.venceuHa(Math.abs(proximoVencimento.diasRestantes), proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1)
                   : proximoVencimento.diasRestantes === 0
-                    ? "Vence hoje"
-                    : `Próximo vencimento: dia ${proximoVencimento.vencimento.getDate()}/${proximoVencimento.vencimento.getMonth() + 1} (em ${proximoVencimento.diasRestantes} dia${proximoVencimento.diasRestantes === 1 ? "" : "s"})`}
+                    ? t.home.venceHoje
+                    : t.home.proximoVencimento(proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1, proximoVencimento.diasRestantes)}
               </p>
             </div>
           </div>
@@ -236,7 +228,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
                 : "bg-white/70 text-na-success-dark hover:bg-white dark:bg-black/20 dark:text-emerald-300"
             }`}
           >
-            Ver Situação
+            {t.home.verSituacao}
           </button>
         </div>
 
@@ -245,35 +237,35 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           <FortunaWalletCard
             balances={fortunaBalances}
             loading={fortunaCarregando}
-            onAdicionarCreditos={() => setModal("fortuna_recarga")}
+            onAdicionarCreditos={somenteConsulta ? undefined : () => setModal("fortuna_recarga")}
             onAtualizar={buscarSaldoFortuna}
           />
         </div>
 
         {/* Grid de funcionalidades */}
         <section className="grid grid-cols-2 gap-2.5">
-          <FeatureTile icon={<Leaf size={16} />} title="Minha Contribuição" subtitle="Composição e apoios" onClick={() => setModal("contribuicao")} />
+          <FeatureTile icon={<Leaf size={16} />} title={t.tiles.contribuicao.title} subtitle={t.tiles.contribuicao.subtitle} onClick={() => setModal("contribuicao")} />
           <FeatureTile
             tourId="agenda"
             icon={<CalendarCheck size={16} />}
-            title="Agenda & Eventos"
-            subtitle={agendaItems.length > 0 ? `${agendaItems.length} próximos` : "Palestras e Turmas"}
+            title={t.tiles.agenda.title}
+            subtitle={agendaItems.length > 0 ? t.tiles.agenda.subtitleComItens(agendaItems.length) : t.tiles.agenda.subtitleSemItens}
             onClick={() => setModal("agenda")}
           />
-          <FeatureTile icon={<BookOpen size={16} />} title="Área de Estudos" subtitle="Biblioteca, apostilas e Acrópole Play" onClick={() => setModal("estudos")} />
-          <FeatureTile icon={<HandHeart size={16} />} title="Voluntariado" subtitle="Secretarias e mutirões" onClick={() => setModal("voluntariado")} />
-          <FeatureTile icon={<UsersRound size={16} />} title="Grupo de Acompanhamento" subtitle="Conheça e faça sua adesão ao GAF" onClick={() => setModal("gaf")} />
-          <FeatureTile icon={<LifeBuoy size={16} />} title="Central de Ajuda" subtitle="Fale com a Economia" onClick={() => setModal("ajuda")} />
+          <FeatureTile icon={<BookOpen size={16} />} title={t.tiles.estudos.title} subtitle={t.tiles.estudos.subtitle} onClick={() => setModal("estudos")} />
+          <FeatureTile icon={<HandHeart size={16} />} title={t.tiles.voluntariado.title} subtitle={t.tiles.voluntariado.subtitle} onClick={() => setModal("voluntariado")} />
+          <FeatureTile icon={<UsersRound size={16} />} title={t.tiles.gaf.title} subtitle={t.tiles.gaf.subtitle} onClick={() => setModal("gaf")} />
+          <FeatureTile icon={<LifeBuoy size={16} />} title={t.tiles.ajuda.title} subtitle={t.tiles.ajuda.subtitle} onClick={() => setModal("ajuda")} />
           <FeatureTile
             icon={<Compass size={16} />}
-            title="Minha Jornada"
-            subtitle={dashboard.streakMeses > 0 ? `${dashboard.streakMeses} meses em dia` : "Sua caminhada na escola"}
+            title={t.tiles.jornada.title}
+            subtitle={dashboard.streakMeses > 0 ? t.tiles.jornada.subtitleComStreak(dashboard.streakMeses) : t.tiles.jornada.subtitleSemStreak}
             onClick={() => setModal("jornada")}
           />
           <FeatureTile
             icon={<PiggyBank size={16} />}
-            title="Transparência Financeira"
-            subtitle="Veja como o dinheiro da escola é usado"
+            title={t.tiles.transparencia.title}
+            subtitle={t.tiles.transparencia.subtitle}
             onClick={() => setModal("transparencia")}
           />
         </section>
@@ -283,14 +275,14 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
         href={whatsappHref(schoolWhatsapp)}
         target="_blank"
         rel="noreferrer"
-        aria-label="Falar com a escola no WhatsApp"
+        aria-label={t.home.falarNoWhatsapp}
         className="fixed bottom-6 right-6 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg transition hover:scale-105 sm:absolute"
       >
         <MessageCircle size={26} />
       </a>
 
       {modal && (
-        <BottomSheet open onOpenChange={(open) => !open && setModal(null)} title={MODAL_TITLES[modal]}>
+        <BottomSheet open onOpenChange={(open) => !open && setModal(null)} title={t.modalTitles[modal]}>
           {modal === "cadastro" && (
             <ProfileEditPanel
               memberId={member.id}
@@ -321,10 +313,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               compositionTotal={compositionTotal}
               fortunaBalances={fortunaBalances}
               pixAutomaticStatus={member.pixAutomaticStatus}
+              somenteConsulta={somenteConsulta}
             />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
-          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} />}
+          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} />}
           {modal === "estudos" && <StudyAreaPanel />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}

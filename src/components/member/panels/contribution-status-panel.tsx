@@ -69,12 +69,14 @@ export function ContributionStatusPanel({
   compositionTotal,
   fortunaBalances,
   pixAutomaticStatus,
+  somenteConsulta,
 }: {
   memberId: string;
   monthlyStatus: ContributionMonthlyStatus[];
   compositionTotal: number;
   fortunaBalances: FortunaBalanceView[];
   pixAutomaticStatus: string | null;
+  somenteConsulta?: boolean;
 }) {
   const [recibo, setRecibo] = useState<string | null>(null);
   const [mesPagamento, setMesPagamento] = useState<number | null>(null);
@@ -105,7 +107,7 @@ export function ContributionStatusPanel({
       return;
     }
 
-    if (status === "atrasado" || status === "em_branco") {
+    if (!somenteConsulta && (status === "atrasado" || status === "em_branco")) {
       setMesPagamento(mes);
     }
   }
@@ -160,7 +162,7 @@ export function ContributionStatusPanel({
           const mes = i + 1;
           const registro = porMes.get(mes);
           const status = registro?.status ?? "em_branco";
-          const clicavel = status === "paga" || status === "atrasado" || status === "em_branco";
+          const clicavel = status === "paga" || (!somenteConsulta && (status === "atrasado" || status === "em_branco"));
           return (
             <button
               key={mes}
@@ -186,7 +188,9 @@ export function ContributionStatusPanel({
         </div>
       )}
 
-      {mesesAtrasados.length > 0 ? (
+      {somenteConsulta ? (
+        <p className="text-[11px] text-gray-400 dark:text-gray-500">Online payment isn&apos;t available for your branch yet — please contact your branch.</p>
+      ) : mesesAtrasados.length > 0 ? (
         <p className="text-[11px] text-gray-400 dark:text-gray-500">
           Clique num mês em atraso pra pagar. Meses pagos mostram o comprovante.
         </p>
