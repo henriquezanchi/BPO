@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { notificarErroSuporte } from "@/lib/error-notify";
 import type { MercurioContactChanges, MercurioWriteResult } from "./adapter";
 import { abrirSessaoMercurio, lerRubricasDePagamentoHoje, RodadaEmAndamentoError } from "./browser-session";
-import { mercurioAdapter } from "./index";
+import { adapterParaEscola } from "./index";
 
 // Datas não são um tipo JSON válido — mesma serialização usada em
 // enqueueMercurioPersonalUpdate (sync-queue.ts), desserializada de volta aqui.
@@ -23,9 +23,9 @@ type MercurioPersonalChangesJson = {
  * que só tem as funções `enqueue*` (db.create puro, sem Playwright) e É
  * seguro de importar do site.
  *
- * Processa tarefas pendentes da fila, escrevendo de verdade no Mercúrio
- * (mercurioAdapter é o real quando as credenciais estão configuradas — ver
- * mercurio/index.ts).
+ * Processa tarefas pendentes da fila, escrevendo de verdade no sistema-fonte
+ * de cada escola — Mercúrio antigo (RPA) ou Mercury (API), escolhido por
+ * School.sistemaRegistro (ver adapterParaEscola em mercurio/index.ts).
  */
 export async function processMercurioSyncQueue(limit = 20) {
   const pending = await db.mercurioSyncTask.findMany({
@@ -38,7 +38,11 @@ export async function processMercurioSyncQueue(limit = 20) {
   const results = [];
   for (const task of pending) {
     const { member } = task;
-    if (!member.mercurioId || !member.school.mercurioFilialLabel) {
+    const adapter = adapterParaEscola(member.school);
+    const usaMercury = member.school.sistemaRegistro === "mercury";
+    // Rótulo da filial só é necessário pro RPA (navegar no menu do Mercúrio
+    // antigo); a Mercury API identifica a pessoa só pela matrícula.
+    if (!member.mercurioId || (!usaMercury && !member.school.mercurioFilialLabel)) {
       results.push(
         await db.mercurioSyncTask.update({
           where: { id: task.id },
@@ -54,7 +58,7 @@ export async function processMercurioSyncQueue(limit = 20) {
       continue;
     }
 
-    const identidade = { matricula: member.mercurioId, name: member.name, filialLabel: member.school.mercurioFilialLabel };
+    const identidade = { matricula: member.mercurioId, name: member.name, filialLabel: member.school.mercurioFilialLabel ?? "" };
 
     // Tudo dentro de 1 try/catch: chamadas de leitura do adapter (pullComposition,
     // fetchReceiptContent) lançam em vez de devolver { ok: false } — sem isso,
@@ -64,24 +68,24 @@ export async function processMercurioSyncQueue(limit = 20) {
     try {
       if (task.taskType === "atualizar_dados_pessoais") {
         const payload = task.payload as MercurioPersonalChangesJson;
-        result = await mercurioAdapter.pushPersonalUpdate(identidade, {
+        result = await adapter.pushPersonalUpdate(identidade, {
           ...payload,
           birthDate: payload.birthDate === undefined ? undefined : payload.birthDate ? new Date(payload.birthDate) : null,
           rgDataEmissao: payload.rgDataEmissao === undefined ? undefined : payload.rgDataEmissao ? new Date(payload.rgDataEmissao) : null,
         });
       } else if (task.taskType === "incluir_item_composicao") {
         const payload = task.payload as { mercurioGroupId: string; label: string; valor?: number };
-        result = await mercurioAdapter.addCompositionItem(identidade, payload.mercurioGroupId);
+        result = await adapter.addCompositionItem(identidade, payload.mercurioGroupId);
         if (result.ok && payload.valor !== undefined) {
           // Inclui com o valor padrão do Mercúrio primeiro, depois ajusta pro
           // valor que o membro escolheu no Portal (mesma chamada de escrita
           // já usada por editar_valor_item_composicao) — best-effort: se essa
           // 2ª chamada falhar, o item fica incluído mesmo assim, só com o
           // valor padrão em vez do escolhido (relido abaixo de qualquer jeito).
-          await mercurioAdapter.editCompositionItemValue(identidade, payload.mercurioGroupId, payload.valor.toFixed(2).replace(".", ","));
+          await adapter.editCompositionItemValue(identidade, payload.mercurioGroupId, payload.valor.toFixed(2).replace(".", ","));
         }
         if (result.ok) {
-          const { items } = await mercurioAdapter.pullComposition(identidade);
+          const { items } = await adapter.pullComposition(identidade);
           const incluido = items.find((i) => i.mercurioGroupId === payload.mercurioGroupId);
           await db.contributionCompositionItem.upsert({
             where: { memberId_mercurioGroupId: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } },
@@ -97,14 +101,14 @@ export async function processMercurioSyncQueue(limit = 20) {
         }
       } else if (task.taskType === "excluir_item_composicao") {
         const payload = task.payload as { mercurioGroupId: string };
-        result = await mercurioAdapter.removeCompositionItem(identidade, payload.mercurioGroupId);
+        result = await adapter.removeCompositionItem(identidade, payload.mercurioGroupId);
         if (result.ok) {
           await db.contributionCompositionItem.deleteMany({ where: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } });
         }
       } else if (task.taskType === "editar_valor_item_composicao") {
         const payload = task.payload as { mercurioGroupId: string; novoValor: number };
         const valorBR = payload.novoValor.toFixed(2).replace(".", ",");
-        result = await mercurioAdapter.editCompositionItemValue(identidade, payload.mercurioGroupId, valorBR);
+        result = await adapter.editCompositionItemValue(identidade, payload.mercurioGroupId, valorBR);
         if (result.ok) {
           await db.contributionCompositionItem.update({
             where: { memberId_mercurioGroupId: { memberId: task.memberId, mercurioGroupId: payload.mercurioGroupId } },
@@ -113,13 +117,13 @@ export async function processMercurioSyncQueue(limit = 20) {
         }
       } else if (task.taskType === "atualizar_anotacoes_economicas") {
         const payload = task.payload as { texto: string };
-        result = await mercurioAdapter.pushEconomicNotes(identidade, payload.texto);
+        result = await adapter.pushEconomicNotes(identidade, payload.texto);
         if (result.ok) {
           await db.member.update({ where: { id: task.memberId }, data: { economicNotesSyncedAt: new Date() } });
         }
       } else if (task.taskType === "buscar_recibo") {
         const payload = task.payload as { mercurioRecId: string };
-        const conteudo = await mercurioAdapter.fetchReceiptContent(identidade, payload.mercurioRecId);
+        const conteudo = await adapter.fetchReceiptContent(identidade, payload.mercurioRecId);
         await db.contributionReceipt.updateMany({
           where: { mercurioRecId: payload.mercurioRecId },
           data: { rawText: conteudo.rawText, canceled: conteudo.canceled, fetchedAt: new Date() },
@@ -127,7 +131,7 @@ export async function processMercurioSyncQueue(limit = 20) {
         result = { ok: true };
       } else if (task.taskType === "lancar_contribuicao_paga") {
         const payload = task.payload as { chargeId: string };
-        if (!member.school.mercurioCaixaLancamento) {
+        if (!usaMercury && !member.school.mercurioCaixaLancamento) {
           // Não é falha DEFINITIVA nem retryable (não é trava de
           // concorrência) — mas também não dá pra lançar "no escuro" sem
           // saber o caixa certo. Marca falhou com uma mensagem clara em vez
@@ -139,13 +143,13 @@ export async function processMercurioSyncQueue(limit = 20) {
           // fuso do Brasil de propósito (não UTC), já que é isso que decide
           // se ainda vale o desconto de pontualidade lá dentro do Mercúrio.
           const dataBR = (charge.paidAt ?? new Date()).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-          result = await mercurioAdapter.launchContributionPayment(identidade, member.school.mercurioCaixaLancamento, {
+          result = await adapter.launchContributionPayment(identidade, member.school.mercurioCaixaLancamento ?? "", {
             amount: Number(charge.amount),
             paidAtBR: dataBR,
           });
         }
       } else {
-        result = await mercurioAdapter.pushContactUpdate(identidade, task.payload as MercurioContactChanges);
+        result = await adapter.pushContactUpdate(identidade, task.payload as MercurioContactChanges);
       }
     } catch (e) {
       result = { ok: false, error: (e as Error).message, retryable: e instanceof RodadaEmAndamentoError };

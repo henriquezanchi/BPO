@@ -99,6 +99,12 @@ model School {
   // pagamento (Asaas/PIX é só Brasil) pra quem está em "en" — ver
   // src/lib/i18n/.
   language                String    @default("pt") // "pt" | "en"
+  // Qual sistema é a fonte da verdade dessa escola — pedido do usuário
+  // 2026-10-16. "mercurio" = Mercúrio antigo, via RPA (todas as escolas do
+  // Brasil hoje); "mercury" = Mercúrio novo, via API (escolas dos EUA já
+  // usam). O antigo será desligado ~fev/2027: a virada é trocar este campo
+  // escola por escola, sem deploy. Ver adapterParaEscola em mercurio/index.ts.
+  sistemaRegistro         String    @default("mercurio") // "mercurio" | "mercury"
   whatsapp                String? // número da secretaria/economia, usado no botão de ajuda do Portal
   mercurioFilialLabel     String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
   // branchId da API externa de leitura "Mercury" (ver src/lib/mercury/client.ts)

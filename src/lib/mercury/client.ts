@@ -197,8 +197,19 @@ export interface MercuryContributionPlan {
   coverage?: Record<string, string>;
 }
 
-/** Nunca visto populado ainda (Barra do Garças retornou lista vazia) — formato do item a confirmar quando aparecer o 1º recibo real. */
-export type MercuryReceipt = unknown;
+/** Confirmado ao vivo 2026-10-16 (matrícula 21596). `items` veio sempre vazio até agora. */
+export interface MercuryReceipt {
+  id: string;
+  number: string;
+  date: string; // "YYYY-MM-DD"
+  amount: string; // "120.00"
+  description: string | null;
+  interestedParty: string | null;
+  receiptActive: boolean | null; // null = não informado; false = cancelado
+  studentActive: boolean | null;
+  signedAt: string | null;
+  items: unknown[];
+}
 
 export interface MercuryStaffMember {
   registrationNo: string | null;
