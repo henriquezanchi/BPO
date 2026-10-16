@@ -19,37 +19,21 @@
  * padStart(11, "0") antes de derivar a senha inicial, senão a senha fica
  * errada pra quem tem CPF começando com 0.
  *
+ * Situação mensal da contribuição NÃO vem daqui: confirmado ao vivo
+ * 2026-10-16 que os dados de tesouraria da Mercury API estão parados no
+ * começo de setembro (último pagamento visto: 02/09, enquanto o Mercúrio
+ * já tinha set/out pagos). Fica com scripts/sync-monthly-status.ts (RPA,
+ * lê direto do Mercúrio) até isso ser resolvido do lado da Mercury.
+ *
  * Uso: npx tsx --env-file=.env scripts/onboard-filial-lote-mercury.ts <mercuryBranchId>
  */
 import { db } from "../src/lib/db";
 import { supabaseAdmin } from "../src/lib/supabase/admin";
 import { provisionarLoginComSenha } from "../src/lib/mercurio/auth-provisioning";
-import {
-  mercuryGetBranchStaff,
-  mercuryGetContributions,
-  mercuryGetDossier,
-  mercuryGetInstructors,
-  mercuryGetPeople,
-  type MercuryMonthStatus,
-} from "../src/lib/mercury/client";
-import type { ContributionMonthStatus } from "@prisma/client";
+import { mercuryGetBranchStaff, mercuryGetDossier, mercuryGetInstructors, mercuryGetPeople } from "../src/lib/mercury/client";
 
 function soDigitos(s: string | null | undefined): string {
   return (s ?? "").replace(/\D/g, "");
-}
-
-// "cancelado" não existe no nosso enum — cobrança cancelada = nada confirmado no mês.
-const STATUS_MES: Record<MercuryMonthStatus, ContributionMonthStatus> = {
-  pago: "paga",
-  em_branco: "em_branco",
-  atrasado: "atrasado",
-  isento: "isento",
-  cancelado: "em_branco",
-};
-
-function isoParaBR(iso: string): string {
-  const [ano, mes, dia] = iso.split("-");
-  return `${dia}/${mes}/${ano}`;
 }
 
 async function main() {
@@ -80,8 +64,6 @@ async function main() {
   }
   console.log(`Pedagogos: ${pedagogos.size} · Pessoas com cargo: ${cargosPorMatricula.size}`);
 
-  const anoAtual = new Date().getFullYear();
-
   let membrosCriadosOuAtualizados = 0;
   let loginsProvisionados = 0;
   let jaTinhamLogin = 0;
@@ -93,7 +75,6 @@ async function main() {
     try {
       await new Promise((r) => setTimeout(r, 400)); // ritmo pausado — evita 429 em filiais grandes (visto ao vivo 2026-10-15)
       const dossier = await mercuryGetDossier(ativo.registrationNo);
-      const contribuicoes = await mercuryGetContributions(ativo.registrationNo, anoAtual);
 
       const dadosComuns = {
         schoolId: school.id,
@@ -122,27 +103,6 @@ async function main() {
         create: { ...dadosComuns, mercurioId: dossier.registrationNo, registrationNo: dossier.registrationNo, status: "em_dia" },
       });
       membrosCriadosOuAtualizados++;
-
-      for (const m of contribuicoes.months) {
-        const dados = {
-          status: STATUS_MES[m.status],
-          registeredAtBR: m.paidOn ? isoParaBR(m.paidOn) : null,
-          syncedAt: new Date(),
-        };
-        await db.contributionMonthlyStatus.upsert({
-          where: { memberId_year_month: { memberId: member.id, year: contribuicoes.year, month: m.month } },
-          update: dados,
-          create: { ...dados, memberId: member.id, year: contribuicoes.year, month: m.month },
-        });
-      }
-
-      // Mesma regra de sync-monthly-status.ts: nunca sobrescreve "negociando"
-      // (registrado à mão, sem sinal disso no Mercúrio).
-      if (member.status !== "negociando") {
-        const temAtraso = contribuicoes.months.some((m) => m.status === "atrasado");
-        const novoStatus = temAtraso ? "atrasado" : contribuicoes.standing === "ISENTO" ? "isento" : "em_dia";
-        if (novoStatus !== member.status) await db.member.update({ where: { id: member.id }, data: { status: novoStatus } });
-      }
 
       // Já tem login (ou é dependente de quem tem): NÃO mexe — provisionar de
       // novo redefine a senha pro padrão do CPF, apagando a que o membro escolheu.
