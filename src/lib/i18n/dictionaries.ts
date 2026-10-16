@@ -1,11 +1,13 @@
 /**
  * Infraestrutura de idioma do Portal do Membro — pedido do usuário
  * 2026-10-15, pras filiais americanas vistas na Mercury API (Austin-TX,
- * Deerfield Beach, Orlando, South Orange-NJ). Decidido por School.language,
- * sem seletor manual pro membro. Login acontece ANTES de sabermos a
- * escola do membro, então fica só em português por ora (ver login-client.tsx).
+ * Deerfield Beach, Orlando, South Orange-NJ). Dentro do Portal (pós-login),
+ * decidido por School.language, sem seletor manual pro membro — a tela de
+ * login é a ÚNICA exceção: acontece ANTES de sabermos a escola de quem
+ * está entrando, então tem um toggle manual PT/EN só ali (ver
+ * login-client.tsx), independente da escolha automática do resto.
  *
- * Cobertura deste 1º incremento: tela inicial do Portal do Membro
+ * Cobertura deste 1º incremento: login + tela inicial do Portal do Membro
  * (member-portal-client.tsx) + a mensagem que substitui qualquer fluxo de
  * pagamento pra quem está em "en" (Asaas/PIX é só Brasil — ver decisão do
  * usuário: 1ª versão em inglês é só consulta, sem processar cobrança).
@@ -15,6 +17,16 @@
 export type Locale = "pt" | "en";
 
 export interface Dictionary {
+  login: {
+    titulo: string;
+    subtitulo: string;
+    email: string;
+    senha: string;
+    senhaDica: string;
+    erroCredenciais: string;
+    entrando: string;
+    entrar: string;
+  };
   modalTitles: {
     cadastro: string;
     contribuicao: string;
@@ -62,6 +74,16 @@ export interface Dictionary {
 }
 
 const pt: Dictionary = {
+  login: {
+    titulo: "Entrar no Portal do Membro",
+    subtitulo: "Use o e-mail cadastrado no Mercúrio.",
+    email: "E-mail",
+    senha: "Senha",
+    senhaDica: "Senha inicial: os 6 primeiros números do seu CPF.",
+    erroCredenciais: "E-mail ou senha incorretos. A senha inicial são os 6 primeiros números do seu CPF.",
+    entrando: "Entrando...",
+    entrar: "Entrar",
+  },
   modalTitles: {
     cadastro: "Atualizar Cadastro",
     contribuicao: "Minha Contribuição",
@@ -116,6 +138,20 @@ const pt: Dictionary = {
 };
 
 const en: Dictionary = {
+  login: {
+    titulo: "Log in to the Member Portal",
+    subtitulo: "Use the email on file with your branch.",
+    email: "Email",
+    senha: "Password",
+    // Dica genérica (não cita CPF) — de propósito: o toggle de idioma do
+    // login é manual e pode ser usado por qualquer membro, mas a senha
+    // derivada do CPF só existe pra quem é do Brasil; ainda não temos um
+    // esquema de senha inicial pras filiais americanas.
+    senhaDica: "Your initial password was provided by your branch.",
+    erroCredenciais: "Incorrect email or password.",
+    entrando: "Signing in...",
+    entrar: "Sign in",
+  },
   modalTitles: {
     cadastro: "Update Profile",
     contribuicao: "My Contribution",
