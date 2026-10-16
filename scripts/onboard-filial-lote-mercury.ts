@@ -24,10 +24,32 @@
 import { db } from "../src/lib/db";
 import { supabaseAdmin } from "../src/lib/supabase/admin";
 import { provisionarLoginComSenha } from "../src/lib/mercurio/auth-provisioning";
-import { mercuryGetDossier, mercuryGetPeople } from "../src/lib/mercury/client";
+import {
+  mercuryGetBranchStaff,
+  mercuryGetContributions,
+  mercuryGetDossier,
+  mercuryGetInstructors,
+  mercuryGetPeople,
+  type MercuryMonthStatus,
+} from "../src/lib/mercury/client";
+import type { ContributionMonthStatus } from "@prisma/client";
 
 function soDigitos(s: string | null | undefined): string {
   return (s ?? "").replace(/\D/g, "");
+}
+
+// "cancelado" não existe no nosso enum — cobrança cancelada = nada confirmado no mês.
+const STATUS_MES: Record<MercuryMonthStatus, ContributionMonthStatus> = {
+  pago: "paga",
+  em_branco: "em_branco",
+  atrasado: "atrasado",
+  isento: "isento",
+  cancelado: "em_branco",
+};
+
+function isoParaBR(iso: string): string {
+  const [ano, mes, dia] = iso.split("-");
+  return `${dia}/${mes}/${ano}`;
 }
 
 async function main() {
@@ -43,8 +65,23 @@ async function main() {
   const { data: authData, error: erroListaAuth } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
   if (erroListaAuth) throw erroListaAuth;
 
+  const instrutores = await mercuryGetInstructors({ branchId });
+  const pedagogos = new Set(instrutores.filter((i) => i.pedagogue).map((i) => i.registrationNo));
+
+  const staff = await mercuryGetBranchStaff(branchId);
+  const cargosPorMatricula = new Map<string, Set<string>>();
+  for (const r of staff.roles) {
+    if (!r.registrationNo || r.role === "Não informado") continue;
+    if (!cargosPorMatricula.has(r.registrationNo)) cargosPorMatricula.set(r.registrationNo, new Set());
+    cargosPorMatricula.get(r.registrationNo)!.add(r.role);
+  }
+  console.log(`Pedagogos: ${pedagogos.size} · Pessoas com cargo: ${cargosPorMatricula.size}`);
+
+  const anoAtual = new Date().getFullYear();
+
   let membrosCriadosOuAtualizados = 0;
   let loginsProvisionados = 0;
+  let jaTinhamLogin = 0;
   let semEmail = 0;
   let semCpf = 0;
   let comErro = 0;
@@ -53,6 +90,7 @@ async function main() {
     try {
       await new Promise((r) => setTimeout(r, 400)); // ritmo pausado — evita 429 em filiais grandes (visto ao vivo 2026-10-15)
       const dossier = await mercuryGetDossier(ativo.registrationNo);
+      const contribuicoes = await mercuryGetContributions(ativo.registrationNo, anoAtual);
 
       const dadosComuns = {
         schoolId: school.id,
@@ -70,6 +108,9 @@ async function main() {
         rgNumero: dossier.documents.find((d) => d.type === "RG")?.number ?? null,
         mercurioAtivo: true,
         mercurioAtivoSync: new Date(),
+        isPedagogo: pedagogos.has(dossier.registrationNo),
+        pedagogoSyncedAt: new Date(),
+        cargos: [...(cargosPorMatricula.get(dossier.registrationNo) ?? [])],
       };
 
       const member = await db.member.upsert({
@@ -78,6 +119,34 @@ async function main() {
         create: { ...dadosComuns, mercurioId: dossier.registrationNo, registrationNo: dossier.registrationNo, status: "em_dia" },
       });
       membrosCriadosOuAtualizados++;
+
+      for (const m of contribuicoes.months) {
+        const dados = {
+          status: STATUS_MES[m.status],
+          registeredAtBR: m.paidOn ? isoParaBR(m.paidOn) : null,
+          syncedAt: new Date(),
+        };
+        await db.contributionMonthlyStatus.upsert({
+          where: { memberId_year_month: { memberId: member.id, year: contribuicoes.year, month: m.month } },
+          update: dados,
+          create: { ...dados, memberId: member.id, year: contribuicoes.year, month: m.month },
+        });
+      }
+
+      // Mesma regra de sync-monthly-status.ts: nunca sobrescreve "negociando"
+      // (registrado à mão, sem sinal disso no Mercúrio).
+      if (member.status !== "negociando") {
+        const temAtraso = contribuicoes.months.some((m) => m.status === "atrasado");
+        const novoStatus = temAtraso ? "atrasado" : contribuicoes.standing === "ISENTO" ? "isento" : "em_dia";
+        if (novoStatus !== member.status) await db.member.update({ where: { id: member.id }, data: { status: novoStatus } });
+      }
+
+      // Já tem login (ou é dependente de quem tem): NÃO mexe — provisionar de
+      // novo redefine a senha pro padrão do CPF, apagando a que o membro escolheu.
+      if (member.authUserId || member.responsavelId) {
+        jaTinhamLogin++;
+        continue;
+      }
 
       if (!member.email) {
         console.log(`⚠ ${member.name}: sem e-mail no Mercúrio — Member ok, login NÃO provisionado.`);
@@ -104,7 +173,7 @@ async function main() {
   }
 
   console.log(
-    `\n✅ Onboarding em lote (Mercury API) concluído: ${membrosCriadosOuAtualizados} Member(s) criado(s)/atualizado(s), ${loginsProvisionados} login(s) provisionado(s), ${semEmail} sem e-mail, ${semCpf} sem CPF legível, ${comErro} com erro.`,
+    `\n✅ Onboarding em lote (Mercury API) concluído: ${membrosCriadosOuAtualizados} Member(s) criado(s)/atualizado(s), ${loginsProvisionados} login(s) novo(s), ${jaTinhamLogin} já tinham login (senha preservada), ${semEmail} sem e-mail, ${semCpf} sem CPF legível, ${comErro} com erro.`,
   );
 }
 

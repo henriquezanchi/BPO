@@ -24,7 +24,8 @@ export default async function VoluntarioPage() {
     !member.isDiretor &&
     !member.isSubChefe &&
     !member.isSecretarioEscolastica &&
-    !member.isSecretarioEconomia
+    !member.isSecretarioEconomia &&
+    member.cargos.length === 0
   )
     redirect("/portal");
 
@@ -41,6 +42,15 @@ export default async function VoluntarioPage() {
         <ThemeToggle />
       </div>
       <h1 className="text-xl font-black text-na-green-dark">Portal do Voluntário</h1>
+      {member.cargos.length > 0 && (
+        <div className="-mt-3 flex flex-wrap gap-1.5">
+          {member.cargos.map((cargo) => (
+            <span key={cargo} className="rounded-full bg-na-green-light px-2.5 py-1 text-[11px] font-semibold text-na-green-dark">
+              {cargo.charAt(0) + cargo.slice(1).toLowerCase()}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         {member.isPedagogo && (
