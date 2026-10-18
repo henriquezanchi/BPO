@@ -10,12 +10,19 @@ import type { Member } from "@prisma/client";
  *  - quem já foi liberado e é responsável por um grupo libera os
  *    integrantes desse grupo (vínculos que o sistema já conhece).
  */
-type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "filiaisChefiadas">;
+type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "filiaisChefiadas" | "mercurioId">;
 
 const ehChefeDeFilial = (m: Pessoa) => m.isDiretor || m.filiaisChefiadas.length > 0;
 
-/** Escolas (ids) que a pessoa chefia: a própria, se é diretora, e as de filiaisChefiadas. */
+/** Administração nacional (LiberadorNacional): vale como Chefe de Filial em todas as filiais. */
+export async function ehAdministradorNacional(m: Pick<Member, "mercurioId">): Promise<boolean> {
+  if (!m.mercurioId) return false;
+  return (await db.liberadorNacional.count({ where: { mercurioId: m.mercurioId } })) > 0;
+}
+
+/** Escolas (ids) que a pessoa chefia: a própria, se é diretora, e as de filiaisChefiadas — ou todas, se é administração nacional. */
 async function escolasChefiadas(m: Pessoa): Promise<string[]> {
+  if (await ehAdministradorNacional(m)) return (await db.school.findMany({ select: { id: true } })).map((s) => s.id);
   const outras = m.filiaisChefiadas.length
     ? (await db.school.findMany({ where: { mercurioUnidade: { in: m.filiaisChefiadas } }, select: { id: true } })).map((s) => s.id)
     : [];
@@ -23,7 +30,7 @@ async function escolasChefiadas(m: Pessoa): Promise<string[]> {
 }
 
 export async function temAcessoVoluntario(m: Pessoa): Promise<boolean> {
-  if (ehChefeDeFilial(m)) return true;
+  if (ehChefeDeFilial(m) || (await ehAdministradorNacional(m))) return true;
   return (await db.acessoVoluntario.count({ where: { memberId: m.id } })) > 0;
 }
 

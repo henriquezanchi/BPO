@@ -1,4 +1,4 @@
-import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
+import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { linkDoCanal } from "@/lib/slack";
@@ -21,8 +21,7 @@ export const dynamic = "force-dynamic";
 export default async function VoluntarioPage() {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/voluntario");
-  // Grupos de voluntários (Brigada Feminina/Masculina, Corpo de Segurança)
-  // vêm do Mercúrio — ver mercurio-db/importar.ts.
+  // Grupos de voluntários (Grupo Feminino/Masculino/de Segurança) vêm do Mercúrio — ver mercurio-db/importar.ts.
   // Informação sensível: só aparece com acesso liberado em camadas.
   const acesso = await temAcessoVoluntario(member);
   const grupos = !acesso ? [] : await db.classMembership.findMany({
@@ -35,10 +34,11 @@ export default async function VoluntarioPage() {
   const gruposUnicos = [...new Map([...grupos].sort((a, b) => Number(a.role === "professor") - Number(b.role === "professor")).map((g) => [g.classGroupId, g])).values()].sort((a, b) =>
     a.classGroup.name.localeCompare(b.classGroup.name),
   );
-  const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0;
+  const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0 || (await ehAdministradorNacional(member));
   const podeLiberarAcessos = chefeDeFilial || lideraGrupo;
   if (
     grupos.length === 0 &&
+    !chefeDeFilial &&
     !member.isPedagogo &&
     !member.isDiretor &&
     !member.isSubChefe &&

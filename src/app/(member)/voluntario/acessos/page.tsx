@@ -1,5 +1,5 @@
 import { AcessosVoluntarioPanel } from "@/components/member/volunteer/acessos-voluntario-panel";
-import { candidatosParaLiberar, temAcessoVoluntario } from "@/lib/acesso-voluntario";
+import { candidatosParaLiberar, ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ArrowLeft } from "lucide-react";
@@ -19,7 +19,8 @@ export default async function AcessosVoluntarioPage() {
   if (!(await temAcessoVoluntario(member))) redirect("/voluntario");
 
   const pessoas = await candidatosParaLiberar(member);
-  const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0;
+  const nacional = await ehAdministradorNacional(member);
+  const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0 || nacional;
   if (!chefeDeFilial && pessoas.length === 0) redirect("/voluntario");
 
   return (
@@ -35,7 +36,9 @@ export default async function AcessosVoluntarioPage() {
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           A área de voluntários (grupos, avisos e canais) fica oculta até alguém liberar.{" "}
           {chefeDeFilial
-            ? "Como Chefe de Filial, você libera qualquer pessoa da filial — comece pelos chefes de grupo, sub-chefes e secretários; eles liberam os integrantes dos seus grupos."
+            ? nacional
+              ? "Como administração nacional, você libera qualquer pessoa de qualquer filial — comece pelos chefes de filial, chefes de grupo, sub-chefes e secretários."
+              : "Como Chefe de Filial, você libera qualquer pessoa da filial — comece pelos chefes de grupo, sub-chefes e secretários; eles liberam os integrantes dos seus grupos."
             : "Você pode liberar os integrantes dos grupos pelos quais é responsável."}
         </p>
       </div>

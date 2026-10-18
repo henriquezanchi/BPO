@@ -1,5 +1,5 @@
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
-import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
+import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import { rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
@@ -139,6 +139,7 @@ export async function getMemberDashboard(memberId: string) {
 
   // Avisos de grupos de voluntários só com acesso liberado (ver acesso-voluntario.ts).
   const acessoVoluntario = await temAcessoVoluntario(member);
+  const administradorNacional = await ehAdministradorNacional(member);
   const studentClassGroupIds = member.classMemberships
     .filter((cm) => cm.role === "aluno" && (cm.classGroup.tipo === "turma" || acessoVoluntario))
     .map((cm) => cm.classGroupId);
@@ -266,6 +267,7 @@ export async function getMemberDashboard(memberId: string) {
       avatarUrl: getAvatarUrl(member.avatarPath),
     },
     acessoVoluntario,
+    administradorNacional,
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     fortunaBalances,
     agendaItems,

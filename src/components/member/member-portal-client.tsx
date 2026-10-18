@@ -136,7 +136,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-semibold text-na-gold">{t.home.portalDoMembro}</span>
-              {(member.isPedagogo || member.isDiretor || member.isSubChefe || member.isSecretarioEscolastica || member.isSecretarioEconomia || member.cargos.length > 0 || (dashboard.acessoVoluntario && member.classMemberships.some((cm) => cm.classGroup.tipo !== "turma"))) && (
+              {(dashboard.administradorNacional || member.isPedagogo || member.isDiretor || member.isSubChefe || member.isSecretarioEscolastica || member.isSecretarioEconomia || member.cargos.length > 0 || (dashboard.acessoVoluntario && member.classMemberships.some((cm) => cm.classGroup.tipo !== "turma"))) && (
                 <>
                   <span className="text-[10px] text-white/30">·</span>
                   <Link
