@@ -8,7 +8,7 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Portal do Membro - Nova Acrópole",
+    name: "Portal do Aluno - Nova Acrópole",
     short_name: "Portal NA",
     description: "Contribuição, carteira Fortuna, agenda e jornada na Nova Acrópole.",
     start_url: "/portal",

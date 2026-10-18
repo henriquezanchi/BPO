@@ -170,7 +170,7 @@ export function HelpPanel({ whatsapp }: { whatsapp: string }) {
       <div className="rounded-xl border border-gray-200 p-3 text-center dark:border-gray-700">
         <p className="mb-3 text-[11px] text-gray-500 dark:text-gray-400">Não achou o que precisava? Fale com a Economia:</p>
         <a
-          href={whatsappHref(whatsapp, "Olá, preciso de ajuda com o Portal do Membro")}
+          href={whatsappHref(whatsapp, "Olá, preciso de ajuda com o Portal do Aluno")}
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-na-green px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-na-green-dark"

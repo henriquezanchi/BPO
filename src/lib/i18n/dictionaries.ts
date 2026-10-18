@@ -1,5 +1,5 @@
 /**
- * Infraestrutura de idioma do Portal do Membro — pedido do usuário
+ * Infraestrutura de idioma do Portal do Aluno — pedido do usuário
  * 2026-10-15, pras filiais americanas vistas na Mercury API (Austin-TX,
  * Deerfield Beach, Orlando, South Orange-NJ). Dentro do Portal (pós-login),
  * decidido por School.language, sem seletor manual pro membro — a tela de
@@ -7,7 +7,7 @@
  * está entrando, então tem um toggle manual PT/EN só ali (ver
  * login-client.tsx), independente da escolha automática do resto.
  *
- * Cobertura deste 1º incremento: login + tela inicial do Portal do Membro
+ * Cobertura deste 1º incremento: login + tela inicial do Portal do Aluno
  * (member-portal-client.tsx) + a mensagem que substitui qualquer fluxo de
  * pagamento pra quem está em "en" (Asaas/PIX é só Brasil — ver decisão do
  * usuário: 1ª versão em inglês é só consulta, sem processar cobrança).
@@ -75,7 +75,7 @@ export interface Dictionary {
 
 const pt: Dictionary = {
   login: {
-    titulo: "Entrar no Portal do Membro",
+    titulo: "Entrar no Portal do Aluno",
     subtitulo: "Use o e-mail cadastrado no Mercúrio.",
     email: "E-mail",
     senha: "Senha",
@@ -139,7 +139,7 @@ const pt: Dictionary = {
 
 const en: Dictionary = {
   login: {
-    titulo: "Log in to the Member Portal",
+    titulo: "Log in to the Student Portal",
     subtitulo: "Use the email on file with your branch.",
     email: "Email",
     senha: "Password",

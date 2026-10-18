@@ -22,7 +22,7 @@ export interface CreateActivityInput {
 /**
  * Professor cadastra uma atividade (prova, trabalho, leitura...) para a
  * turma. Todos os alunos matriculados na turma passam a ver a atividade em
- * "Agenda & Eventos" no Portal do Membro automaticamente — não é uma seção
+ * "Agenda & Eventos" no Portal do Aluno automaticamente — não é uma seção
  * nova, é a mesma agenda que já lista os eventos da escola.
  *
  * O aviso por WhatsApp é disparado na hora; um push nativo (PWA) fica como
@@ -66,7 +66,7 @@ export async function createActivity(input: CreateActivityInput) {
   const corpo = `${input.type === "aviso" ? "Novo aviso" : "Nova atividade"} ${origem}: *${input.title}* (${dueDateLabel}).${
     input.studyItems ? `\nConteúdo: ${input.studyItems}` : ""
   }${input.description ? `\n${input.description}` : ""}`;
-  const message = `${corpo}\nConfira em Agenda & Eventos no Portal do Membro.`;
+  const message = `${corpo}\nConfira em Agenda & Eventos no Portal do Aluno.`;
 
   // Slack é complemento: uma falha lá não desfaz a publicação no Portal.
   let slack: "enviado" | "falhou" | null = null;

@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Portal do Membro - Nova Acrópole",
+  title: "Portal do Aluno - Nova Acrópole",
   description: "Autogestão, carteira digital e agenda de atividades para membros e professores.",
   appleWebApp: {
     capable: true,

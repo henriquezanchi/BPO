@@ -18,7 +18,7 @@ export default function Home() {
           <Image src="/na-logo.png" alt="Nova Acrópole" width={160} height={104} className="h-auto w-36 dark:brightness-0 dark:invert" />
         </div>
 
-        <h1 className="mb-1 text-lg font-black text-na-green-dark dark:text-emerald-400">Portal do Membro</h1>
+        <h1 className="mb-1 text-lg font-black text-na-green-dark dark:text-emerald-400">Portal do Aluno</h1>
         <p className="mb-6 text-xs text-gray-500 dark:text-gray-400">
           Tudo o que você precisa da sua jornada na Nova Acrópole, num só lugar.
         </p>
