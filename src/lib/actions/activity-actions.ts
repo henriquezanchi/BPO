@@ -1,5 +1,6 @@
 "use server";
 
+import { comAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { postarNoCanal, tokenSlackDaFilial } from "@/lib/slack";
@@ -42,10 +43,14 @@ export async function createActivity(input: CreateActivityInput) {
     },
   });
 
-  const roster = await db.classMembership.findMany({
+  const grupoTipo = (await db.classGroup.findUniqueOrThrow({ where: { id: input.classGroupId }, select: { tipo: true } })).tipo;
+  const rosterTodo = await db.classMembership.findMany({
     where: { classGroupId: input.classGroupId, role: "aluno" },
     include: { member: true },
   });
+  // Grupo de voluntários: só avisa quem já tem o acesso liberado.
+  const liberados = grupoTipo === "turma" ? null : await comAcessoVoluntario(rosterTodo.map((r) => r.memberId));
+  const roster = liberados ? rosterTodo.filter((r) => liberados.has(r.memberId)) : rosterTodo;
 
   await db.activityNotification.createMany({
     data: roster.map((r) => ({

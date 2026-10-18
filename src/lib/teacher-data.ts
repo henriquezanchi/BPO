@@ -1,9 +1,13 @@
+import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export async function getTeacherClasses(memberId: string) {
+  const member = await db.member.findUniqueOrThrow({ where: { id: memberId }, select: { id: true, schoolId: true, isDiretor: true } });
+  const acesso = await temAcessoVoluntario(member);
   const memberships = await db.classMembership.findMany({
-    where: { memberId, role: "professor" },
+    // Grupos de voluntários só com acesso liberado.
+    where: { memberId, role: "professor", ...(acesso ? {} : { classGroup: { tipo: "turma" } }) },
     include: {
       classGroup: {
         include: {
@@ -20,7 +24,9 @@ export async function getTeacherClasses(memberId: string) {
 
 /** Responsável por alguma turma ou grupo (instrutor, chefe de brigada) — libera a área "Turmas e grupos". */
 export async function lideraAlgumGrupo(memberId: string) {
-  return (await db.classMembership.count({ where: { memberId, role: "professor" } })) > 0;
+  const member = await db.member.findUniqueOrThrow({ where: { id: memberId }, select: { id: true, schoolId: true, isDiretor: true } });
+  const acesso = await temAcessoVoluntario(member);
+  return (await db.classMembership.count({ where: { memberId, role: "professor", ...(acesso ? {} : { classGroup: { tipo: "turma" } }) } })) > 0;
 }
 
 export type TeacherClass = Awaited<ReturnType<typeof getTeacherClasses>>[number];

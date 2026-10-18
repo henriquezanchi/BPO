@@ -1,9 +1,10 @@
+import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { linkDoCanal } from "@/lib/slack";
 import { VOLUNTEER_TERM_VERSION } from "@/lib/volunteer-term";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { ArrowLeft, Banknote, CalendarClock, Crown, ExternalLink, FileSignature, GraduationCap, Shield } from "lucide-react";
+import { ArrowLeft, Banknote, CalendarClock, Crown, ExternalLink, FileSignature, GraduationCap, KeyRound, Shield } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -22,12 +23,15 @@ export default async function VoluntarioPage() {
   if (!member) redirect("/login?next=/voluntario");
   // Grupos de voluntários (Brigada Feminina/Masculina, Corpo de Segurança)
   // vêm do Mercúrio — ver mercurio-db/importar.ts.
-  const grupos = await db.classMembership.findMany({
+  // Informação sensível: só aparece com acesso liberado em camadas.
+  const acesso = await temAcessoVoluntario(member);
+  const grupos = !acesso ? [] : await db.classMembership.findMany({
     where: { memberId: member.id, classGroup: { tipo: { not: "turma" } } },
     include: { classGroup: { select: { id: true, name: true, slackChannelId: true, slackTeamId: true } } },
     orderBy: { classGroup: { name: "asc" } },
   });
   const lideraGrupo = grupos.some((g) => g.role === "professor");
+  const podeLiberarAcessos = member.isDiretor || lideraGrupo;
   if (
     grupos.length === 0 &&
     !member.isPedagogo &&
@@ -63,6 +67,23 @@ export default async function VoluntarioPage() {
       )}
 
       <div className="flex flex-col gap-3">
+        {podeLiberarAcessos && (
+          <Link
+            href="/voluntario/acessos"
+            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
+              <KeyRound size={18} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Liberar acessos</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {member.isDiretor ? "Quem da filial vê a área de voluntários" : "Quem do seu grupo vê a área de voluntários"}
+              </p>
+            </div>
+          </Link>
+        )}
+
         {lideraGrupo && !member.isPedagogo && (
           <Link
             href="/professor"

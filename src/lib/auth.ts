@@ -1,3 +1,4 @@
+import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { db } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -93,6 +94,9 @@ export async function requireTeacherOfClass(classGroupId: string) {
     where: { classGroupId, memberId: member.id, role: "professor" },
   });
   if (!membership) throw new Error("Você não é professor desta turma.");
+  // Grupos de voluntários exigem acesso liberado (ver acesso-voluntario.ts).
+  const grupo = await db.classGroup.findUnique({ where: { id: classGroupId }, select: { tipo: true } });
+  if (grupo?.tipo !== "turma" && !(await temAcessoVoluntario(member))) throw new Error("Seu acesso à área de voluntários ainda não foi liberado.");
 
   return member;
 }

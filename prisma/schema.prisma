@@ -1256,3 +1256,16 @@ model ErrorNotification {
   lastNotifiedAt DateTime
 }
 
+
+// Liberação em camadas da área de voluntários (grupos Feminino/Masculino/
+// de Segurança, avisos, escalas) — informação sensível, nada aparece por
+// padrão. Chefe de Filial tem acesso sempre e libera quem quiser; quem foi
+// liberado e é responsável por um grupo libera os integrantes desse grupo.
+// Ver src/lib/acesso-voluntario.ts.
+model AcessoVoluntario {
+  memberId      String   @id
+  liberadoPorId String
+  liberadoEm    DateTime @default(now())
+
+  @@index([liberadoPorId])
+}

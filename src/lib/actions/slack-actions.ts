@@ -1,5 +1,6 @@
 "use server";
 
+import { comAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -30,7 +31,11 @@ async function contexto(classGroupId: string) {
 
 /** Convida pro canal todo integrante/responsável do grupo que tem conta no Slack da filial (achado pelo e-mail do cadastro). */
 async function convidarIntegrantes(classGroupId: string, token: string, channelId: string) {
-  const vinculos = await db.classMembership.findMany({ where: { classGroupId }, include: { member: { select: { email: true } } } });
+  const grupo = await db.classGroup.findUniqueOrThrow({ where: { id: classGroupId }, select: { tipo: true } });
+  const todos = await db.classMembership.findMany({ where: { classGroupId }, include: { member: { select: { email: true } } } });
+  // Grupo de voluntários: só convida quem já tem o acesso liberado.
+  const liberados = grupo.tipo === "turma" ? null : await comAcessoVoluntario(todos.map((v) => v.memberId));
+  const vinculos = liberados ? todos.filter((v) => liberados.has(v.memberId)) : todos;
   const emails = [...new Set(vinculos.map((v) => v.member.email?.trim().toLowerCase()).filter((e): e is string => !!e))];
   const ids: string[] = [];
   let semConta = 0;

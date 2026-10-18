@@ -1,4 +1,5 @@
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
+import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import { rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
@@ -136,8 +137,10 @@ export async function getMemberDashboard(memberId: string) {
   // via getFortunaBalancesForMember — ver fortuna-member-actions.ts.
   const fortunaBalances: FortunaBalanceView[] = [];
 
+  // Avisos de grupos de voluntários só com acesso liberado (ver acesso-voluntario.ts).
+  const acessoVoluntario = await temAcessoVoluntario(member);
   const studentClassGroupIds = member.classMemberships
-    .filter((cm) => cm.role === "aluno")
+    .filter((cm) => cm.role === "aluno" && (cm.classGroup.tipo === "turma" || acessoVoluntario))
     .map((cm) => cm.classGroupId);
 
   const [schoolEvents, classActivities, classPolls] = await Promise.all([
@@ -262,6 +265,7 @@ export async function getMemberDashboard(memberId: string) {
       compositionItems: member.compositionItems.map((i) => serializeCompositionItem(i, gruposComTarefaPendente)),
       avatarUrl: getAvatarUrl(member.avatarPath),
     },
+    acessoVoluntario,
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     fortunaBalances,
     agendaItems,
