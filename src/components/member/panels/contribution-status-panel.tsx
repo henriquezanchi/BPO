@@ -3,13 +3,13 @@
 import { getFortunaRecorrenteNudge, responderNudge } from "@/lib/actions/nudge-actions";
 import { ativarPixAutomatico, checkPixAutomaticoStatus, desativarPixAutomatico } from "@/lib/actions/pix-automatico-actions";
 import { cancelarCobrancaContribuicaoPendente, checkChargeStatus, createContributionCharge, getPendingContributionCharge } from "@/lib/actions/payment-actions";
-import { enviarReciboPorEmail, viewReceiptByMercurioRecId } from "@/lib/actions/receipt-actions";
+import { viewReceiptByMercurioRecId } from "@/lib/actions/receipt-actions";
 import { formatBRL } from "@/lib/format";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import type { FortunaBalanceView } from "@/lib/member-data";
 import { gerarPdfRecibo } from "@/lib/recibo-pdf";
 import type { ContributionMonthlyStatus } from "@prisma/client";
-import { AlertTriangle, Check, Coffee, Copy, CreditCard, Download, ExternalLink, HeartHandshake, Loader2, Mail, QrCode, RefreshCw, Zap } from "lucide-react";
+import { AlertTriangle, Check, Coffee, Copy, CreditCard, Download, ExternalLink, HeartHandshake, Loader2, QrCode, RefreshCw, Zap } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -51,7 +51,6 @@ export function ContributionStatusPanel({
   somenteConsulta?: boolean;
 }) {
   const [recibo, setRecibo] = useState<{ recId: string; texto: string } | null>(null);
-  const [envioEmail, setEnvioEmail] = useState<{ estado: "enviando" } | { estado: "enviado"; para: string } | { estado: "erro"; msg: string } | null>(null);
   const [mesPagamento, setMesPagamento] = useState<number | null>(null);
   const [carregandoMes, setCarregandoMes] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -78,7 +77,6 @@ export function ContributionStatusPanel({
           setErro(res.error ?? "Falha ao buscar o comprovante.");
           return;
         }
-        setEnvioEmail(null);
         setRecibo({ recId: registro.mercurioRecId!, texto: res.rawText });
       });
       return;
@@ -89,28 +87,12 @@ export function ContributionStatusPanel({
     }
   }
 
-  function handleEnviarEmail() {
-    if (!recibo) return;
-    setEnvioEmail({ estado: "enviando" });
-    enviarReciboPorEmail(memberId, recibo.recId)
-      .then((res) => setEnvioEmail(res.ok ? { estado: "enviado", para: res.para } : { estado: "erro", msg: res.error }))
-      .catch(() => setEnvioEmail({ estado: "erro", msg: "Não foi possível enviar o e-mail agora." }));
-  }
-
   if (recibo) {
     return (
       <div className="text-left">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs text-gray-500 dark:text-gray-400">Comprovante</p>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleEnviarEmail}
-              disabled={envioEmail?.estado === "enviando" || envioEmail?.estado === "enviado"}
-              className="flex items-center gap-1 text-[11px] font-semibold text-na-green disabled:opacity-60 dark:text-emerald-400"
-            >
-              {envioEmail?.estado === "enviando" ? <Loader2 size={12} className="animate-spin" /> : envioEmail?.estado === "enviado" ? <Check size={12} /> : <Mail size={12} />}
-              {envioEmail?.estado === "enviado" ? "Enviado" : "Enviar por e-mail"}
-            </button>
             <button
               onClick={() => gerarPdfRecibo(recibo.texto).save(`comprovante-${recibo.recId}.pdf`)}
               className="flex items-center gap-1 text-[11px] font-semibold text-na-green dark:text-emerald-400"
@@ -122,15 +104,6 @@ export function ContributionStatusPanel({
             </button>
           </div>
         </div>
-        {envioEmail?.estado === "enviado" && (
-          <p className="mb-2 text-[11px] text-na-success-dark dark:text-emerald-400">Comprovante enviado para {envioEmail.para}.</p>
-        )}
-        {envioEmail?.estado === "erro" && (
-          <div className="mb-2 flex items-start gap-2 rounded-lg bg-na-danger-light p-2.5 text-[11px] text-na-danger-dark dark:bg-red-950/30 dark:text-red-300">
-            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-            <span>{envioEmail.msg}</span>
-          </div>
-        )}
         <pre className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 p-3 text-[11px] leading-tight whitespace-pre-wrap dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
           {recibo.texto}
         </pre>

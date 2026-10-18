@@ -126,7 +126,7 @@ const FAQ: { pergunta: string; resposta: string }[] = [
   },
   {
     pergunta: "Como baixo o comprovante de uma contribuição paga?",
-    resposta: 'Em "Situação da Contribuição", clique no mês já pago (verde) e depois em "Baixar PDF" ou "Enviar por e-mail".',
+    resposta: 'Em "Situação da Contribuição", clique no mês já pago (verde) e depois em "Baixar PDF".',
   },
   {
     pergunta: "Posso pagar com cartão de crédito?",

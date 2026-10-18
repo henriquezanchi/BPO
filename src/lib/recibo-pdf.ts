@@ -5,7 +5,7 @@ import jsPDF from "jspdf";
  * pedido do usuário 2026-09-30. Mantém o texto cru exatamente como veio do
  * Mercúrio (fonte monoespaçada, sem tentar reformatar) — é um comprovante
  * financeiro oficial, arriscado reinterpretar o layout dele. Usado tanto no
- * navegador (Baixar PDF) quanto no servidor (anexo do envio por e-mail).
+ * navegador (Baixar PDF) quanto, no futuro, no servidor (anexo do envio por e-mail — ver docs/PENDENCIAS.md).
  */
 export function gerarPdfRecibo(rawText: string): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
