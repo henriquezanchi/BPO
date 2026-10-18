@@ -3,7 +3,7 @@ import { CreateActivityForm } from "@/components/member/professor/create-activit
 import { CreatePollForm } from "@/components/member/professor/create-poll-form";
 import { SlackChannelPanel } from "@/components/member/professor/slack-channel-panel";
 import { linkDoCanal, tokenSlackDaFilial } from "@/lib/slack";
-import { formatDateBR } from "@/lib/format";
+import { PublishedActivities } from "@/components/member/professor/published-activities";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { getTeacherClassDetail } from "@/lib/teacher-data";
 import { ArrowLeft } from "lucide-react";
@@ -68,14 +68,7 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
         {turma.activities.length > 0 && (
           <div>
             <h3 className="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">{ehGrupo ? "Publicados" : "Atividades cadastradas"}</h3>
-            <ul className="flex flex-col gap-1.5">
-              {turma.activities.map((a) => (
-                <li key={a.id} className="flex justify-between rounded-lg bg-gray-50 p-2 text-xs dark:bg-gray-800">
-                  <span>{a.title}</span>
-                  <span className="text-gray-500 dark:text-gray-400">{formatDateBR(a.dueDate)}</span>
-                </li>
-              ))}
-            </ul>
+            <PublishedActivities activities={turma.activities} ehGrupo={ehGrupo} />
           </div>
         )}
       </section>

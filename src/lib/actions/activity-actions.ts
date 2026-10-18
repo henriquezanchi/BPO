@@ -94,6 +94,34 @@ export async function createActivity(input: CreateActivityInput) {
   );
 
   revalidatePath("/portal");
+  revalidatePath(`/professor/turma/${input.classGroupId}`);
 
   return { id: activity.id, slack, whatsapp: { sent: results.filter(Boolean).length, total: roster.length, failed: results.filter(ok=>!ok).length } };
+}
+
+
+/** Edição/exclusão sempre conferem o responsável pelo grupo real do registro. */
+export async function manageActivity(id: string, input: Omit<CreateActivityInput, "classGroupId" | "publicarNoSlack"> | null) {
+  try {
+    const activity = await db.activity.findUniqueOrThrow({ where: { id }, select: { classGroupId: true } });
+    await requireTeacherOfClass(activity.classGroupId);
+    if (input) {
+      const group = await db.classGroup.findUniqueOrThrow({ where: { id: activity.classGroupId }, select: { tipo: true } });
+      const types = group.tipo === "turma" ? ["prova", "trabalho", "leitura", "atividade_turma", "aviso"] : ["atividade_turma", "aviso"];
+      if (!types.includes(input.type) || !input.title.trim() || input.title.length > 160 || (input.description?.length ?? 0) > 5000 || (input.studyItems?.length ?? 0) > 5000 || !(input.dueDate instanceof Date) || !Number.isFinite(input.dueDate.getTime())) {
+        return { ok: false, error: "Confira o título, a data e o conteúdo da publicação." };
+      }
+      await db.activity.update({ where: { id }, data: { type: input.type, title: input.title.trim(), description: input.description?.trim() || null, studyItems: input.studyItems?.trim() || null, dueDate: input.dueDate } });
+    } else {
+      await db.$transaction(async tx => {
+        await tx.activityNotification.deleteMany({ where: { activityId: id } });
+        await tx.activity.delete({ where: { id } });
+      });
+    }
+    revalidatePath(`/professor/turma/${activity.classGroupId}`);
+    revalidatePath("/portal");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Não foi possível concluir. Atualize a página e confira seu acesso ao grupo." };
+  }
 }

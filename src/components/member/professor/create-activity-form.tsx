@@ -3,6 +3,7 @@
 import { createActivity } from "@/lib/actions/activity-actions";
 import type { ActivityType } from "@prisma/client";
 import { CheckCircle2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 const TYPES: { value: ActivityType; label: string }[] = [
@@ -20,6 +21,7 @@ const TYPES_GRUPO: { value: ActivityType; label: string }[] = [
 ];
 
 export function CreateActivityForm({ classGroupId, ehGrupo = false, temSlack = false }: { classGroupId: string; ehGrupo?: boolean; temSlack?: boolean }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [done, setDone] = useState<{ slack: "enviado" | "falhou" | null; whatsapp:{sent:number;total:number;failed:number} } | null>(null);
   const tipos = ehGrupo ? TYPES_GRUPO : TYPES;
@@ -36,6 +38,7 @@ export function CreateActivityForm({ classGroupId, ehGrupo = false, temSlack = f
         publicarNoSlack: formData.get("publicarNoSlack") === "on",
       });
       setDone({ slack: res.slack, whatsapp:res.whatsapp });
+      router.refresh();
     });
   }
 

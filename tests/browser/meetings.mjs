@@ -14,11 +14,12 @@ try{
    else if(action==='createGroupMeetings'){writes.push({action,args});value={ok:true,count:12,weekly:true};}
    else if(action==='changeGroupMeeting'){writes.push({action,args});value={ok:true};}
    else if(action==='createActivity'){writes.push({action,args});value={id:'activity-fake',slack:null,whatsapp:{sent:0,total:2,failed:2}};}
+   else if(action==='manageActivity'){writes.push({action,args});value={ok:true};}
    else if(action==='respondGroupMeeting'){writes.push({action,args});value={ok:true};}
    else throw new Error('Ação inesperada: '+action);
    return route.fulfill({contentType:'text/x-component',body:'0:{"a":"$@1","f":"","b":"development"}\n1:'+JSON.stringify(value)+'\n'});
   });
-  await page.goto(base+'/browser-meetings-local');await page.getByRole('button',{name:'Editar',exact:true}).waitFor();
+  await page.goto(base+'/browser-meetings-local');await page.getByRole('region',{name:'Reuniões da brigada'}).getByRole('button',{name:'Editar',exact:true}).waitFor();
   const manager=page.getByRole('region',{name:'Reuniões da brigada'}),agenda=page.getByRole('region',{name:'Agenda do integrante'});
   assert.equal((await agenda.innerText()).includes('SEGREDO_INTERNO_TESTE'),false);assert.match(await agenda.innerText(),/16:00/);
   assert.equal(await manager.getByText('Fuso horário',{exact:true}).count(),0);assert.equal(await manager.locator('input[name=repeatUntil]').count(),0);
@@ -27,6 +28,12 @@ try{
   await agenda.getByRole('button',{name:'Justificar ausência',exact:true}).click();await agenda.getByLabel('Justificativa breve (somente você e os responsáveis do grupo)',{exact:true}).fill('Compromisso anterior');await agenda.getByRole('button',{name:'Registrar justificativa',exact:true}).click();await agenda.getByText(/Justificativa registrada/).waitFor();
   assert.equal(writes[0].args[1].weekly,true);assert.equal(writes[0].args[1].repeatUntil,undefined);assert.equal(writes[1].args[2],'seguintes');assert.equal(writes[2].args[0],'test-member');assert.equal(writes[2].args[4],0);
   const notices=page.getByRole('region',{name:'Avisos do grupo'});await notices.locator('input[name=dueDate]').fill('2099-01-01');await notices.locator('input[name=title]').fill('Aviso teste');await notices.getByRole('button',{name:'Publicar para o grupo',exact:true}).click();await notices.getByText(/Nenhuma mensagem enviada pelo WhatsApp/).waitFor();assert.equal((await notices.innerText()).includes('integrantes notificados'),false);
+  const published=page.getByRole('region',{name:'Publicações'});
+  await published.locator('summary').click();await published.getByText('Mensagem completa do aviso',{exact:true}).waitFor();
+  await published.getByRole('button',{name:'Editar',exact:true}).click();await published.getByLabel('Título',{exact:true}).fill('Aviso revisado');await published.getByRole('button',{name:'Salvar alterações',exact:true}).click();await published.getByText(/Alterações salvas na Agenda/).waitFor();
+  assert.equal(writes.at(-1).args[1].title,'Aviso revisado');
+  await published.getByRole('button',{name:'Excluir',exact:true}).click();await published.getByRole('button',{name:'Manter publicação',exact:true}).click();assert.equal(writes.at(-1).args[1].title,'Aviso revisado');
+  await published.getByRole('button',{name:'Excluir',exact:true}).click();await published.getByRole('button',{name:'Confirmar exclusão',exact:true}).click();await published.locator('summary').waitFor({state:'detached'});assert.equal(writes.at(-1).args[1],null);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'/tmp/portal-meetings-'+width+'.png',fullPage:true});console.log('PASS '+width+'px: reunião semanal, alcance de edição, justificativa e separação visual dos detalhes internos.');await page.close();
  }
 }finally{await browser?.close();if(server?.pid)try{process.kill(-server.pid,'SIGTERM')}catch{}await rm(routeDir,{recursive:true,force:true});await rm(path.join(root,'.next/dev/types'),{recursive:true,force:true});}
