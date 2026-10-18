@@ -215,9 +215,14 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
         `Data: ${emissao.toLocaleDateString("pt-BR", { timeZone: "UTC" })}`,
         `Recebemos de: ${(cab.rec_interessado ?? c.cad_nome ?? "").trim()} (matrícula ${matr})`,
         "",
-        ...linhas.map((l) => `${(l.pro_descricao ?? "ITEM").trim().padEnd(40, " ")} ${String(l.rei_mes).padStart(2, "0")}/${l.rei_ano}  R$ ${brl(Number(l.rei_valtotal ?? 0)).padStart(10, " ")}`),
-        "".padEnd(68, "-"),
-        `${"TOTAL".padEnd(50, " ")}R$ ${brl(total).padStart(10, " ")}`,
+        // 40 colunas (descrição numa linha, referência + valor na de baixo)
+        // — cabe na tela do celular sem quebrar o "R$" do valor.
+        ...linhas.flatMap((l) => [
+          (l.pro_descricao ?? "ITEM").trim(),
+          `${`  ref. ${String(l.rei_mes).padStart(2, "0")}/${l.rei_ano}`.padEnd(28, " ")}R$ ${brl(Number(l.rei_valtotal ?? 0)).padStart(9, " ")}`,
+        ]),
+        "".padEnd(40, "-"),
+        `${"TOTAL".padEnd(28, " ")}R$ ${brl(total).padStart(9, " ")}`,
       ].join("\n");
       const cancelado = dataOuNull(cab.rec_data_cancel) !== null;
       const resumo = linhas.length ? `${(linhas[0].pro_descricao ?? "").trim()}${linhas.length > 1 ? ` +${linhas.length - 1} itens` : ""}` : null;
