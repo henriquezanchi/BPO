@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 export function SignTermForm({ memberId }: { memberId: string }) {
   const [agreed, setAgreed] = useState(false);
   const [signedName, setSignedName] = useState("");
+  const [cpf, setCpf] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -16,7 +17,7 @@ export function SignTermForm({ memberId }: { memberId: string }) {
     setError(null);
     startTransition(async () => {
       try {
-        await signVolunteerTerm(memberId, signedName);
+        await signVolunteerTerm(memberId, signedName, cpf);
         setDone(true);
       } catch (err) {
         setError((err as Error).message);
@@ -57,11 +58,24 @@ export function SignTermForm({ memberId }: { memberId: string }) {
         />
       </div>
 
+      <div className="flex flex-col gap-1">
+        <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">CPF</label>
+        <input
+          value={cpf}
+          onChange={(e) => setCpf(e.target.value)}
+          required
+          inputMode="numeric"
+          placeholder="000.000.000-00"
+          className="rounded-lg border border-gray-300 p-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+        />
+        <p className="text-[10px] text-gray-500 dark:text-gray-400">O termo assinado guarda só os dígitos centrais do CPF.</p>
+      </div>
+
       {error && <p className="text-xs text-na-danger dark:text-red-400">{error}</p>}
 
       <button
         type="submit"
-        disabled={!agreed || !signedName.trim() || isPending}
+        disabled={!agreed || !signedName.trim() || cpf.replace(/\D/g, "").length !== 11 || isPending}
         className="flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-50"
       >
         <PenLine size={16} /> {isPending ? "Assinando..." : "Assinar Digitalmente"}

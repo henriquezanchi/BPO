@@ -2,7 +2,7 @@ import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { linkDoCanal } from "@/lib/slack";
-import { VOLUNTEER_TERM_VERSION } from "@/lib/volunteer-term";
+import { termoVigente } from "@/lib/volunteer-term";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ArrowLeft, Banknote, CalendarClock, Crown, ExternalLink, FileSignature, GraduationCap, KeyRound, Shield } from "lucide-react";
 import Link from "next/link";
@@ -31,6 +31,10 @@ export default async function VoluntarioPage() {
     orderBy: { classGroup: { name: "asc" } },
   });
   const lideraGrupo = grupos.some((g) => g.role === "professor");
+  // Responsável que também é integrante aparece uma vez só, como responsável.
+  const gruposUnicos = [...new Map([...grupos].sort((a, b) => Number(a.role === "professor") - Number(b.role === "professor")).map((g) => [g.classGroupId, g])).values()].sort((a, b) =>
+    a.classGroup.name.localeCompare(b.classGroup.name),
+  );
   const podeLiberarAcessos = member.isDiretor || lideraGrupo;
   if (
     grupos.length === 0 &&
@@ -43,9 +47,7 @@ export default async function VoluntarioPage() {
   )
     redirect("/portal");
 
-  const termoAssinado = await db.volunteerTermSignature.findUnique({
-    where: { memberId_termVersion: { memberId: member.id, termVersion: VOLUNTEER_TERM_VERSION } },
-  });
+  const termoAssinado = await termoVigente(member.id, member.schoolId);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
@@ -177,7 +179,7 @@ export default async function VoluntarioPage() {
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Seus grupos</h2>
           <p className="-mt-1 text-[11px] text-gray-500 dark:text-gray-400">Os avisos de cada grupo aparecem na sua Agenda no Portal.</p>
-          {grupos.map((g) => {
+          {gruposUnicos.map((g) => {
             const slack = linkDoCanal(g.classGroup.slackTeamId, g.classGroup.slackChannelId);
             return (
               <div key={g.id} className="flex items-center justify-between rounded-2xl border border-gray-200 p-3 dark:border-gray-700">

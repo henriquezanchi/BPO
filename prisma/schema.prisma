@@ -1213,8 +1213,11 @@ model VolunteerTermSignature {
   termVersion String
   signedName  String
   signedAt    DateTime @default(now())
+  // Filial em que foi assinado (novo termo ao mudar de filial) e o texto
+  // exato assinado, já preenchido — registro do documento.
+  schoolId    String?
+  signedText  String?
 
-  @@unique([memberId, termVersion])
   @@index([memberId])
 }
 
