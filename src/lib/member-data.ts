@@ -43,6 +43,7 @@ export interface PollOptionView {
 }
 
 export type AgendaItem =
+  | {kind:"reuniao";id:string;title:string;date:Date;endsAt:Date;className:string;description:string;fullUniform:boolean;status:string;cancellationReason:string|null;version:number;myResponse:string|null}
   | {
       kind: "evento";
       id: string;
@@ -173,6 +174,12 @@ export async function getMemberDashboard(memberId: string) {
       : Promise.resolve([]),
   ]);
 
+  const groupIds = member.classMemberships.filter(cm=>cm.role==='aluno'&&['BF','BM','CS'].includes(cm.classGroup.tipo)&&acessoVoluntario&&member.mercurioAtivo).map(cm=>cm.classGroupId);
+  const meetings = groupIds.length ? await db.groupMeeting.findMany({
+    where:{classGroupId:{in:groupIds},endsAt:{gte:new Date()}},orderBy:{startsAt:'asc'},
+    select:{id:true,title:true,startsAt:true,endsAt:true,publicDetails:true,fullUniform:true,status:true,cancellationReason:true,version:true,classGroup:{select:{name:true}},responses:{where:{memberId},select:{response:true}}},
+  }) : [];
+
   // Reações de emoji (ver toggleAgendaReaction) — 1 query só pros dois
   // tipos de item, agregada localmente em vez de N queries por card.
   const reacoesGravadas = await db.agendaReaction.findMany({
@@ -207,6 +214,7 @@ export async function getMemberDashboard(memberId: string) {
   }
 
   const agendaItems: AgendaItem[] = [
+    ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:m.classGroup.name,description:m.publicDetails,fullUniform:m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
     ...schoolEvents.map(
       (e): AgendaItem => ({
         kind: "evento",

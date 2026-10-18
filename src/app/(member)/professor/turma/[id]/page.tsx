@@ -1,3 +1,4 @@
+import { MeetingManager } from "@/components/member/groups/meeting-manager";
 import { CreateActivityForm } from "@/components/member/professor/create-activity-form";
 import { CreatePollForm } from "@/components/member/professor/create-poll-form";
 import { SlackChannelPanel } from "@/components/member/professor/slack-channel-panel";
@@ -57,6 +58,8 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
           <SlackChannelPanel classGroupId={turma.id} linkCanal={linkDoCanal(turma.slackTeamId, turma.slackChannelId)} />
         </section>
       )}
+
+      {ehGrupo && ["BF","BM","CS"].includes(turma.tipo) && <MeetingManager groupId={turma.id} />}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{ehGrupo ? "Novo aviso" : "Nova atividade"}</h2>

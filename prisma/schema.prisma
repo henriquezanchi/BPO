@@ -175,6 +175,9 @@ model School {
 }
 
 model Member {
+  groupMeetingsCreated GroupMeeting[] @relation("MeetingCreator")
+  meetingResponses GroupMeetingResponse[]
+  meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
   id                    String       @id @default(cuid())
   schoolId              String
   school                School       @relation(fields: [schoolId], references: [id])
@@ -1052,6 +1055,7 @@ model ClassGroup {
   createdAt       DateTime @default(now())
 
   memberships ClassMembership[]
+  meetings GroupMeeting[]
   activities  Activity[]
   polls       Poll[]
 
@@ -1275,4 +1279,55 @@ model AcessoVoluntario {
   liberadoEm    DateTime @default(now())
 
   @@index([liberadoPorId])
+}
+
+
+// Reuniões: ocorrências explícitas, cancelamento sem apagar histórico.
+model GroupMeeting {
+  id String @id @default(cuid())
+  classGroupId String
+  classGroup ClassGroup @relation(fields: [classGroupId], references: [id])
+  createdById String
+  createdBy Member @relation("MeetingCreator", fields: [createdById], references: [id])
+  seriesId String?
+  title String
+  startsAt DateTime
+  endsAt DateTime
+  timeZone String
+  required Boolean @default(true)
+  publicDetails String @default("") @db.Text
+  internalDetails String @default("") @db.Text
+  fullUniform Boolean @default(false)
+  status String @default("agendada")
+  cancellationReason String?
+  version Int @default(0)
+  createdAt DateTime @default(now())
+  responses GroupMeetingResponse[]
+  auditLog GroupMeetingAudit[]
+  @@index([classGroupId, startsAt])
+  @@index([seriesId, startsAt])
+}
+
+model GroupMeetingResponse {
+  id String @id @default(cuid())
+  meetingId String
+  meeting GroupMeeting @relation(fields: [meetingId], references: [id])
+  memberId String
+  member Member @relation(fields: [memberId], references: [id])
+  response String
+  justification String? @db.Text
+  updatedAt DateTime @updatedAt
+  @@unique([meetingId, memberId])
+}
+
+model GroupMeetingAudit {
+  id String @id @default(cuid())
+  meetingId String
+  meeting GroupMeeting @relation(fields: [meetingId], references: [id])
+  actorId String
+  actor Member @relation("MeetingAuditor", fields: [actorId], references: [id])
+  action String
+  changes Json
+  createdAt DateTime @default(now())
+  @@index([meetingId, createdAt])
 }

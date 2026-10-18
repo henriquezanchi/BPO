@@ -1,0 +1,4 @@
+"use client";
+import {MeetingManager} from "@/components/member/groups/meeting-manager";
+import {AgendaPanel} from "@/components/member/panels/agenda-panel";
+export default function Fixture(){return <main className="mx-auto max-w-2xl space-y-12 p-4"><h1>Brigada — dados fictícios</h1><MeetingManager groupId="test-only"/><section aria-label="Agenda do integrante"><h2>Agenda do integrante</h2><AgendaPanel memberId="test-member" items={[{kind:'reuniao',id:'fake',title:'Reunião fictícia',date:new Date('2099-01-01T19:00Z'),endsAt:new Date('2099-01-01T20:00Z'),className:'Brigada teste',description:'Oficina pública',fullUniform:true,status:'agendada',cancellationReason:null,version:0,myResponse:null}]}/></section></main>}

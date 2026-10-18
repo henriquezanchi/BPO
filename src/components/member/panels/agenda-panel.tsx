@@ -1,5 +1,6 @@
 "use client";
 
+import { MeetingResponse } from "@/components/member/groups/meeting-response";
 import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/event-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
@@ -28,6 +29,7 @@ function chaveDia(date: Date): string {
 }
 
 const COR_PONTO: Record<AgendaItem["kind"], string> = {
+  reuniao: "bg-na-green",
   evento: "bg-na-gold",
   atividade: "bg-na-green",
   enquete: "bg-na-turquesa",
@@ -229,6 +231,10 @@ function InscricaoEvento({
 }
 
 function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean }) {
+  if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm">
+    <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><h3 className="font-bold">{item.title}</h3><p>{item.date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} (horário do seu dispositivo)</p>
+    {item.status==='cancelada'?<p>Reunião cancelada: {item.cancellationReason}</p>:<><p>Comparecimento obrigatório. Se não puder participar, registre uma justificativa.</p>{item.fullUniform&&<p className="font-semibold">CRM com traje completo</p>}{item.description&&<p>{item.description}</p>}<MeetingResponse key={`${item.id}:${item.version}`} memberId={memberId} id={item.id} version={item.version} initial={item.myResponse}/></>}
+  </section>;
   if (item.kind === "enquete") return <PollCard memberId={memberId} item={item} />;
 
   if (item.kind === "evento") {
