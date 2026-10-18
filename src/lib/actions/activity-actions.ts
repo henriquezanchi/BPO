@@ -80,7 +80,7 @@ export async function createActivity(input: CreateActivityInput) {
       });
   }
 
-  await Promise.all(
+  const results = await Promise.all(
     roster.map(async (r) => {
       const result = await sendWhatsAppMessage(r.member.whatsapp, message);
       await db.activityNotification.updateMany({
@@ -89,10 +89,11 @@ export async function createActivity(input: CreateActivityInput) {
           ? { status: "enviado", sentAt: new Date() }
           : { status: "falhou" },
       });
+      return result.ok;
     }),
   );
 
   revalidatePath("/portal");
 
-  return { id: activity.id, slack };
+  return { id: activity.id, slack, whatsapp: { sent: results.filter(Boolean).length, total: roster.length, failed: results.filter(ok=>!ok).length } };
 }

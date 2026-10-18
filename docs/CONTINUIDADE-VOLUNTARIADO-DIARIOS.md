@@ -18,7 +18,7 @@ Fonte principal: decisões do responsável pelo Portal nesta conversa. O plano a
 
 Modelos `GroupMeeting`, `GroupMeetingResponse` e `GroupMeetingAudit`. Migração aditiva `20261018190000_reunioes_brigadas` com RLS sem políticas públicas. As Server Actions validam responsável ativo e vínculo com a brigada; integrante só responde por si, com acesso liberado e versão atual da convocação.
 
-A série materializa até 52 ocorrências, com data final explícita. O horário local é preservado ao atravessar mudanças de horário de verão. Editar horário exige nova confirmação; respostas anteriores ficam preservadas na auditoria reservada. Cancelamentos mantêm a ocorrência na agenda com o motivo. Sem envio automático de WhatsApp ou Slack.
+A rotina semanal não tem data final. O modelo `GroupMeetingSeries` mantém a regra e gera uma janela de 12 próximos encontros conforme responsáveis e integrantes consultam o Portal. O formulário mostra data inicial e horários; características e reunião extra ficam recolhidas. O fuso é automático, sem campo obrigatório. O horário local é preservado ao atravessar mudanças de horário de verão. Editar horário exige nova confirmação; respostas anteriores ficam preservadas na auditoria reservada. Cancelamentos mantêm a ocorrência na agenda com o motivo. Sem envio automático de WhatsApp ou Slack.
 
 Localização: **Turmas e grupos → brigada → Reuniões da brigada**. Para integrantes: **Agenda**, no dia da reunião. Detalhes internos e justificativas de outras pessoas não são incluídos no payload da Agenda.
 
@@ -61,3 +61,13 @@ Dados fictícios em testes. Nenhuma convocação real, notificação externa ou 
 O token anterior retornava HTTP 403 por falta de privilégios no projeto `lefahgczkonbqcppyftg`. Em 18/10/2026 o responsável atualizou a credencial segura e o acesso foi confirmado como `postgres`. A migração aditiva `20261018190000_reunioes_brigadas` foi aplicada via API de gerenciamento do Supabase, com checksum registrado em `_prisma_migrations`. As três tabelas foram conferidas com RLS habilitada. Não foram criadas reuniões ou convocações de grupos reais durante a validação.
 
 A versão foi encaminhada à master após as verificações de testes, lint e build. Conferência autenticada com responsável e integrante reais ainda é necessária para validar o uso no grupo específico da escola.
+
+## Ajuste de recorrência e notificações
+
+Migração aditiva `20261019000000_rotina_semanal_continua`: rotina contínua, segmentos de alteração e identificação imutável de cada posição na série. Reuniões canceladas ou movidas pontualmente não são recriadas pela geração seguinte. Erros esperados retornam mensagens legíveis, evitando a mensagem genérica de produção.
+
+CallMeBot em `error-notify.ts` atende alertas técnicos ao telefone de suporte configurado. Isso não equivale ao envio de avisos aos integrantes. O helper de WhatsApp dos integrantes era uma simulação que retornava sucesso; agora retorna indisponibilidade, sem registrar mensagem como enviada. Publicação de aviso informa o resultado real e os rascunhos de cobrança não são marcados enviados sem sucesso do provedor. Nenhuma mensagem real foi enviada durante os testes.
+
+Validação adicional: 25 testes automatizados, cenários de navegador em 414 e 1365 pixels, TypeScript, ESLint, build de produção e teste PostgreSQL local de migração/RLS. Consulta autenticada na produção segue pendente de uso por responsável real.
+
+A migração de rotina contínua foi aplicada no projeto de produção e registrada em `_prisma_migrations`. As quatro tabelas de reuniões foram conferidas com RLS habilitada. Nenhuma reunião real foi criada no processo.

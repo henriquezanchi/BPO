@@ -127,7 +127,8 @@ export async function aprovarEEnviarRascunho(schoolId: string, draftId: string, 
   if (draft.status !== "pendente_aprovacao") throw new Error("Este rascunho já foi decidido.");
 
   const corpoFinal = bodyEditado?.trim() || draft.body;
-  await sendWhatsAppMessage(draft.member.whatsapp, corpoFinal);
+  const result = await sendWhatsAppMessage(draft.member.whatsapp, corpoFinal);
+  if(!result.ok) throw new Error(result.error ?? "Não foi possível enviar pelo WhatsApp.");
   await db.chargeMessageDraft.update({ where: { id: draftId }, data: { status: "enviado", body: corpoFinal, decidedAt: new Date() } });
   revalidatePath("/diretor");
 }

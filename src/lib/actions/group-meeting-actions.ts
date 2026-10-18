@@ -1,50 +1,66 @@
 "use server";
 
-import {randomUUID} from "node:crypto";
 import {requireAuthenticatedMember,requireTeacherOfClass} from "@/lib/auth";
 import {temAcessoVoluntario} from "@/lib/acesso-voluntario";
 import {db} from "@/lib/db";
-import {meetingOccurrences,localInZone,parseLocal,shiftLocal,validMeetingResponse,type MeetingInput} from "@/lib/group-meetings";
+import {validateMeeting,localInZone,parseLocal,shiftLocal,validMeetingResponse,MeetingError,type MeetingInput,type WeeklySegment} from "@/lib/group-meetings";
+import {ensureGroupMeetingWindow,materializeMeetingSeries} from "@/lib/meeting-series";
 import {revalidatePath} from "next/cache";
 
 async function leader(groupId:string) {
  const actor=await requireTeacherOfClass(groupId);
- if(!actor.mercurioAtivo)throw new Error('Cadastro inativo.');
+ if(!actor.mercurioAtivo)throw new MeetingError('Cadastro inativo.');
  const group=await db.classGroup.findUniqueOrThrow({where:{id:groupId},select:{tipo:true}});
- if(!['BF','BM','CS'].includes(group.tipo))throw new Error('Reuniões disponíveis somente para brigadas.');
+ if(!['BF','BM','CS'].includes(group.tipo))throw new MeetingError('Reuniões disponíveis somente para brigadas.');
  return actor;
 }
 function refresh(groupId:string) {revalidatePath(`/professor/turma/${groupId}`);revalidatePath('/portal');}
 function fields(input:MeetingInput) {return {title:input.title.trim(),timeZone:input.timeZone,publicDetails:input.publicDetails.trim(),internalDetails:input.internalDetails.trim(),fullUniform:input.fullUniform,required:true};}
-export async function createGroupMeetings(groupId:string,input:MeetingInput) {
- const actor=await leader(groupId);const dates=meetingOccurrences(input);const seriesId=input.repeatUntil?randomUUID():null;
- await db.$transaction(async tx=>{
-  for(const date of dates){
-   const row=await tx.groupMeeting.create({data:{classGroupId:groupId,createdById:actor.id,seriesId,...date,...fields(input)}});
-   await tx.groupMeetingAudit.create({data:{meetingId:row.id,actorId:actor.id,action:'criada',changes:{title:row.title,startsAt:row.startsAt.toISOString(),endsAt:row.endsAt.toISOString(),publicDetails:row.publicDetails,internalDetails:row.internalDetails,fullUniform:row.fullUniform}}});
+async function createMeeting(groupId:string,input:MeetingInput) {
+ const actor=await leader(groupId);const date=validateMeeting(input);const weekly=input.weekly??!!input.repeatUntil;
+ const count=await db.$transaction(async tx=>{
+  if(weekly){
+   const series=await tx.groupMeetingSeries.create({data:{classGroupId:groupId,createdById:actor.id,startsLocal:input.startsLocal,endsLocal:input.endsLocal,timeZone:input.timeZone,template:fields(input)}});
+   return materializeMeetingSeries(tx,series);
   }
- },{timeout:30000});refresh(groupId);return {count:dates.length};
+  const row=await tx.groupMeeting.create({data:{classGroupId:groupId,createdById:actor.id,...date,...fields(input)}});
+  await tx.groupMeetingAudit.create({data:{meetingId:row.id,actorId:actor.id,action:'criada',changes:{title:row.title,startsAt:row.startsAt.toISOString(),endsAt:row.endsAt.toISOString(),publicDetails:row.publicDetails,internalDetails:row.internalDetails,fullUniform:row.fullUniform}}});
+  return 1;
+ },{timeout:30000});refresh(groupId);return {count,weekly};
 }
 export async function getGroupMeetings(groupId:string) {
  await leader(groupId);
+ await ensureGroupMeetingWindow([groupId]);
  return db.groupMeeting.findMany({where:{classGroupId:groupId,startsAt:{gte:new Date(Date.now()-30*86400000)}},orderBy:{startsAt:'asc'},include:{responses:{select:{memberId:true,response:true,justification:true,updatedAt:true,member:{select:{name:true}}}}}});
 }
-export async function changeGroupMeeting(id:string,version:number,scope:'esta'|'seguintes',input:MeetingInput|null,cancellationReason?:string) {
- if(!Number.isSafeInteger(version)||version<0)throw new Error('Versão de reunião inválida.');
+async function changeMeeting(id:string,version:number,scope:'esta'|'seguintes',input:MeetingInput|null,cancellationReason?:string) {
+ if(!Number.isSafeInteger(version)||version<0)throw new MeetingError('Versão de reunião inválida.');
  const anchor=await db.groupMeeting.findUniqueOrThrow({where:{id}});const actor=await leader(anchor.classGroupId);
- if(!['esta','seguintes'].includes(scope))throw new Error('Escolha o alcance da alteração.');
- if(anchor.status!=='agendada'||anchor.startsAt<=new Date())throw new Error('Só é possível alterar reuniões futuras agendadas.');
- if(!input&&(!cancellationReason?.trim()||cancellationReason.length>300))throw new Error('Informe o motivo do cancelamento, em até 300 caracteres.');
- if(input)meetingOccurrences({...input,repeatUntil:undefined});
- const selected=scope==='seguintes'&&anchor.seriesId?{seriesId:anchor.seriesId,classGroupId:anchor.classGroupId,startsAt:{gte:anchor.startsAt},status:'agendada'}:{id};
+ if(!['esta','seguintes'].includes(scope))throw new MeetingError('Escolha o alcance da alteração.');
+ if(anchor.status!=='agendada'||anchor.startsAt<=new Date())throw new MeetingError('Só é possível alterar reuniões futuras agendadas.');
+ if(!input&&(!cancellationReason?.trim()||cancellationReason.length>300))throw new MeetingError('Informe o motivo do cancelamento, em até 300 caracteres.');
+ if(input)validateMeeting(input);
+ const slot=anchor.seriesSlot??localInZone(anchor.startsAt,anchor.timeZone);
+ const selected=scope==='seguintes'&&anchor.seriesId?{seriesId:anchor.seriesId,classGroupId:anchor.classGroupId,...(anchor.seriesSlot?{seriesSlot:{gte:slot}}:{startsAt:{gte:anchor.startsAt}}),status:'agendada'}:{id};
  await db.$transaction(async tx=>{
+  if(anchor.seriesId)await tx.groupMeetingSeries.updateMany({where:{id:anchor.seriesId},data:{id:anchor.seriesId}});
   const lock=await tx.groupMeeting.updateMany({where:{id,version},data:{version:{increment:1}}});
-  if(lock.count!==1)throw new Error('A reunião mudou em outra sessão. Atualize antes de editar.');
+  if(lock.count!==1)throw new MeetingError('A reunião mudou em outra sessão. Atualize antes de editar.');
+  if(scope==='seguintes'&&anchor.seriesId){
+   const series=await tx.groupMeetingSeries.findUnique({where:{id:anchor.seriesId}});
+   if(series){
+    if(input){
+     const changes=(series.changes as unknown as WeeklySegment[]).filter(change=>change.fromSlot<slot);
+     changes.push({fromSlot:slot,startsLocal:input.startsLocal,endsLocal:input.endsLocal,timeZone:input.timeZone,template:fields(input)});
+     await tx.groupMeetingSeries.update({where:{id:series.id},data:{changes:JSON.parse(JSON.stringify(changes))}});
+    }else await tx.groupMeetingSeries.update({where:{id:series.id},data:{untilSlot:slot}});
+   }
+  }
   const rows=await tx.groupMeeting.findMany({where:selected,include:{responses:true}});
   for(const row of rows){
    let dates={startsAt:row.startsAt,endsAt:row.endsAt};
    if(input){
-    const a=localInZone(anchor.startsAt,anchor.timeZone).slice(0,10),b=localInZone(row.startsAt,anchor.timeZone).slice(0,10);
+    const a=slot.slice(0,10),b=(row.seriesSlot??localInZone(row.startsAt,anchor.timeZone)).slice(0,10);
     const days=Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/86400000);
     dates={startsAt:parseLocal(shiftLocal(input.startsLocal,days),input.timeZone),endsAt:parseLocal(shiftLocal(input.endsLocal,days),input.timeZone)};
    }
@@ -55,20 +71,34 @@ export async function changeGroupMeeting(id:string,version:number,scope:'esta'|'
   }
  },{timeout:30000});refresh(anchor.classGroupId);return {ok:true};
 }
-export async function respondGroupMeeting(memberId:string,id:string,response:string,justification:string,meetingVersion:number) {
+async function respondMeeting(memberId:string,id:string,response:string,justification:string,meetingVersion:number) {
  const member=await requireAuthenticatedMember(memberId);
- if(!member.mercurioAtivo||!await temAcessoVoluntario(member))throw new Error('Acesso à área de voluntários não liberado.');
- if(!Number.isSafeInteger(meetingVersion)||meetingVersion<0)throw new Error('Versão de convocação inválida.');
+ if(!member.mercurioAtivo||!await temAcessoVoluntario(member))throw new MeetingError('Acesso à área de voluntários não liberado.');
+ if(!Number.isSafeInteger(meetingVersion)||meetingVersion<0)throw new MeetingError('Versão de convocação inválida.');
  validMeetingResponse(response,justification);
  await db.$transaction(async tx=>{
   const lock=await tx.groupMeeting.updateMany({where:{id,version:meetingVersion,status:'agendada'},data:{version:meetingVersion}});
-  if(lock.count!==1)throw new Error('A convocação mudou. Atualize a agenda antes de responder.');
+  if(lock.count!==1)throw new MeetingError('A convocação mudou. Atualize a agenda antes de responder.');
   const meeting=await tx.groupMeeting.findUniqueOrThrow({where:{id}});
-  if(meeting.status!=='agendada'||meeting.endsAt<new Date())throw new Error('Reunião encerrada ou cancelada.');
-  if(!await tx.classMembership.count({where:{classGroupId:meeting.classGroupId,memberId,role:'aluno'}}))throw new Error('Você não integra este grupo.');
+  if(meeting.status!=='agendada'||meeting.endsAt<new Date())throw new MeetingError('Reunião encerrada ou cancelada.');
+  if(!await tx.classMembership.count({where:{classGroupId:meeting.classGroupId,memberId,role:'aluno'}}))throw new MeetingError('Você não integra este grupo.');
   const data={response,justification:response==='ausencia_justificada'?justification.trim():null};
   await tx.groupMeetingResponse.upsert({where:{meetingId_memberId:{meetingId:id,memberId}},create:{meetingId:id,memberId,...data},update:data});
   // O histórico preserva a justificativa, inclusive quando uma nova resposta a substitui.
   await tx.groupMeetingAudit.create({data:{meetingId:id,actorId:memberId,action:'resposta',changes:data}});
  });revalidatePath('/portal');return {ok:true};
 }
+
+async function meetingResult<T extends object>(operation:()=>Promise<T>) {
+ try{return {ok:true as const,...await operation()};}
+ catch(error){
+  if(error instanceof MeetingError)return {ok:false as const,error:error.message};
+  const message=error instanceof Error?error.message:'';
+  if(['Não autenticado.','Você não é professor desta turma.','Seu acesso à área de voluntários ainda não foi liberado.'].includes(message))return {ok:false as const,error:message};
+  console.error('[Reuniões] Falha de operação',error instanceof Error?error.name:'erro');
+  return {ok:false as const,error:'Não foi possível concluir. Atualize a página e tente novamente.'};
+ }
+}
+export async function createGroupMeetings(groupId:string,input:MeetingInput){return meetingResult(()=>createMeeting(groupId,input));}
+export async function changeGroupMeeting(id:string,version:number,scope:'esta'|'seguintes',input:MeetingInput|null,reason?:string){return meetingResult(()=>changeMeeting(id,version,scope,input,reason));}
+export async function respondGroupMeeting(memberId:string,id:string,response:string,justification:string,version:number){return meetingResult(()=>respondMeeting(memberId,id,response,justification,version));}

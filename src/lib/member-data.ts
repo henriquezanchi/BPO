@@ -1,3 +1,4 @@
+import {ensureGroupMeetingWindow} from "@/lib/meeting-series";
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAvatarUrl } from "@/lib/avatar-url";
@@ -175,6 +176,7 @@ export async function getMemberDashboard(memberId: string) {
   ]);
 
   const groupIds = member.classMemberships.filter(cm=>cm.role==='aluno'&&['BF','BM','CS'].includes(cm.classGroup.tipo)&&acessoVoluntario&&member.mercurioAtivo).map(cm=>cm.classGroupId);
+  await ensureGroupMeetingWindow(groupIds);
   const meetings = groupIds.length ? await db.groupMeeting.findMany({
     where:{classGroupId:{in:groupIds},endsAt:{gte:new Date()}},orderBy:{startsAt:'asc'},
     select:{id:true,title:true,startsAt:true,endsAt:true,publicDetails:true,fullUniform:true,status:true,cancellationReason:true,version:true,classGroup:{select:{name:true}},responses:{where:{memberId},select:{response:true}}},

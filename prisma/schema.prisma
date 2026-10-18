@@ -175,6 +175,7 @@ model School {
 }
 
 model Member {
+  meetingSeriesCreated GroupMeetingSeries[]
   groupMeetingsCreated GroupMeeting[] @relation("MeetingCreator")
   meetingResponses GroupMeetingResponse[]
   meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
@@ -1055,6 +1056,7 @@ model ClassGroup {
   createdAt       DateTime @default(now())
 
   memberships ClassMembership[]
+  meetingSeries GroupMeetingSeries[]
   meetings GroupMeeting[]
   activities  Activity[]
   polls       Poll[]
@@ -1290,6 +1292,7 @@ model GroupMeeting {
   createdById String
   createdBy Member @relation("MeetingCreator", fields: [createdById], references: [id])
   seriesId String?
+  seriesSlot String?
   title String
   startsAt DateTime
   endsAt DateTime
@@ -1306,6 +1309,7 @@ model GroupMeeting {
   auditLog GroupMeetingAudit[]
   @@index([classGroupId, startsAt])
   @@index([seriesId, startsAt])
+  @@unique([seriesId, seriesSlot])
 }
 
 model GroupMeetingResponse {
@@ -1330,4 +1334,22 @@ model GroupMeetingAudit {
   changes Json
   createdAt DateTime @default(now())
   @@index([meetingId, createdAt])
+}
+
+
+// Rotina semanal permanente; só materializa as próximas ocorrências.
+model GroupMeetingSeries {
+  id String @id @default(cuid())
+  classGroupId String
+  classGroup ClassGroup @relation(fields: [classGroupId], references: [id])
+  createdById String
+  createdBy Member @relation(fields: [createdById], references: [id])
+  startsLocal String
+  endsLocal String
+  timeZone String
+  template Json
+  changes Json @default("[]")
+  untilSlot String?
+  createdAt DateTime @default(now())
+  @@index([classGroupId])
 }

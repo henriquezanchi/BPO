@@ -21,7 +21,7 @@ const TYPES_GRUPO: { value: ActivityType; label: string }[] = [
 
 export function CreateActivityForm({ classGroupId, ehGrupo = false, temSlack = false }: { classGroupId: string; ehGrupo?: boolean; temSlack?: boolean }) {
   const [isPending, startTransition] = useTransition();
-  const [done, setDone] = useState<{ slack: "enviado" | "falhou" | null } | null>(null);
+  const [done, setDone] = useState<{ slack: "enviado" | "falhou" | null; whatsapp:{sent:number;total:number;failed:number} } | null>(null);
   const tipos = ehGrupo ? TYPES_GRUPO : TYPES;
 
   function handleSubmit(formData: FormData) {
@@ -35,7 +35,7 @@ export function CreateActivityForm({ classGroupId, ehGrupo = false, temSlack = f
         dueDate: new Date(String(formData.get("dueDate"))),
         publicarNoSlack: formData.get("publicarNoSlack") === "on",
       });
-      setDone({ slack: res.slack });
+      setDone({ slack: res.slack, whatsapp:res.whatsapp });
     });
   }
 
@@ -102,12 +102,12 @@ export function CreateActivityForm({ classGroupId, ehGrupo = false, temSlack = f
 
       {done && (
         <div className="flex items-center gap-2 rounded-lg bg-na-success-light p-2.5 text-xs text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">
-          <CheckCircle2 size={14} /> Publicado e {ehGrupo ? "integrantes" : "alunos"} notificados no WhatsApp
+          <CheckCircle2 size={14} /> Publicado na Agenda do Portal. {done.whatsapp.sent ? `${done.whatsapp.sent} de ${done.whatsapp.total} envio(s) confirmado(s) pelo provedor de WhatsApp.` : "Nenhuma mensagem enviada pelo WhatsApp."}
           {done.slack === "enviado" ? " e no Slack" : ""}.
         </div>
       )}
       {done?.slack === "falhou" && (
-        <p className="text-[11px] text-na-danger-dark dark:text-red-300">Não foi possível postar no Slack — a publicação no Portal e no WhatsApp foi feita normalmente.</p>
+        <p className="text-[11px] text-na-danger-dark dark:text-red-300">Não foi possível postar no Slack. A publicação na Agenda foi mantida.</p>
       )}
     </form>
   );
