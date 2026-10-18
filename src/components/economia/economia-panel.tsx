@@ -83,7 +83,7 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
       {crescimentoAtual && (
         <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
           <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-gray-900 dark:text-gray-100">
-            <TrendingUp size={14} className="text-na-green-dark" /> Crescimento de {NOMES_MES[crescimentoAtual.mes - 1]}
+            <TrendingUp size={14} className="text-na-green-dark dark:text-emerald-400" /> Crescimento de {NOMES_MES[crescimentoAtual.mes - 1]}
           </div>
           <div className="grid grid-cols-2 gap-3 text-[13px]">
             <div>

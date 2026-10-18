@@ -69,6 +69,7 @@ enum ActivityType {
   trabalho
   leitura
   atividade_turma
+  aviso
 }
 
 enum NotificationChannel {
@@ -1036,6 +1037,14 @@ model ClassGroup {
   // (ex: "HILARION", "AMON") — sabemos o formato agora (ver
   // scripts/sync-teacher-classes.ts), diferente do comentário antigo.
   mercurioClassId String?
+  // "turma" (padrão) ou grupo de voluntários vindo do cadastro do Mercúrio
+  // (cad_raio_fv): "BF" Brigada Feminina, "BM" Brigada Masculina, "CS"
+  // Corpo de Segurança. Nos grupos, role "professor" = chefe/responsável e
+  // "aluno" = integrante (BRG). Ver mercurio-db/importar.ts.
+  tipo            String   @default("turma")
+  // Canal do Slack da filial vinculado ao grupo (opcional) — ver lib/slack.ts.
+  slackChannelId  String?
+  slackTeamId     String?
   createdAt       DateTime @default(now())
 
   memberships ClassMembership[]

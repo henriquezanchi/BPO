@@ -2,6 +2,7 @@
 
 import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { postarNoCanal, tokenSlackDaFilial } from "@/lib/slack";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 import { revalidatePath } from "next/cache";
 import type { ActivityType } from "@prisma/client";
@@ -13,6 +14,8 @@ export interface CreateActivityInput {
   studyItems?: string;
   description?: string;
   dueDate: Date;
+  /** Também posta no canal do Slack vinculado ao grupo (se houver). */
+  publicarNoSlack?: boolean;
 }
 
 /**
@@ -52,10 +55,25 @@ export async function createActivity(input: CreateActivityInput) {
     })),
   });
 
-  const dueDateLabel = input.dueDate.toLocaleDateString("pt-BR");
-  const message = `Nova atividade da turma: *${input.title}* (${dueDateLabel}).${
+  const grupo = await db.classGroup.findUniqueOrThrow({ where: { id: input.classGroupId }, include: { school: { select: { mercurioUnidade: true } } } });
+  const dueDateLabel = input.dueDate.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  const origem = grupo.tipo === "turma" ? "da turma" : `— ${grupo.name}`;
+  const corpo = `${input.type === "aviso" ? "Novo aviso" : "Nova atividade"} ${origem}: *${input.title}* (${dueDateLabel}).${
     input.studyItems ? `\nConteúdo: ${input.studyItems}` : ""
-  }\nConfira em Agenda & Eventos no Portal do Membro.`;
+  }${input.description ? `\n${input.description}` : ""}`;
+  const message = `${corpo}\nConfira em Agenda & Eventos no Portal do Membro.`;
+
+  // Slack é complemento: uma falha lá não desfaz a publicação no Portal.
+  let slack: "enviado" | "falhou" | null = null;
+  const token = tokenSlackDaFilial(grupo.school.mercurioUnidade);
+  if (input.publicarNoSlack && grupo.slackChannelId && token) {
+    slack = await postarNoCanal(token, grupo.slackChannelId, corpo)
+      .then(() => "enviado" as const)
+      .catch((e) => {
+        console.error("Falha ao postar no Slack:", e);
+        return "falhou" as const;
+      });
+  }
 
   await Promise.all(
     roster.map(async (r) => {
@@ -71,5 +89,5 @@ export async function createActivity(input: CreateActivityInput) {
 
   revalidatePath("/portal");
 
-  return activity;
+  return { id: activity.id, slack };
 }

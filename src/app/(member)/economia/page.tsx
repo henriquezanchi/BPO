@@ -21,12 +21,12 @@ export default async function EconomiaPage() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
-        <Link href="/voluntario" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700">
+        <Link href="/voluntario" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
           <ArrowLeft size={14} /> Portal do Voluntário
         </Link>
         <ThemeToggle />
       </div>
-      <h1 className="text-xl font-black text-na-green-dark">Economia</h1>
+      <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Economia</h1>
       <EconomiaPanel schoolId={member.schoolId} />
     </main>
   );

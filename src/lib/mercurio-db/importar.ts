@@ -33,6 +33,26 @@ function dataOuNull(s: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/** Grupos de voluntários (cad_raio_fv) que viram ClassGroup com tipo próprio. */
+export const GRUPOS: Record<string, string> = { BF: "Brigada Feminina", BM: "Brigada Masculina", CS: "Corpo de Segurança" };
+
+/**
+ * Deduz de qual(is) grupo(s) uma função CBF é chefia, pelo texto livre que
+ * cada filial digitou. Assistente/coordenação/secretaria não contam como
+ * chefia. Texto genérico ("CHEFE DE BRIGADA") usa o raio da própria pessoa.
+ */
+export function raiosDaChefia(texto: string, raioProprio: string | null): string[] {
+  const t = texto.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  if (/ASSIST|COOR|SECRET|COLAB/.test(t)) return [];
+  if (!/CHEF|JEFE|\bCH\b|\bCF\b/.test(t)) return [];
+  const r = new Set<string>();
+  if (/FEMIN|\bBF\b|BBFF|\bGF\b/.test(t)) r.add("BF");
+  if (/MASCUL|\bBM\b|BBMM|\bGM\b/.test(t)) r.add("BM");
+  if (/SEGURAN|\bCS\b|\bCDS\b|\bGS\b/.test(t)) r.add("CS");
+  if (!r.size && raioProprio && GRUPOS[raioProprio]) r.add(raioProprio);
+  return [...r];
+}
+
 function textoOuNull(s: string | null | undefined): string | null {
   const t = (s ?? "").trim();
   return t && t !== "???" ? t : null;
@@ -101,6 +121,15 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const funcoes = await consultarTudo(`SELECT dfn_matr, dfn_funcao, dfn_descricao FROM dirigente_funcoes WHERE dfn_atual='S' AND dfn_matr IN (${lista}) ORDER BY dfn_matr`);
   // Turmas em que a pessoa dá aula (qualquer matéria) — só turmas que
   // ainda têm aluno ativo, pra não listar turma já formada.
+  // Chefias de BF/BM/CS: código CBF, mas o texto da função varia por
+  // filial ("CHEFE DO GRUPO FEMININO", "JEFE BF", "CHEFE DA BBFF", "CHEFE
+  // DO GS"...) e muitas não marcam dfn_atual — vale também término vazio.
+  const chefias = await consultarTudo(
+    `SELECT d.dfn_matr, d.dfn_descricao, c.cad_raio_fv FROM dirigente_funcoes d JOIN cadastro c ON c.cad_matr=d.dfn_matr WHERE c.cad_unidade=${sqlTexto(uniId)} AND d.dfn_funcao='CBF' AND (d.dfn_atual='S' OR d.dfn_termino IS NULL OR d.dfn_termino < '1900-01-01' OR d.dfn_termino >= CURDATE()) ORDER BY d.dfn_matr`,
+  );
+  const raiosComBrigadista = new Set(
+    (await consultarMercurio(`SELECT DISTINCT cad_raio_fv FROM cadastro WHERE cad_unidade=${sqlTexto(uniId)} AND cad_situacao_fv='BRG'`)).map((r) => r.cad_raio_fv ?? ""),
+  );
   const aulas = await consultarTudo(
     `SELECT DISTINCT tm.tma_instrutor, tm.tma_turma FROM turmas_materias tm WHERE tm.tma_unidade=${sqlTexto(uniId)} AND tm.tma_instrutor IN (${lista}) AND EXISTS (SELECT 1 FROM cadastro c WHERE c.cad_tur_unidade=tm.tma_unidade AND c.cad_turma=tm.tma_turma) ORDER BY tm.tma_instrutor`,
   );
@@ -127,13 +156,21 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const composicaoPor = porMatr(composicao, "cal_matr");
   const funcoesPor = porMatr(funcoes, "dfn_matr");
   const aulasPor = porMatr(aulas, "tma_instrutor");
+  const chefiaPor = new Map<string, Set<string>>();
+  for (const ch of chefias) {
+    const raios = raiosDaChefia(ch.dfn_descricao ?? "", ch.cad_raio_fv ?? null);
+    if (raios.length) chefiaPor.set(ch.dfn_matr!, new Set([...(chefiaPor.get(ch.dfn_matr!) ?? []), ...raios]));
+  }
+  // Chefe de Filial responde pelos 3 grupos (pedido do usuário 2026-10-18) —
+  // todos os que existem na filial (com brigadista ou com chefe registrado).
+  const gruposDaFilial = Object.keys(GRUPOS).filter((r) => raiosComBrigadista.has(r) || [...chefiaPor.values()].some((s) => s.has(r)));
   const turmaIds = new Map<string, string>();
-  const turmaId = async (nome: string) => {
+  const turmaId = async (nome: string, tipo = "turma") => {
     if (!turmaIds.has(nome)) {
       const cg = await db.classGroup.upsert({
         where: { schoolId_name: { schoolId: school.id, name: nome } },
-        update: { mercurioClassId: nome },
-        create: { schoolId: school.id, name: nome, mercurioClassId: nome },
+        update: tipo === "turma" ? { mercurioClassId: nome } : { tipo },
+        create: { schoolId: school.id, name: nome, tipo, mercurioClassId: tipo === "turma" ? nome : null },
       });
       turmaIds.set(nome, cg.id);
     }
@@ -274,12 +311,22 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     // Turmas: professor (turmas_materias) e aluno (cad_turma, só se a
     // turma é desta mesma filial). Remove vínculos que o Mercúrio não tem mais.
     const turmaAluno = textoOuNull(c.cad_turma);
+    const raio = c.cad_raio_fv ?? "";
+    const lidera = new Set(chefiaPor.get(matr) ?? []);
+    if (isDiretor || siglas.has("CF")) gruposDaFilial.forEach((r) => lidera.add(r));
     const desejado = {
-      professor: [...new Set((aulasPor.get(matr) ?? []).map((a) => a.tma_turma!).filter(Boolean))],
-      aluno: turmaAluno && c.cad_tur_unidade === uniId ? [turmaAluno] : [],
+      professor: [
+        ...[...new Set((aulasPor.get(matr) ?? []).map((a) => a.tma_turma!).filter(Boolean))].map((n) => turmaId(n)),
+        ...[...lidera].map((r) => turmaId(GRUPOS[r], r)),
+      ],
+      aluno: [
+        ...(turmaAluno && c.cad_tur_unidade === uniId ? [turmaId(turmaAluno)] : []),
+        // Integrante = brigadista (BRG); "PRO" ainda está se preparando e não entra.
+        ...(c.cad_situacao_fv === "BRG" && GRUPOS[raio] ? [turmaId(GRUPOS[raio], raio)] : []),
+      ],
     };
     for (const role of ["professor", "aluno"] as const) {
-      const ids = await Promise.all(desejado[role].map(turmaId));
+      const ids = await Promise.all(desejado[role]);
       await db.classMembership.deleteMany({ where: { memberId: member.id, role, classGroup: { schoolId: school.id }, classGroupId: { notIn: ids } } });
       if (ids.length) await db.classMembership.createMany({ data: ids.map((classGroupId) => ({ classGroupId, memberId: member.id, role })), skipDuplicates: true });
     }

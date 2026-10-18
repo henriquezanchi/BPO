@@ -21,20 +21,20 @@ export function CreatePollForm({ classGroupId }: { classGroupId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-semibold text-gray-700">Pergunta</label>
+        <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Pergunta</label>
         <input
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           required
           placeholder="Ex: Qual dia funciona melhor pro mutirão?"
-          className="rounded-lg border border-gray-300 p-2 text-sm"
+          className="rounded-lg border border-gray-300 p-2 text-sm dark:border-gray-700"
         />
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-semibold text-gray-700">Opções</label>
+        <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Opções</label>
         {options.map((opt, i) => (
           <div key={i} className="flex items-center gap-2">
             <input
@@ -42,7 +42,7 @@ export function CreatePollForm({ classGroupId }: { classGroupId: string }) {
               onChange={(e) => setOptions((prev) => prev.map((o, j) => (j === i ? e.target.value : o)))}
               required
               placeholder={`Opção ${i + 1}`}
-              className="flex-1 rounded-lg border border-gray-300 p-2 text-sm"
+              className="flex-1 rounded-lg border border-gray-300 p-2 text-sm dark:border-gray-700"
             />
             {options.length > 2 && (
               <button
@@ -73,7 +73,7 @@ export function CreatePollForm({ classGroupId }: { classGroupId: string }) {
       </button>
 
       {done && (
-        <div className="flex items-center gap-2 rounded-lg bg-na-success-light p-2.5 text-xs text-na-success-dark">
+        <div className="flex items-center gap-2 rounded-lg bg-na-success-light p-2.5 text-xs text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">
           <CheckCircle2 size={14} /> Enquete publicada — os alunos já podem votar pela Agenda.
         </div>
       )}

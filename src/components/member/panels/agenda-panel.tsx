@@ -13,6 +13,7 @@ const ACTIVITY_LABEL: Record<string, string> = {
   trabalho: "Trabalho",
   leitura: "Leitura",
   atividade_turma: "Atividade de turma",
+  aviso: "Aviso",
 };
 
 const MESES_NOME = [

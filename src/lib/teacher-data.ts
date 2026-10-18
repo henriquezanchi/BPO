@@ -14,7 +14,13 @@ export async function getTeacherClasses(memberId: string) {
     },
   });
 
-  return memberships.map((m) => m.classGroup);
+  // Turmas primeiro, depois os grupos (Brigada, Corpo de Segurança).
+  return memberships.map((m) => m.classGroup).sort((a, b) => Number(a.tipo !== "turma") - Number(b.tipo !== "turma") || a.name.localeCompare(b.name));
+}
+
+/** Responsável por alguma turma ou grupo (instrutor, chefe de brigada) — libera a área "Turmas e grupos". */
+export async function lideraAlgumGrupo(memberId: string) {
+  return (await db.classMembership.count({ where: { memberId, role: "professor" } })) > 0;
 }
 
 export type TeacherClass = Awaited<ReturnType<typeof getTeacherClasses>>[number];
@@ -31,6 +37,7 @@ export async function getTeacherClassDetail(classGroupId: string) {
   const classGroup = await db.classGroup.findUniqueOrThrow({
     where: { id: classGroupId },
     include: {
+      school: { select: { mercurioUnidade: true } },
       memberships: { where: { role: "aluno" }, include: { member: true }, orderBy: { member: { name: "asc" } } },
       activities: { orderBy: { dueDate: "desc" } },
       polls: { orderBy: { createdAt: "desc" }, include: { options: { include: { _count: { select: { votes: true } } } } } },
@@ -40,6 +47,10 @@ export async function getTeacherClassDetail(classGroupId: string) {
   return {
     id: classGroup.id,
     name: classGroup.name,
+    tipo: classGroup.tipo,
+    mercurioUnidade: classGroup.school.mercurioUnidade,
+    slackChannelId: classGroup.slackChannelId,
+    slackTeamId: classGroup.slackTeamId,
     students: classGroup.memberships.map((m) => ({ id: m.member.id, name: m.member.name, registrationNo: m.member.registrationNo })),
     activities: classGroup.activities,
     polls: classGroup.polls.map((p) => ({
