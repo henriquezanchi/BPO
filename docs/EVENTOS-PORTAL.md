@@ -54,3 +54,11 @@ Webhook Asaas exige `ASAAS_WEBHOOK_TOKEN`; sem configuração responde 503. Paga
 Migração aditiva `20261019100000_eventos_internos` aplicada ao projeto do Portal, com checksum registrado e RLS conferida nas cinco tabelas de eventos. Validada previamente em PostgreSQL local. 39 testes automatizados passaram, assim como tipos, lint e build. Telas exercitadas em 414 e 1365 pixels; testes usam dados fictícios e interceptam chamadas de escrita. Conferência de operação com sessão real, cobrança real e integração externa ainda não foi realizada.
 
 Vocabulário: o Portal apresenta Grupo Feminino/Masculino/de Segurança e cargos equivalentes. A conversão de apresentação não modifica os códigos oficiais usados na autorização.
+
+## Diagnóstico do erro ao gerar PIX
+
+O erro reportado na tela foi investigado sem emitir cobranças: split da escola configurado, uma inscrição em `revisao`, sem identificador de cobrança nem QR persistidos. Isso não comprova ausência de cobrança no gateway. O tratamento anterior descartou a causa técnica; não apagar a inscrição ou liberar outra cobrança com base somente nesse estado.
+
+Inscrição agora retorna resultado estruturado, preservando mensagens de negócio em produção. Pré-condições de gateway/taxas são verificadas antes da reserva de cobrança. Falha anterior ao POST retorna ao estado de nova tentativa; resposta incerta posterior ao POST permanece em revisão. Identificação do cliente é persistida antes do POST. Falhas registram etapa, código e status HTTP em auditoria, sem copiar o corpo do gateway, CPF ou credenciais. PIX existente é recuperado sem outra emissão.
+
+Sem `ASAAS_API_KEY` no servidor, a Agenda e a Direção mostram configuração pendente. Isso não prova que a chave esteja ausente no Vercel; a disponibilidade desse ambiente não foi inspecionada. Para conferir o Asaas diretamente, falta disponibilizar a credencial nas configurações seguras do ambiente de trabalho, que atualmente só tem credenciais Supabase. Salvo requisito `ASAAS_API_KEY` com destino `api.asaas.com`. Não solicitar valores no chat.

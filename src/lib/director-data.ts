@@ -194,6 +194,7 @@ export async function getDirectorDashboard(schoolId: string) {
   });
 
   return {
+    eventPaymentConfigured: Boolean(process.env.ASAAS_API_KEY),
     kpis: {
       receitaPrevista,
       receitaEventosMes,

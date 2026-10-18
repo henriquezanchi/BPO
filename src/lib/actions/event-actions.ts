@@ -7,6 +7,7 @@ import {temAcessoVoluntario} from '@/lib/acesso-voluntario';
 import {db} from '@/lib/db';
 import {eventAudienceWhere,eventNoticePlan,validateInternalEvent} from '@/lib/event-policy';
 import {requireEventReception} from '@/lib/event-data';
+import {EventEnrollmentError,eventPaymentFailure} from '@/lib/event-payment-errors';
 import {confirmEventPayment} from '@/lib/event-payments';
 import {revalidatePath} from 'next/cache';
 
@@ -76,20 +77,20 @@ export async function declararComparecimento(memberId:string,registrationId:stri
   await tx.eventAudit.create({data:{eventId:r.eventId,actorId:memberId,action:'comparecimento_declarado',changes:{registrationId,presente}}});
  });refresh(r.eventId);
 }
-export async function inscreverEmEvento(memberId:string,eventId:string,cpf?:string){
+async function enrollEvent(memberId:string,eventId:string,cpf?:string){
  const member=await requireAuthenticatedMember(memberId);
- if(member.isJanos)throw Error('Seu perfil permite somente consulta.');
+ if(member.isJanos)throw new EventEnrollmentError('Seu perfil permite somente consulta.');
  const volunteer=await temAcessoVoluntario(member);
  const eligible={id:eventId,schoolId:member.schoolId,source:'manual',status:'publicado',startsAt:{gt:new Date()},AND:[eventAudienceWhere(member,volunteer)]};
  const event=await db.event.findFirst({where:eligible});
- if(!event)throw Error('Evento indisponível para seu perfil ou inscrições encerradas.');
+ if(!event)throw new EventEnrollmentError('Evento indisponível para seu perfil ou inscrições encerradas.');
  const price=Number(event.price);
- if(price>0&&(!cpf||!/^[0-9]{11}$/.test(cpf)))throw Error('Informe o CPF com 11 números.');
+ if(price>0&&(!cpf||!/^[0-9]{11}$/.test(cpf)))throw new EventEnrollmentError('Informe o CPF com 11 números.');
  const school=await db.school.findUniqueOrThrow({where:{id:event.schoolId!}});
- if(price>0&&!school.asaasWalletId)throw Error('A escola ainda precisa configurar o recebimento e o split antes de liberar inscrições pagas.');
+ if(price>0&&!school.asaasWalletId)throw new EventEnrollmentError('A escola ainda precisa configurar o recebimento e o split antes de liberar inscrições pagas.');
  const registration=await db.$transaction(async tx=>{
   const lock=await tx.event.updateMany({where:{...eligible,revision:event.revision},data:{revision:{increment:1}}});
-  if(!lock.count)throw Error('O evento mudou. Atualize a Agenda antes de se inscrever.');
+  if(!lock.count)throw new EventEnrollmentError('O evento mudou. Atualize a Agenda antes de se inscrever.');
   return tx.eventRegistration.upsert({where:{eventId_memberId:{eventId,memberId}},create:{eventId,memberId,amount:price,paid:price===0,paymentState:price===0?'gratuito':'novo'},update:{}});
  });
  if(price===0||registration.paid){
@@ -98,26 +99,52 @@ export async function inscreverEmEvento(memberId:string,eventId:string,cpf?:stri
  }
  if(registration.pixPayload)return {jaInscrito:true as const,pago:false as const,registrationId:registration.id,pixPayload:registration.pixPayload,pixQrCodeBase64:registration.pixQrCodeBase64!};
  if(registration.asaasPaymentId){
+  try{
   const qr=await asaasGetPixQrCode(registration.asaasPaymentId);
   await db.eventRegistration.update({where:{id:registration.id},data:{pixPayload:qr.payload,pixQrCodeBase64:qr.encodedImage}});
   return {jaInscrito:true as const,pago:false as const,registrationId:registration.id,pixPayload:qr.payload,pixQrCodeBase64:qr.encodedImage};
+  }catch{throw new EventEnrollmentError('O PIX desta inscrição já existe, mas não foi possível recuperar o QR Code. Tente novamente mais tarde; não é necessário criar outra cobrança.');}
+ }
+ // Pré-condições de leitura antes de reservar a cobrança: falha aqui não emite PIX.
+ let split:Awaited<ReturnType<typeof calcularSplitEscola>>|null=null;
+ if(price>0){
+  if(!process.env.ASAAS_API_KEY)throw new EventEnrollmentError(eventPaymentFailure(new Error('ASAAS_API_KEY não configurado.')).message);
+  try{split=await calcularSplitEscola(price,school.asaasWalletId!);}catch(error){throw new EventEnrollmentError(eventPaymentFailure(error).message);}
+  if(!split.fixedValue||split.fixedValue<=0)throw new EventEnrollmentError('A contribuição não cobre os custos de processamento. Peça conferência à Economia.');
  }
  const claimed=await db.eventRegistration.updateMany({where:{id:registration.id,paymentState:'novo',asaasPaymentId:null},data:{paymentState:'criando'}});
- if(!claimed.count)throw Error('Sua cobrança está sendo preparada ou precisa de conferência pela Economia. Não gere outra cobrança.');
+ if(!claimed.count)throw new EventEnrollmentError('Sua cobrança está sendo preparada ou precisa de conferência pela Economia. Não gere outra cobrança.');
+ let stage:'cliente'|'criacao_cobranca'|'qrcode'='cliente';
  try {
   const customer=await asaasFindOrCreateCustomer(member.name,cpf!,member.email??undefined);
-  const split=await calcularSplitEscola(price,school.asaasWalletId!);
-  if(!split.fixedValue||split.fixedValue<=0)throw Error('A contribuição não cobre os custos de processamento.');
+  await db.eventRegistration.update({where:{id:registration.id},data:{asaasCustomerId:customer.id}});
   const dueDate=new Date(Math.min(Date.now()+2*86400000,event.startsAt.getTime())).toISOString().slice(0,10);
-  const payment=await asaasCreatePixCharge(customer.id,price,`Inscrição: ${event.title} — ${member.name}`,dueDate,[split]);
+  stage='criacao_cobranca';
+  const payment=await asaasCreatePixCharge(customer.id,price,`Inscrição: ${event.title} — ${member.name}`,dueDate,[split!]);
   // Persistir o ID antes de buscar QR: falha na consulta não cria cobrança duplicada.
   await db.eventRegistration.update({where:{id:registration.id},data:{asaasCustomerId:customer.id,asaasPaymentId:payment.id,paymentState:'pendente'}});
+  stage='qrcode';
   const qr=await asaasGetPixQrCode(payment.id);
   await db.eventRegistration.update({where:{id:registration.id},data:{pixPayload:qr.payload,pixQrCodeBase64:qr.encodedImage}});
   refresh(eventId);return {jaInscrito:false as const,pago:false as const,registrationId:registration.id,pixPayload:qr.payload,pixQrCodeBase64:qr.encodedImage};
- }catch{
-  await db.eventRegistration.updateMany({where:{id:registration.id,asaasPaymentId:null},data:{paymentState:'revisao'}});
-  throw Error('Não foi possível concluir o PIX. A inscrição foi preservada; consulte novamente ou peça conferência à Economia.');
+ }catch(error){
+  const failure=eventPaymentFailure(error);
+  // Falha antes do POST não pode ter criado cobrança. Depois do POST, só uma
+  // rejeição HTTP inequívoca permite nova tentativa; timeout permanece em revisão.
+  const rejected=failure.status!==null&&failure.status>=400&&failure.status<500&&failure.status!==408&&failure.status!==409;
+  const safeToRetry=stage==='cliente'||(stage==='criacao_cobranca'&&rejected);
+  await db.$transaction(async tx=>{
+   await tx.eventRegistration.updateMany({where:{id:registration.id,asaasPaymentId:null},data:{paymentState:safeToRetry?'novo':'revisao'}});
+   await tx.eventAudit.create({data:{eventId,actorId:memberId,action:'falha_pagamento',changes:{registrationId:registration.id,stage,code:failure.code,httpStatus:failure.status,safeToRetry}}});
+  });
+  throw new EventEnrollmentError(stage==='qrcode'?'A cobrança já foi criada, mas o QR Code não carregou. Tente abrir a inscrição novamente para recuperar o mesmo PIX.':safeToRetry?failure.message:'O pedido de cobrança precisa de conferência pela Economia antes de outra tentativa. Sua inscrição foi preservada para evitar pagamento duplicado.');
+ }
+}
+export async function inscreverEmEvento(memberId:string,eventId:string,cpf?:string){
+ try{return {ok:true as const,...await enrollEvent(memberId,eventId,cpf)};}
+ catch(error){
+  if(error instanceof EventEnrollmentError)return {ok:false as const,error:error.message};
+  return {ok:false as const,error:'Não foi possível concluir a inscrição. Atualize a Agenda e confira se seu acesso continua ativo.'};
  }
 }
 export async function checkStatusInscricaoEvento(memberId:string,registrationId:string){

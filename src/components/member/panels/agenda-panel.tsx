@@ -106,10 +106,12 @@ function InscricaoEvento({
   eventId,
   price,
   inscricaoInicial,
+  unavailableReason,
 }: {
   memberId: string;
   eventId: string;
   price: number;
+  unavailableReason?: string | null;
   inscricaoInicial: Extract<AgendaItem, { kind: "evento" }>["minhaInscricao"];
 }) {
   const [inscricao, setInscricao] = useState(inscricaoInicial);
@@ -128,6 +130,7 @@ function InscricaoEvento({
     startTransition(async () => {
       try {
         const res = await inscreverEmEvento(memberId, eventId, cpfLimpo);
+        if(!res.ok){setErro(res.error);return;}
         setInscricao(
           res.pago
             ? { registrationId: res.registrationId ?? "", pago: true, pixPayload: null, pixQrCodeBase64: null }
@@ -187,6 +190,8 @@ function InscricaoEvento({
       </div>
     );
   }
+
+  if(unavailableReason)return <p role="status" className="mt-2 text-xs text-amber-700 dark:text-amber-300">{unavailableReason}</p>;
 
   if (mostrarCpf) {
     return (
@@ -265,7 +270,7 @@ function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item:
             {somenteConsulta ? (
               <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Online payment isn&apos;t available for your branch yet — please contact your branch.</p>
             ) : (
-              <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} />
+              <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} unavailableReason={item.paymentUnavailableReason} />
             )}
           </>
         )}

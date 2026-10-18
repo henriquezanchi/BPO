@@ -20,6 +20,7 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
  function mutate(fn:()=>Promise<unknown>,success:string){start(async()=>{try{await fn();setMessage(success);router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Não foi possível concluir.');}});}
  return <div className="space-y-5">
   <p className="text-sm text-gray-500">Crie atividades internas, escolha quem pode participar e organize a recepção. Eventos pagos usam o split da escola; a cobrança só é liberada com a carteira configurada.</p>
+  {!data.eventPaymentConfigured&&<p role="status" className="rounded-xl border border-amber-300 p-3 text-sm text-amber-800 dark:text-amber-300">O PIX ainda não está liberado: falta configurar a credencial do Asaas no servidor do Portal. Eventos gratuitos continuam disponíveis.</p>}
   <section className="max-w-xl rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
    <h3 className="mb-4 font-bold">{editing?'Editar evento':'Novo evento interno'}</h3>
    <form key={editing?.id??'new'} action={save} className="space-y-3">

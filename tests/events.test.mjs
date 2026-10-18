@@ -1,6 +1,8 @@
 import {test,mock} from 'node:test';import assert from 'node:assert/strict';
 import {eventAudienceWhere,validateInternalEvent,eventNoticePlan} from '../src/lib/event-policy.ts';
 const actor={id:'member',schoolId:'school',mercurioAtivo:true,isJanos:false,isMembroPrograma:true,isProvacionista:false,isDiretor:false,isSubChefe:false,name:'Aluno teste',email:null};
+process.env.ASAAS_API_KEY='test-only';
+let failureMode='off';
 let director=true,reception=true,paid=true,wallet='school-wallet',eventStatus='publicado',payCalls=0;
 const writes=[];
 const event={id:'event',schoolId:'school',source:'manual',revision:0,status:'publicado',startsAt:new Date('2099-01-01T19:00Z'),endsAt:new Date('2099-01-01T21:00Z'),title:'Curso',price:50};
@@ -11,7 +13,7 @@ mock.module(new URL('../src/lib/acesso-voluntario.ts',import.meta.url).href,{exp
 mock.module(new URL('../src/lib/event-data.ts',import.meta.url).href,{exports:{requireEventReception:async()=>{if(!reception)throw Error('Não designado');return {actor,event};}}});
 mock.module(new URL('../src/lib/event-payments.ts',import.meta.url).href,{exports:{confirmEventPayment:async()=>writes.push('paid')}});
 mock.module(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{event:{findFirst:async args=>{assert.equal(args.where.schoolId,'school');assert.equal(args.where.source,'manual');assert.deepEqual(args.where.AND[0].audience,{in:['todos_ativos','membros','voluntarios']});return eventStatus==='publicado'?event:null;}},school:{findUniqueOrThrow:async()=>({asaasWalletId:wallet})},eventRegistration:{findUniqueOrThrow:async()=>({...current,paid,event:{...event,status:eventStatus}}),updateMany:async()=>({count:0}),findFirstOrThrow:async()=>({...current,event})},$transaction:async fn=>fn(tx)}}});
-mock.module(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasFindOrCreateCustomer:async()=>{throw Error('unexpected gateway');},asaasCreatePixCharge:async()=>{payCalls++;throw Error('unexpected gateway');},asaasGetPixQrCode:async()=>({payload:'existing-qr',encodedImage:'image'}),asaasGetPaymentStatus:async()=>({status:'PENDING'})}});
+mock.module(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasFindOrCreateCustomer:async()=>{if(failureMode==='customer')throw Error('Asaas API /customers -> HTTP 400: dado privado fictício');return {id:'customer'};},asaasCreatePixCharge:async()=>{payCalls++;if(failureMode==='payment')throw Error('fetch failed');return {id:'payment'};},asaasGetPixQrCode:async()=>({payload:'existing-qr',encodedImage:'image'}),asaasGetPaymentStatus:async()=>({status:'PENDING'})}});
 mock.module(new URL('../src/lib/asaas/split.ts',import.meta.url).href,{exports:{calcularSplitEscola:async()=>({walletId:wallet,fixedValue:48})}});
 mock.module('next/cache',{exports:{revalidatePath:()=>{}}});
 const{inscreverEmEvento,marcarPresencaEvento,salvarEvento,excluirEvento}=await import('../src/lib/actions/event-actions.ts');
@@ -29,10 +31,10 @@ test('lembretes respeitam horário e não geram lembrete retroativo',()=>{
  assert.deepEqual(plan.map(n=>n.kind),['inscricao','uma_hora','avaliar_presenca']);assert.equal(plan[1].dueAt.toISOString(),'2099-01-02T19:00:00.000Z');
 });
 test('inscrição exige perfil permitido e split; não cria cobrança duplicada em processamento',async()=>{
- actor.isJanos=true;await assert.rejects(()=>inscreverEmEvento('member','event','12345678901'),/consulta/);actor.isJanos=false;
- eventStatus='cancelado';await assert.rejects(()=>inscreverEmEvento('member','event','12345678901'),/indisponível/);eventStatus='publicado';
- wallet=null;await assert.rejects(()=>inscreverEmEvento('member','event','12345678901'),/split/);wallet='school-wallet';
- await assert.rejects(()=>inscreverEmEvento('member','event','12345678901'),/conferência/);assert.equal(payCalls,0);
+ actor.isJanos=true;assert.match((await inscreverEmEvento('member','event','12345678901')).error,/consulta/);actor.isJanos=false;
+ eventStatus='cancelado';assert.match((await inscreverEmEvento('member','event','12345678901')).error,/indisponível/);eventStatus='publicado';
+ wallet=null;assert.match((await inscreverEmEvento('member','event','12345678901')).error,/split/);wallet='school-wallet';
+ assert.match((await inscreverEmEvento('member','event','12345678901')).error,/conferência/);assert.equal(payCalls,0);
  current={...current,pixPayload:'saved-qr',pixQrCodeBase64:'image'};
  const result=await inscreverEmEvento('member','event','12345678901');assert.equal(result.pixPayload,'saved-qr');assert.equal(payCalls,0);
 });
@@ -45,4 +47,19 @@ test('recepção exige designação, período de recepção e inscrição paga',
 test('direção precisa de permissão e cancelamento preserva inscrições e gera auditoria',async()=>{
  director=false;assert.equal((await salvarEvento('school',{})).ok,false);await assert.rejects(()=>excluirEvento('school','event'),/permissão/);director=true;
  await excluirEvento('school','event');assert.equal(writes.at(-1).data.action,'cancelado');
+});
+
+test('erro de preparação volta como mensagem legível, sem cobrança; timeout do POST permanece em revisão',async()=>{
+ event.startsAt=new Date('2099-01-01T19:00Z');eventStatus='publicado';
+ current={...current,pixPayload:null,asaasPaymentId:null,paymentState:'novo'};
+ const {db:store}=await import('../src/lib/db.ts');
+ store.eventRegistration.updateMany=async()=>({count:1});store.eventRegistration.update=async()=>{};
+ const states=[];tx.eventRegistration.updateMany=async args=>{states.push(args.data.paymentState);return {count:1};};
+ failureMode='customer';const before=payCalls;
+ const rejected=await inscreverEmEvento('member','event','12345678901');assert.equal(rejected.ok,false);assert.match(rejected.error,/recusou os dados/);assert.equal(rejected.error.includes('privado'),false);assert.equal(payCalls,before);assert.equal(states.at(-1),'novo');
+ failureMode='payment';const uncertain=await inscreverEmEvento('member','event','12345678901');assert.equal(uncertain.ok,false);assert.match(uncertain.error,/conferência/);assert.equal(states.at(-1),'revisao');assert.equal(writes.at(-1).data.changes.stage,'criacao_cobranca');assert.equal(writes.at(-1).data.changes.safeToRetry,false);
+});
+test('falta de credencial é explicada e não dispara pedido de cobrança',async()=>{
+ delete process.env.ASAAS_API_KEY;const before=payCalls;
+ const result=await inscreverEmEvento('member','event','12345678901');assert.equal(result.ok,false);assert.match(result.error,/configurar o Asaas/);assert.equal(payCalls,before);
 });

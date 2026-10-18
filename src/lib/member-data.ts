@@ -58,6 +58,7 @@ export type AgendaItem =
       // não se inscreveu. Sempre null pra scope "nacional"/"regional" (não
       // têm fluxo de inscrição/pagamento ainda).
       minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null } | null;
+      paymentUnavailableReason?: string | null;
       source?: string;
       registrationUrl?: string | null;
       status?: string;
@@ -234,6 +235,7 @@ export async function getMemberDashboard(memberId: string) {
         minhaInscricao: inscricaoDoEvento(e.id),
         scope: e.scope,
         source: e.source,
+        paymentUnavailableReason: e.source!=="manual"||Number(e.price)<=0?null:!member.school.asaasWalletId?"O recebimento deste evento ainda precisa ser configurado pela escola.":!process.env.ASAAS_API_KEY?"O pagamento on-line ainda não foi configurado. A administração precisa configurar o Asaas antes de liberar o PIX.":null,
         registrationUrl: safeEventRegistrationUrl(e.registrationUrl),
         status: e.status,
         description: e.description,
