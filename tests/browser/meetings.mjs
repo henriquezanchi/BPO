@@ -8,7 +8,7 @@ try{
  for(const width of [414,1365]){
   const page=await browser.newPage({viewport:{width,height:896},timezoneId:'America/Sao_Paulo'});page.setDefaultTimeout(20000);const writes=[];
   const row={id:'fake',classGroupId:'test-only',title:'Reunião fictícia',startsAt:'2099-01-01T19:00:00Z',endsAt:'2099-01-01T20:00:00Z',timeZone:'America/Sao_Paulo',seriesId:'series',publicDetails:'Oficina pública',internalDetails:'SEGREDO_INTERNO_TESTE',fullUniform:true,status:'agendada',version:0,responses:[]};
-  await page.route('**/*',async route=>{const req=route.request();if(!req.url().startsWith(base))return route.abort();if(req.method()!=='POST')return route.continue();
+  await page.route('**/*',async route=>{const req=route.request();if(!req.url().startsWith(base))return route.abort();if(req.method()!=='POST')return route.continue();if(!req.headers()['next-action'])return route.abort();
    const manifest=JSON.parse(await readFile('.next/dev/server/server-reference-manifest.json','utf8'));const action=manifest.node[req.headers()['next-action']]?.exportedName;const args=JSON.parse(req.postData());let value;
    if(action==='getGroupMeetings')value=[row];
    else if(action==='createGroupMeetings'){writes.push({action,args});value={count:2};}

@@ -14,13 +14,13 @@ Fonte principal: decisões do responsável pelo Portal nesta conversa. O plano a
 - Avaliação de instrutores: responsável escolhe anônima ou identificada ao publicar; configuração precisa ser mostrada ao aluno e não pode mudar depois de receber respostas. Em modo anônimo, apresentação de resultados somente a partir de três respostas é a proteção proposta, ainda não é um módulo implementado. Base nacional pode ser adaptada pela filial; Escolástica ou chefe libera a qualquer momento ou por ondas.
 - Informe mensal: chefe de grupo lê os informes dos membros do seu grupo. Acesso consolidado nacional ainda não definido: não habilitar automaticamente a dirigentes nacionais.
 
-## Reuniões implementadas e aguardando migração para publicação
+## Reuniões implementadas
 
 Modelos `GroupMeeting`, `GroupMeetingResponse` e `GroupMeetingAudit`. Migração aditiva `20261018190000_reunioes_brigadas` com RLS sem políticas públicas. As Server Actions validam responsável ativo e vínculo com a brigada; integrante só responde por si, com acesso liberado e versão atual da convocação.
 
 A série materializa até 52 ocorrências, com data final explícita. O horário local é preservado ao atravessar mudanças de horário de verão. Editar horário exige nova confirmação; respostas anteriores ficam preservadas na auditoria reservada. Cancelamentos mantêm a ocorrência na agenda com o motivo. Sem envio automático de WhatsApp ou Slack.
 
-Após a migração/publicação, localização: **Turmas e grupos → brigada → Reuniões da brigada**. Para integrantes: **Agenda**, no dia da reunião. Detalhes internos e justificativas de outras pessoas não são incluídos no payload da Agenda.
+Localização: **Turmas e grupos → brigada → Reuniões da brigada**. Para integrantes: **Agenda**, no dia da reunião. Detalhes internos e justificativas de outras pessoas não são incluídos no payload da Agenda.
 
 ## Termo: estado real
 
@@ -56,8 +56,8 @@ Próximos blocos: escalas; ED/Pré-ED; designação de responsáveis por GDVE; d
 
 Dados fictícios em testes. Nenhuma convocação real, notificação externa ou alteração de grupo real foi feita durante a validação.
 
-## Bloqueio real de publicação das reuniões
+## Migração e publicação
 
-A chamada à API de gerenciamento Supabase no projeto `lefahgczkonbqcppyftg` retornou HTTP 403: “Your account does not have the necessary privileges to access this endpoint”. O token está configurado no ambiente, mas o principal não tem os privilégios necessários neste projeto. Nenhuma migração foi aplicada. Não publicar na master código que consulta as novas tabelas antes de aplicar a migração. A correção de nomenclatura do termo foi publicada separadamente.
+O token anterior retornava HTTP 403 por falta de privilégios no projeto `lefahgczkonbqcppyftg`. Em 18/10/2026 o responsável atualizou a credencial segura e o acesso foi confirmado como `postgres`. A migração aditiva `20261018190000_reunioes_brigadas` foi aplicada via API de gerenciamento do Supabase, com checksum registrado em `_prisma_migrations`. As três tabelas foram conferidas com RLS habilitada. Não foram criadas reuniões ou convocações de grupos reais durante a validação.
 
-A migração pronta está em `prisma/migrations/20261018190000_reunioes_brigadas/migration.sql`; é aditiva e inclui RLS. Após o acesso ser corrigido: aplicar a migração, registrar checksum em `_prisma_migrations`, publicar o commit das reuniões e testar com contas reais autorizadas, sem criar convocações para grupos reais durante a validação automática.
+A versão foi encaminhada à master após as verificações de testes, lint e build. Conferência autenticada com responsável e integrante reais ainda é necessária para validar o uso no grupo específico da escola.
