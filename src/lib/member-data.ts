@@ -268,7 +268,10 @@ export async function getMemberDashboard(memberId: string) {
     availableToAdd,
     streakMeses,
     badges: badges.map((b) => ({ badgeType: b.badgeType, earnedAt: b.earnedAt, ...BADGE_CATALOG[b.badgeType] })),
-    levelHistory: levelHistory.map((l) => ({ nivel: l.nivel, changedAt: l.changedAt })),
+    // O 1º registro de cada membro é só a linha de base de quando o sync
+    // começou a observar o nível — não é uma mudança real (ver
+    // sync-monthly-status.ts). Mostrar só o que veio depois.
+    levelHistory: levelHistory.slice(1).map((l) => ({ nivel: l.nivel, changedAt: l.changedAt })),
     integrationCourses: integrationCourses.map((c) => ({
       courseName: c.courseName,
       instructor: c.instructor,

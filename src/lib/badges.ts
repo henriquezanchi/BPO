@@ -67,8 +67,8 @@ export async function verificarEAtribuirConquistas(memberId: string): Promise<vo
   if (eventosParticipados >= 10) elegiveis.push("eventos_10");
   if (gaf) elegiveis.push("gaf");
   if (voluntario) elegiveis.push("voluntario");
-  const entrada = member.dataEntradaEscola ?? member.createdAt;
-  if (Date.now() - entrada.getTime() >= UM_ANO_MS) elegiveis.push("um_ano_casa");
+  // Só com a data REAL de entrada na escola — nunca a de entrada no Portal.
+  if (member.dataEntradaEscola && Date.now() - member.dataEntradaEscola.getTime() >= UM_ANO_MS) elegiveis.push("um_ano_casa");
 
   if (elegiveis.length === 0) return;
   await db.memberBadge.createMany({

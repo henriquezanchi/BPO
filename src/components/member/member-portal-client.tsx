@@ -324,7 +324,8 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           {modal === "gaf" && <GafPanel memberId={member.id} />}
           {modal === "jornada" && (
             <JornadaPanel
-              dataEntrada={member.dataEntradaEscola ?? member.createdAt}
+              dataEntrada={member.dataEntradaEscola}
+              dataSegundoNivel={member.dataSegundoNivel}
               streakMeses={dashboard.streakMeses}
               levelHistory={dashboard.levelHistory}
               badges={dashboard.badges}

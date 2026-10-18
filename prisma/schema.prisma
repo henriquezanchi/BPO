@@ -105,6 +105,14 @@ model School {
   // usam). O antigo será desligado ~fev/2027: a virada é trocar este campo
   // escola por escola, sem deploy. Ver adapterParaEscola em mercurio/index.ts.
   sistemaRegistro         String    @default("mercurio") // "mercurio" | "mercury"
+  // Código da unidade no banco de consulta do Mercúrio (unidades.uni_id,
+  // ex: "BGA", "GYN") — chave de importação/sincronização via
+  // src/lib/mercurio-db. Pedido do usuário 2026-10-18.
+  mercurioUnidade         String?   @unique
+  // Portal liberado pra QUALQUER membro ativo dessa filial (primeiro acesso
+  // por e-mail+CPF). Fora das abertas, só entram dirigentes e testadores
+  // liberados por eles (ver src/lib/acesso-portal.ts).
+  portalAberto            Boolean   @default(false)
   whatsapp                String? // número da secretaria/economia, usado no botão de ajuda do Portal
   mercurioFilialLabel     String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
   // branchId da API externa de leitura "Mercury" (ver src/lib/mercury/client.ts)
@@ -245,6 +253,10 @@ model Member {
   // usuário 2026-10-15). Não concede acesso de Direção/Economia/Escolástica
   // sozinho — isso continua nos booleans acima.
   cargos                  String[]   @default([])
+  // Pode liberar testadores da própria filial (diretor, chefe ou sub-chefe
+  // de filial — vem do banco do Mercúrio). Liberadores nacionais ficam em
+  // LiberadorNacional, não aqui.
+  liberaTestadores        Boolean    @default(false)
   // Grupo/programa dentro da filial (PROGRAMA BRANCO > Provacionistas/
   // Membros, COMPLEMENTAR > C. de Amigos/Correntinha/Távolas/Janos) — cada
   // um é uma listagem própria no Mercúrio (mesmo formato Matr./Nome de
@@ -313,6 +325,9 @@ model Member {
   // ficar null, a jornada usa createdAt (quando entrou no Portal) como
   // aproximação, deixando claro que é uma estimativa.
   dataEntradaEscola DateTime?
+  // Data real da passagem pro 2º nível (cadastro.cad_2o_nivel no banco do
+  // Mercúrio) — marco da Jornada. Pedido do usuário 2026-10-18.
+  dataSegundoNivel  DateTime?
   // Foto de perfil (Supabase Storage, bucket privado "member-avatars" — ver
   // profile-actions.ts) — pedido do usuário 2026-09-30: deixa o Portal
   // mais pessoal e ajuda a diretoria a reconhecer quem é quem.
@@ -1201,6 +1216,28 @@ model VolunteerTermSignature {
 // reclamar. `fingerprint` (rota + mensagem, ver error-notify.ts) dedupe pra
 // não floodar o WhatsApp com o MESMO erro repetido (ex: um cron falhando a
 // cada 10min) — só reavisa depois de JANELA_DEDUPE_MIN.
+// Membro de filial NÃO aberta (School.portalAberto=false) liberado pra
+// testar o Portal por um dirigente — pedido do usuário 2026-10-18 ("os
+// testadores são escolhidos pelos dirigentes, não por mim"). Chave é a
+// matrícula, não Member.id: a pessoa pode ainda nem ter feito o primeiro
+// acesso (Member só é criado nesse momento).
+model TestadorLiberado {
+  mercurioId   String   @id // matrícula
+  unidade      String // unidades.uni_id da filial da pessoa
+  liberadoPor  String // matrícula de quem liberou
+  liberadoEm   DateTime @default(now())
+
+  @@index([unidade])
+}
+
+// Quem pode liberar testadores em QUALQUER filial (além dos dirigentes de
+// cada uma) — lista nominal definida pelo usuário 2026-10-18.
+model LiberadorNacional {
+  mercurioId String   @id // matrícula
+  nome       String
+  criadoEm   DateTime @default(now())
+}
+
 model ErrorNotification {
   id             String   @id @default(cuid())
   fingerprint    String   @unique

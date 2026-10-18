@@ -93,7 +93,10 @@ export function ContributionStatusPanel({
     setErro(null);
 
     if (status === "paga") {
-      if (!registro?.mercurioRecId) return;
+      if (!registro?.mercurioRecId) {
+        setErro("O comprovante deste mês ainda não está disponível no Portal. Se precisar dele agora, peça à secretaria.");
+        return;
+      }
       setCarregandoMes(mes);
       startTransition(async () => {
         const res = await viewReceiptByMercurioRecId(memberId, registro.mercurioRecId!);
