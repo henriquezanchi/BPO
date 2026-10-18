@@ -1,0 +1,7 @@
+"use client";
+import {ContributionStatusPanel} from "@/components/member/panels/contribution-status-panel";
+import {PaymentReviewPanel} from "@/components/economia/payment-review-panel";
+import type {ContributionMonthlyStatus} from "@prisma/client";
+const year=new Date().getFullYear();
+const monthly=[{year:year-1,month:12,status:'atrasado',syncedAt:new Date('2026-10-17T12:00:00Z')},{year,month:1,status:'atrasado',syncedAt:new Date('2026-10-17T12:00:00Z')},{year,month:2,status:'em_branco',syncedAt:new Date('2026-10-17T12:00:00Z')} ] as ContributionMonthlyStatus[];
+export default function Fixture(){return <main className="mx-auto max-w-2xl space-y-8 p-4"><h1>Ambiente fictício de teste</h1><ContributionStatusPanel memberId="test-only" monthlyStatus={monthly} confirmedCharges={[{referenceYear:year,referenceMonth:1,status:'pago'}]} compositionTotal={110} fortunaBalances={[]} pixAutomaticStatus={null}/><PaymentReviewPanel schoolId="test-only"/></main>;}

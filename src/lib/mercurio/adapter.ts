@@ -109,6 +109,8 @@ export interface MercurioReceiptContent {
 
 /** Recebimento de contribuição já confirmado por um gateway externo (Asaas) — lançar na Tesouraria igual a secretaria faria na mão. */
 export interface MercurioContributionPayment {
+  referenceYear: number;
+  referenceMonth: number;
   amount: number;
   paidAtBR: string; // "dd/mm/yyyy"
   interessado?: string;

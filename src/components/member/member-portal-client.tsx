@@ -310,6 +310,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             <ContributionStatusPanel
               memberId={member.id}
               monthlyStatus={member.monthlyStatus}
+              confirmedCharges={member.paymentCharges}
               compositionTotal={compositionTotal}
               fortunaBalances={fortunaBalances}
               pixAutomaticStatus={member.pixAutomaticStatus}

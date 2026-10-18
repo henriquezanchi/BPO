@@ -1,4 +1,5 @@
 import { getAuthenticatedMember } from "@/lib/auth";
+import { PaymentReviewPanel } from "@/components/economia/payment-review-panel";
 import { EconomiaPanel } from "@/components/economia/economia-panel";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ArrowLeft } from "lucide-react";
@@ -27,6 +28,7 @@ export default async function EconomiaPage() {
         <ThemeToggle />
       </div>
       <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Economia</h1>
+      <PaymentReviewPanel schoolId={member.schoolId} />
       <EconomiaPanel schoolId={member.schoolId} />
     </main>
   );

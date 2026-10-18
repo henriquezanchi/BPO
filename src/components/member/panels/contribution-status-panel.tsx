@@ -1,5 +1,12 @@
 "use client";
 
+import { usePaymentPolling } from "@/hooks/use-payment-polling";
+import { PaymentStatus } from "@/components/ui/payment-status";
+
+import { contributionPosition } from "@/lib/contribution-position";
+import { oldestOpenContribution, periodNumber, type ChargeLedger } from "@/lib/contribution-order";
+import { CopyButton } from "@/components/ui/copy-button";
+
 import { getFortunaRecorrenteNudge, responderNudge } from "@/lib/actions/nudge-actions";
 import { ativarPixAutomatico, checkPixAutomaticoStatus, desativarPixAutomatico } from "@/lib/actions/pix-automatico-actions";
 import { cancelarCobrancaContribuicaoPendente, checkChargeStatus, createContributionCharge, getPendingContributionCharge } from "@/lib/actions/payment-actions";
@@ -7,9 +14,9 @@ import { viewReceiptByMercurioRecId } from "@/lib/actions/receipt-actions";
 import { formatBRL } from "@/lib/format";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import type { FortunaBalanceView } from "@/lib/member-data";
-import { gerarPdfRecibo } from "@/lib/recibo-pdf";
 import type { ContributionMonthlyStatus } from "@prisma/client";
-import { AlertTriangle, Check, Coffee, Copy, CreditCard, Download, ExternalLink, HeartHandshake, Loader2, QrCode, RefreshCw, Zap } from "lucide-react";
+import { gerarPdfRecibo } from "@/lib/recibo-pdf";
+import { AlertTriangle, Coffee, CreditCard, Download, ExternalLink, HeartHandshake, Loader2, QrCode, RefreshCw, Zap } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -38,6 +45,7 @@ const LABEL_POR_STATUS: Record<string, string> = {
 export function ContributionStatusPanel({
   memberId,
   monthlyStatus,
+  confirmedCharges = [],
   compositionTotal,
   fortunaBalances,
   pixAutomaticStatus,
@@ -45,6 +53,7 @@ export function ContributionStatusPanel({
 }: {
   memberId: string;
   monthlyStatus: ContributionMonthlyStatus[];
+  confirmedCharges?: ChargeLedger[];
   compositionTotal: number;
   fortunaBalances: FortunaBalanceView[];
   pixAutomaticStatus: string | null;
@@ -56,19 +65,26 @@ export function ContributionStatusPanel({
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const porMes = new Map(monthlyStatus.map((m) => [m.month, m]));
-  const mesesAtrasados = monthlyStatus.filter((m) => m.status === "atrasado");
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [confirmedLocally, setConfirmedLocally] = useState<ChargeLedger[]>([]);
+  const payments = [...confirmedCharges, ...confirmedLocally];
+  const firstOpen = oldestOpenContribution(monthlyStatus, payments);
+  const position = contributionPosition(monthlyStatus, payments);
+  const overdue = position.filter(row=>row.overdue);
+  const received = position.filter(row=>row.received);
+  const latestSync = monthlyStatus.reduce<Date | null>((latest,row)=>!latest || new Date(row.syncedAt)>latest ? new Date(row.syncedAt) : latest, null);
+  const years = [...new Set([new Date().getFullYear(), ...monthlyStatus.map(item=>item.year), ...payments.map(item=>item.referenceYear)])].sort((a,b)=>a-b);
+  const porMes = new Map(monthlyStatus.filter(m=>m.year===selectedYear).map((m) => [m.month, m]));
+  const mesesAtrasados = monthlyStatus.filter((m) => m.year===selectedYear && m.status === "atrasado");
 
   function handleClickMes(mes: number) {
     const registro = porMes.get(mes);
-    const status = registro?.status ?? "em_branco";
+    const paid = payments.some(item=>item.referenceYear===selectedYear&&item.referenceMonth===mes&&item.status==="pago");
+    const status = paid ? "paga" : registro?.status ?? "em_branco";
     setErro(null);
 
     if (status === "paga") {
-      if (!registro?.mercurioRecId) {
-        setErro("O comprovante deste mês ainda não está disponível no Portal. Se precisar dele agora, peça à secretaria.");
-        return;
-      }
+      if (!registro?.mercurioRecId) { setErro(paid ? "Recebimento confirmado pelo Portal. O comprovante da escola ainda não está disponível; não é necessário pagar novamente." : "Pagamento registrado. O comprovante ainda não está disponível; peça a conferência à escola."); return; }
       setCarregandoMes(mes);
       startTransition(async () => {
         const res = await viewReceiptByMercurioRecId(memberId, registro.mercurioRecId!);
@@ -77,7 +93,7 @@ export function ContributionStatusPanel({
           setErro(res.error ?? "Falha ao buscar o comprovante.");
           return;
         }
-        setRecibo({ recId: registro.mercurioRecId!, texto: res.rawText });
+        setRecibo({recId:registro.mercurioRecId!,texto:res.rawText});
       });
       return;
     }
@@ -115,10 +131,11 @@ export function ContributionStatusPanel({
     return (
       <RealPaymentScreen
         memberId={memberId}
-        year={porMes.get(mesPagamento)?.year ?? new Date().getFullYear()}
+        year={porMes.get(mesPagamento)?.year ?? selectedYear}
         mes={mesPagamento}
         amount={compositionTotal}
         podeRecarregarFortuna={fortunaBalances.length > 0}
+        onConfirmed={() => setConfirmedLocally(items=>[...items,{referenceYear:selectedYear,referenceMonth:mesPagamento,status:"pago"}])}
         onVoltar={() => setMesPagamento(null)}
       />
     );
@@ -126,22 +143,32 @@ export function ContributionStatusPanel({
 
   return (
     <div className="text-left">
-      <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />
+      {!somenteConsulta && <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />}
 
-      <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-        Situação da sua contribuição em {new Date().getFullYear()}:
-      </p>
+      <section aria-label="Resumo das contribuições" className="my-4 space-y-2 border-y border-gray-200 py-4 text-sm dark:border-gray-700">
+        <h3 className="font-bold text-na-green-dark dark:text-na-green-light">Suas contribuições</h3>
+        <p>{overdue.length ? `${overdue.length} competência(s) registrada(s) em atraso.` : monthlyStatus.length ? "Nenhum atraso nos registros disponíveis." : "Ainda não temos a situação da escola para consulta."}</p>
+        {!!received.length && <p>{received.length} pagamento(s) confirmado(s) pelo Portal. O registro na escola pode levar mais tempo.</p>}
+        <p className="text-xs text-gray-600 dark:text-gray-300">{latestSync ? `Última atualização de um registro: ${latestSync.toLocaleString("pt-BR")}.` : "Sem data de atualização disponível."} Não são cobrados juros sobre as contribuições.</p>
+        <p className="text-xs text-gray-600 dark:text-gray-300">O valor atual da composição não é usado para estimar valores de meses anteriores. Se você já pagou na escola e isso não aparece, peça a conferência antes de pagar novamente.</p>
+      </section>
 
+      <label className="mb-3 flex items-center gap-2 text-sm">Ano<select aria-label="Ano das contribuições" value={selectedYear} onChange={e=>setSelectedYear(Number(e.target.value))} className="min-h-11 rounded-lg border border-gray-300 p-2 dark:bg-gray-800">{years.map(year=><option key={year} value={year}>{year}</option>)}</select></label>
+      {firstOpen && <button type="button" onClick={()=>setSelectedYear(firstOpen.year)} className="mb-2 min-h-11 text-sm font-semibold text-na-green-dark dark:text-na-green-light">Ir para a contribuição mais antiga em aberto</button>}
+      {firstOpen && <p className="mb-3 text-xs text-na-warning-dark dark:text-na-warning-light">Regularize primeiro {String(firstOpen.month).padStart(2,"0")}/{firstOpen.year}. Meses posteriores ficam bloqueados enquanto houver contribuição anterior em aberto.</p>}
       <div className="mb-4 grid grid-cols-4 gap-2">
         {MESES.map((nome, i) => {
           const mes = i + 1;
           const registro = porMes.get(mes);
-          const status = registro?.status ?? "em_branco";
-          const clicavel = status === "paga" || (!somenteConsulta && (status === "atrasado" || status === "em_branco"));
+          const paid = payments.some(item=>item.referenceYear===selectedYear&&item.referenceMonth===mes&&item.status==="pago");
+    const status = paid ? "paga" : registro?.status ?? "em_branco";
+          const blocked = !!firstOpen && periodNumber({year:registro?.year??selectedYear,month:mes}) > periodNumber(firstOpen);
+          const clicavel = status === "paga" || (!somenteConsulta && !blocked && !!registro && (status === "atrasado" || status === "em_branco"));
           return (
             <button
               key={mes}
               onClick={() => clicavel && handleClickMes(mes)}
+              title={blocked && status!=="paga" ? `Regularize primeiro ${firstOpen?.month}/${firstOpen?.year}` : undefined}
               disabled={!clicavel || (isPending && carregandoMes === mes)}
               className={`rounded-lg border p-2 text-center text-[11px] transition ${ESTILO_POR_STATUS[status]} ${
                 clicavel ? "cursor-pointer hover:brightness-95" : "cursor-default"
@@ -149,7 +176,7 @@ export function ContributionStatusPanel({
             >
               <div className="font-semibold">{nome}</div>
               <div className="mt-0.5 flex items-center justify-center gap-1">
-                {isPending && carregandoMes === mes ? <Loader2 size={10} className="animate-spin" /> : LABEL_POR_STATUS[status]}
+                {isPending && carregandoMes === mes ? <Loader2 size={10} className="animate-spin" /> : paid ? "Recebido" : registro ? LABEL_POR_STATUS[status] : "Sem dados"}
               </div>
             </button>
           );
@@ -203,6 +230,7 @@ function RealPaymentScreen({
   amount,
   podeRecarregarFortuna,
   onVoltar,
+  onConfirmed,
 }: {
   memberId: string;
   year: number;
@@ -210,15 +238,17 @@ function RealPaymentScreen({
   amount: number;
   podeRecarregarFortuna: boolean;
   onVoltar: () => void;
+  onConfirmed: () => void;
 }) {
   const [metodo, setMetodo] = useState<"PIX" | "CREDIT_CARD">("PIX");
   const [recargaFortuna, setRecargaFortuna] = useState(0);
   const [cpf, setCpf] = useState("");
   const [charge, setCharge] = useState<ChargeResult | null>(null);
   const [verificandoPendente, setVerificandoPendente] = useState(true);
+  const [falhaPendente, setFalhaPendente] = useState(false);
+  const [tentativaPendente, setTentativaPendente] = useState(0);
   const [pago, setPago] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [copiado, setCopiado] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [fortunaNudge, setFortunaNudge] = useState<Awaited<ReturnType<typeof getFortunaRecorrenteNudge>>>(null);
   const [respondendoNudge, setRespondendoNudge] = useState(false);
@@ -229,17 +259,19 @@ function RealPaymentScreen({
   // cobrança, arriscando cobrar o aluno duas vezes. Antes de mostrar o
   // formulário, checa se já existe uma pendente e volta direto pra ela.
   useEffect(() => {
+    let active = true;
     getPendingContributionCharge(memberId, year, mes)
-      .then((res) => res && setCharge(res))
-      .finally(() => setVerificandoPendente(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      .then((res) => { if (active) { if (res) setCharge(res); setFalhaPendente(false); } })
+      .catch((error) => { if (active) { setFalhaPendente(true); setErro(mensagemErroAmigavel(error)); } })
+      .finally(() => { if (active) setVerificandoPendente(false); });
+    return () => { active = false; };
+  }, [memberId, year, mes, tentativaPendente]);
 
   // Pop-up do crédito recorrente Fortuna na hora de pagar — pedido do
   // usuário 2026-10-09: não fica mais fixo na Home, só aparece aqui pra
   // quem ainda não tem o item registrado (ver getFortunaRecorrenteNudge).
   useEffect(() => {
-    if (podeRecarregarFortuna) getFortunaRecorrenteNudge(memberId).then(setFortunaNudge);
+    if (podeRecarregarFortuna) getFortunaRecorrenteNudge(memberId).then(setFortunaNudge).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -264,6 +296,7 @@ function RealPaymentScreen({
 
   function handleGerarCobranca(e: React.FormEvent) {
     e.preventDefault();
+    if (verificandoPendente || falhaPendente || isPending) return;
     const cpfLimpo = cpf.replace(/\D/g, "");
     if (cpfLimpo.length !== 11) {
       setErro("Digite um CPF válido (11 números).");
@@ -280,32 +313,16 @@ function RealPaymentScreen({
     });
   }
 
-  useEffect(() => {
-    if (!charge || pago) return;
-    const intervalo = setInterval(async () => {
-      const res = await checkChargeStatus(memberId, charge.chargeId);
-      if (res.status === "pago") {
-        setPago(true);
-        clearInterval(intervalo);
-      }
-    }, 5000);
-    return () => clearInterval(intervalo);
-  }, [charge, pago, memberId]);
+  const polling = usePaymentPolling(charge && !pago ? `${memberId}:${charge.chargeId}` : null, () => checkChargeStatus(memberId, charge!.chargeId), (res) => { if (res.status !== "pago") return false; setPago(true); onConfirmed(); return true; });
 
-  function handleCopiar() {
-    if (!charge || charge.metodo !== "PIX") return;
-    navigator.clipboard.writeText(charge.pixPayload).then(() => {
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
-    });
-  }
+
 
   const recargaEfetiva = charge?.fortunaTopUpAmount ?? recargaFortuna;
   const totalCobrado = charge?.totalCobrado ?? amount + recargaFortuna;
 
   return (
     <div className="text-left">
-      {fortunaNudge && !verificandoPendente && !charge && !pago && (
+      {fortunaNudge && !verificandoPendente && !falhaPendente && !charge && !pago && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="flex w-full max-w-sm flex-col gap-2.5 rounded-2xl border border-na-gold/40 bg-white p-4 dark:bg-gray-900">
             <div className="flex items-start gap-2.5">
@@ -352,7 +369,7 @@ function RealPaymentScreen({
       </button>
 
       <div className="mb-4 rounded-xl border border-gray-200 p-4 text-center dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400">Contribuição de {MESES[mes - 1]}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">Contribuição de {MESES[mes - 1]}/{year}</p>
         <p className="mt-1 text-2xl font-bold text-na-green-dark dark:text-emerald-400">{formatBRL(totalCobrado)}</p>
         {totalCobrado !== amount && (
           <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
@@ -367,6 +384,12 @@ function RealPaymentScreen({
         <p className="flex items-center justify-center gap-1.5 py-10 text-center text-[11px] text-gray-400 dark:text-gray-500">
           <Loader2 size={12} className="animate-spin" /> Verificando se já existe uma cobrança pendente...
         </p>
+      ) : falhaPendente ? (
+        <div role="alert" className="rounded-xl bg-na-warning-light p-4 text-sm text-na-warning-dark dark:bg-na-warning-dark/30 dark:text-na-warning-light">
+          <p>{erro}</p>
+          <p>Não foi possível verificar se já existe uma cobrança. Para evitar um pagamento duplicado, consulte novamente antes de gerar outro código.</p>
+          <button type="button" onClick={() => { setVerificandoPendente(true); setFalhaPendente(false); setTentativaPendente((value) => value + 1); }} className="mt-3 min-h-11 rounded-lg border border-current px-3 font-semibold">Verificar cobrança existente</button>
+        </div>
       ) : pago ? (
         <div className="rounded-xl border border-na-success/40 bg-na-success-light p-4 text-center text-sm text-na-success-dark dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
           Pagamento confirmado! O lançamento no Mercúrio foi disparado automaticamente
@@ -376,15 +399,8 @@ function RealPaymentScreen({
         <div className="flex flex-col items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- base64 dinâmico do Asaas, não é um asset local */}
           <img src={`data:image/png;base64,${charge.pixQrCodeBase64}`} alt="QR Code PIX" className="h-56 w-56 rounded-lg border border-gray-200" />
-          <button
-            onClick={handleCopiar}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-[13px] font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300"
-          >
-            {copiado ? <Check size={14} /> : <Copy size={14} />} {copiado ? "Copiado!" : "Copiar código PIX"}
-          </button>
-          <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-            <Loader2 size={12} className="animate-spin" /> Aguardando confirmação do pagamento...
-          </p>
+          <CopyButton key={charge.pixPayload} value={charge.pixPayload} />
+          <PaymentStatus state={polling.state} onRetry={polling.retry} />
           <button onClick={handleCancelarEGerarNova} disabled={isPending} className="text-[11px] font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
             Cancelar essa cobrança e gerar outra
           </button>
@@ -402,9 +418,7 @@ function RealPaymentScreen({
           <p className="text-center text-[11px] text-gray-400 dark:text-gray-500">
             Seus dados de cartão são digitados direto no ambiente seguro do Asaas — nunca passam pelo Portal.
           </p>
-          <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-            <Loader2 size={12} className="animate-spin" /> Aguardando confirmação do pagamento...
-          </p>
+          <PaymentStatus state={polling.state} onRetry={polling.retry} />
           <button onClick={handleCancelarEGerarNova} disabled={isPending} className="text-[11px] font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
             Cancelar essa cobrança e gerar outra
           </button>
@@ -509,18 +523,11 @@ function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: s
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (statusAtual === "ACTIVE" || !autorizacao) return;
-    const intervalo = setInterval(async () => {
-      const res = await checkPixAutomaticoStatus(memberId);
-      if (res.status === "ACTIVE") {
-        setStatusAtual("ACTIVE");
-        setAutorizacao(null);
-        clearInterval(intervalo);
-      }
-    }, 5000);
-    return () => clearInterval(intervalo);
-  }, [autorizacao, statusAtual, memberId]);
+  const polling = usePaymentPolling(autorizacao && statusAtual !== "ACTIVE" ? memberId : null,
+    () => checkPixAutomaticoStatus(memberId), (res) => {
+      if (res.status !== "ACTIVE") return false;
+      setStatusAtual("ACTIVE"); setAutorizacao(null); return true;
+    });
 
   function handleAtivar(e: React.FormEvent) {
     e.preventDefault();
@@ -567,9 +574,7 @@ function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: s
         <p className="text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">Escaneie pra confirmar — esse pagamento também autoriza os próximos meses</p>
         {/* eslint-disable-next-line @next/next/no-img-element -- base64 dinâmico do Asaas */}
         <img src={`data:image/png;base64,${autorizacao.encodedImage}`} alt="QR Code Pix Automático" className="h-40 w-40 rounded-lg border border-gray-200" />
-        <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-          <Loader2 size={12} className="animate-spin" /> Aguardando confirmação...
-        </p>
+        <PaymentStatus state={polling.state} onRetry={polling.retry} />
       </div>
     );
   }

@@ -139,11 +139,14 @@ export async function processMercurioSyncQueue(limit = 20) {
           result = { ok: false, error: `Escola sem mercurioCaixaLancamento configurado — lançamento automático desligado (ver scripts/list-cashiers.ts).` };
         } else {
           const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: payload.chargeId } });
+          if (charge.status !== "pago" || charge.memberId !== member.id) throw new Error("A cobrança não está paga ou não pertence ao membro da tarefa.");
           // Data real (com hora), não "pura" como Fundação/dueDate — usa o
           // fuso do Brasil de propósito (não UTC), já que é isso que decide
           // se ainda vale o desconto de pontualidade lá dentro do Mercúrio.
           const dataBR = (charge.paidAt ?? new Date()).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
           result = await adapter.launchContributionPayment(identidade, member.school.mercurioCaixaLancamento ?? "", {
+            referenceYear: charge.referenceYear,
+            referenceMonth: charge.referenceMonth,
             amount: Number(charge.amount),
             paidAtBR: dataBR,
           });

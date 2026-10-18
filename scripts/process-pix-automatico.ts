@@ -17,6 +17,7 @@
  * Uso: npx tsx scripts/process-pix-automatico.ts
  */
 import "dotenv/config";
+import { requireContributionOrder } from "../src/lib/contribution-payment-policy";
 import { asaasCreatePixAutomaticCharge, asaasGetPaymentStatus } from "../src/lib/asaas/client";
 import { confirmarPagamento } from "../src/lib/asaas/confirm-payment";
 import { calcularSplitEscola } from "../src/lib/asaas/split";
@@ -84,6 +85,8 @@ async function criarCicloSeguinte() {
 
   let criadas = 0;
   for (const membro of membros) {
+    if (!membro.mercurioAtivo) continue;
+    try { await requireContributionOrder(membro.id,year,month); } catch { console.log(`Membro ${membro.id}: ciclo não elegível; há contribuição anterior aberta ou mês já liquidado.`); continue; }
     const existente = await db.paymentCharge.findFirst({ where: { memberId: membro.id, referenceYear: year, referenceMonth: month } });
     if (existente) continue; // já paga/pendente pro mês (manual ou automática) — não duplica
 

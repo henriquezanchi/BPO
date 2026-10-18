@@ -1,3 +1,4 @@
+import { assertMercurioReference } from "@/lib/contribution-order";
 /**
  * Automação de navegador (Playwright) do Mercúrio (mercurio.oinabn.com.br)
  * — não há API oficial, é RPA mesmo. Lógica de login/navegação
@@ -1588,6 +1589,8 @@ async function finalizarRecibo(page: Page, frame: Frame, emitirRecibo: boolean):
 }
 
 export interface LancamentoContribuicao {
+  referenceYear: number;
+  referenceMonth: number;
   matricula: string;
   valor: number;
   dataPagamentoBR: string; // "dd/mm/yyyy" — decide a data do lançamento E se ainda vale o desconto de pontualidade
@@ -1636,6 +1639,7 @@ async function lancarRecebimentoContribuicao(page: Page, frameDia: Frame, lancam
     throw new Error(`Matrícula "${lancamento.matricula}": não encontrei nenhuma ficha PENDENTE no Mercúrio — confira manualmente antes de tentar de novo.`);
   }
   const mesEscolhido = fichaMaisAntiga(fichas).mes;
+  assertMercurioReference(mesEscolhido, { year: lancamento.referenceYear, month: lancamento.referenceMonth });
 
   const resultado = await marcarECalcular(page, frame, fichas, [mesEscolhido]);
   frame = resultado.frame;

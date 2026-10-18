@@ -11,6 +11,7 @@ import {
 } from "@/lib/asaas/client";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
 import { calcularSplitEscola, calcularSplitEscolaCartao } from "@/lib/asaas/split";
+import { requireContributionOrder } from "@/lib/contribution-payment-policy";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatBRL } from "@/lib/format";
@@ -71,6 +72,7 @@ export async function createContributionCharge(
   opts?: { metodo?: "PIX" | "CREDIT_CARD"; fortunaTopUpAmount?: number },
 ) {
   const member = await requireAuthenticatedMember(memberId);
+  await requireContributionOrder(memberId, year, month);
   const metodo = opts?.metodo ?? "PIX";
   const fortunaTopUpAmount = opts?.fortunaTopUpAmount ? Math.round(opts.fortunaTopUpAmount * 100) / 100 : 0;
   if (fortunaTopUpAmount > 0) {
@@ -200,6 +202,7 @@ export async function checkChargeStatus(memberId: string, chargeId: string) {
  */
 export async function getPendingContributionCharge(memberId: string, year: number, month: number) {
   await requireAuthenticatedMember(memberId);
+  await requireContributionOrder(memberId, year, month);
   const existente = await db.paymentCharge.findFirst({
     where: { memberId, referenceYear: year, referenceMonth: month, status: "pendente" },
     orderBy: { createdAt: "desc" },

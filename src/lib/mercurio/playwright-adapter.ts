@@ -298,6 +298,8 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
       try {
         await lancarPagamentoContribuicaoHoje(page, new RegExp(member.filialLabel, "i"), nomeCaixa, {
           matricula: member.matricula,
+          referenceYear: payment.referenceYear,
+          referenceMonth: payment.referenceMonth,
           valor: payment.amount,
           dataPagamentoBR: payment.paidAtBR,
           interessado: payment.interessado,

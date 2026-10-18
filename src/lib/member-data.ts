@@ -94,10 +94,11 @@ export async function getMemberDashboard(memberId: string) {
       contributions: { orderBy: { dueDate: "desc" }, take: 6 },
       compositionItems: { orderBy: { createdAt: "asc" } },
       // Situação mês a mês da contribuição (Ficha Anual do Mercúrio, ver
-      // scripts/sync-monthly-status.ts) do ano corrente — alimenta a tela
-      // "situação atual" do ambiente de pagamento (cobrança/lançamento
-      // ainda não implementados).
-      monthlyStatus: { where: { year: new Date().getFullYear() }, orderBy: { month: "asc" } },
+      // scripts/sync-monthly-status.ts), incluindo anos anteriores para
+      // conferir a ordem dos pagamentos. Gateway confirmado prevalece
+      // enquanto o sistema da escola ainda não atualiza.
+      monthlyStatus: { orderBy: [{ year: "asc" }, { month: "asc" }] },
+      paymentCharges: { where: { status: { in: ["pendente", "pago"] } }, select: { referenceYear: true, referenceMonth: true, status: true } },
       classMemberships: { include: { classGroup: true } },
     },
   });
