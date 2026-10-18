@@ -39,7 +39,7 @@ export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, level
         if (b.badgeType === "um_ano_casa") return umAnoDeCasa ? [{ data: umAnoDeCasa, titulo: b.label, subtitulo: b.description, tipo: "conquista" as const }] : [];
         return [{ data: b.earnedAt, titulo: b.label, subtitulo: b.description, tipo: "conquista" as const }];
       }),
-    ...integrationCourses.map((c) => ({ data: c.date, titulo: c.courseName, subtitulo: `Instrutor: ${c.instructor}`, tipo: "curso" as const })),
+    ...integrationCourses.map((c) => ({ data: c.date, titulo: c.courseName, subtitulo: c.instructor ? `Instrutor: ${c.instructor}` : undefined, tipo: "curso" as const })),
   ].sort((a, b) => a.data.getTime() - b.data.getTime());
 
   const selos = badges.filter((b) => SEM_DATA_REAL.has(b.badgeType));

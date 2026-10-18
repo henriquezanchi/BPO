@@ -130,6 +130,9 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const raiosComBrigadista = new Set(
     (await consultarMercurio(`SELECT DISTINCT cad_raio_fv FROM cadastro WHERE cad_unidade=${sqlTexto(uniId)} AND cad_situacao_fv='BRG'`)).map((r) => r.cad_raio_fv ?? ""),
   );
+  const cursos = await consultarTudo(
+    `SELECT p.dcr_matr, p.dcr_data, s.sdu_descricao, s.sdu_instrutor FROM cursos_integra_participa p LEFT JOIN sig_cursos_integra s ON s.sdu_id=p.dcr_curso_id WHERE p.dcr_matr IN (${lista}) ORDER BY p.dcr_matr, p.dcr_data`,
+  );
   const aulas = await consultarTudo(
     `SELECT DISTINCT tm.tma_instrutor, tm.tma_turma FROM turmas_materias tm WHERE tm.tma_unidade=${sqlTexto(uniId)} AND tm.tma_instrutor IN (${lista}) AND EXISTS (SELECT 1 FROM cadastro c WHERE c.cad_tur_unidade=tm.tma_unidade AND c.cad_turma=tm.tma_turma) ORDER BY tm.tma_instrutor`,
   );
@@ -156,6 +159,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const composicaoPor = porMatr(composicao, "cal_matr");
   const funcoesPor = porMatr(funcoes, "dfn_matr");
   const aulasPor = porMatr(aulas, "tma_instrutor");
+  const cursosPor = porMatr(cursos, "dcr_matr");
   const chefiaPor = new Map<string, Set<string>>();
   for (const ch of chefias) {
     const raios = raiosDaChefia(ch.dfn_descricao ?? "", ch.cad_raio_fv ?? null);
@@ -307,6 +311,24 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     // Item incluído pelo membro no Portal pode ainda estar a caminho do
     // Mercúrio (fila) — só remove o que veio do próprio Mercúrio.
     await db.contributionCompositionItem.deleteMany({ where: { memberId: member.id, addedViaPortal: false, mercurioGroupId: { notIn: [...grupos] } } });
+
+    // Cursos de integração (Jornada) — o banco é a fonte; substitui o que o
+    // scraper antigo tinha gravado.
+    const idsCursos: string[] = [];
+    for (const cu of cursosPor.get(matr) ?? []) {
+      const data = dataOuNull(cu.dcr_data);
+      const nome = (cu.sdu_descricao ?? "").trim().toUpperCase();
+      if (!nome) continue;
+      const dateBR = data ? data.toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "";
+      const d = { courseDate: data, instructor: (cu.sdu_instrutor ?? "").trim(), syncedAt: new Date() };
+      const reg = await db.memberIntegrationCourse.upsert({
+        where: { memberId_courseName_dateBR: { memberId: member.id, courseName: nome, dateBR } },
+        update: d,
+        create: { ...d, memberId: member.id, courseName: nome, dateBR },
+      });
+      idsCursos.push(reg.id);
+    }
+    await db.memberIntegrationCourse.deleteMany({ where: { memberId: member.id, id: { notIn: idsCursos } } });
 
     // Turmas: professor (turmas_materias) e aluno (cad_turma, só se a
     // turma é desta mesma filial). Remove vínculos que o Mercúrio não tem mais.
