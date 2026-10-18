@@ -28,13 +28,14 @@ export function SignTermForm({ memberId }: { memberId: string }) {
   if (done) {
     return (
       <div className="flex items-center gap-2 rounded-lg bg-na-success-light p-3 text-xs text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">
-        <CheckCircle2 size={16} /> Termo assinado com sucesso!
+        <CheckCircle2 size={16} /> Concordância eletrônica registrada.
       </div>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <p className="text-sm text-gray-600 dark:text-gray-300">Este registro é uma concordância eletrônica no Portal. Não utiliza a assinatura gov.br e não reúne as assinaturas do representante e das duas testemunhas. O CPF é validado pelos dígitos verificadores; isso não comprova a identidade do titular.</p>
       <label className="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
         <input
           type="checkbox"
@@ -47,7 +48,7 @@ export function SignTermForm({ memberId }: { memberId: string }) {
 
       <div className="flex flex-col gap-1">
         <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
-          Digite seu nome completo pra assinar digitalmente
+          Digite seu nome completo para registrar a concordância
         </label>
         <input
           value={signedName}
@@ -78,7 +79,7 @@ export function SignTermForm({ memberId }: { memberId: string }) {
         disabled={!agreed || !signedName.trim() || cpf.replace(/\D/g, "").length !== 11 || isPending}
         className="flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-50"
       >
-        <PenLine size={16} /> {isPending ? "Assinando..." : "Assinar Digitalmente"}
+        <PenLine size={16} /> {isPending ? "Registrando..." : "Registrar concordância"}
       </button>
     </form>
   );
