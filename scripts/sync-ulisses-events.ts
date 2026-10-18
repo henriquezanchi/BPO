@@ -10,6 +10,11 @@ async function main(){
  if(!clientPath)throw Error('Configure ULISSES_CLIENT_MODULE com o caminho do cliente oficial já utilizado pelo CRM.');
  const mapping=JSON.parse(process.env.ULISSES_SCHOOL_MAP??'{}') as Record<string,number>;
  if(!Object.keys(mapping).length)throw Error('Configure ULISSES_SCHOOL_MAP: JSON de School.id do Portal para filialId do Ulisses. Não inferir por nome.');
+ // Nomes separados impedem enviar a chave do projeto Portal ao Supabase do CRM.
+ const crmUrl=process.env.CRM_SUPABASE_URL,crmKey=process.env.CRM_SUPABASE_SERVICE_ROLE_KEY,crmCipher=process.env.CRM_CREDENCIAIS_SCRAPER_CHAVE;
+ if(!crmUrl||!crmKey||!crmCipher)throw Error('Configure as três variáveis CRM_* no contexto seguro do job existente; nunca reutilize a chave do Portal.');
+ if(new URL(crmUrl).hostname==='lefahgczkonbqcppyftg.supabase.co')throw Error('O cliente Ulisses precisa do projeto CRM, não do projeto Portal.');
+ process.env.SUPABASE_URL=crmUrl;process.env.SUPABASE_SERVICE_ROLE_KEY=crmKey;process.env.CREDENCIAIS_SCRAPER_CHAVE=crmCipher;
  const client=await import(pathToFileURL(resolve(clientPath)).href) as {listarTodosEventos:(id:number)=>Promise<{id:number}[]>;evento:(id:number)=>Promise<UlissesEvent>};
  if(typeof client.listarTodosEventos!=='function'||typeof client.evento!=='function')throw Error('Cliente incompatível: faltam listarTodosEventos e evento.');
  let updated=0,errors=0;

@@ -25,6 +25,7 @@ Preparado `scripts/sync-ulisses-events.ts`, com o adaptador em `src/lib/ulisses/
 
 - `ULISSES_CLIENT_MODULE`: caminho absoluto do cliente existente `CRMNovaAcropole/scraper/ulisses-api.js`.
 - `ULISSES_SCHOOL_MAP`: JSON de **School.id do Portal → filialId numérico do Ulisses**, validado por quem administra as filiais. Não deduzir por nome. O cliente mantém as próprias credenciais seguras já existentes.
+- Entregar ao job as credenciais existentes do CRM pelos nomes separados `CRM_SUPABASE_URL`, `CRM_SUPABASE_SERVICE_ROLE_KEY` e `CRM_CREDENCIAIS_SCRAPER_CHAVE`, usando suas configurações seguras. O script recusa o projeto Portal como origem dessas credenciais. Não reutilizar a chave do Portal nem copiar valores para arquivos de código.
 - Configuração PostgreSQL do Portal no ambiente executor. Executar, no checkout do Portal: `node --import tsx scripts/sync-ulisses-events.ts`.
 
 A sincronização usa `listarTodosEventos` e `evento`, lê `filiaisEventos[].produtos[]`, preserva sessões, usa identificador externo estável e respeita cancelamento explícito. Ausência numa resposta parcial não apaga o catálogo. Não importa participantes nem altera inscrições pela API. Inscrição externa abre `linkFinal` no organizador; abrir esse link não cria confirmação no Portal. Valores externos não são cobrados pelo Portal.
