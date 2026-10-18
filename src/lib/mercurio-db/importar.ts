@@ -99,6 +99,11 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     `SELECT c.cal_matr, c.cal_grupo, c.cal_valor, p.pro_descricao FROM compaluno c LEFT JOIN produtos p ON p.pro_cod=c.cal_grupo WHERE c.cal_unidade=${sqlTexto(uniId)} AND c.cal_matr IN (${lista}) ORDER BY c.cal_matr`,
   );
   const funcoes = await consultarTudo(`SELECT dfn_matr, dfn_funcao, dfn_descricao FROM dirigente_funcoes WHERE dfn_atual='S' AND dfn_matr IN (${lista}) ORDER BY dfn_matr`);
+  // Turmas em que a pessoa dá aula (qualquer matéria) — só turmas que
+  // ainda têm aluno ativo, pra não listar turma já formada.
+  const aulas = await consultarTudo(
+    `SELECT DISTINCT tm.tma_instrutor, tm.tma_turma FROM turmas_materias tm WHERE tm.tma_unidade=${sqlTexto(uniId)} AND tm.tma_instrutor IN (${lista}) AND EXISTS (SELECT 1 FROM cadastro c WHERE c.cad_tur_unidade=tm.tma_unidade AND c.cad_turma=tm.tma_turma) ORDER BY tm.tma_instrutor`,
+  );
 
   // Recibos dos meses pagos — gravados JÁ com o conteúdo (rawText), pra
   // tela "Situação da Contribuição" abrir o comprovante na hora, sem fila
@@ -121,6 +126,19 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const fichasPor = porMatr(fichas, "fic_matr");
   const composicaoPor = porMatr(composicao, "cal_matr");
   const funcoesPor = porMatr(funcoes, "dfn_matr");
+  const aulasPor = porMatr(aulas, "tma_instrutor");
+  const turmaIds = new Map<string, string>();
+  const turmaId = async (nome: string) => {
+    if (!turmaIds.has(nome)) {
+      const cg = await db.classGroup.upsert({
+        where: { schoolId_name: { schoolId: school.id, name: nome } },
+        update: { mercurioClassId: nome },
+        create: { schoolId: school.id, name: nome, mercurioClassId: nome },
+      });
+      turmaIds.set(nome, cg.id);
+    }
+    return turmaIds.get(nome)!;
+  };
   const reciboPorId = new Map(recibos.map((r) => [r.rec_id!, r]));
   const itensPorRecibo = porMatr(itensRecibo, "rei_id");
 
@@ -162,7 +180,8 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
       dataSegundoNivel: dataOuNull(c.cad_2o_nivel),
       mercurioAtivo: true,
       mercurioAtivoSync: new Date(),
-      isPedagogo: textoOuNull(c.cad_pedagogo) !== null,
+      // Quem dá aula numa turma ativa também é instrutor (acesso a "Minhas Turmas"), mesmo sem o campo de pedagogo preenchido.
+      isPedagogo: textoOuNull(c.cad_pedagogo) !== null || (aulasPor.get(matr) ?? []).length > 0,
       pedagogoSyncedAt: new Date(),
       isDiretor,
       isSubChefe,
@@ -251,6 +270,19 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     // Item incluído pelo membro no Portal pode ainda estar a caminho do
     // Mercúrio (fila) — só remove o que veio do próprio Mercúrio.
     await db.contributionCompositionItem.deleteMany({ where: { memberId: member.id, addedViaPortal: false, mercurioGroupId: { notIn: [...grupos] } } });
+
+    // Turmas: professor (turmas_materias) e aluno (cad_turma, só se a
+    // turma é desta mesma filial). Remove vínculos que o Mercúrio não tem mais.
+    const turmaAluno = textoOuNull(c.cad_turma);
+    const desejado = {
+      professor: [...new Set((aulasPor.get(matr) ?? []).map((a) => a.tma_turma!).filter(Boolean))],
+      aluno: turmaAluno && c.cad_tur_unidade === uniId ? [turmaAluno] : [],
+    };
+    for (const role of ["professor", "aluno"] as const) {
+      const ids = await Promise.all(desejado[role].map(turmaId));
+      await db.classMembership.deleteMany({ where: { memberId: member.id, role, classGroup: { schoolId: school.id }, classGroupId: { notIn: ids } } });
+      if (ids.length) await db.classMembership.createMany({ data: ids.map((classGroupId) => ({ classGroupId, memberId: member.id, role })), skipDuplicates: true });
+    }
   }
 
   if (!opcoes.matriculas?.length) {
