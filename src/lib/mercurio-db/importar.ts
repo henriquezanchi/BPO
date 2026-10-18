@@ -398,7 +398,15 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     // Rodada da filial inteira: quem tinha Member local e sumiu do cadastro saiu da escola.
     const ativos = new Set(cadastros.map((c) => c.cad_matr));
     const locais = await db.member.findMany({ where: { schoolId: school.id, mercurioAtivo: true, mercurioId: { not: null } }, select: { id: true, mercurioId: true } });
-    const sairam = locais.filter((m) => !ativos.has(m.mercurioId!)).map((m) => m.id);
+    const ausentes = locais.filter((m) => !ativos.has(m.mercurioId!));
+    // Ativo em OUTRA filial (ex: dirigente com conta pelo Universitário e
+    // matrícula em Fortaleza) não saiu da escola — só quem não está ativo em lugar nenhum.
+    const ativosEmOutraFilial = new Set(
+      ausentes.length
+        ? (await consultarMercurio(`SELECT cad_matr FROM cadastro WHERE cad_matr IN (${ausentes.map((m) => sqlNumero(m.mercurioId!)).join(",")})`)).map((c) => c.cad_matr)
+        : [],
+    );
+    const sairam = ausentes.filter((m) => !ativosEmOutraFilial.has(m.mercurioId!)).map((m) => m.id);
     if (sairam.length) await db.member.updateMany({ where: { id: { in: sairam } }, data: { mercurioAtivo: false, mercurioAtivoSync: new Date() } });
 
     // Responsável de fora que deixou o cargo: perde a responsabilidade pelos grupos daqui.
