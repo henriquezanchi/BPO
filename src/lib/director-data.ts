@@ -98,7 +98,7 @@ export async function getDirectorDashboard(schoolId: string) {
   const despesasTotaisMes = despesasPendentesMes + despesasRealizadasMes;
 
   const eventosMes = await db.event.findMany({
-    where: { schoolId, startsAt: { gte: inicioMes, lt: fimMes } },
+    where: { schoolId, status: "publicado", startsAt: { gte: inicioMes, lt: fimMes } },
     include: { registrations: true },
   });
   const receitaEventosMes = eventosMes.reduce((soma, e) => soma + Number(e.price) * e.registrations.length, 0);
@@ -174,7 +174,7 @@ export async function getDirectorDashboard(schoolId: string) {
 
   const eventos = await db.event.findMany({
     where: { schoolId },
-    include: { registrations: { include: { member: true } } },
+    include: { registrations: { include: { member: true } }, staff: true },
     orderBy: { startsAt: "desc" },
     take: 10,
   });
@@ -259,6 +259,14 @@ export async function getDirectorDashboard(schoolId: string) {
       id: e.id,
       title: e.title,
       startsAt: e.startsAt,
+      endsAt: e.endsAt,
+      description: e.description,
+      location: e.location,
+      audience: e.audience,
+      revision: e.revision,
+      status: e.status,
+      source: e.source,
+      staff: e.staff.map(s=>s.memberId),
       price: Number(e.price),
       inscritos: e.registrations.length,
       presentes: e.registrations.filter((r) => r.checkedIn).length,

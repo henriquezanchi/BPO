@@ -36,8 +36,8 @@ export function MeetingManager({groupId}:{groupId:string}) {
  const begin=editing?localInZone(new Date(editing.startsAt),zone):'';
  const end=editing?localInZone(new Date(editing.endsAt),zone):'';
  const inputStyle='mt-1 min-h-11 w-full min-w-0 rounded-lg border border-gray-300 p-2.5 text-base dark:border-gray-600 dark:bg-gray-900';
- return <section className="max-w-lg space-y-4" aria-label="Reuniões da brigada">
-  <h2 className="text-base font-bold text-na-green-dark dark:text-na-green-light">Reuniões da brigada</h2>
+ return <section className="max-w-lg space-y-4" aria-label="Reuniões do grupo">
+  <h2 className="text-base font-bold text-na-green-dark dark:text-na-green-light">Reuniões do grupo</h2>
   <p className="text-sm text-gray-600 dark:text-gray-300">Defina o encontro semanal do grupo. Os integrantes conferem a convocação e justificam ausência pela Agenda.</p>
   {error&&<p role="alert" className="text-sm text-na-danger-dark dark:text-na-danger-light">{error}</p>}{notice&&<p role="status" className="text-sm text-na-green-dark dark:text-na-green-light">{notice}</p>}
   <form key={editing?.id??'nova'} onSubmit={submit} className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-700">

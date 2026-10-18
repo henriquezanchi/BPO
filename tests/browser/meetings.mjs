@@ -19,8 +19,8 @@ try{
    else throw new Error('Ação inesperada: '+action);
    return route.fulfill({contentType:'text/x-component',body:'0:{"a":"$@1","f":"","b":"development"}\n1:'+JSON.stringify(value)+'\n'});
   });
-  await page.goto(base+'/browser-meetings-local');await page.getByRole('region',{name:'Reuniões da brigada'}).getByRole('button',{name:'Editar',exact:true}).waitFor();
-  const manager=page.getByRole('region',{name:'Reuniões da brigada'}),agenda=page.getByRole('region',{name:'Agenda do integrante'});
+  await page.goto(base+'/browser-meetings-local');await page.getByRole('region',{name:'Reuniões do grupo'}).getByRole('button',{name:'Editar',exact:true}).waitFor();
+  const manager=page.getByRole('region',{name:'Reuniões do grupo'}),agenda=page.getByRole('region',{name:'Agenda do integrante'});
   assert.equal((await agenda.innerText()).includes('SEGREDO_INTERNO_TESTE'),false);assert.match(await agenda.innerText(),/16:00/);
   assert.equal(await manager.getByText('Fuso horário',{exact:true}).count(),0);assert.equal(await manager.locator('input[name=repeatUntil]').count(),0);
   await manager.getByLabel('A partir de',{exact:true}).fill('2099-02-01');await manager.getByLabel('Início',{exact:true}).fill('19:00');await manager.getByLabel('Fim',{exact:true}).fill('20:00');await manager.getByRole('button',{name:'Salvar encontro semanal',exact:true}).click();await manager.getByText(/Rotina semanal salva/).waitFor();

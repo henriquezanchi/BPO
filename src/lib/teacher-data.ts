@@ -1,3 +1,4 @@
+import {portalLabel} from "@/lib/display-labels";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -19,7 +20,7 @@ export async function getTeacherClasses(memberId: string) {
   });
 
   // Turmas primeiro, depois os grupos (Brigada, Corpo de Segurança).
-  return memberships.map((m) => m.classGroup).sort((a, b) => Number(a.tipo !== "turma") - Number(b.tipo !== "turma") || a.name.localeCompare(b.name));
+  return memberships.map((m) => ({...m.classGroup,name:portalLabel(m.classGroup.name)})).sort((a, b) => Number(a.tipo !== "turma") - Number(b.tipo !== "turma") || a.name.localeCompare(b.name));
 }
 
 /** Responsável por alguma turma ou grupo (instrutor, chefe de brigada) — libera a área "Turmas e grupos". */
@@ -52,7 +53,7 @@ export async function getTeacherClassDetail(classGroupId: string) {
 
   return {
     id: classGroup.id,
-    name: classGroup.name,
+    name: portalLabel(classGroup.name),
     tipo: classGroup.tipo,
     mercurioUnidade: classGroup.school.mercurioUnidade,
     slackChannelId: classGroup.slackChannelId,

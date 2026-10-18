@@ -850,14 +850,9 @@ model AgendaReaction {
   @@index([itemType, itemId])
 }
 
-// Pedido do usuário 2026-10-09: evento nem sempre é de uma filial só —
-// importamos a agenda nacional (Google Calendar da Diretoria, via
-// scripts/sync-national-calendar.ts) e isso precisa conviver com os
-// eventos de filial que o Diretor já cria em EventosTab. `scope` decide
-// quem vê (ver member-data.ts): "nacional"/"regional" aparecem pra TODO
-// MUNDO por ora (ainda não temos o recorte por perfil/região — ver
-// conversa sobre os 9 perfis), "filial" só pra quem é da escola.
-// `schoolId` null = nacional/regional (sem dono de uma filial só).
+// Eventos internos usam público explícito e o vínculo real com a filial.
+// Fontes externas mantêm sua inscrição na origem. Ágora aguarda mapeamento
+// oficial de papéis e é bloqueado por padrão no Portal.
 model Event {
   id          String    @id @default(cuid())
   schoolId    String?
@@ -881,6 +876,12 @@ model Event {
   externalUid String?   @unique
   createdAt   DateTime  @default(now())
 
+  audience String @default("todos_ativos")
+  status String @default("publicado")
+  registrationUrl String?
+  revision Int @default(0)
+  staff EventReception[]
+  audits EventAudit[]
   registrations EventRegistration[]
 
   @@index([schoolId])
@@ -906,6 +907,14 @@ model EventRegistration {
   pixPayload      String?   @db.Text
   pixQrCodeBase64 String?   @db.Text
   paidAt          DateTime?
+  checkedInAt DateTime?
+  checkedInBy String?
+  selfReportedAttendance String?
+  selfReportedAt DateTime?
+  mercurioStatus String @default("aguardando_integracao")
+  paymentState String @default("novo")
+  amount Decimal? @db.Decimal(10,2)
+  notices EventNotice[]
 
   @@unique([eventId, memberId])
   @@index([eventId])
@@ -1352,4 +1361,36 @@ model GroupMeetingSeries {
   untilSlot String?
   createdAt DateTime @default(now())
   @@index([classGroupId])
+}
+
+
+// Designação específica para recepção, sem acesso ao painel financeiro.
+model EventReception {
+  id String @id @default(cuid())
+  eventId String
+  event Event @relation(fields:[eventId], references:[id])
+  memberId String
+  @@unique([eventId,memberId])
+  @@index([memberId])
+}
+model EventAudit {
+  id String @id @default(cuid())
+  eventId String
+  event Event @relation(fields:[eventId], references:[id])
+  actorId String
+  action String
+  changes Json
+  createdAt DateTime @default(now())
+  @@index([eventId,createdAt])
+}
+model EventNotice {
+  id String @id @default(cuid())
+  registrationId String
+  registration EventRegistration @relation(fields:[registrationId], references:[id])
+  kind String
+  dueAt DateTime
+  status String @default("aguardando_canal")
+  sentAt DateTime?
+  @@unique([registrationId,kind])
+  @@index([status,dueAt])
 }

@@ -10,6 +10,7 @@ interface JornadaPanelProps {
   streakMeses: number;
   levelHistory: { nivel: string; changedAt: Date }[];
   badges: { badgeType: string; label: string; description: string; earnedAt: Date }[];
+  eventHistory?: {title:string;date:Date}[];
   integrationCourses: { courseName: string; instructor: string; date: Date }[];
 }
 
@@ -29,10 +30,11 @@ const SEM_DATA_REAL = new Set(["streak_3", "streak_6", "streak_12", "streak_24",
  * da ficha; "1 ano de casa" é calculado da entrada. Sem data de entrada
  * conhecida, NÃO usa a data de entrada no Portal como aproximação.
  */
-export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, levelHistory, badges, integrationCourses }: JornadaPanelProps) {
+export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, levelHistory, badges, integrationCourses, eventHistory=[] }: JornadaPanelProps) {
   const umAnoDeCasa = dataEntrada ? new Date(Date.UTC(dataEntrada.getUTCFullYear() + 1, dataEntrada.getUTCMonth(), dataEntrada.getUTCDate(), 12)) : null;
 
   const eventos = [
+    ...eventHistory.map(e=>({data:e.date,titulo:e.title,subtitulo:"Participação conferida pela recepção",tipo:"curso" as const})),
     ...(dataEntrada ? [{ data: dataEntrada, titulo: "Entrou na Nova Acrópole", tipo: "entrada" as const }] : []),
     ...(dataSegundoNivel ? [{ data: dataSegundoNivel, titulo: "Passou para o 2º nível", tipo: "nivel" as const }] : []),
     ...levelHistory.map((l) => ({ data: l.changedAt, titulo: `Passou para o nível "${l.nivel}"`, tipo: "nivel" as const })),

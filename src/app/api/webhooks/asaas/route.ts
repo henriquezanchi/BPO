@@ -1,3 +1,5 @@
+import {confirmEventPayment} from "@/lib/event-payments";
+import {asaasGetPaymentStatus} from "@/lib/asaas/client";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
 import { db } from "@/lib/db";
 
@@ -25,6 +27,7 @@ const EVENTO_PARA_STATUS: Record<string, "ACTIVE" | "CANCELLED" | "REFUSED" | "E
  */
 export async function POST(req: Request) {
   const tokenEsperado = process.env.ASAAS_WEBHOOK_TOKEN;
+  if (!tokenEsperado) return new Response("webhook not configured", { status: 503 });
   if (tokenEsperado) {
     const tokenRecebido = req.headers.get("asaas-access-token");
     if (tokenRecebido !== tokenEsperado) {
@@ -41,6 +44,13 @@ export async function POST(req: Request) {
   if ((body.event === "PAYMENT_RECEIVED" || body.event === "PAYMENT_CONFIRMED") && body.payment?.id) {
     const charge = await db.paymentCharge.findUnique({ where: { asaasPaymentId: body.payment.id } });
     if (charge) await confirmarPagamento(charge.id);
+    const registration=await db.eventRegistration.findUnique({where:{asaasPaymentId:body.payment.id}});
+    if(registration){
+      const payment=await asaasGetPaymentStatus(body.payment.id);
+      if(!["RECEIVED","CONFIRMED"].includes(payment.status))return new Response("payment not confirmed",{status:409});
+      if(registration.amount!==null&&Math.round(Number(registration.amount)*100)!==Math.round(payment.value*100))return new Response("payment amount mismatch",{status:409});
+      await confirmEventPayment(registration.id);
+    }
   }
 
   const novoStatus = body.event ? EVENTO_PARA_STATUS[body.event] : undefined;

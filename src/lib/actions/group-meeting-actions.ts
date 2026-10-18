@@ -11,7 +11,7 @@ async function leader(groupId:string) {
  const actor=await requireTeacherOfClass(groupId);
  if(!actor.mercurioAtivo)throw new MeetingError('Cadastro inativo.');
  const group=await db.classGroup.findUniqueOrThrow({where:{id:groupId},select:{tipo:true}});
- if(!['BF','BM','CS'].includes(group.tipo))throw new MeetingError('Reuniões disponíveis somente para brigadas.');
+ if(!['BF','BM','CS'].includes(group.tipo))throw new MeetingError('Reuniões disponíveis somente para grupos de voluntários.');
  return actor;
 }
 function refresh(groupId:string) {revalidatePath(`/professor/turma/${groupId}`);revalidatePath('/portal');}

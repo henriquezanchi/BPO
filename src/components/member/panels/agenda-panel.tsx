@@ -1,5 +1,6 @@
 "use client";
 
+import {usePaymentPolling} from "@/hooks/use-payment-polling";
 import { MeetingResponse } from "@/components/member/groups/meeting-response";
 import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/event-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
@@ -7,7 +8,7 @@ import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
 import { Check, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   prova: "Prova",
@@ -118,17 +119,9 @@ function InscricaoEvento({
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (!inscricao || inscricao.pago) return;
-    const intervalo = setInterval(async () => {
-      const res = await checkStatusInscricaoEvento(memberId, inscricao.registrationId);
-      if (res.status === "pago") {
-        setInscricao((prev) => (prev ? { ...prev, pago: true } : prev));
-        clearInterval(intervalo);
-      }
-    }, 5000);
-    return () => clearInterval(intervalo);
-  }, [inscricao, memberId]);
+  const polling = usePaymentPolling(inscricao&&!inscricao.pago?inscricao.registrationId:null,
+    ()=>checkStatusInscricaoEvento(memberId,inscricao!.registrationId),
+    result=>{if(result.status!=="pago")return false;setInscricao(previous=>previous?{...previous,pago:true}:previous);return true;});
 
   function handleInscrever(cpfLimpo?: string) {
     setErro(null);
@@ -187,6 +180,7 @@ function InscricaoEvento({
         >
           {copiado ? <Check size={12} /> : <Copy size={12} />} {copiado ? "Copiado!" : "Copiar código PIX"}
         </button>
+        {(polling.state==="error"||polling.state==="paused")&&<div className="text-xs"><p>A consulta foi pausada. Sua inscrição continua salva.</p><button onClick={polling.retry} className="mt-2 rounded-lg border px-3 py-2">Consultar pagamento novamente</button></div>}
         <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
           <Loader2 size={12} className="animate-spin" /> Aguardando confirmação...
         </p>
@@ -253,15 +247,17 @@ function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item:
         </div>
         <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
         <div className="mt-1 text-[11px] capitalize text-gray-500 dark:text-gray-400">
-          {item.allDay ? formatDateBR(item.date) : formatDateTimeBR(item.date)}
+          {item.allDay ? formatDateBR(item.date) : item.date.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"})+" (Brasília)"}
         </div>
         {item.location && (
           <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
             <MapPin size={11} className="shrink-0" /> {item.location}
           </div>
         )}
+        {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block text-sm font-semibold text-na-green dark:text-emerald-400">Inscrever-se no site do organizador ↗</a>}
         {item.description && <p className="mt-1.5 text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
-        {item.scope === "filial" && (
+        {item.status === "cancelado" && <p className="mt-2 text-sm font-semibold text-red-700 dark:text-red-300">Evento cancelado. Consulte a Economia se houver pagamento.</p>}
+        {item.status !== "cancelado" && item.source === "manual" && item.scope === "filial" && (
           <>
             <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
               {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}

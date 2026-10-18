@@ -2,15 +2,15 @@
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { criarEvento, excluirEvento, marcarPresencaEvento } from "@/lib/actions/event-actions";
+import { EventosTab } from "./eventos-tab";
 import { getFortunaBalancesForDirector, type FortunaBalancesForDirector } from "@/lib/actions/fortuna-actions";
 import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import type { DirectorDashboard } from "@/lib/director-data";
 import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
 import { EconomiaPanel } from "@/components/economia/economia-panel";
-import { ArrowLeft, ArrowUpDown, BadgePercent, Banknote, CalendarClock, Coffee, FileWarning, Handshake, LayoutDashboard, Menu, Search, Ticket, Trash2, Users, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, BadgePercent, Banknote, CalendarClock, Coffee, FileWarning, Handshake, LayoutDashboard, Menu, Search, Ticket, Users, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { FortunaTab } from "./fortuna-tab";
 import { MemberDetailPanel } from "./member-detail-panel";
 import { QrCodeCadastroCard } from "./qr-code-cadastro-card";
@@ -492,93 +492,3 @@ function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data:
     </div>
   );
 }
-
-function EventosTab({ schoolId, data }: { schoolId: string; data: DirectorDashboard }) {
-  const [isPending, startTransition] = useTransition();
-
-  function handleCriarEvento(formData: FormData) {
-    const title = String(formData.get("title") ?? "");
-    const startsAt = String(formData.get("startsAt") ?? "");
-    const price = Number(formData.get("price") ?? 0);
-    if (!title || !startsAt) return;
-    startTransition(() => criarEvento(schoolId, title, startsAt, price));
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Novo Evento</h3>
-        <form action={handleCriarEvento} className="flex flex-wrap items-end gap-2">
-          <input name="title" placeholder="Título do evento" required className="min-w-[180px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
-          <input name="startsAt" type="datetime-local" required className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
-          <input name="price" type="number" step="0.01" min="0" placeholder="Preço (0 = grátis)" className="w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
-          <button type="submit" disabled={isPending} className="rounded-lg bg-na-green px-3 py-2 text-sm font-semibold text-white hover:bg-na-green-dark disabled:opacity-60">
-            + Evento
-          </button>
-        </form>
-      </div>
-
-      {data.eventos.length === 0 ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
-          <Ticket size={28} className="mx-auto mb-3 text-gray-300" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum evento cadastrado ainda.</p>
-        </div>
-      ) : (
-        data.eventos.map((e) => (
-          <div key={e.id} className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-black text-na-green-dark dark:text-emerald-400">{e.title}</h3>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {formatDateBR(e.startsAt)} {e.price > 0 && `· ${formatBRL(e.price)}`}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {e.presentes}/{e.inscritos} presentes
-                </span>
-                <button
-                  onClick={() => confirm(`Excluir "${e.title}"? Isso também remove as inscrições.`) && startTransition(() => excluirEvento(schoolId, e.id))}
-                  disabled={isPending}
-                  className="text-gray-400 hover:text-na-danger"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-            {e.registrations.length === 0 ? (
-              <EmptyState text="Nenhuma inscrição ainda." />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <tbody>
-                    {e.registrations.map((r) => (
-                      <tr key={r.id} className="border-t border-gray-100 dark:border-gray-800">
-                        <td className="py-2 font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">{r.memberName}</td>
-                        <td className="py-2 text-right">
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap ${r.paid ? "bg-na-success-light text-na-success-dark" : "bg-na-warning-light text-na-warning-dark"}`}>
-                            {r.paid ? "Pago" : "Pendente"}
-                          </span>
-                        </td>
-                        <td className="py-2 text-right">
-                          <button
-                            onClick={() => startTransition(() => marcarPresencaEvento(schoolId, r.id, !r.checkedIn))}
-                            disabled={isPending}
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap ${r.checkedIn ? "bg-na-success-light text-na-success-dark" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
-                          >
-                            {r.checkedIn ? "Presente" : "Marcar presença"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-

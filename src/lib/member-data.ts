@@ -1,3 +1,5 @@
+import {portalLabel} from "@/lib/display-labels";
+import {eventAudienceWhere,safeEventRegistrationUrl} from "@/lib/event-policy";
 import {ensureGroupMeetingWindow} from "@/lib/meeting-series";
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
@@ -56,6 +58,9 @@ export type AgendaItem =
       // não se inscreveu. Sempre null pra scope "nacional"/"regional" (não
       // têm fluxo de inscrição/pagamento ainda).
       minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null } | null;
+      source?: string;
+      registrationUrl?: string | null;
+      status?: string;
       scope: string; // "nacional" | "regional" | "filial"
       description: string | null;
       location: string | null;
@@ -155,7 +160,8 @@ export async function getMemberDashboard(memberId: string) {
     db.event.findMany({
       where: {
         OR: [{ schoolId: member.schoolId }, { scope: { in: ["nacional", "regional"] } }],
-        startsAt: { gte: new Date() },
+        AND: [eventAudienceWhere(member,acessoVoluntario),{OR:[{status:"publicado"},{status:"cancelado",registrations:{some:{memberId}}}]}],
+        startsAt: { gte: new Date(Date.now()-86400000) },
       },
       orderBy: { startsAt: "asc" },
     }),
@@ -216,7 +222,7 @@ export async function getMemberDashboard(memberId: string) {
   }
 
   const agendaItems: AgendaItem[] = [
-    ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:m.classGroup.name,description:m.publicDetails,fullUniform:m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
+    ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
     ...schoolEvents.map(
       (e): AgendaItem => ({
         kind: "evento",
@@ -227,6 +233,9 @@ export async function getMemberDashboard(memberId: string) {
         reactions: resumoReacoes(e.id),
         minhaInscricao: inscricaoDoEvento(e.id),
         scope: e.scope,
+        source: e.source,
+        registrationUrl: safeEventRegistrationUrl(e.registrationUrl),
+        status: e.status,
         description: e.description,
         location: e.location,
         endsAt: e.endsAt,
@@ -242,7 +251,7 @@ export async function getMemberDashboard(memberId: string) {
         type: a.type,
         studyItems: a.studyItems,
         description: a.description,
-        className: a.classGroup.name,
+        className: portalLabel(a.classGroup.name),
         reactions: resumoReacoes(a.id),
       }),
     ),
@@ -252,7 +261,7 @@ export async function getMemberDashboard(memberId: string) {
         id: p.id,
         question: p.question,
         date: p.createdAt,
-        className: p.classGroup.name,
+        className: portalLabel(p.classGroup.name),
         options: p.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes.length })),
         myVote: p.options.find((o) => o.votes.some((v) => v.memberId === memberId))?.id ?? null,
       }),
@@ -263,11 +272,12 @@ export async function getMemberDashboard(memberId: string) {
   // Portal inteiro (ver decisão do usuário 2026-09-28 sobre conquistas).
   await verificarEAtribuirConquistas(memberId).catch(() => {});
 
-  const [streakMeses, badges, levelHistory, integrationCourses] = await Promise.all([
+  const [streakMeses, badges, levelHistory, integrationCourses, eventHistory] = await Promise.all([
     calcularStreakMeses(memberId),
     db.memberBadge.findMany({ where: { memberId }, orderBy: { earnedAt: "asc" } }),
     db.memberLevelHistory.findMany({ where: { memberId }, orderBy: { changedAt: "asc" } }),
     db.memberIntegrationCourse.findMany({ where: { memberId }, orderBy: { syncedAt: "asc" } }),
+    db.eventRegistration.findMany({where:{memberId,checkedIn:true},select:{event:{select:{title:true,startsAt:true}}},orderBy:{event:{startsAt:"asc"}}}),
   ]);
 
   return {
@@ -284,6 +294,7 @@ export async function getMemberDashboard(memberId: string) {
     agendaItems,
     availableToAdd,
     streakMeses,
+    eventHistory: eventHistory.map(r=>({title:r.event.title,date:r.event.startsAt})),
     badges: badges.map((b) => ({ badgeType: b.badgeType, earnedAt: b.earnedAt, ...BADGE_CATALOG[b.badgeType] })),
     // O 1º registro de cada membro é só a linha de base de quando o sync
     // começou a observar o nível — não é uma mudança real (ver

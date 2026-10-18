@@ -242,6 +242,8 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           />
         </div>
 
+        <Link href="/eventos" className="block rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold dark:border-gray-700">Meus eventos · inscrições, participação e recepção →</Link>
+
         {/* Grid de funcionalidades */}
         <section className="grid grid-cols-2 gap-2.5">
           <FeatureTile icon={<Leaf size={16} />} title={t.tiles.contribuicao.title} subtitle={t.tiles.contribuicao.subtitle} onClick={() => setModal("contribuicao")} />
@@ -331,6 +333,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               levelHistory={dashboard.levelHistory}
               badges={dashboard.badges}
               integrationCourses={dashboard.integrationCourses}
+              eventHistory={dashboard.eventHistory}
             />
           )}
           {modal === "transparencia" && <TransparenciaPanel memberId={member.id} />}

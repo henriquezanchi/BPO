@@ -1,3 +1,4 @@
+import {portalLabel} from "@/lib/display-labels";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -63,7 +64,7 @@ export default async function VoluntarioPage() {
         <div className="-mt-3 flex flex-wrap gap-1.5">
           {member.cargos.map((cargo) => (
             <span key={cargo} className="rounded-full bg-na-green-light px-2.5 py-1 text-[11px] font-semibold text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-400">
-              {cargo.charAt(0) + cargo.slice(1).toLowerCase()}
+              {portalLabel(cargo.charAt(0) + cargo.slice(1).toLowerCase())}
             </span>
           ))}
         </div>
@@ -185,7 +186,7 @@ export default async function VoluntarioPage() {
             return (
               <div key={g.id} className="flex items-center justify-between rounded-2xl border border-gray-200 p-3 dark:border-gray-700">
                 <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{g.classGroup.name}</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{portalLabel(g.classGroup.name)}</p>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400">{g.role === "professor" ? "Responsável" : "Integrante"}</p>
                 </div>
                 {slack && (
