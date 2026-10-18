@@ -7,6 +7,7 @@ import { useMemo, useState, useTransition } from "react";
 interface Pessoa {
   id: string;
   name: string;
+  filial: string | null;
   papel: string[];
   grupos: string[];
   sugerido: boolean;
@@ -57,8 +58,8 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
       <li className="flex items-center justify-between gap-3 py-2.5">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{p.name}</p>
-          {(p.papel.length > 0 || p.grupos.length > 0) && (
-            <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{[...p.papel, ...p.grupos].join(" · ")}</p>
+          {(p.filial || p.papel.length > 0 || p.grupos.length > 0) && (
+            <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{[...(p.filial ? [p.filial] : []), ...p.papel, ...p.grupos].join(" · ")}</p>
           )}
         </div>
         <button

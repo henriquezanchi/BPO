@@ -120,6 +120,11 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     `SELECT c.cal_matr, c.cal_grupo, c.cal_valor, p.pro_descricao FROM compaluno c LEFT JOIN produtos p ON p.pro_cod=c.cal_grupo WHERE c.cal_unidade=${sqlTexto(uniId)} AND c.cal_matr IN (${lista}) ORDER BY c.cal_matr`,
   );
   const funcoes = await consultarTudo(`SELECT dfn_matr, dfn_funcao, dfn_descricao FROM dirigente_funcoes WHERE dfn_atual='S' AND dfn_matr IN (${lista}) ORDER BY dfn_matr`);
+  // Filiais que cada pessoa chefia (pode ser mais de uma, e de outra unidade).
+  const chefiadasPor = new Map<string, string[]>();
+  for (const u of await consultarMercurio(`SELECT uni_id, uni_diretor FROM unidades WHERE uni_ativa='S' AND uni_diretor IN (${lista})`)) {
+    chefiadasPor.set(u.uni_diretor!, [...(chefiadasPor.get(u.uni_diretor!) ?? []), u.uni_id!]);
+  }
   // Turmas em que a pessoa dá aula (qualquer matéria) — só turmas que
   // ainda têm aluno ativo, pra não listar turma já formada.
   // Chefias de BF/BM/CS: código CBF, mas o texto da função varia por
@@ -208,6 +213,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     const cargos = [...new Set(minhasFuncoes.map((f) => (f.dfn_descricao ?? "").trim()).filter(Boolean))];
     const textoCargos = cargos.join(" ").toUpperCase();
     // Chefe de Filial: diretor da unidade ou função atual "CF".
+    const filiaisChefiadas = chefiadasPor.get(matr) ?? [];
     const isDiretor = unidade?.uni_diretor === matr || siglas.has("CF");
     const isSubChefe = unidade?.uni_subchefe === matr || [...siglas].some((s) => CARGOS_SUBCHEFE.has(s));
     const nivel = c.cad_nivel ?? "";
@@ -244,6 +250,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
       isPedagogo: textoOuNull(c.cad_pedagogo) !== null || (aulasPor.get(matr) ?? []).length > 0,
       pedagogoSyncedAt: new Date(),
       isDiretor,
+      filiaisChefiadas,
       isSubChefe,
       direcaoSyncedAt: new Date(),
       isSecretarioEscolastica: textoCargos.includes("ESCOLÁST") || textoCargos.includes("ESCOLAST"),
@@ -374,12 +381,31 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     }
   }
 
+  // Chefe de Filial / Sub-Chefe matriculados em OUTRA unidade (ex: Izabel é
+  // de GYN e chefia BGA) também respondem pelos grupos desta filial.
+  const responsaveisDeFora = [
+    ...(unidade?.uni_diretor && unidade.uni_diretor !== "0" ? [{ matr: unidade.uni_diretor, raios: gruposDaFilial }] : []),
+    ...(unidade?.uni_subchefe && unidade.uni_subchefe !== "0" ? [{ matr: unidade.uni_subchefe, raios: gruposSemChefe }] : []),
+  ].filter((r) => !alvo.some((c) => c.cad_matr === r.matr));
+  for (const r of responsaveisDeFora) {
+    const m = await db.member.findUnique({ where: { mercurioId: r.matr }, select: { id: true } });
+    if (!m || !r.raios.length) continue;
+    const ids = await Promise.all(r.raios.map((raio) => grupoId(raio)));
+    await db.classMembership.createMany({ data: ids.map((classGroupId) => ({ classGroupId, memberId: m.id, role: "professor" as const })), skipDuplicates: true });
+  }
+
   if (!opcoes.matriculas?.length) {
     // Rodada da filial inteira: quem tinha Member local e sumiu do cadastro saiu da escola.
     const ativos = new Set(cadastros.map((c) => c.cad_matr));
     const locais = await db.member.findMany({ where: { schoolId: school.id, mercurioAtivo: true, mercurioId: { not: null } }, select: { id: true, mercurioId: true } });
     const sairam = locais.filter((m) => !ativos.has(m.mercurioId!)).map((m) => m.id);
     if (sairam.length) await db.member.updateMany({ where: { id: { in: sairam } }, data: { mercurioAtivo: false, mercurioAtivoSync: new Date() } });
+
+    // Responsável de fora que deixou o cargo: perde a responsabilidade pelos grupos daqui.
+    const responsaveisValidos = [...cadastros.map((c) => c.cad_matr!), ...responsaveisDeFora.map((r) => r.matr)];
+    await db.classMembership.deleteMany({
+      where: { role: "professor", classGroup: { schoolId: school.id, tipo: { not: "turma" } }, member: { mercurioId: { notIn: responsaveisValidos } } },
+    });
 
     // Grupo que deixou de existir (ninguém BRG/PRO nele): tira todos os vínculos.
     await db.classMembership.deleteMany({ where: { classGroup: { schoolId: school.id, tipo: { notIn: ["turma", ...gruposDaFilial] } } } });

@@ -35,7 +35,8 @@ export default async function VoluntarioPage() {
   const gruposUnicos = [...new Map([...grupos].sort((a, b) => Number(a.role === "professor") - Number(b.role === "professor")).map((g) => [g.classGroupId, g])).values()].sort((a, b) =>
     a.classGroup.name.localeCompare(b.classGroup.name),
   );
-  const podeLiberarAcessos = member.isDiretor || lideraGrupo;
+  const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0;
+  const podeLiberarAcessos = chefeDeFilial || lideraGrupo;
   if (
     grupos.length === 0 &&
     !member.isPedagogo &&
@@ -80,7 +81,7 @@ export default async function VoluntarioPage() {
             <div>
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Liberar acessos</h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {member.isDiretor ? "Quem da filial vê a área de voluntários" : "Quem do seu grupo vê a área de voluntários"}
+                {chefeDeFilial ? "Quem da filial vê a área de voluntários" : "Quem do seu grupo vê a área de voluntários"}
               </p>
             </div>
           </Link>

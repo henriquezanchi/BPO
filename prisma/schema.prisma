@@ -258,6 +258,10 @@ model Member {
   // de filial — vem do banco do Mercúrio). Liberadores nacionais ficam em
   // LiberadorNacional, não aqui.
   liberaTestadores        Boolean    @default(false)
+  // Filiais (School.mercurioUnidade) em que é Chefe de Filial — pode chefiar
+  // mais de uma, inclusive fora da filial da própria matrícula (ex: Izabel,
+  // GYN e BGA). Ver mercurio-db/importar.ts e acesso-voluntario.ts.
+  filiaisChefiadas        String[]   @default([])
   // Grupo/programa dentro da filial (PROGRAMA BRANCO > Provacionistas/
   // Membros, COMPLEMENTAR > C. de Amigos/Correntinha/Távolas/Janos) — cada
   // um é uma listagem própria no Mercúrio (mesmo formato Matr./Nome de

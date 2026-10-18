@@ -19,7 +19,8 @@ export default async function AcessosVoluntarioPage() {
   if (!(await temAcessoVoluntario(member))) redirect("/voluntario");
 
   const pessoas = await candidatosParaLiberar(member);
-  if (!member.isDiretor && pessoas.length === 0) redirect("/voluntario");
+  const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0;
+  if (!chefeDeFilial && pessoas.length === 0) redirect("/voluntario");
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-5 p-6">
@@ -33,12 +34,12 @@ export default async function AcessosVoluntarioPage() {
         <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Liberar acessos</h1>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           A área de voluntários (grupos, avisos e canais) fica oculta até alguém liberar.{" "}
-          {member.isDiretor
+          {chefeDeFilial
             ? "Como Chefe de Filial, você libera qualquer pessoa da filial — comece pelos chefes de grupo, sub-chefes e secretários; eles liberam os integrantes dos seus grupos."
             : "Você pode liberar os integrantes dos grupos pelos quais é responsável."}
         </p>
       </div>
-      <AcessosVoluntarioPanel pessoas={pessoas} mostrarSugeridos={member.isDiretor} />
+      <AcessosVoluntarioPanel pessoas={pessoas} mostrarSugeridos={chefeDeFilial} />
     </main>
   );
 }
