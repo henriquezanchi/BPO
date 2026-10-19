@@ -213,9 +213,14 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
     <form action={handleSubmit} autoComplete="on" className="flex flex-col text-left">
       <AvatarUploader memberId={memberId} avatarUrl={avatarUrl} />
 
-      <p className="mb-4 text-xs text-gray-500">
-        Mantenha seus dados atualizados para receber os comunicados e informativos da escola.
-      </p>
+      {/* Pedido do usuário 2026-10-19: deixar claro que TODO dado do cadastro muda só por solicitação, não só o contato. */}
+      <div className="mb-4 flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-[11px] text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
+        <Clock size={14} className="mt-0.5 shrink-0 text-gray-400" />
+        <span>
+          <strong className="text-gray-800 dark:text-gray-100">Nenhuma alteração muda seu cadastro na hora.</strong> Contato, endereço e os dados de &quot;Mais Dados&quot; viram uma
+          solicitação: a secretaria confere e só então atualiza seu cadastro na escola.
+        </span>
+      </div>
 
       <div className="mb-3 flex flex-col gap-1">
         <label className={LABEL_CLASS}>Nome Completo</label>
@@ -226,9 +231,11 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         />
       </div>
 
+      <div className="mb-1 text-[11px] font-bold text-gray-900 dark:text-gray-100">Contato</div>
       <ContatoSensivelCard memberId={memberId} whatsapp={props.whatsapp} email={props.email} />
 
-      <div className="mb-1 text-[11px] font-bold text-gray-900 dark:text-gray-100">Endereço</div>
+      <div className="text-[11px] font-bold text-gray-900 dark:text-gray-100">Endereço</div>
+      <p className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">Corrija o que precisar e toque em &quot;Solicitar alteração do endereço&quot; no fim da página.</p>
 
       <div className="mb-3 grid grid-cols-3 gap-2">
         <div className="col-span-2 flex flex-col gap-1">
@@ -310,7 +317,10 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         href={`/portal/mais-dados?memberId=${memberId}`}
         className="mb-5 flex items-center justify-between rounded-xl border border-gray-200 p-3 text-[13px] font-medium text-gray-800 transition hover:border-na-gold dark:border-gray-700 dark:text-gray-200"
       >
-        Mais Dados
+        <span>
+          Mais Dados
+          <span className="block text-[11px] font-normal text-gray-500 dark:text-gray-400">Nascimento, documentos, profissão… — também por solicitação</span>
+        </span>
         <ChevronRight size={16} className="text-gray-400 dark:text-gray-500" />
       </Link>
 
