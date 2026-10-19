@@ -144,7 +144,7 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   if (!e.allDay) {
     y += passoData;
     ctx.font = fonte(400, m.data);
-    ctx.fillText(`às ${horaCurta(e.date)} (Brasília)`, MARGEM, y);
+    ctx.fillText(`às ${horaCurta(e.date)}`, MARGEM, y);
   }
   ctx.fillStyle = COR.textoSuave;
   ctx.font = fonte(400, m.local);

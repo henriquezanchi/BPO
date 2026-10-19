@@ -69,6 +69,7 @@ export type AgendaItem =
       contactInfo?: string | null;
       paymentUnavailableReason?: string | null;
       source?: string;
+      externalUid?: string | null;
       registrationUrl?: string | null;
       status?: string;
       scope: string; // "nacional" | "regional" | "filial"
@@ -253,6 +254,7 @@ export async function getMemberDashboard(memberId: string) {
         minhaInscricao: inscricaoDoEvento(e.id),
         scope: e.scope,
         source: e.source,
+        externalUid: e.externalUid,
         posterUrl:eventPosters.get(e.id)??e.imageUrl??null,
         capacity:e.capacity,
         availableSpots:e.capacity===null?null:Math.max(0,e.capacity-e._count.registrations),

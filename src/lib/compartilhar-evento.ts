@@ -57,7 +57,7 @@ export function diaPorExtenso(data: Date): string {
   });
 }
 
-/** "19h" ou "19h30" (horário de Brasília). */
+/** "19h" ou "19h30" (fuso America/Sao_Paulo, o mesmo usado no cadastro do evento). */
 export function horaCurta(data: Date): string {
   const [h, m] = data
     .toLocaleTimeString("pt-BR", {

@@ -41,6 +41,7 @@ import { ProfileEditPanel } from "./panels/profile-edit-panel";
 import { StudyAreaPanel } from "./panels/study-area-panel";
 import { TransparenciaPanel } from "./panels/transparencia-panel";
 import { GafPanel, HelpPanel, VolunteerPanel } from "./misc-panels";
+import { useAgendaComUlisses } from "@/lib/ulisses/navegador";
 
 type ModalKey =
   | "cadastro"
@@ -83,7 +84,9 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
 }
 
 export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }) {
-  const { member, agendaItems, availableToAdd } = dashboard;
+  const { member, availableToAdd } = dashboard;
+  // Eventos públicos do Ulisses lidos pelo navegador (ver lib/ulisses/navegador.ts).
+  const agendaItems = useAgendaComUlisses(dashboard.agendaItems, member.school.ulissesFilialId, member.schoolId);
   const [modal, setModal] = useState<ModalKey | null>(null);
   const [fortunaBalances, setFortunaBalances] = useState(dashboard.fortunaBalances);
   const [fortunaCarregando, setFortunaCarregando] = useState(true);

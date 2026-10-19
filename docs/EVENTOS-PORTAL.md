@@ -91,3 +91,11 @@ As rotas públicas da API do Ulisses respondem sem credencial: `GET /eventos/{fi
 - Evento com `publicar=false` não entra. Item do catálogo cujo detalhe responde 400/404 é pulado sem derrubar a filial. Evento que sai do catálogo público vira `arquivado` (some da Agenda); falha de rede não arquiva nada.
 - A imagem oficial do evento (`Event.imageUrl`) aparece na Agenda quando não há cartaz próprio.
 - A API não cria inscrição: a Agenda abre o link oficial (`linkFinal`), que pode ser o formulário do Ulisses, Sympla ou Tickets do Bem.
+
+**Teste em nuvem (19/10/2026):** a chamada pela Vercel recebeu 403 do Cloudflare em todas as filiais; daqui (rede residencial) funciona. Enquanto não houver exceção no Cloudflare da Acrópole Brasil para essas rotas, a Agenda lê o catálogo público **no navegador do aluno** (`src/lib/ulisses/navegador.ts`). A API responde `Access-Control-Allow-Origin: *`, a mesma forma de uso do site de eventos. Nada vindo do navegador é gravado no banco: cada pessoa só vê o que o próprio navegador leu. O catálogo fica 6 horas em cache no aparelho. A rota diária `/api/cron/ulisses` continua agendada: no dia em que a exceção existir, ela passa a gravar os eventos, e os do banco têm prioridade sobre os do navegador. Os 10 eventos gravados no teste local foram arquivados, sem inscrições.
+
+**Pedido para a Acrópole Brasil (Célio):** regra de exceção no Cloudflare para `GET /eventos/*` e `GET /evento/*` em `api.acropolebrasil.com.br` (dados já públicos), por cabeçalho próprio ou pela origem do Portal. A Vercel não tem IP fixo; o Railway tem IP de saída fixo no plano Pro, se preferirem liberar por IP.
+
+## PIX de valor baixo: split acima do permitido (corrigido em 19/10/2026)
+
+Erro real do Asaas na inscrição de R$ 5,00: "O valor total do Split R$ 4,90 excede o valor a receber da cobrança R$ 4,01". O split da escola (98%) não descontava a taxa quando o PIX saía isento pelos créditos do mês, mas o Asaas valida contra "valor − taxa" mesmo assim. `calcularSplitEscola` agora limita o repasse a `valor − taxa`. Só afeta valores em que 2% fica abaixo da taxa (menos de ~R$ 50). O cliente e o CPF estavam corretos.

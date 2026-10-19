@@ -16,7 +16,11 @@ export async function calcularSplitEscola(valor: number, walletId: string): Prom
   const { isento, taxaFixa } = await asaasGetPixFeeStatus();
   const taxaReal = isento ? 0 : taxaFixa;
   const margemBpo = ((100 - PERCENTUAL_SPLIT_ESCOLA) / 100) * valor;
-  const valorEscola = Math.max(0, Math.round((valor - taxaReal - margemBpo) * 100) / 100);
+  // O Asaas valida o split contra "valor − taxa" mesmo quando o PIX sai
+  // isento pelos créditos do mês (erro real em 19/10/2026: "O valor total do
+  // Split R$ 4,90 excede o valor a receber da cobrança R$ 4,01"). Em valores
+  // baixos a margem do BPO é menor que a taxa, então limita aqui.
+  const valorEscola = Math.max(0, Math.round(Math.min(valor - taxaReal - margemBpo, valor - taxaFixa) * 100) / 100);
   return { walletId, fixedValue: valorEscola };
 }
 

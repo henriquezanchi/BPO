@@ -233,7 +233,7 @@ function InscricaoEvento({
 
 function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean }) {
   if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm">
-    <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><h3 className="font-bold">{item.title}</h3><p>{item.date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} (horário do seu dispositivo)</p>
+    <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><h3 className="font-bold">{item.title}</h3><p>{item.date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</p>
     {item.status==='cancelada'?<p>Reunião cancelada: {item.cancellationReason}</p>:<><p>Comparecimento obrigatório. Se não puder participar, registre uma justificativa.</p>{item.fullUniform&&<p className="font-semibold">CRM com traje completo</p>}{item.description&&<p>{item.description}</p>}<MeetingResponse key={`${item.id}:${item.version}`} memberId={memberId} id={item.id} version={item.version} initial={item.myResponse}/></>}
   </section>;
   if (item.kind === "enquete") return <PollCard memberId={memberId} item={item} />;
@@ -258,7 +258,7 @@ function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item:
         </a>}
         <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
         <div className="mt-1 text-[11px] capitalize text-gray-500 dark:text-gray-400">
-          {item.allDay ? formatDateBR(item.date) : item.date.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"})+" (Brasília)"}
+          {item.allDay ? formatDateBR(item.date) : item.date.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"})}
         </div>
         {item.location && (
           <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
