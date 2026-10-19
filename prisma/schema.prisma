@@ -110,6 +110,9 @@ model School {
   // ex: "BGA", "GYN") — chave de importação/sincronização via
   // src/lib/mercurio-db. Pedido do usuário 2026-10-18.
   mercurioUnidade         String?   @unique
+  // Id da filial no Ulisses (eventos públicos, api.acropolebrasil.com.br/eventos/{id}).
+  // Não é o código do Mercúrio: Barra do Garças = 44 ("bdg"), Sede Central = 7.
+  ulissesFilialId         Int?      @unique
   // Portal liberado pra QUALQUER membro ativo dessa filial (primeiro acesso
   // por e-mail+CPF). Fora das abertas, só entram dirigentes e testadores
   // liberados por eles (ver src/lib/acesso-portal.ts).
@@ -884,6 +887,8 @@ model Event {
   audience String @default("todos_ativos")
   status String @default("publicado")
   registrationUrl String?
+  // Imagem pública do evento no Ulisses (https). Cartaz próprio da filial fica em posterPath.
+  imageUrl String?
   revision Int @default(0)
   staff EventReception[]
   audits EventAudit[]

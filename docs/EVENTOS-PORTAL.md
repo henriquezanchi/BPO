@@ -82,3 +82,12 @@ Só eventos do Ulisses (`source="ulisses"`), publicados, com link de inscrição
 - WhatsApp, Telegram, Facebook e e-mail abrem o aplicativo (ou a versão web no computador) com o texto já montado no formato de cada canal, terminando no link oficial de inscrição.
 - Instagram não aceita postagem por link. No celular, o botão abre a folha de compartilhamento já com a arte no tamanho certo (story 1080×1920 ou feed 1080×1350), e a pessoa escolhe o Instagram. A legenda (feed) ou o link (story, para o adesivo "Link") vai copiado. No computador, a arte é baixada e o site do Instagram abre.
 - A arte é desenhada no navegador, com logo, cores e fonte da marca. Nada é enviado ao servidor.
+
+## Importação dos eventos públicos do Ulisses em nuvem (19/10/2026)
+
+As rotas públicas da API do Ulisses respondem sem credencial: `GET /eventos/{filialId}` (catálogo público da filial) e `GET /evento/{id}` (detalhe com sessões, imagem e link de inscrição). São as mesmas que alimentam o site de eventos. A importação usa só essas rotas (`src/lib/ulisses/publico.ts`), roda na Vercel uma vez por dia (`vercel.json`, rota `/api/cron/ulisses`, protegida por `CRON_SECRET`) e não usa a credencial do CRM. As rotas `/facade` (participantes, inscrições) continuam exigindo a credencial e ficam fora do Portal.
+
+- `School.ulissesFilialId` liga cada escola à filial no Ulisses. O id não é o código do Mercúrio: Barra do Garças = 44 (`bdg`), Sede Central = 7 (Lago Norte, `bsb`). As 7 escolas do Portal foram conferidas pelo `codigoEscola` do catálogo público de cada filial (migração `20261019200000_ulisses_publico`). Escola nova precisa receber o id.
+- Evento com `publicar=false` não entra. Item do catálogo cujo detalhe responde 400/404 é pulado sem derrubar a filial. Evento que sai do catálogo público vira `arquivado` (some da Agenda); falha de rede não arquiva nada.
+- A imagem oficial do evento (`Event.imageUrl`) aparece na Agenda quando não há cartaz próprio.
+- A API não cria inscrição: a Agenda abre o link oficial (`linkFinal`), que pode ser o formulário do Ulisses, Sympla ou Tickets do Bem.

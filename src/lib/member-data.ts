@@ -253,7 +253,7 @@ export async function getMemberDashboard(memberId: string) {
         minhaInscricao: inscricaoDoEvento(e.id),
         scope: e.scope,
         source: e.source,
-        posterUrl:eventPosters.get(e.id)??null,
+        posterUrl:eventPosters.get(e.id)??e.imageUrl??null,
         capacity:e.capacity,
         availableSpots:e.capacity===null?null:Math.max(0,e.capacity-e._count.registrations),
         registrationClosed:Boolean(e.registrationClosesAt&&e.registrationClosesAt<=new Date()),
