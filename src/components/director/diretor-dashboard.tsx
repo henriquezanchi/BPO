@@ -8,7 +8,7 @@ import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import type { DirectorDashboard } from "@/lib/director-data";
 import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
 import { EconomiaPanel } from "@/components/economia/economia-panel";
-import { ArrowLeft, ArrowUpDown, BadgePercent, Banknote, CalendarClock, ClipboardList, Coffee, FileWarning, Handshake, LayoutDashboard, Menu, Search, Ticket, Users, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, BadgePercent, Banknote, CalendarClock, CalendarDays, ClipboardList, Coffee, FileWarning, Handshake, LayoutDashboard, Menu, Search, Ticket, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FortunaTab } from "./fortuna-tab";
@@ -16,11 +16,13 @@ import { MemberDetailPanel } from "./member-detail-panel";
 import { QrCodeCadastroCard } from "./qr-code-cadastro-card";
 import { RecuperacaoTab } from "./recuperacao-tab";
 import { RelatorioTab } from "./relatorio-tab";
+import { CalendarioTab } from "./calendario-tab";
 import { ContasConciliacoesTab } from "./contas-conciliacoes-tab";
 
 const ABAS = [
   { id: "visao-geral", label: "Visão Geral", icon: LayoutDashboard },
   { id: "relatorio", label: "Relatório da Filial", icon: ClipboardList },
+  { id: "calendario", label: "Calendário", icon: CalendarDays },
   { id: "membros", label: "Gestão de Membros", icon: Users },
   { id: "eventos", label: "Gestão de Eventos", icon: Ticket },
   { id: "recuperacao", label: "Recup. de Crédito", icon: Handshake },
@@ -132,6 +134,7 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
             <VisaoGeralTab data={data} onNavigate={navegarPara} saldoFortunaConsolidado={fortunaBalances.saldoConsolidado} fortunaCarregando={fortunaCarregando} />
           )}
           {aba === "relatorio" && <RelatorioTab schoolId={schoolId} />}
+          {aba === "calendario" && <CalendarioTab schoolId={schoolId} />}
           {aba === "membros" && <MembrosTab schoolId={schoolId} data={data} filtroInicial={membrosFiltroInicial} />}
           {aba === "eventos" && <EventosTab schoolId={schoolId} data={data} />}
           {aba === "recuperacao" && <RecuperacaoTab schoolId={schoolId} data={data} />}

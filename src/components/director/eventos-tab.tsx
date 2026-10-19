@@ -8,6 +8,7 @@ import {formatBRL} from '@/lib/format';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useState,useTransition} from 'react';
+import {AvisoConflitosEvento} from './aviso-conflitos-evento';
 
 const field='w-full min-w-0 rounded-lg border border-gray-300 bg-transparent p-2.5 text-sm dark:border-gray-700';
 const button='rounded-lg bg-na-green px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50';
@@ -30,7 +31,7 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
     <EventPosterInput initialPath={editing?.posterPath} initialUrl={editing?.posterUrl} onUploading={setPosterUploading}/>
     <div className="grid gap-3 sm:grid-cols-2"><label className="flex min-w-0 flex-col gap-1 text-xs">Início<input type="datetime-local" name="startsAt" required defaultValue={editing?localDate(editing.startsAt):''} className={field}/></label><label className="flex min-w-0 flex-col gap-1 text-xs">Término<input type="datetime-local" name="endsAt" required defaultValue={editing?.endsAt?localDate(editing.endsAt):''} className={field}/></label></div>
     <label className="flex flex-col gap-1 text-xs">Local<input name="location" required maxLength={300} defaultValue={editing?.location??''} className={field}/></label>
-    <label className="flex flex-col gap-1 text-xs">Quem pode participar?<select name="audience" defaultValue={editing?.audience??'membros'} className={field}>{Object.entries(EVENT_AUDIENCES).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+    <label className="flex flex-col gap-1 text-xs">Quem pode participar?<select name="audience" defaultValue={editing?.audience??'membros'} className={field}>{Object.entries(EVENT_AUDIENCES).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label><AvisoConflitosEvento schoolId={schoolId}/>
     <label className="flex flex-col gap-1 text-xs">Contribuição por inscrição (R$; zero para gratuito)<input type="number" name="price" min={0} max={999999.99} step="0.01" required defaultValue={editing?.price??0} className={field}/></label>
     <label className="flex flex-col gap-1 text-xs">Descrição<textarea name="description" rows={3} maxLength={5000} defaultValue={editing?.description??''} className={field}/></label>
     <div className="grid gap-3 sm:grid-cols-2"><label className="flex min-w-0 flex-col gap-1 text-xs">Limite de vagas (vazio = sem limite)<input type="number" name="capacity" min={1} max={100000} step={1} defaultValue={editing?.capacity??''} className={field}/></label><label className="flex min-w-0 flex-col gap-1 text-xs">Inscrições até (opcional)<input type="datetime-local" name="registrationClosesAt" defaultValue={editing?.registrationClosesAt?localDate(editing.registrationClosesAt):''} className={field}/></label></div>
