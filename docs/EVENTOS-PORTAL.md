@@ -108,7 +108,7 @@ Teste somente leitura no ambiente de trabalho: catálogo `/eventos/44` com o cab
 
 ## Cancelamento com reembolso e relatório da Economia (19/10/2026)
 
-Implementação preparada, ainda não publicada: a Direção pode marcar **Reembolsar as inscrições** no cancelamento. A escolha é persistida junto do cancelamento. A API não devolve pagamentos de eventos antigos apenas pela instalação: `refundOnCancellation` começa falso. Eventos sem essa opção continuam sem reembolso automático.
+Implementação de 19/10/2026: a Direção pode marcar **Reembolsar as inscrições** no cancelamento. A escolha é persistida junto do cancelamento. A API não devolve pagamentos de eventos antigos apenas pela instalação: `refundOnCancellation` começa falso. Eventos sem essa opção continuam sem reembolso automático.
 
 Uma inscrição é processada de imediato; o restante e a conciliação seguem em lotes de até 20, pela rota autenticada `/api/cron/event-refunds`, agendada a cada cinco minutos no `vercel.json` (exige plano Vercel que aceite essa frequência e `CRON_SECRET` já usado pelo Ulisses). Cada tentativa tem trava por inscrição e prazo. O lote interrompe novas operações antes do limite da função. Webhooks `PAYMENT_REFUND*` e confirmação de pagamentos também disparam a conciliação, sempre consultando o Asaas, sem confiar no status recebido no corpo do webhook.
 
@@ -120,7 +120,7 @@ O membro vê a situação do reembolso na Agenda, no evento cancelado. O relató
 
 Depois do lançamento manual, a Economia informa o recibo ou referência no relatório. A ação registra autor, data e referência anterior na auditoria. É uma declaração do responsável, sem afirmar que o Portal escreveu ou conferiu o lançamento no Mercúrio. Reembolso confirmado destaca a necessidade de conferir também o estorno/ajuste do recibo.
 
-Migração aditiva: `20261019220000_eventos_reembolsos_relatorio`, sem nova tabela e com RLS preservada nas existentes. Antes de publicar, aplicar a migração e registrar o checksum em `_prisma_migrations`. Não executar pedidos de reembolso reais como teste.
+Migração aditiva `20261019220000_eventos_reembolsos_relatorio` aplicada em produção, com checksum em `_prisma_migrations`, sem nova tabela e com RLS preservada nas existentes. Conferência após aplicação: zero eventos com reembolso ativado e zero inscrições enfileiradas. Nenhum pedido de reembolso real foi feito como teste. Validação: 21 arquivos de testes automatizados, migração em PostgreSQL local com dados preexistentes, tipos, ESLint, build de produção e navegador em 414/1365 pixels para cancelamento e relatório.
 
 Contrato consultado: [estornar cobrança](https://docs.asaas.com/reference/estornar-cobranca), [interpretação de estornos](https://docs.asaas.com/docs/estornos) e [split](https://docs.asaas.com/docs/split-de-pagamentos). O Asaas pode exigir saldo suficiente e as taxas originais do PIX não são necessariamente devolvidas. O participante recebe o valor integral; custos/pendências da operação não são silenciosamente descontados dele.
 
