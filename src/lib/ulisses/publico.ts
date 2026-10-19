@@ -27,7 +27,13 @@ async function pedir<T>(caminho: string): Promise<T> {
     signal: AbortSignal.timeout(20_000),
     cache: "no-store",
   });
-  if (!r.ok) throw Object.assign(new Error(`GET ${caminho} -> ${r.status}`), { status: r.status });
+  if (!r.ok) {
+    // Ray ID e tipo de mitigação ajudam a Acrópole Brasil a achar a regra do Cloudflare que bloqueou.
+    const ray = r.headers.get("cf-ray");
+    const mitigado = r.headers.get("cf-mitigated");
+    const detalhe = [ray && `Ray ID ${ray}`, mitigado && `cf-mitigated: ${mitigado}`, r.headers.get("server") && `server: ${r.headers.get("server")}`].filter(Boolean).join(", ");
+    throw Object.assign(new Error(`GET ${caminho} -> ${r.status}${detalhe ? ` (${detalhe})` : ""}`), { status: r.status, detalhe });
+  }
   return r.json() as Promise<T>;
 }
 
@@ -84,7 +90,7 @@ export async function sincronizarEventosUlisses(): Promise<ResultadoUlisses> {
       const status = (e as { status?: number }).status;
       linha.erro =
         status === 403 || status === 503
-          ? `Ulisses recusou a chamada (${status}): provável bloqueio do Cloudflare para servidores.`
+          ? `Ulisses recusou a chamada (${status}): provável bloqueio do Cloudflare para servidores. ${(e as { detalhe?: string }).detalhe ?? ""}`.trim()
           : e instanceof Error
             ? e.message
             : String(e);
