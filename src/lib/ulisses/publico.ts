@@ -22,8 +22,9 @@ type ItemCatalogo = { eventoId: number };
 
 async function pedir<T>(caminho: string): Promise<T> {
   const r = await fetch(`${API}${caminho}`, {
-    // Cabeçalho solicitado pelo Célio para a exceção das rotas públicas no Cloudflare.
-    headers: { accept: "application/json", "user-agent": "PortalNovaAcropole/1.0 (eventos publicos)", "X-Portal-NA": "bypass" },
+    // Cabeçalho combinado com o Célio para a exceção no Cloudflare. Precisa ir em MINÚSCULAS:
+    // testado em 19/10/2026, "X-Portal-NA" recebe desafio (403) e "x-portal-na" passa (200).
+    headers: { accept: "application/json", "user-agent": "PortalNovaAcropole/1.0 (eventos publicos)", "x-portal-na": "bypass" },
     signal: AbortSignal.timeout(20_000),
     cache: "no-store",
   });
