@@ -422,11 +422,41 @@ function Encontros({ dados, recarregar }: { dados: D; recarregar: () => void }) 
   const { grupo, papel, encontros, agora } = dados;
   const futuros = encontros.filter((e) => new Date(e.endsAt).getTime() >= agora && e.status !== "cancelada").slice(0, 6);
   const passados = encontros.filter((e) => new Date(e.startsAt).getTime() <= agora && e.status !== "cancelada").reverse().slice(0, 8);
+  // Secretarias: reuniões recolhidas por padrão (pedido do usuário 2026-10-19) — só o próximo encontro à vista.
+  if (grupo.tipo === "SEC") {
+    const proximo = futuros[0];
+    return (
+      <details className={`${CARTAO} group`}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+              <CalendarClock size={15} /> Reuniões
+            </span>
+            <span className="truncate text-[12px] text-gray-500 capitalize dark:text-gray-400">{proximo ? `Próxima: ${quando(proximo.startsAt)}` : "Nenhuma reunião marcada"}</span>
+          </span>
+          <span className="shrink-0 text-[12px] font-semibold text-na-green-dark group-open:hidden dark:text-emerald-400">{papel.podeGerir ? "Abrir e gerenciar" : "Ver reuniões"}</span>
+          <span className="hidden shrink-0 text-[12px] font-semibold text-gray-500 group-open:inline">Fechar</span>
+        </summary>
+        <div className="mt-4">
+          <ConteudoEncontros dados={dados} recarregar={recarregar} futuros={futuros} passados={passados} />
+        </div>
+      </details>
+    );
+  }
   return (
     <section className={CARTAO}>
       <h2 className={TITULO}>
         <CalendarClock size={15} /> Encontros
       </h2>
+      <ConteudoEncontros dados={dados} recarregar={recarregar} futuros={futuros} passados={passados} />
+    </section>
+  );
+}
+
+function ConteudoEncontros({ dados, recarregar, futuros, passados }: { dados: D; recarregar: () => void; futuros: D["encontros"]; passados: D["encontros"] }) {
+  const { grupo, papel } = dados;
+  return (
+    <>
       {papel.podeGerir ? (
         <MeetingManager groupId={grupo.id} />
       ) : futuros.length === 0 ? (
@@ -454,6 +484,6 @@ function Encontros({ dados, recarregar }: { dados: D; recarregar: () => void }) 
           </ul>
         </div>
       )}
-    </section>
+    </>
   );
 }
