@@ -20,7 +20,7 @@ async function createMeeting(groupId:string,input:MeetingInput) {
  const actor=await leader(groupId);const date=validateMeeting(input);const weekly=input.weekly??!!input.repeatUntil;
  const count=await db.$transaction(async tx=>{
   if(weekly){
-   const series=await tx.groupMeetingSeries.create({data:{classGroupId:groupId,createdById:actor.id,startsLocal:input.startsLocal,endsLocal:input.endsLocal,timeZone:input.timeZone,template:fields(input)}});
+   const series=await tx.groupMeetingSeries.create({data:{classGroupId:groupId,createdById:actor.id,startsLocal:input.startsLocal,endsLocal:input.endsLocal,timeZone:input.timeZone,template:fields(input),intervaloSemanas:input.intervalWeeks??1}});
    return materializeMeetingSeries(tx,series);
   }
   const row=await tx.groupMeeting.create({data:{classGroupId:groupId,createdById:actor.id,...date,...fields(input)}});

@@ -1072,8 +1072,23 @@ model ClassGroup {
   // Canal do Slack da filial vinculado ao grupo (opcional) — ver lib/slack.ts.
   slackChannelId  String?
   slackTeamId     String?
+  // Grupos montados no Portal (pedido do usuário 2026-10-19): "GAF" (Grupo de
+  // Acompanhamento Filosófico, criado pela administração da filial), "GDVE"
+  // (criado por FV, só FV selecionados) e "SEC" (secretaria da filial, com
+  // equipe e atividades). A sincronização do Mercúrio não mexe nesses tipos.
+  descricao       String?  @db.Text
+  modalidade      String? // "presencial" | "online" | "misto"
+  local           String?
+  linkOnline      String?
+  // GAF: por padrão só membros (2º nível em diante); true = alunos também.
+  permiteAlunos   Boolean  @default(false)
+  // GAF: programa de estudos que orienta os encontros.
+  programa        String?  @db.Text
+  criadoPorId     String?
+  arquivadoEm     DateTime?
   createdAt       DateTime @default(now())
 
+  atividades  GrupoAtividade[]
   memberships ClassMembership[]
   meetingSeries GroupMeetingSeries[]
   meetings GroupMeeting[]
@@ -1326,6 +1341,7 @@ model GroupMeeting {
   createdAt DateTime @default(now())
   responses GroupMeetingResponse[]
   auditLog GroupMeetingAudit[]
+  presencas GrupoPresenca[]
   @@index([classGroupId, startsAt])
   @@index([seriesId, startsAt])
   @@unique([seriesId, seriesSlot])
@@ -1369,8 +1385,42 @@ model GroupMeetingSeries {
   template Json
   changes Json @default("[]")
   untilSlot String?
+  // 1 = semanal, 2 = quinzenal, 4 = a cada 4 semanas (GAF, GDVE, secretarias).
+  intervaloSemanas Int @default(1)
   createdAt DateTime @default(now())
   @@index([classGroupId])
+}
+
+// Atividades de um grupo (secretaria, Grupo Feminino/Masculino/de Segurança,
+// GDVE) e quem responde por cada uma (pedido do usuário 2026-10-19).
+model GrupoAtividade {
+  id           String     @id @default(cuid())
+  classGroupId String
+  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id])
+  titulo       String
+  descricao    String?    @db.Text
+  responsaveis String[]   @default([]) // ids de Member, integrantes do grupo
+  periodicidade String?   // texto livre: "toda semana", "no dia do evento"…
+  status       String     @default("ativa") // ativa | pausada | concluida
+  criadoPorId  String
+  criadoEm     DateTime   @default(now())
+  atualizadoEm DateTime   @updatedAt
+  @@index([classGroupId])
+}
+
+// Depois do encontro, o Portal pergunta ao participante se ele foi. O motivo
+// da ausência é opcional e a pessoa pode preferir não informar.
+model GrupoPresenca {
+  id           String       @id @default(cuid())
+  meetingId    String
+  meeting      GroupMeeting @relation(fields: [meetingId], references: [id])
+  memberId     String
+  participou   Boolean
+  motivo       String?      @db.Text
+  naoInformou  Boolean      @default(false)
+  respondidoEm DateTime     @default(now())
+  @@unique([meetingId, memberId])
+  @@index([memberId])
 }
 
 

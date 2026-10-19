@@ -36,6 +36,8 @@ function dataOuNull(s: string | null | undefined): Date | null {
 /** Grupos de voluntários (cad_raio_fv) que viram ClassGroup com tipo próprio. */
 // Nomes exibidos no Portal — sem a palavra "brigada" (pedido do usuário 2026-10-18).
 export const GRUPOS: Record<string, string> = { BF: "Grupo Feminino", BM: "Grupo Masculino", CS: "Grupo de Segurança" };
+/** Tipos de ClassGroup mantidos pela sincronização. GAF, GDVE e secretarias ("SEC") são do Portal. */
+const TIPOS_DO_MERCURIO = ["turma", ...Object.keys(GRUPOS)];
 
 /**
  * Deduz de qual(is) grupo(s) uma função CBF é chefia, pelo texto livre que
@@ -378,7 +380,8 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     };
     for (const role of ["professor", "aluno"] as const) {
       const ids = await Promise.all(desejado[role]);
-      await db.classMembership.deleteMany({ where: { memberId: member.id, role, classGroup: { schoolId: school.id }, classGroupId: { notIn: ids } } });
+      // Só grupos que vêm do Mercúrio: GAF, GDVE e secretarias são montados no Portal e não são tocados aqui.
+      await db.classMembership.deleteMany({ where: { memberId: member.id, role, classGroup: { schoolId: school.id, tipo: { in: TIPOS_DO_MERCURIO } }, classGroupId: { notIn: ids } } });
       if (ids.length) await db.classMembership.createMany({ data: ids.map((classGroupId) => ({ classGroupId, memberId: member.id, role })), skipDuplicates: true });
     }
   }
@@ -414,7 +417,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     // Responsável de fora que deixou o cargo: perde a responsabilidade pelos grupos daqui.
     const responsaveisValidos = [...cadastros.map((c) => c.cad_matr!), ...responsaveisDeFora.map((r) => r.matr)];
     await db.classMembership.deleteMany({
-      where: { role: "professor", classGroup: { schoolId: school.id, tipo: { not: "turma" } }, member: { mercurioId: { notIn: responsaveisValidos } } },
+      where: { role: "professor", classGroup: { schoolId: school.id, tipo: { in: Object.keys(GRUPOS) } }, member: { mercurioId: { notIn: responsaveisValidos } } },
     });
 
     // Vínculo oficial turma → matéria → instrutor (avaliação de instrutores):
@@ -449,7 +452,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     await db.turmaMateria.deleteMany({ where: { schoolId: school.id, id: { notIn: idsMaterias } } });
 
     // Grupo que deixou de existir (ninguém BRG/PRO nele): tira todos os vínculos.
-    await db.classMembership.deleteMany({ where: { classGroup: { schoolId: school.id, tipo: { notIn: ["turma", ...gruposDaFilial] } } } });
+    await db.classMembership.deleteMany({ where: { classGroup: { schoolId: school.id, tipo: { in: Object.keys(GRUPOS).filter((t) => !gruposDaFilial.includes(t)) } } } });
 
     const catalogo = await consultarMercurio(
       `SELECT DISTINCT c.cal_grupo, p.pro_descricao FROM compaluno c JOIN produtos p ON p.pro_cod=c.cal_grupo WHERE c.cal_unidade=${sqlTexto(uniId)}`,

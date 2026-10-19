@@ -5,7 +5,7 @@ import {seriesOccurrences,type WeeklySegment} from "@/lib/group-meetings";
 
 type Store=Pick<Prisma.TransactionClient,'groupMeeting'|'groupMeetingAudit'>;
 export async function materializeMeetingSeries(store:Store,series:GroupMeetingSeries,from=Date.now()) {
- const dates=seriesOccurrences({...series,changes:series.changes as unknown as WeeklySegment[]},from);
+ const dates=seriesOccurrences({...series,changes:series.changes as unknown as WeeklySegment[],intervalWeeks:series.intervaloSemanas},from);
  if(!dates.length)return 0;
  const rows=dates.map(date=>{
   const template=(date.segment.template??series.template) as {title:string;publicDetails:string;internalDetails:string;fullUniform:boolean};

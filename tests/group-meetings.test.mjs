@@ -24,3 +24,11 @@ test('rejeita datas normalizadas, horário inexistente, duração negativa e pas
 test('ausência exige justificativa breve; confirmação não significa comparecimento realizado',()=>{
  assert.throws(()=>validMeetingResponse('ausencia_justificada',' '));assert.throws(()=>validMeetingResponse('presente',''));assert.doesNotThrow(()=>validMeetingResponse('ausencia_justificada','Compromisso já combinado.'));assert.doesNotThrow(()=>validMeetingResponse('confirmado',''));
 });
+test('rotina quinzenal e a cada 4 semanas pulam as semanas intermediárias',()=>{
+ const s={startsLocal:'2026-11-03T19:00',endsLocal:'2026-11-03T21:00',timeZone:'America/Sao_Paulo',untilSlot:null};
+ const q=seriesOccurrences({...s,intervalWeeks:2},Date.parse('2026-11-01'));
+ assert.equal(q[0].seriesSlot,'2026-11-03T19:00');assert.equal(q[1].seriesSlot,'2026-11-17T19:00');
+ const m=seriesOccurrences({...s,intervalWeeks:4},Date.parse('2026-11-20'));
+ assert.equal(m[0].seriesSlot,'2026-12-01T19:00');
+ assert.equal(seriesOccurrences(s,Date.parse('2026-11-01'))[1].seriesSlot,'2026-11-10T19:00');
+});
