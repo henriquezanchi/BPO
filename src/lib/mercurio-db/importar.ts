@@ -18,7 +18,7 @@ type Linha = Record<string, string | null>;
 const LOTE = 4000;
 
 /** Pagina por LIMIT/OFFSET — o phpMyAdmin devolve no máx. 5000 linhas por chamada. */
-async function consultarTudo(sql: string): Promise<Linha[]> {
+export async function consultarTudo(sql: string): Promise<Linha[]> {
   const todas: Linha[] = [];
   for (let offset = 0; ; offset += LOTE) {
     const lote = await consultarMercurio(`${sql} LIMIT ${LOTE} OFFSET ${offset}`);
