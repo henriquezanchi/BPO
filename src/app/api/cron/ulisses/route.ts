@@ -18,22 +18,6 @@ function autorizado(req: Request) {
 
 export async function GET(req: Request) {
   if (!autorizado(req)) return Response.json({ erro: "Não autorizado." }, { status: 401 });
-  // Diagnóstico temporário (19/10/2026): repete variações para separar padrão de acaso no bloqueio do Cloudflare.
-  if (new URL(req.url).searchParams.get("diagnostico") === "1") {
-    const ua = "PortalNovaAcropole/1.0 (eventos publicos)";
-    const variacoes: [string, Record<string, string>][] = [
-      ["maiusculo", { accept: "application/json", "user-agent": ua, "X-Portal-NA": "bypass" }],
-      ["minusculo", { accept: "application/json", "user-agent": ua, "x-portal-na": "bypass" }],
-      ["sem", { accept: "application/json", "user-agent": ua }],
-    ];
-    const linhas: string[] = [];
-    for (let rodada = 0; rodada < 5; rodada++)
-      for (const [nome, h] of variacoes) {
-        const r = await fetch(`https://api.acropolebrasil.com.br/eventos/${rodada % 2 ? 16 : 44}`, { headers: h, cache: "no-store" });
-        linhas.push(`${rodada}:${nome}:${r.status}`);
-      }
-    return Response.json({ linhas });
-  }
   const resultado = await sincronizarEventosUlisses();
   const falhas = resultado.escolas.filter((e) => e.erro).length;
   console.log(JSON.stringify({ ulisses: resultado }));
