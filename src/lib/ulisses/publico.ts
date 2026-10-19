@@ -22,7 +22,8 @@ type ItemCatalogo = { eventoId: number };
 
 async function pedir<T>(caminho: string): Promise<T> {
   const r = await fetch(`${API}${caminho}`, {
-    headers: { accept: "application/json", "user-agent": "PortalNovaAcropole/1.0 (eventos publicos)" },
+    // Cabeçalho solicitado pelo Célio para a exceção das rotas públicas no Cloudflare.
+    headers: { accept: "application/json", "user-agent": "PortalNovaAcropole/1.0 (eventos publicos)", "X-Portal-NA": "bypass" },
     signal: AbortSignal.timeout(20_000),
     cache: "no-store",
   });

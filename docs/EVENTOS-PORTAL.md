@@ -99,3 +99,9 @@ As rotas públicas da API do Ulisses respondem sem credencial: `GET /eventos/{fi
 ## PIX de valor baixo: split acima do permitido (corrigido em 19/10/2026)
 
 Erro real do Asaas na inscrição de R$ 5,00: "O valor total do Split R$ 4,90 excede o valor a receber da cobrança R$ 4,01". O split da escola (98%) não descontava a taxa quando o PIX saía isento pelos créditos do mês, mas o Asaas valida contra "valor − taxa" mesmo assim. `calcularSplitEscola` agora limita o repasse a `valor − taxa`. Só afeta valores em que 2% fica abaixo da taxa (menos de ~R$ 50). O cliente e o CPF estavam corretos.
+
+## Cabeçalho combinado com Célio (19/10/2026)
+
+Célio orientou enviar `X-Portal-NA: bypass` nas duas rotas públicas e avisou que a regra do Cloudflare ainda precisaria ser ajustada. O importador do servidor agora envia exatamente esse cabeçalho em `GET /eventos/{filialId}` e `GET /evento/{id}`. A leitura no navegador permanece sem cabeçalho adicional, evitando preflight CORS desnecessário. Não usa token do CRM nem acessa participantes/inscrições.
+
+Teste somente leitura no ambiente de trabalho: catálogo `/eventos/44` com o cabeçalho respondeu HTTP 200, JSON válido e sete itens. Isso confirma a resposta neste ambiente, não a liberação da origem Vercel. Ainda é preciso publicar a alteração e verificar a sincronização pela própria Vercel antes de declarar a integração em nuvem liberada.
