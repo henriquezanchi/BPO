@@ -59,7 +59,15 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
         </section>
       )}
 
-      {ehGrupo && ["BF","BM","CS"].includes(turma.tipo) && <MeetingManager groupId={turma.id} />}
+      {ehGrupo && ["BF","BM","CS"].includes(turma.tipo) && (
+        // Reuniões recolhidas por padrão (pedido do usuário 2026-10-19).
+        <details className="rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+          <summary className="cursor-pointer text-sm font-bold text-na-green-dark dark:text-na-green-light">Reuniões do grupo</summary>
+          <div className="mt-3">
+            <MeetingManager groupId={turma.id} />
+          </div>
+        </details>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{ehGrupo ? "Novo aviso" : "Nova atividade"}</h2>

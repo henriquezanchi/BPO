@@ -4,7 +4,15 @@ import { FormGrupo } from "@/components/grupos/form-grupo";
 import { SeletorPessoas, type PessoaOpcao } from "@/components/grupos/seletor-pessoas";
 import { MeetingManager } from "@/components/member/groups/meeting-manager";
 import { PerguntaPresenca } from "@/components/grupos/pergunta-presenca";
-import { adicionarPessoas, arquivarGrupo, buscarCandidatos, buscarResponsaveis, removerAtividade, removerPessoa, salvarAtividade } from "@/lib/actions/grupos-actions";
+import {
+  adicionarPessoas,
+  arquivarGrupo,
+  buscarCandidatos,
+  buscarResponsaveis,
+  removerAtividade,
+  removerPessoa,
+  salvarAtividade,
+} from "@/lib/actions/grupos-actions";
 import type { DetalheGrupo } from "@/lib/grupos-dados";
 import { FREQUENCIAS, MODALIDADES, TIPOS_GRUPO } from "@/lib/grupos-comum";
 import { CalendarClock, ExternalLink, ListChecks, Loader2, MapPin, Pencil, Plus, Trash2, Users, Video, X } from "lucide-react";
@@ -16,11 +24,15 @@ type Atividade = D["grupo"]["atividades"][number];
 
 const CARTAO = "rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900 lg:p-5";
 const TITULO = "mb-3 flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100";
-const CAMPO = "min-h-10 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-[13px] text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100";
-const BOTAO = "flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-na-green px-3.5 text-[13px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60";
-const BOTAO_LEVE = "flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold text-na-green-dark hover:bg-na-green-light dark:text-emerald-300 dark:hover:bg-emerald-950/40";
+const CAMPO =
+  "min-h-10 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-[13px] text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100";
+const BOTAO =
+  "flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-na-green px-3.5 text-[13px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60";
+const BOTAO_LEVE =
+  "flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold text-na-green-dark hover:bg-na-green-light dark:text-emerald-300 dark:hover:bg-emerald-950/40";
 
-const quando = (iso: string) => new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+const quando = (iso: string) =>
+  new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 const STATUS: Record<string, string> = { ativa: "Ativa", pausada: "Pausada", concluida: "Concluída" };
 
 type Aba = "encontros" | "atividades" | "equipe" | "sobre";
@@ -48,7 +60,9 @@ export function GrupoPainel({ dados }: { dados: D }) {
   return (
     <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-2">
-        <span className="w-fit rounded-full bg-na-gold/15 px-2.5 py-0.5 text-[11px] font-bold text-na-gold-dark dark:text-na-gold">{TIPOS_GRUPO[grupo.tipo].completo}</span>
+        <span className="w-fit rounded-full bg-na-gold/15 px-2.5 py-0.5 text-[11px] font-bold text-na-gold-dark dark:text-na-gold">
+          {TIPOS_GRUPO[grupo.tipo].completo}
+        </span>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">{grupo.name}</h1>
           {papel.podeGerir && doPortal && !editando && (
@@ -66,7 +80,15 @@ export function GrupoPainel({ dados }: { dados: D }) {
             tipo={grupo.tipo as "GAF" | "SEC" | "GDVE"}
             schoolId={grupo.schoolId}
             grupoId={grupo.id}
-            inicial={{ nome: grupo.name, descricao: grupo.descricao, modalidade: grupo.modalidade, local: grupo.local, linkOnline: grupo.linkOnline, permiteAlunos: grupo.permiteAlunos, programa: grupo.programa }}
+            inicial={{
+              nome: grupo.name,
+              descricao: grupo.descricao,
+              modalidade: grupo.modalidade,
+              local: grupo.local,
+              linkOnline: grupo.linkOnline,
+              permiteAlunos: grupo.permiteAlunos,
+              programa: grupo.programa,
+            }}
             onSalvo={() => {
               setEditando(false);
               recarregar();
@@ -76,7 +98,10 @@ export function GrupoPainel({ dados }: { dados: D }) {
         </section>
       )}
 
-      <nav className="sticky top-0 z-10 -mx-4 flex gap-1 overflow-x-auto bg-na-bg/95 px-4 py-2 backdrop-blur lg:hidden dark:bg-gray-950/95" aria-label="Seções do grupo">
+      <nav
+        className="sticky top-0 z-10 -mx-4 flex gap-1 overflow-x-auto bg-na-bg/95 px-4 py-2 backdrop-blur lg:hidden dark:bg-gray-950/95"
+        aria-label="Seções do grupo"
+      >
         {abas.map(([a, r]) => (
           <button
             key={a}
@@ -130,7 +155,12 @@ function InfoEncontro({ grupo }: { grupo: D["grupo"] }) {
         </a>
       )}
       {grupo.linkOnline && (
-        <a href={grupo.linkOnline} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-semibold text-na-green-dark dark:text-emerald-400">
+        <a
+          href={grupo.linkOnline}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 font-semibold text-na-green-dark dark:text-emerald-400"
+        >
           Entrar no encontro online <ExternalLink size={12} />
         </a>
       )}
@@ -147,10 +177,16 @@ function Sobre({ dados, recarregar }: { dados: D; recarregar: () => void }) {
   return (
     <section className={CARTAO}>
       <h2 className={TITULO}>Sobre</h2>
-      {grupo.descricao ? <p className="text-[13px] whitespace-pre-wrap text-gray-700 dark:text-gray-300">{grupo.descricao}</p> : <p className="text-[12px] text-gray-500">Sem descrição.</p>}
+      {grupo.descricao ? (
+        <p className="text-[13px] whitespace-pre-wrap text-gray-700 dark:text-gray-300">{grupo.descricao}</p>
+      ) : (
+        <p className="text-[12px] text-gray-500">Sem descrição.</p>
+      )}
       {grupo.tipo === "GAF" && (
         <>
-          <p className="mt-3 text-[12px] text-gray-600 dark:text-gray-400">{grupo.permiteAlunos ? "Aberto a membros e alunos." : "Só para membros (2º nível em diante)."}</p>
+          <p className="mt-3 text-[12px] text-gray-600 dark:text-gray-400">
+            {grupo.permiteAlunos ? "Aberto a membros e alunos." : "Só para membros (2º nível em diante)."}
+          </p>
           {grupo.programa && (
             <details className="mt-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50" open>
               <summary className="cursor-pointer text-[12px] font-bold text-gray-800 dark:text-gray-200">Programa de estudos</summary>
@@ -196,13 +232,22 @@ function Equipe({ dados, recarregar }: { dados: D; recarregar: () => void }) {
     (t: string) => (adicionando === "professor" && grupo.tipo !== "GDVE" ? buscarResponsaveis(grupo.schoolId, t) : buscarCandidatos({ grupoId: grupo.id }, t)),
     [adicionando, grupo.id, grupo.schoolId, grupo.tipo],
   );
-  const rotulos = grupo.tipo === "SEC" ? ["Responsáveis", "Equipe de voluntários"] : grupo.tipo === "GAF" || grupo.tipo === "GDVE" ? ["Coordenação", "Participantes"] : ["Responsáveis", "Integrantes"];
+  const rotulos =
+    grupo.tipo === "SEC"
+      ? ["Responsáveis", "Equipe de voluntários"]
+      : grupo.tipo === "GAF" || grupo.tipo === "GDVE"
+        ? ["Coordenação", "Participantes"]
+        : ["Responsáveis", "Integrantes"];
 
   function salvar() {
     if (!adicionando || !escolhidos.length) return;
     setErro(null);
     iniciar(async () => {
-      const r = await adicionarPessoas(grupo.id, adicionando, escolhidos.map((p) => p.id));
+      const r = await adicionarPessoas(
+        grupo.id,
+        adicionando,
+        escolhidos.map((p) => p.id),
+      );
       if (!r.ok) return setErro(r.error);
       setEscolhidos([]);
       setAdicionando(null);
@@ -243,10 +288,17 @@ function Equipe({ dados, recarregar }: { dados: D; recarregar: () => void }) {
       ) : (
         <ul className="flex flex-col">
           {pessoas.map((p) => (
-            <li key={p.id} className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px] text-gray-800 last:border-0 dark:border-gray-800 dark:text-gray-200">
+            <li
+              key={p.id}
+              className="flex items-center justify-between border-b border-gray-100 py-1.5 text-[13px] text-gray-800 last:border-0 dark:border-gray-800 dark:text-gray-200"
+            >
               {p.name}
               {gerir && (
-                <button onClick={() => tirar(role, p.id, p.name)} aria-label={`Tirar ${p.name}`} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-na-danger-dark dark:hover:bg-gray-800">
+                <button
+                  onClick={() => tirar(role, p.id, p.name)}
+                  aria-label={`Tirar ${p.name}`}
+                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-na-danger-dark dark:hover:bg-gray-800"
+                >
                   <X size={13} />
                 </button>
               )}
@@ -292,7 +344,9 @@ function Atividades({ dados, recarregar }: { dados: D; recarregar: () => void })
       {editando && <FormAtividade grupo={grupo} atividade={editando === "nova" ? null : editando} onFim={() => (setEditando(null), recarregar())} />}
       {grupo.atividades.length === 0 && !editando && (
         <p className="text-[12px] text-gray-500 dark:text-gray-400">
-          {papel.podeGerir ? "Liste o que o grupo faz e quem responde por cada coisa: recepção, escala do café, organização do evento…" : "Nenhuma atividade cadastrada."}
+          {papel.podeGerir
+            ? "Liste o que o grupo faz e quem responde por cada coisa: recepção, escala do café, organização do evento…"
+            : "Nenhuma atividade cadastrada."}
         </p>
       )}
       <ul className="flex flex-col gap-2">
@@ -322,7 +376,11 @@ function ItemAtividade({ a, podeGerir, onEditar, recarregar }: { a: Atividade; p
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
             {a.titulo}
-            {a.status !== "ativa" && <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{STATUS[a.status]}</span>}
+            {a.status !== "ativa" && (
+              <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                {STATUS[a.status]}
+              </span>
+            )}
           </p>
           {a.descricao && <p className="mt-0.5 text-[12px] whitespace-pre-wrap text-gray-600 dark:text-gray-400">{a.descricao}</p>}
           <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
@@ -332,7 +390,11 @@ function ItemAtividade({ a, podeGerir, onEditar, recarregar }: { a: Atividade; p
         </div>
         {podeGerir && (
           <div className="flex shrink-0 gap-0.5">
-            <button onClick={onEditar} aria-label={`Editar ${a.titulo}`} className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800">
+            <button
+              onClick={onEditar}
+              aria-label={`Editar ${a.titulo}`}
+              className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800"
+            >
               <Pencil size={13} />
             </button>
             <button
@@ -374,10 +436,33 @@ function FormAtividade({ grupo, atividade, onFim }: { grupo: D["grupo"]; ativida
   return (
     <form onSubmit={enviar} className="mb-3 flex flex-col gap-3 rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50">
       <div className="grid gap-3 md:grid-cols-[1fr_200px]">
-        <input name="titulo" required maxLength={120} defaultValue={atividade?.titulo} placeholder="Atividade (ex.: escala do café)" className={CAMPO} aria-label="Atividade" />
-        <input name="periodicidade" maxLength={80} defaultValue={atividade?.periodicidade ?? ""} placeholder="Quando (ex.: toda sexta)" className={CAMPO} aria-label="Quando" />
+        <input
+          name="titulo"
+          required
+          maxLength={120}
+          defaultValue={atividade?.titulo}
+          placeholder="Atividade (ex.: escala do café)"
+          className={CAMPO}
+          aria-label="Atividade"
+        />
+        <input
+          name="periodicidade"
+          maxLength={80}
+          defaultValue={atividade?.periodicidade ?? ""}
+          placeholder="Quando (ex.: toda sexta)"
+          className={CAMPO}
+          aria-label="Quando"
+        />
       </div>
-      <textarea name="descricao" rows={2} maxLength={2000} defaultValue={atividade?.descricao ?? ""} placeholder="Detalhes (opcional)" className={CAMPO} aria-label="Detalhes" />
+      <textarea
+        name="descricao"
+        rows={2}
+        maxLength={2000}
+        defaultValue={atividade?.descricao ?? ""}
+        placeholder="Detalhes (opcional)"
+        className={CAMPO}
+        aria-label="Detalhes"
+      />
       <fieldset>
         <legend className="mb-1.5 text-[12px] font-semibold text-gray-700 dark:text-gray-300">Responsáveis pela atividade</legend>
         <div className="flex flex-wrap gap-1.5">
@@ -419,37 +504,34 @@ function FormAtividade({ grupo, atividade, onFim }: { grupo: D["grupo"]; ativida
 }
 
 function Encontros({ dados, recarregar }: { dados: D; recarregar: () => void }) {
-  const { grupo, papel, encontros, agora } = dados;
+  const { papel, encontros, agora } = dados;
   const futuros = encontros.filter((e) => new Date(e.endsAt).getTime() >= agora && e.status !== "cancelada").slice(0, 6);
-  const passados = encontros.filter((e) => new Date(e.startsAt).getTime() <= agora && e.status !== "cancelada").reverse().slice(0, 8);
-  // Secretarias: reuniões recolhidas por padrão (pedido do usuário 2026-10-19) — só o próximo encontro à vista.
-  if (grupo.tipo === "SEC") {
-    const proximo = futuros[0];
-    return (
-      <details className={`${CARTAO} group`}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-          <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
-              <CalendarClock size={15} /> Reuniões
-            </span>
-            <span className="truncate text-[12px] text-gray-500 capitalize dark:text-gray-400">{proximo ? `Próxima: ${quando(proximo.startsAt)}` : "Nenhuma reunião marcada"}</span>
-          </span>
-          <span className="shrink-0 text-[12px] font-semibold text-na-green-dark group-open:hidden dark:text-emerald-400">{papel.podeGerir ? "Abrir e gerenciar" : "Ver reuniões"}</span>
-          <span className="hidden shrink-0 text-[12px] font-semibold text-gray-500 group-open:inline">Fechar</span>
-        </summary>
-        <div className="mt-4">
-          <ConteudoEncontros dados={dados} recarregar={recarregar} futuros={futuros} passados={passados} />
-        </div>
-      </details>
-    );
-  }
+  const passados = encontros
+    .filter((e) => new Date(e.startsAt).getTime() <= agora && e.status !== "cancelada")
+    .reverse()
+    .slice(0, 8);
+  // Reuniões recolhidas por padrão em todos os grupos (pedido do usuário 2026-10-19) — só o próximo encontro à vista.
+  const proximo = futuros[0];
   return (
-    <section className={CARTAO}>
-      <h2 className={TITULO}>
-        <CalendarClock size={15} /> Encontros
-      </h2>
-      <ConteudoEncontros dados={dados} recarregar={recarregar} futuros={futuros} passados={passados} />
-    </section>
+    <details className={`${CARTAO} group`}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+            <CalendarClock size={15} /> Reuniões
+          </span>
+          <span className="truncate text-[12px] text-gray-500 capitalize dark:text-gray-400">
+            {proximo ? `Próxima: ${quando(proximo.startsAt)}` : "Nenhuma reunião marcada"}
+          </span>
+        </span>
+        <span className="shrink-0 text-[12px] font-semibold text-na-green-dark group-open:hidden dark:text-emerald-400">
+          {papel.podeGerir ? "Abrir e gerenciar" : "Ver reuniões"}
+        </span>
+        <span className="hidden shrink-0 text-[12px] font-semibold text-gray-500 group-open:inline">Fechar</span>
+      </summary>
+      <div className="mt-4">
+        <ConteudoEncontros dados={dados} recarregar={recarregar} futuros={futuros} passados={passados} />
+      </div>
+    </details>
   );
 }
 
