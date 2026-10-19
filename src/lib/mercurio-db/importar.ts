@@ -105,7 +105,9 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const ano = opcoes.ano ?? new Date().getFullYear();
 
   const filtroMatr = opcoes.matriculas?.length ? ` AND cad_matr IN (${opcoes.matriculas.map(sqlNumero).join(",")})` : "";
-  const cadastros = await consultarTudo(`SELECT * FROM cadastro WHERE cad_unidade=${sqlTexto(uniId)}${filtroMatr} ORDER BY cad_matr`);
+  // Desde 19/10/2026 o banco de consulta traz também os desligados (cad_situacao='INA'):
+  // toda leitura de cadastro precisa filtrar cad_situacao='ATI'.
+  const cadastros = await consultarTudo(`SELECT * FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${sqlTexto(uniId)}${filtroMatr} ORDER BY cad_matr`);
 
   const conhecidos = new Set(
     (await db.member.findMany({ where: { mercurioId: { in: cadastros.map((c) => c.cad_matr!) } }, select: { mercurioId: true } })).map((m) => m.mercurioId),
@@ -131,17 +133,17 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   // filial ("CHEFE DO GRUPO FEMININO", "JEFE BF", "CHEFE DA BBFF", "CHEFE
   // DO GS"...) e muitas não marcam dfn_atual — vale também término vazio.
   const chefias = await consultarTudo(
-    `SELECT d.dfn_matr, d.dfn_descricao, c.cad_raio_fv FROM dirigente_funcoes d JOIN cadastro c ON c.cad_matr=d.dfn_matr WHERE c.cad_unidade=${sqlTexto(uniId)} AND d.dfn_funcao='CBF' AND (d.dfn_atual='S' OR d.dfn_termino IS NULL OR d.dfn_termino < '1900-01-01' OR d.dfn_termino >= CURDATE()) ORDER BY d.dfn_matr`,
+    `SELECT d.dfn_matr, d.dfn_descricao, c.cad_raio_fv FROM dirigente_funcoes d JOIN cadastro c ON c.cad_matr=d.dfn_matr WHERE c.cad_situacao='ATI' AND c.cad_unidade=${sqlTexto(uniId)} AND d.dfn_funcao='CBF' AND (d.dfn_atual='S' OR d.dfn_termino IS NULL OR d.dfn_termino < '1900-01-01' OR d.dfn_termino >= CURDATE()) ORDER BY d.dfn_matr`,
   );
   // Grupo só existe na filial se tem alguém nele como BRG ou PRO.
   const raiosAtivos = new Set(
-    (await consultarMercurio(`SELECT DISTINCT cad_raio_fv FROM cadastro WHERE cad_unidade=${sqlTexto(uniId)} AND cad_situacao_fv IN ('BRG','PRO')`)).map((r) => r.cad_raio_fv ?? ""),
+    (await consultarMercurio(`SELECT DISTINCT cad_raio_fv FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${sqlTexto(uniId)} AND cad_situacao_fv IN ('BRG','PRO')`)).map((r) => r.cad_raio_fv ?? ""),
   );
   const cursos = await consultarTudo(
     `SELECT p.dcr_matr, p.dcr_data, s.sdu_descricao, s.sdu_instrutor FROM cursos_integra_participa p LEFT JOIN sig_cursos_integra s ON s.sdu_id=p.dcr_curso_id WHERE p.dcr_matr IN (${lista}) ORDER BY p.dcr_matr, p.dcr_data`,
   );
   const aulas = await consultarTudo(
-    `SELECT DISTINCT tm.tma_instrutor, tm.tma_turma FROM turmas_materias tm WHERE tm.tma_unidade=${sqlTexto(uniId)} AND tm.tma_instrutor IN (${lista}) AND EXISTS (SELECT 1 FROM cadastro c WHERE c.cad_tur_unidade=tm.tma_unidade AND c.cad_turma=tm.tma_turma) ORDER BY tm.tma_instrutor`,
+    `SELECT DISTINCT tm.tma_instrutor, tm.tma_turma FROM turmas_materias tm WHERE tm.tma_unidade=${sqlTexto(uniId)} AND tm.tma_instrutor IN (${lista}) AND EXISTS (SELECT 1 FROM cadastro c WHERE c.cad_situacao='ATI' AND c.cad_tur_unidade=tm.tma_unidade AND c.cad_turma=tm.tma_turma) ORDER BY tm.tma_instrutor`,
   );
 
   // Recibos dos meses pagos — gravados JÁ com o conteúdo (rawText), pra
@@ -403,7 +405,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     // matrícula em Fortaleza) não saiu da escola — só quem não está ativo em lugar nenhum.
     const ativosEmOutraFilial = new Set(
       ausentes.length
-        ? (await consultarMercurio(`SELECT cad_matr FROM cadastro WHERE cad_matr IN (${ausentes.map((m) => sqlNumero(m.mercurioId!)).join(",")})`)).map((c) => c.cad_matr)
+        ? (await consultarMercurio(`SELECT cad_matr FROM cadastro WHERE cad_situacao='ATI' AND cad_matr IN (${ausentes.map((m) => sqlNumero(m.mercurioId!)).join(",")})`)).map((c) => c.cad_matr)
         : [],
     );
     const sairam = ausentes.filter((m) => !ativosEmOutraFilial.has(m.mercurioId!)).map((m) => m.id);
@@ -419,7 +421,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     // todas as turmas da filial com aluno ativo, inclusive instrutores sem
     // conta no Portal ou de outra filial.
     const materias = await consultarTudo(
-      `SELECT tm.tma_turma, tm.tma_materia, s.sma_materia, tm.tma_instrutor, c.cad_nome, tm.tma_inicio FROM turmas_materias tm LEFT JOIN sig_materias s ON s.sma_sigla=tm.tma_materia LEFT JOIN cadastro c ON c.cad_matr=tm.tma_instrutor WHERE tm.tma_unidade=${sqlTexto(uniId)} AND EXISTS (SELECT 1 FROM cadastro a WHERE a.cad_tur_unidade=tm.tma_unidade AND a.cad_turma=tm.tma_turma) ORDER BY tm.tma_turma, tm.tma_materia`,
+      `SELECT tm.tma_turma, tm.tma_materia, s.sma_materia, tm.tma_instrutor, c.cad_nome, tm.tma_inicio FROM turmas_materias tm LEFT JOIN sig_materias s ON s.sma_sigla=tm.tma_materia LEFT JOIN cadastro c ON c.cad_matr=tm.tma_instrutor WHERE tm.tma_unidade=${sqlTexto(uniId)} AND EXISTS (SELECT 1 FROM cadastro a WHERE a.cad_situacao='ATI' AND a.cad_tur_unidade=tm.tma_unidade AND a.cad_turma=tm.tma_turma) ORDER BY tm.tma_turma, tm.tma_materia`,
     );
     const instrutoresLocais = new Map(
       (await db.member.findMany({ where: { mercurioId: { in: [...new Set(materias.map((m) => m.tma_instrutor!).filter(Boolean))] } }, select: { id: true, mercurioId: true } })).map((m) => [m.mercurioId!, m.id]),
@@ -466,7 +468,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
 
 /** Importa 1 pessoa (primeiro acesso). Devolve o Member já gravado. */
 export async function importarMembro(matricula: string) {
-  const [c] = await consultarMercurio(`SELECT cad_unidade FROM cadastro WHERE cad_matr=${sqlNumero(matricula)}`);
+  const [c] = await consultarMercurio(`SELECT cad_unidade FROM cadastro WHERE cad_situacao='ATI' AND cad_matr=${sqlNumero(matricula)}`);
   if (!c?.cad_unidade) throw new Error(`Matrícula ${matricula} não encontrada entre os ativos do Mercúrio.`);
   await sincronizarUnidade(c.cad_unidade, { matriculas: [matricula] });
   return db.member.findUniqueOrThrow({ where: { mercurioId: matricula }, include: { school: true } });
