@@ -4,6 +4,7 @@ mock.module(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{payme
 mock.module(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasGetPaymentStatus:async()=>({status:'CONFIRMED',value})}});
 mock.module(new URL('../src/lib/event-payments.ts',import.meta.url).href,{exports:{confirmEventPayment:async()=>{confirmed++;}}});
 mock.module(new URL('../src/lib/asaas/confirm-payment.ts',import.meta.url).href,{exports:{confirmarPagamento:async()=>{throw Error('unexpected contribution payment');}}});
+mock.module(new URL('../src/lib/event-refunds.ts',import.meta.url).href,{exports:{processEventRefund:async()=>{}}});
 const {POST}=await import('../src/app/api/webhooks/asaas/route.ts');
 function request(token){return new Request('http://localhost/api/webhooks/asaas',{method:'POST',headers:{'content-type':'application/json',...(token?{'asaas-access-token':token}:{})},body:JSON.stringify({event:'PAYMENT_CONFIRMED',payment:{id:'payment'}})});}
 test('webhook sem configuração ou sem autenticação nunca confirma inscrição',async()=>{

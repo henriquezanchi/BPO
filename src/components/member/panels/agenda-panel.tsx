@@ -1,4 +1,5 @@
 "use client";
+import {REFUND_LABELS} from "@/lib/event-refund-policy";
 
 import {usePaymentPolling} from "@/hooks/use-payment-polling";
 import { CompartilharEvento } from "@/components/member/compartilhar-evento";
@@ -271,7 +272,7 @@ function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item:
         {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{item.availableSpots??0} vagas disponíveis de {item.capacity}</p>}
         {item.participantInstructions&&<p className="mt-2 whitespace-pre-wrap text-xs"><strong>Orientações: </strong>{item.participantInstructions}</p>}
         {item.contactInfo&&<p className="mt-2 break-words text-xs"><strong>Dúvidas: </strong>{item.contactInfo}</p>}
-        {item.status === "cancelado" && <p className="mt-2 text-sm font-semibold text-red-700 dark:text-red-300">Evento cancelado. Consulte a Economia se houver pagamento.</p>}
+        {item.status === "cancelado" && <p className="mt-2 text-sm font-semibold text-red-700 dark:text-red-300">Evento cancelado. {item.minhaInscricao?.refundState&&item.minhaInscricao.refundState!=="nao_solicitado"?`Reembolso: ${REFUND_LABELS[item.minhaInscricao.refundState]??"em acompanhamento"}${item.minhaInscricao.refundedAmount?` · ${formatBRL(item.minhaInscricao.refundedAmount)}`:""}.`:"Consulte a Economia se houver pagamento."}</p>}
         {item.status !== "cancelado" && item.source === "manual" && item.scope === "filial" && (
           <>
             <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">

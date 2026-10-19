@@ -1,0 +1,3 @@
+"use client";
+import {EventEconomyReport} from "@/components/economia/event-economy-report";
+export default function Page(){return <main className="mx-auto max-w-4xl p-5"><EventEconomyReport schoolId="school-test"/></main>}

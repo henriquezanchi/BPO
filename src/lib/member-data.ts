@@ -60,7 +60,7 @@ export type AgendaItem =
       // Inscrição do próprio membro (ver event-actions.ts) — null = ainda
       // não se inscreveu. Sempre null pra scope "nacional"/"regional" (não
       // têm fluxo de inscrição/pagamento ainda).
-      minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null } | null;
+      minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null; refundState?: string; refundedAmount?: number } | null;
       posterUrl?: string | null;
       capacity?: number | null;
       availableSpots?: number | null;
@@ -226,7 +226,7 @@ export async function getMemberDashboard(memberId: string) {
   function inscricaoDoEvento(eventId: string): Extract<AgendaItem, { kind: "evento" }>["minhaInscricao"] {
     const r = minhasInscricoes.find((i) => i.eventId === eventId);
     if (!r) return null;
-    return { registrationId: r.id, pago: r.paid, pixPayload: r.pixPayload, pixQrCodeBase64: r.pixQrCodeBase64 };
+    return { registrationId: r.id, pago: r.paid, pixPayload: r.pixPayload, pixQrCodeBase64: r.pixQrCodeBase64, refundState:r.refundState, refundedAmount:Number(r.refundedAmount) };
   }
 
   function resumoReacoes(itemId: string): AgendaReactionSummary[] {

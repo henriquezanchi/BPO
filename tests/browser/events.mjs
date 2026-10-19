@@ -11,7 +11,7 @@ try{
    if(req.url().endsWith('/api/eventos/cartaz')&&req.method()==='POST')return route.fulfill({contentType:'application/json',body:JSON.stringify({posterPath:'fake-school/event-posters/poster.png',url:base+'/poster-fixture.svg'})});
    if(req.method()!=='POST')return route.continue();if(!req.headers()['next-action'])return route.abort();
    const manifest=JSON.parse(await readFile('.next/dev/server/server-reference-manifest.json','utf8'));const action=manifest.node[req.headers()['next-action']]?.exportedName;const args=JSON.parse(req.postData());let value;
-   if(['salvarEvento','definirRecepcaoEvento','definirRecepcaoEmLote','marcarPresencaEvento','declararComparecimento'].includes(action)){writes.push({action,args});value={ok:true};}
+   if(['excluirEvento','salvarEvento','definirRecepcaoEvento','definirRecepcaoEmLote','marcarPresencaEvento','declararComparecimento'].includes(action)){writes.push({action,args});value={ok:true};}
    else if(action==='inscreverEmEvento'){writes.push({action,args});value={ok:false,error:'O serviço de pagamentos não autorizou a operação. A administração precisa conferir a credencial e as permissões do Asaas.'};}
    else throw new Error('Ação inesperada: '+action);
    return route.fulfill({contentType:'text/x-component',body:'0:{"a":"$@1","f":"","b":"development"}\n1:'+JSON.stringify(value)+'\n'});
@@ -30,6 +30,12 @@ try{
   const downloadPromise=page.waitForEvent('download');await reception.getByRole('button',{name:'Baixar lista filtrada (CSV)',exact:true}).click();const downloaded=await downloadPromise;const csv=await readFile(await downloaded.path(),'utf8');assert.match(csv,/Aluno confirmado/);assert.equal(csv.includes('Aluno pendente'),false);
   await page.getByRole('region',{name:'Resposta do aluno'}).getByRole('button',{name:'Sim, participei',exact:true}).click();await page.getByText(/Resposta registrada/).waitFor();assert.equal(writes.at(-1).args[2],true);
   const paid=page.getByRole('region',{name:'Inscrição paga'});await paid.getByRole('button',{name:'Inscrever-se',exact:true}).click();await paid.getByPlaceholder('CPF de quem vai pagar').fill('12345678901');await paid.getByRole('button',{name:'Gerar PIX',exact:true}).click();await paid.getByText(/O serviço de pagamentos não autorizou/).waitFor();assert.equal((await paid.innerText()).includes('erro inesperado'),false);
+  await management.getByRole('button',{name:'Cancelar evento',exact:true}).click();
+  const cancellation=management.getByRole('dialog');assert.equal(await cancellation.getByRole('checkbox',{name:'Reembolsar as inscrições',exact:true}).isChecked(),false);
+  await cancellation.getByRole('checkbox',{name:'Reembolsar as inscrições',exact:true}).check();
+  await cancellation.getByRole('button',{name:'Confirmar cancelamento',exact:true}).click();
+  await management.getByText('Evento cancelado. Reembolsos solicitados; acompanhe as confirmações na Economia.',{exact:true}).waitFor();
+  assert.equal(writes.at(-1).action,'excluirEvento');assert.equal(writes.at(-1).args[2],true);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'/tmp/portal-events-'+width+'.png',fullPage:true});console.log('PASS '+width+'px: criação com público e horário, designação de recepção, filtros, conferência, CSV e declaração separada.');await page.close();
  }
 }finally{await browser?.close();if(server?.pid)try{process.kill(-server.pid,'SIGTERM')}catch{}await rm(routeDir,{recursive:true,force:true});await rm(path.join(root,'.next/dev/types'),{recursive:true,force:true});}

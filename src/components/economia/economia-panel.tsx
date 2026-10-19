@@ -95,6 +95,10 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
         </span>
         <ChevronRight size={14} className="shrink-0 text-gray-400" />
       </a>
+      <a href="/economia/eventos" className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+        <span className="block text-sm font-semibold">Eventos: recebimentos e lançamentos no Mercúrio</span>
+        <span className="block text-xs text-gray-600 dark:text-gray-300">Consulte pagamentos e reembolsos, baixe o CSV e informe o recibo após lançar no Mercúrio.</span>
+      </a>
       {crescimentoAtual && (
         <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
           <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-gray-900 dark:text-gray-100">

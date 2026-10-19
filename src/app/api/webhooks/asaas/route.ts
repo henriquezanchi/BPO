@@ -1,3 +1,4 @@
+import {processEventRefund} from "@/lib/event-refunds";
 import {confirmEventPayment} from "@/lib/event-payments";
 import {asaasGetPaymentStatus} from "@/lib/asaas/client";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
@@ -50,7 +51,13 @@ export async function POST(req: Request) {
       if(!["RECEIVED","CONFIRMED"].includes(payment.status))return new Response("payment not confirmed",{status:409});
       if(registration.amount!==null&&Math.round(Number(registration.amount)*100)!==Math.round(payment.value*100))return new Response("payment amount mismatch",{status:409});
       await confirmEventPayment(registration.id);
+      await processEventRefund(registration.id);
     }
+  }
+
+  if(body.event?.startsWith("PAYMENT_REFUND")&&body.payment?.id){
+    const registration=await db.eventRegistration.findUnique({where:{asaasPaymentId:body.payment.id}});
+    if(registration)await processEventRefund(registration.id);
   }
 
   const novoStatus = body.event ? EVENTO_PARA_STATUS[body.event] : undefined;

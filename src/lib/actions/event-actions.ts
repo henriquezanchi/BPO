@@ -9,6 +9,7 @@ import {eventAudienceWhere,eventNoticePlan,validateInternalEvent} from '@/lib/ev
 import {requireEventReception} from '@/lib/event-data';
 import {EventEnrollmentError,eventPaymentFailure} from '@/lib/event-payment-errors';
 import {confirmEventPayment} from '@/lib/event-payments';
+import {processEventRefundQueue} from '@/lib/event-refunds';
 import {revalidatePath} from 'next/cache';
 
 export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience:string;description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null}
@@ -38,16 +39,20 @@ export async function salvarEvento(schoolId:string,input:InternalEventInput,id?:
 }
 // Compatibilidade com a tela anterior; novas telas exigem também término e público.
 export async function criarEvento(schoolId:string,title:string,startsAt:string,price:number){return salvarEvento(schoolId,{title,startsAt,endsAt:new Date(new Date(startsAt).getTime()+7200000).toISOString(),price,audience:'todos_ativos',description:'',location:''});}
-export async function excluirEvento(schoolId:string,eventId:string){
+export async function excluirEvento(schoolId:string,eventId:string,reembolsar=false){
+ if(typeof reembolsar!=='boolean')throw Error('Opção de reembolso inválida.');
  const actor=await requireDirector(schoolId);if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
  await db.$transaction(async tx=>{
-  const changed=await tx.event.updateMany({where:{id:eventId,schoolId,source:'manual',status:'publicado'},data:{status:'cancelado',revision:{increment:1}}});
+  const changed=await tx.event.updateMany({where:{id:eventId,schoolId,source:'manual',OR:[{status:'publicado'},...(reembolsar?[{status:'cancelado',refundOnCancellation:false}]:[])]},data:{status:'cancelado',...(reembolsar?{refundOnCancellation:true}:{}),revision:{increment:1}}});
   if(!changed.count)throw Error('Evento indisponível para cancelamento.');
   await tx.eventNotice.updateMany({where:{registration:{eventId},status:'aguardando_canal'},data:{status:'cancelado'}});
   const registrations=await tx.eventRegistration.findMany({where:{eventId},select:{id:true}});
   for(const r of registrations)await tx.eventNotice.upsert({where:{registrationId_kind:{registrationId:r.id,kind:'cancelamento'}},create:{registrationId:r.id,kind:'cancelamento',dueAt:new Date()},update:{status:'aguardando_canal',dueAt:new Date()}});
-  await tx.eventAudit.create({data:{eventId,actorId:actor.id,action:'cancelado',changes:{refunds:'Conferir pagamentos e estornos com a Economia; nenhum estorno automático.'}}});
- });refresh(eventId);
+  await tx.eventAudit.create({data:{eventId,actorId:actor.id,action:'cancelado',changes:{reembolsarInscricoes:reembolsar}}});
+  if(reembolsar)await tx.eventRegistration.updateMany({where:{eventId,refundState:'nao_solicitado'},data:{refundState:'pendente',refundNextAttemptAt:new Date()}});
+ });
+ if(reembolsar)await processEventRefundQueue(eventId,1);
+ refresh(eventId);
 }
 export async function definirRecepcaoEvento(schoolId:string,eventId:string,memberId:string,add:boolean){
  const actor=await requireDirector(schoolId);if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
@@ -158,7 +163,8 @@ export async function inscreverEmEvento(memberId:string,eventId:string,cpf?:stri
 }
 export async function checkStatusInscricaoEvento(memberId:string,registrationId:string){
  await requireAuthenticatedMember(memberId);
- const r=await db.eventRegistration.findFirstOrThrow({where:{id:registrationId,memberId}});
+ const r=await db.eventRegistration.findFirstOrThrow({where:{id:registrationId,memberId},include:{event:true}});
+ if(r.event.status==='cancelado')return {status:'cancelado' as const};
  if(r.paid)return {status:'pago' as const};
  if(!r.asaasPaymentId)return {status:'pendente' as const};
  const payment=await asaasGetPaymentStatus(r.asaasPaymentId);

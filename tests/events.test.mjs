@@ -15,6 +15,7 @@ mock.module(new URL('../src/lib/event-payments.ts',import.meta.url).href,{export
 mock.module(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{event:{findFirst:async args=>{assert.equal(args.where.schoolId,'school');assert.equal(args.where.source,'manual');assert.deepEqual(args.where.AND[0].audience,{in:['todos_ativos','membros','voluntarios']});return eventStatus==='publicado'?event:null;}},school:{findUniqueOrThrow:async()=>({asaasWalletId:wallet})},eventRegistration:{findUniqueOrThrow:async()=>({...current,paid,event:{...event,status:eventStatus}}),updateMany:async()=>({count:0}),findFirstOrThrow:async()=>({...current,event})},$transaction:async fn=>fn(tx)}}});
 mock.module(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasFindOrCreateCustomer:async()=>{if(failureMode==='customer')throw Error('Asaas API /customers -> HTTP 400: dado privado fictício');return {id:'customer'};},asaasCreatePixCharge:async()=>{payCalls++;if(failureMode==='payment')throw Error('fetch failed');return {id:'payment'};},asaasGetPixQrCode:async()=>({payload:'existing-qr',encodedImage:'image'}),asaasGetPaymentStatus:async()=>({status:'PENDING'})}});
 mock.module(new URL('../src/lib/asaas/split.ts',import.meta.url).href,{exports:{calcularSplitEscola:async()=>({walletId:wallet,fixedValue:48})}});
+mock.module(new URL('../src/lib/event-refunds.ts',import.meta.url).href,{exports:{processEventRefundQueue:async()=>({consultadas:0})}});
 mock.module('next/cache',{exports:{revalidatePath:()=>{}}});
 const{inscreverEmEvento,marcarPresencaEvento,salvarEvento,excluirEvento}=await import('../src/lib/actions/event-actions.ts');
 test('público é explícito e papéis desconhecidos do Ágora ficam bloqueados',()=>{
@@ -88,4 +89,10 @@ test('recepção em lote verifica todos os voluntários antes de gravar e dedupl
  const result=await definirRecepcaoEmLote('school','event',['one','two','one']);assert.equal(result.ok,true);assert.equal(batch.length,2);
  store.member.findMany=async()=>[{...actor,id:'one'}];batch=null;
  assert.equal((await definirRecepcaoEmLote('school','event',['one','outside'])).ok,false);assert.equal(batch,null);
+});
+
+test('opção de reembolso é validada e enfileira inscrições na mesma transação do cancelamento',async()=>{
+ await assert.rejects(()=>excluirEvento('school','event','sim'),/inválida/);
+ const queued=[];tx.eventRegistration.updateMany=async args=>{queued.push(args);return {count:1};};
+ await excluirEvento('school','event',true);assert.equal(queued[0].where.refundState,'nao_solicitado');assert.equal(queued[0].data.refundState,'pendente');assert.equal(writes.at(-1).data.changes.reembolsarInscricoes,true);
 });

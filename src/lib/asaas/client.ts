@@ -12,6 +12,7 @@ async function chamarApi<T>(path: string, init?: RequestInit): Promise<T> {
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
+    signal: init?.signal ?? AbortSignal.timeout(20_000),
     headers: {
       access_token: apiKey,
       "Content-Type": "application/json",
@@ -21,7 +22,7 @@ async function chamarApi<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const corpo = await res.text();
-    throw new Error(`Asaas API ${path} -> HTTP ${res.status}: ${corpo}`);
+    throw Object.assign(new Error(`Asaas API ${path} -> HTTP ${res.status}: ${corpo}`), { status: res.status });
   }
   return res.json() as Promise<T>;
 }
@@ -78,6 +79,11 @@ export interface AsaasPayment {
   status: "PENDING" | "RECEIVED" | "CONFIRMED" | "OVERDUE" | "REFUNDED" | string;
   value: number;
   customer: string;
+  billingType?: string;
+  deleted?: boolean;
+  netValue?: number;
+  paymentDate?: string;
+  refunds?: AsaasRefund[];
   /** Checkout hospedado pelo Asaas — usado pro fluxo de cartão de crédito (nenhum dado de cartão passa pelo nosso servidor). */
   invoiceUrl?: string;
 }
@@ -346,4 +352,23 @@ export async function asaasCreateSubaccount(input: AsaasSubaccountInput): Promis
     method: "POST",
     body: JSON.stringify({ companyType: "ASSOCIATION", ...input }),
   });
+}
+
+/** Estorno solicitado não significa devolução concluída: conferir refunds[].status=DONE. */
+export interface AsaasRefund {
+  status: string;
+  value: number;
+  dateCreated?: string;
+  transactionReceiptUrl?: string | null;
+  refundedSplits?: { id: string; value: number; done: boolean }[];
+}
+export async function asaasRefundEventPayment(paymentId: string, remaining?: number): Promise<AsaasPayment> {
+  return chamarApi<AsaasPayment>(`/payments/${encodeURIComponent(paymentId)}/refund`, {
+    method: "POST",
+    body: JSON.stringify({ description: "Cancelamento do evento: reembolso das inscricoes", ...(remaining !== undefined ? { value: remaining } : {}) }),
+  });
+}
+/** Diferente do cancelamento best-effort legado, o evento exige confirmação da exclusão. */
+export async function asaasDeleteEventPayment(paymentId: string): Promise<{ id: string; deleted: boolean }> {
+  return chamarApi(`/payments/${encodeURIComponent(paymentId)}`, { method: "DELETE" });
 }
