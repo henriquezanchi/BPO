@@ -1424,3 +1424,83 @@ model AdministradorFilial {
   @@id([schoolId, memberId])
   @@index([memberId])
 }
+
+// ===================== Avaliação de instrutores =====================
+// Pedido do usuário 2026-10-19. Ver src/lib/avaliacao.ts.
+
+// Vínculo oficial turma → matéria → instrutor (Mercúrio turmas_materias),
+// atualizado pela sincronização diária. É ele que define quem cada aluno
+// pode avaliar (os instrutores da própria turma, com as matérias deles).
+model TurmaMateria {
+  id                String   @id @default(cuid())
+  schoolId          String
+  classGroupId      String
+  materiaSigla      String
+  materiaNome       String
+  instrutorMatr     String
+  instrutorNome     String
+  instrutorMemberId String?
+  inicio            DateTime?
+  syncedAt          DateTime @default(now())
+
+  @@unique([classGroupId, materiaSigla])
+  @@index([schoolId])
+  @@index([instrutorMatr])
+}
+
+// Questionário da filial (cópia editável da base nacional, que fica no código).
+model AvaliacaoQuestionario {
+  schoolId        String   @id
+  titulo          String
+  introducao      String
+  perguntas       Json
+  atualizadoPorId String
+  atualizadoEm    DateTime @default(now())
+}
+
+// Rodada liberada pela Direção ou Secretaria de Escolástica. Guarda a cópia
+// das perguntas no momento da abertura (mudanças posteriores no questionário
+// não alteram uma rodada já aberta). turmas vazio = todas as turmas.
+model AvaliacaoCampanha {
+  id           String    @id @default(cuid())
+  schoolId     String
+  titulo       String
+  introducao   String
+  perguntas    Json
+  turmas       String[]  @default([])
+  status       String    @default("aberta") // "aberta" | "encerrada"
+  abertaEm     DateTime  @default(now())
+  encerradaEm  DateTime?
+  criadoPorId  String
+
+  @@index([schoolId, status])
+}
+
+// Quem já respondeu — só pra impedir resposta dupla. Não tem data nem
+// ligação com a resposta (anonimato). alvo = "geral" ou "instrutor:<matr>:<classGroupId>".
+model AvaliacaoParticipacao {
+  campanhaId String
+  memberId   String
+  alvo       String
+
+  @@id([campanhaId, memberId, alvo])
+}
+
+// Resposta anônima: sem memberId, id aleatório e só o dia (sem hora).
+model AvaliacaoResposta {
+  id            String   @id
+  campanhaId    String
+  schoolId      String
+  parte         String // "instrutor" | "geral"
+  classGroupId  String?
+  turmaNome     String?
+  instrutorMatr String?
+  instrutorNome String?
+  materias      String[] @default([])
+  respostas     Json
+  dia           DateTime @db.Date
+
+  @@index([campanhaId, parte])
+  @@index([schoolId])
+  @@index([instrutorMatr])
+}

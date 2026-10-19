@@ -5,6 +5,7 @@ import {ensureGroupMeetingWindow} from "@/lib/meeting-series";
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { filiaisAdministradas, recursosDaFilial } from "@/lib/recursos-filial";
+import { avaliacaoPendente } from "@/lib/avaliacao";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import { rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
@@ -158,7 +159,12 @@ export async function getMemberDashboard(memberId: string) {
   const acessoVoluntario = await temAcessoVoluntario(member);
   const administradorNacional = await ehAdministradorNacional(member);
   // Recursos que a filial liberou (painéis ocultos por padrão) e se a pessoa administra alguma filial.
-  const [recursos, administraFilial] = await Promise.all([recursosDaFilial(member.schoolId), filiaisAdministradas(member).then((f) => f.length > 0)]);
+  const [recursos, administraFilial, avaliacao] = await Promise.all([
+    recursosDaFilial(member.schoolId),
+    filiaisAdministradas(member).then((f) => f.length > 0),
+    // Quadrinho da avaliação de instrutores: só com rodada aberta e algo pendente pra este aluno.
+    avaliacaoPendente(member),
+  ]);
   const studentClassGroupIds = member.classMemberships
     .filter((cm) => cm.role === "aluno" && (cm.classGroup.tipo === "turma" || acessoVoluntario))
     .map((cm) => cm.classGroupId);
@@ -311,6 +317,7 @@ export async function getMemberDashboard(memberId: string) {
     administradorNacional,
     recursos,
     administraFilial,
+    avaliacao,
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     fortunaBalances,
     agendaItems,

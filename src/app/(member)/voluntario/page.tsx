@@ -1,3 +1,4 @@
+import { escolasQueGereAvaliacao } from "@/lib/avaliacao";
 import {portalLabel} from "@/lib/display-labels";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
@@ -5,7 +6,7 @@ import { db } from "@/lib/db";
 import { linkDoCanal } from "@/lib/slack";
 import { termoVigente } from "@/lib/volunteer-term";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { ArrowLeft, Banknote, CalendarClock, Crown, ExternalLink, FileSignature, GraduationCap, KeyRound, Shield } from "lucide-react";
+import { ArrowLeft, Banknote, CalendarClock, ClipboardCheck, Crown, ExternalLink, FileSignature, GraduationCap, KeyRound, Shield } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -36,6 +37,7 @@ export default async function VoluntarioPage() {
     a.classGroup.name.localeCompare(b.classGroup.name),
   );
   const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0 || (await ehAdministradorNacional(member));
+  const geraAvaliacao = (await escolasQueGereAvaliacao(member)).length > 0;
   const podeLiberarAcessos = chefeDeFilial || lideraGrupo;
   if (
     grupos.length === 0 &&
@@ -71,6 +73,21 @@ export default async function VoluntarioPage() {
       )}
 
       <div className="flex flex-col gap-3">
+        {geraAvaliacao && (
+          <Link
+            href="/escolastica/avaliacao"
+            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
+              <ClipboardCheck size={18} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Avaliação dos instrutores</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Questionário, rodadas e relatórios anônimos</p>
+            </div>
+          </Link>
+        )}
+
         {podeLiberarAcessos && (
           <Link
             href="/voluntario/acessos"

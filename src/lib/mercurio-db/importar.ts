@@ -415,6 +415,37 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
       where: { role: "professor", classGroup: { schoolId: school.id, tipo: { not: "turma" } }, member: { mercurioId: { notIn: responsaveisValidos } } },
     });
 
+    // Vínculo oficial turma → matéria → instrutor (avaliação de instrutores):
+    // todas as turmas da filial com aluno ativo, inclusive instrutores sem
+    // conta no Portal ou de outra filial.
+    const materias = await consultarTudo(
+      `SELECT tm.tma_turma, tm.tma_materia, s.sma_materia, tm.tma_instrutor, c.cad_nome, tm.tma_inicio FROM turmas_materias tm LEFT JOIN sig_materias s ON s.sma_sigla=tm.tma_materia LEFT JOIN cadastro c ON c.cad_matr=tm.tma_instrutor WHERE tm.tma_unidade=${sqlTexto(uniId)} AND EXISTS (SELECT 1 FROM cadastro a WHERE a.cad_tur_unidade=tm.tma_unidade AND a.cad_turma=tm.tma_turma) ORDER BY tm.tma_turma, tm.tma_materia`,
+    );
+    const instrutoresLocais = new Map(
+      (await db.member.findMany({ where: { mercurioId: { in: [...new Set(materias.map((m) => m.tma_instrutor!).filter(Boolean))] } }, select: { id: true, mercurioId: true } })).map((m) => [m.mercurioId!, m.id]),
+    );
+    const idsMaterias: string[] = [];
+    for (const m of materias) {
+      if (!m.tma_turma || !m.tma_materia || !m.tma_instrutor || m.tma_instrutor === "0") continue;
+      const classGroupId = await turmaId(m.tma_turma);
+      const d = {
+        schoolId: school.id,
+        materiaNome: nomeProprio((m.sma_materia ?? m.tma_materia).trim()),
+        instrutorMatr: m.tma_instrutor,
+        instrutorNome: nomeProprio((m.cad_nome ?? `Instrutor ${m.tma_instrutor}`).trim()),
+        instrutorMemberId: instrutoresLocais.get(m.tma_instrutor) ?? null,
+        inicio: dataOuNull(m.tma_inicio),
+        syncedAt: new Date(),
+      };
+      const reg = await db.turmaMateria.upsert({
+        where: { classGroupId_materiaSigla: { classGroupId, materiaSigla: m.tma_materia } },
+        update: d,
+        create: { ...d, classGroupId, materiaSigla: m.tma_materia },
+      });
+      idsMaterias.push(reg.id);
+    }
+    await db.turmaMateria.deleteMany({ where: { schoolId: school.id, id: { notIn: idsMaterias } } });
+
     // Grupo que deixou de existir (ninguém BRG/PRO nele): tira todos os vínculos.
     await db.classMembership.deleteMany({ where: { classGroup: { schoolId: school.id, tipo: { notIn: ["turma", ...gruposDaFilial] } } } });
 

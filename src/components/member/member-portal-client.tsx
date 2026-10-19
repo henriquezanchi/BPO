@@ -11,6 +11,7 @@ import {
   BookOpen,
   CalendarCheck,
   CheckCircle2,
+  ClipboardCheck,
   Compass,
   HandHeart,
   Leaf,
@@ -280,6 +281,18 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             subtitle={dashboard.streakMeses > 0 ? t.tiles.jornada.subtitleComStreak(dashboard.streakMeses) : t.tiles.jornada.subtitleSemStreak}
             onClick={() => setModal("jornada")}
           />
+          {dashboard.avaliacao && (
+            <Link
+              href="/avaliacao"
+              className="flex flex-col items-start gap-2 rounded-2xl border border-na-gold/50 bg-na-gold/10 p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold dark:border-amber-900 dark:bg-amber-950/20"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-gold/20 text-na-gold-dark dark:text-amber-300">
+                <ClipboardCheck size={16} />
+              </span>
+              <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">Avaliação dos instrutores</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">Anônima · poucos minutos</span>
+            </Link>
+          )}
           {dashboard.recursos.transparencia && (
             <FeatureTile
               icon={<PiggyBank size={16} />}
