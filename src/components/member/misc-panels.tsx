@@ -2,7 +2,9 @@
 
 import { getMinhasSolicitacoes, oferecerApoioVoluntario, solicitarAdesaoGaf } from "@/lib/actions/misc-request-actions";
 import { formatDateBR, whatsappHref } from "@/lib/format";
-import { HandHeart, Loader2 } from "lucide-react";
+import type { ResumoGrupo } from "@/lib/grupos-dados";
+import { CalendarClock, ChevronRight, HandHeart, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 
 const SECRETARIAS = ["Economia", "Difusão", "Abertura de Turma", "Café Sophia", "Artes", "Manutenção", "Escolástica"];
@@ -13,7 +15,7 @@ const SECRETARIAS = ["Economia", "Difusão", "Abertura de Turma", "Café Sophia"
  * verdade (ver misc-request-actions.ts) e aparece no detalhe do membro no
  * Painel do Diretor.
  */
-export function GafPanel({ memberId }: { memberId: string }) {
+export function GafPanel({ memberId, gafs = [] }: { memberId: string; gafs?: ResumoGrupo[] }) {
   const [solicitadoEm, setSolicitadoEm] = useState<Date | null | undefined>(undefined);
   const [isPending, startTransition] = useTransition();
 
@@ -30,6 +32,25 @@ export function GafPanel({ memberId }: { memberId: string }) {
 
   return (
     <div className="text-left">
+      {gafs.length > 0 && (
+        <div className="mb-4 flex flex-col gap-2">
+          <p className="text-[11px] font-bold text-gray-500 uppercase dark:text-gray-400">Seus GAFs</p>
+          {gafs.map((g) => (
+            <Link key={g.id} href={`/grupos/${g.id}?de=portal`} className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{g.nome}</span>
+                <span className="flex items-center gap-1 text-[11px] text-gray-500 capitalize dark:text-gray-400">
+                  <CalendarClock size={11} />
+                  {g.proximoEncontro
+                    ? new Date(g.proximoEncontro).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+                    : "sem encontro marcado"}
+                </span>
+              </span>
+              <ChevronRight size={16} className="shrink-0 text-gray-300" />
+            </Link>
+          ))}
+        </div>
+      )}
       <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">
         O <strong>Grupo de Acompanhamento Filosófico (GAF)</strong> é um espaço criado para apoiar o aluno em sua
         jornada de vivência prática da filosofia, com encontros periódicos e acompanhamento próximo por instrutores.
@@ -43,7 +64,7 @@ export function GafPanel({ memberId }: { memberId: string }) {
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
       >
         {isPending ? <Loader2 size={16} className="animate-spin" /> : <HandHeart size={16} />}
-        {solicitadoEm ? "Solicitar de novo" : "Solicitar adesão ao GAF"}
+        {solicitadoEm ? "Solicitar de novo" : gafs.length ? "Quero participar de outro GAF" : "Solicitar adesão ao GAF"}
       </button>
     </div>
   );

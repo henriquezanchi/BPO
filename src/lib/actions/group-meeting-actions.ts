@@ -1,20 +1,22 @@
 "use server";
 
-import {requireAuthenticatedMember,requireTeacherOfClass} from "@/lib/auth";
-import {temAcessoVoluntario} from "@/lib/acesso-voluntario";
+import {getAuthenticatedMember,requireAuthenticatedMember} from "@/lib/auth";
+import {papelNoGrupo} from "@/lib/grupos-portal";
 import {db} from "@/lib/db";
 import {validateMeeting,localInZone,parseLocal,shiftLocal,validMeetingResponse,MeetingError,type MeetingInput,type WeeklySegment} from "@/lib/group-meetings";
 import {ensureGroupMeetingWindow,materializeMeetingSeries} from "@/lib/meeting-series";
 import {revalidatePath} from "next/cache";
 
+// Grupos de voluntários (BF/BM/CS) e os grupos do Portal (GAF, GDVE, secretarias):
+// quem gere cada tipo está em grupos-portal.ts (a administração da filial gere GAF e secretarias).
 async function leader(groupId:string) {
- const actor=await requireTeacherOfClass(groupId);
+ const actor=await getAuthenticatedMember();
+ if(!actor)throw new MeetingError('Não autenticado.');
  if(!actor.mercurioAtivo)throw new MeetingError('Cadastro inativo.');
- const group=await db.classGroup.findUniqueOrThrow({where:{id:groupId},select:{tipo:true}});
- if(!['BF','BM','CS'].includes(group.tipo))throw new MeetingError('Reuniões disponíveis somente para grupos de voluntários.');
+ if(!(await papelNoGrupo(actor,groupId)).podeGerir)throw new MeetingError('Somente os responsáveis do grupo cadastram reuniões.');
  return actor;
 }
-function refresh(groupId:string) {revalidatePath(`/professor/turma/${groupId}`);revalidatePath('/portal');}
+function refresh(groupId:string) {revalidatePath(`/professor/turma/${groupId}`);revalidatePath(`/grupos/${groupId}`);revalidatePath('/portal');}
 function fields(input:MeetingInput) {return {title:input.title.trim(),timeZone:input.timeZone,publicDetails:input.publicDetails.trim(),internalDetails:input.internalDetails.trim(),fullUniform:input.fullUniform,required:true};}
 async function createMeeting(groupId:string,input:MeetingInput) {
  const actor=await leader(groupId);const date=validateMeeting(input);const weekly=input.weekly??!!input.repeatUntil;
@@ -31,7 +33,12 @@ async function createMeeting(groupId:string,input:MeetingInput) {
 export async function getGroupMeetings(groupId:string) {
  await leader(groupId);
  await ensureGroupMeetingWindow([groupId]);
- return db.groupMeeting.findMany({where:{classGroupId:groupId,startsAt:{gte:new Date(Date.now()-30*86400000)}},orderBy:{startsAt:'asc'},include:{responses:{select:{memberId:true,response:true,justification:true,updatedAt:true,member:{select:{name:true}}}}}});
+ const [rows,membros]=await Promise.all([
+  db.groupMeeting.findMany({where:{classGroupId:groupId,startsAt:{gte:new Date(Date.now()-30*86400000)}},orderBy:{startsAt:'asc'},include:{responses:{select:{memberId:true,response:true,justification:true,updatedAt:true,member:{select:{name:true}}}},presencas:{select:{memberId:true,participou:true,motivo:true,naoInformou:true}}}}),
+  db.classMembership.findMany({where:{classGroupId:groupId},select:{memberId:true,member:{select:{name:true}}}}),
+ ]);
+ const nomes=new Map(membros.map(m=>[m.memberId,m.member.name]));
+ return rows.map(row=>({...row,presencas:row.presencas.map(p=>({...p,nome:nomes.get(p.memberId)??'Integrante'}))}));
 }
 async function changeMeeting(id:string,version:number,scope:'esta'|'seguintes',input:MeetingInput|null,cancellationReason?:string) {
  if(!Number.isSafeInteger(version)||version<0)throw new MeetingError('Versão de reunião inválida.');
@@ -73,7 +80,8 @@ async function changeMeeting(id:string,version:number,scope:'esta'|'seguintes',i
 }
 async function respondMeeting(memberId:string,id:string,response:string,justification:string,meetingVersion:number) {
  const member=await requireAuthenticatedMember(memberId);
- if(!member.mercurioAtivo||!await temAcessoVoluntario(member))throw new MeetingError('Acesso à área de voluntários não liberado.');
+ const alvo=await db.groupMeeting.findUnique({where:{id},select:{classGroupId:true}});
+ if(!member.mercurioAtivo||!alvo||!(await papelNoGrupo(member,alvo.classGroupId)).podeVer)throw new MeetingError('Acesso a este grupo não liberado.');
  if(!Number.isSafeInteger(meetingVersion)||meetingVersion<0)throw new MeetingError('Versão de convocação inválida.');
  validMeetingResponse(response,justification);
  await db.$transaction(async tx=>{

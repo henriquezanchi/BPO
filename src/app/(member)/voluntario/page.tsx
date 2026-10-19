@@ -1,49 +1,69 @@
-import { escolasQueGereAvaliacao } from "@/lib/avaliacao";
-import {portalLabel} from "@/lib/display-labels";
+import { CartaoGrupo } from "@/components/admin/grupos-admin";
+import { CriarGdve } from "@/components/member/volunteer/criar-gdve";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { linkDoCanal } from "@/lib/slack";
+import { escolasQueGereAvaliacao } from "@/lib/avaliacao";
+import { portalLabel } from "@/lib/display-labels";
+import { meusGrupos, type ResumoGrupo } from "@/lib/grupos-dados";
+import { ehFV } from "@/lib/grupos-portal";
+import { filiaisAdministradas } from "@/lib/recursos-filial";
 import { termoVigente } from "@/lib/volunteer-term";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { ArrowLeft, Banknote, CalendarClock, ClipboardCheck, Crown, ExternalLink, FileSignature, GraduationCap, KeyRound, Shield } from "lucide-react";
+import { ArrowLeft, Banknote, CalendarClock, ChevronRight, ClipboardCheck, Crown, FileSignature, GraduationCap, KeyRound, Settings, Shield } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+const SECOES: { titulo: string; tipos: ResumoGrupo["tipo"][]; vazio?: string }[] = [
+  { titulo: "Secretarias", tipos: ["SEC"] },
+  { titulo: "Grupos de FV", tipos: ["BF", "BM", "CS"] },
+  { titulo: "GDVE", tipos: ["GDVE"] },
+  { titulo: "GAF", tipos: ["GAF"] },
+];
+
+function Ferramenta({ href, icone: Icone, titulo, texto }: { href: string; icone: typeof Shield; titulo: string; texto: string }) {
+  return (
+    <Link href={href} className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-white dark:hover:bg-gray-900">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
+        <Icone size={17} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{titulo}</span>
+        <span className="block truncate text-[11px] text-gray-500 dark:text-gray-400">{texto}</span>
+      </span>
+      <ChevronRight size={15} className="shrink-0 text-gray-300 group-hover:text-na-green" />
+    </Link>
+  );
+}
+
 /**
- * Hub pros diferentes tipos de voluntário (instrutor, direção, secretário,
- * etc — ver conversa). Instrutor (isPedagogo, "Integração > Pedagogos"),
- * Direção (isDiretor/isSubChefe, "Diretor > Dados da Unidade") e Secretário
- * de Escolástica (isSecretarioEscolastica) e de Economia
- * (isSecretarioEconomia), ambos de "Diretor > Colaboradores", têm sinal real
- * do Mercúrio — ver scripts/sync-diretoria.ts.
+ * Portal do Voluntário (redesenho 2026-10-19): grupos da pessoa em destaque
+ * (secretarias, grupos de FV, GDVE, GAF) e as ferramentas de cada função. No
+ * computador, duas colunas; no celular, grupos primeiro e ferramentas depois.
+ * A área de voluntários é sensível: grupos só aparecem com acesso liberado
+ * (camadas — acesso-voluntario.ts); o GDVE só para FV.
  */
 export default async function VoluntarioPage() {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/voluntario");
-  // Grupos de voluntários (Grupo Feminino/Masculino/de Segurança) vêm do Mercúrio — ver mercurio-db/importar.ts.
-  // Informação sensível: só aparece com acesso liberado em camadas.
-  const acesso = await temAcessoVoluntario(member);
-  const grupos = !acesso ? [] : await db.classMembership.findMany({
-    where: { memberId: member.id, classGroup: { tipo: { not: "turma" } } },
-    include: { classGroup: { select: { id: true, name: true, slackChannelId: true, slackTeamId: true } } },
-    orderBy: { classGroup: { name: "asc" } },
-  });
-  const lideraGrupo = grupos.some((g) => g.role === "professor");
-  // Responsável que também é integrante aparece uma vez só, como responsável.
-  const gruposUnicos = [...new Map([...grupos].sort((a, b) => Number(a.role === "professor") - Number(b.role === "professor")).map((g) => [g.classGroupId, g])).values()].sort((a, b) =>
-    a.classGroup.name.localeCompare(b.classGroup.name),
-  );
-  const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0 || (await ehAdministradorNacional(member));
-  const geraAvaliacao = (await escolasQueGereAvaliacao(member)).length > 0;
-  const podeLiberarAcessos = chefeDeFilial || lideraGrupo;
+  const [acesso, fv, grupos, nacional, administra, geraAvaliacao, termoAssinado] = await Promise.all([
+    temAcessoVoluntario(member),
+    ehFV(member.id),
+    meusGrupos(member),
+    ehAdministradorNacional(member),
+    filiaisAdministradas(member),
+    escolasQueGereAvaliacao(member),
+    termoVigente(member.id, member.schoolId),
+  ]);
+  const lideraGrupo = grupos.some((g) => g.papel === "responsavel" && ["BF", "BM", "CS"].includes(g.tipo));
+  const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0 || nacional;
+  const podeCriarGdve = fv && acesso;
   if (
     grupos.length === 0 &&
+    !podeCriarGdve &&
     !chefeDeFilial &&
     !member.isPedagogo &&
-    !member.isDiretor &&
     !member.isSubChefe &&
     !member.isSecretarioEscolastica &&
     !member.isSecretarioEconomia &&
@@ -51,171 +71,81 @@ export default async function VoluntarioPage() {
   )
     redirect("/portal");
 
-  const termoAssinado = await termoVigente(member.id, member.schoolId);
+  const ferramentas = [
+    administra.length > 0 && { href: "/admin", icone: Settings, titulo: "Administração da filial", texto: "Secretarias, GAF, recursos e administradores" },
+    geraAvaliacao.length > 0 && { href: "/escolastica/avaliacao", icone: ClipboardCheck, titulo: "Avaliação dos instrutores", texto: "Questionário, rodadas e relatórios anônimos" },
+    (chefeDeFilial || lideraGrupo) && {
+      href: "/voluntario/acessos",
+      icone: KeyRound,
+      titulo: "Liberar acessos",
+      texto: chefeDeFilial ? "Quem da filial vê a área de voluntários" : "Quem do seu grupo vê a área de voluntários",
+    },
+    (member.isPedagogo || lideraGrupo) && {
+      href: "/professor",
+      icone: member.isPedagogo ? GraduationCap : Shield,
+      titulo: member.isPedagogo ? "Instrutor" : "Avisos dos grupos",
+      texto: member.isPedagogo ? "Turmas, atividades e enquetes" : "Avisos e atividades para os integrantes",
+    },
+    (member.isDiretor || member.isSubChefe) && { href: "/diretor", icone: Crown, titulo: "Direção", texto: `${member.isDiretor ? "Diretor(a)" : "Sub-Chefe"} da unidade` },
+    member.isSecretarioEscolastica && { href: "/escolastica", icone: CalendarClock, titulo: "Escolástica", texto: "Agenda de pendências" },
+    member.isSecretarioEconomia && { href: "/economia", icone: Banknote, titulo: "Economia", texto: "Composição da contribuição e tesouraria" },
+    { href: "/voluntario/termo", icone: FileSignature, titulo: "Termo de Voluntariado", texto: termoAssinado ? "Assinado" : "Pendente de assinatura" },
+  ].filter(Boolean) as Parameters<typeof Ferramenta>[0][];
+
+  const secoes = SECOES.map((s) => ({ ...s, grupos: grupos.filter((g) => s.tipos.includes(g.tipo)) })).filter((s) => s.grupos.length > 0 || (s.titulo === "GDVE" && podeCriarGdve));
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <Link href="/portal" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-          <ArrowLeft size={14} /> Voltar ao Portal
-        </Link>
-        <ThemeToggle />
-      </div>
-      <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Portal do Voluntário</h1>
-      {member.cargos.length > 0 && (
-        <div className="-mt-3 flex flex-wrap gap-1.5">
-          {member.cargos.map((cargo) => (
-            <span key={cargo} className="rounded-full bg-na-green-light px-2.5 py-1 text-[11px] font-semibold text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-400">
-              {portalLabel(cargo.charAt(0) + cargo.slice(1).toLowerCase())}
-            </span>
-          ))}
+    <div className="min-h-screen bg-na-bg dark:bg-gray-950">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 lg:p-8">
+        <div className="flex items-center justify-between">
+          <Link href="/portal" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <ArrowLeft size={14} /> Portal do Aluno
+          </Link>
+          <ThemeToggle />
         </div>
-      )}
+        <header>
+          <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Portal do Voluntário</h1>
+          {member.cargos.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {member.cargos.map((cargo) => (
+                <span key={cargo} className="rounded-full bg-na-green-light px-2.5 py-1 text-[11px] font-semibold text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-400">
+                  {portalLabel(cargo.charAt(0) + cargo.slice(1).toLowerCase())}
+                </span>
+              ))}
+            </div>
+          )}
+        </header>
 
-      <div className="flex flex-col gap-3">
-        {geraAvaliacao && (
-          <Link
-            href="/escolastica/avaliacao"
-            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
-              <ClipboardCheck size={18} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Avaliação dos instrutores</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Questionário, rodadas e relatórios anônimos</p>
-            </div>
-          </Link>
-        )}
-
-        {podeLiberarAcessos && (
-          <Link
-            href="/voluntario/acessos"
-            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
-              <KeyRound size={18} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Liberar acessos</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {chefeDeFilial ? "Quem da filial vê a área de voluntários" : "Quem do seu grupo vê a área de voluntários"}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+          <div className="flex flex-col gap-6">
+            {secoes.length === 0 && (
+              <p className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-[13px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                {acesso ? "Você ainda não faz parte de nenhum grupo ou secretaria." : "Seus grupos aparecem aqui depois que o responsável liberar seu acesso à área de voluntários."}
               </p>
-            </div>
-          </Link>
-        )}
-
-        {lideraGrupo && !member.isPedagogo && (
-          <Link
-            href="/professor"
-            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
-              <Shield size={18} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Meus grupos</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Avisos e atividades pros integrantes</p>
-            </div>
-          </Link>
-        )}
-
-        {member.isPedagogo && (
-          <Link
-            href="/professor"
-            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
-              <GraduationCap size={18} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{lideraGrupo ? "Instrutor e grupos" : "Instrutor"}</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{lideraGrupo ? "Turmas, grupos, avisos e enquetes" : "Turmas, atividades e enquetes"}</p>
-            </div>
-          </Link>
-        )}
-
-        {(member.isDiretor || member.isSubChefe) && (
-          <Link
-            href="/diretor"
-            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
-              <Crown size={18} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Direção</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{member.isDiretor ? "Diretor(a)" : "Sub-Chefe"} da unidade</p>
-            </div>
-          </Link>
-        )}
-
-        <Link
-          href="/voluntario/termo"
-          className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
-            <FileSignature size={18} />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Termo de Voluntariado</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{termoAssinado ? "Assinado" : "Pendente de assinatura"}</p>
-          </div>
-        </Link>
-
-        {member.isSecretarioEscolastica && (
-          <Link
-            href="/escolastica"
-            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
-              <CalendarClock size={18} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Escolástica</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Agenda de pendências (ex: transições pro Círculo de Amigos)</p>
-            </div>
-          </Link>
-        )}
-
-        {member.isSecretarioEconomia && (
-          <Link
-            href="/economia"
-            className="flex items-center gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-na-gold dark:border-gray-700"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark">
-              <Banknote size={18} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Economia</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Aprovar novos itens de composição da contribuição</p>
-            </div>
-          </Link>
-        )}
-      </div>
-
-      {grupos.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Seus grupos</h2>
-          <p className="-mt-1 text-[11px] text-gray-500 dark:text-gray-400">Os avisos de cada grupo aparecem na sua Agenda no Portal.</p>
-          {gruposUnicos.map((g) => {
-            const slack = linkDoCanal(g.classGroup.slackTeamId, g.classGroup.slackChannelId);
-            return (
-              <div key={g.id} className="flex items-center justify-between rounded-2xl border border-gray-200 p-3 dark:border-gray-700">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{portalLabel(g.classGroup.name)}</p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">{g.role === "professor" ? "Responsável" : "Integrante"}</p>
-                </div>
-                {slack && (
-                  <a href={slack} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] font-semibold text-na-green dark:text-emerald-400">
-                    Canal no Slack <ExternalLink size={11} />
-                  </a>
+            )}
+            {secoes.map((s) => (
+              <section key={s.titulo} className="flex flex-col gap-3">
+                <h2 className="text-[12px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">{s.titulo}</h2>
+                {s.titulo === "GDVE" && podeCriarGdve && <CriarGdve schoolId={member.schoolId} />}
+                {s.grupos.length > 0 && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {s.grupos.map((g) => (
+                      <CartaoGrupo key={g.id} g={g} de="voluntario" etiqueta={g.papel === "responsavel" ? "Responsável" : "Integrante"} />
+                    ))}
+                  </div>
                 )}
-              </div>
-            );
-          })}
-        </section>
-      )}
-    </main>
+              </section>
+            ))}
+          </div>
+
+          <aside className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-gray-50/60 p-2 lg:sticky lg:top-6 dark:border-gray-800 dark:bg-gray-900/40">
+            <h2 className="px-3 pt-2 text-[12px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Ferramentas</h2>
+            {ferramentas.map((f) => (
+              <Ferramenta key={f.href} {...f} />
+            ))}
+          </aside>
+        </div>
+      </div>
+    </div>
   );
 }

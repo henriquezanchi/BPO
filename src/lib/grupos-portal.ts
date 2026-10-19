@@ -15,17 +15,9 @@ import type { Member } from "@prisma/client";
  *  - BF/BM/CS: grupos de voluntários vindos do Mercúrio; aqui ganham
  *    atividades e reuniões, mas a composição continua vindo do Mercúrio.
  */
-export const TIPOS_GRUPO = {
-  GAF: { nome: "GAF", completo: "Grupo de Acompanhamento Filosófico", doPortal: true },
-  GDVE: { nome: "GDVE", completo: "GDVE", doPortal: true },
-  SEC: { nome: "Secretaria", completo: "Secretaria da filial", doPortal: true },
-  BF: { nome: "Grupo Feminino", completo: "Grupo Feminino", doPortal: false },
-  BM: { nome: "Grupo Masculino", completo: "Grupo Masculino", doPortal: false },
-  CS: { nome: "Grupo de Segurança", completo: "Grupo de Segurança", doPortal: false },
-} as const;
-export type TipoGrupo = keyof typeof TIPOS_GRUPO;
-export const TIPOS_FV = ["BF", "BM", "CS"] as const;
-export const ehTipoGrupo = (t: string): t is TipoGrupo => t in TIPOS_GRUPO;
+import { TIPOS_FV, ehTipoGrupo, type TipoGrupo } from "@/lib/grupos-comum";
+
+export { TIPOS_GRUPO, TIPOS_FV, ehTipoGrupo, MODALIDADES, FREQUENCIAS, type TipoGrupo } from "@/lib/grupos-comum";
 
 type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "filiaisChefiadas" | "mercurioId" | "mercurioAtivo" | "isMembroPrograma">;
 
@@ -108,6 +100,3 @@ export async function gruposDaAgenda(m: Pessoa & { classMemberships: { classGrou
     ),
   ];
 }
-
-export const MODALIDADES: Record<string, string> = { presencial: "Presencial", online: "Online", misto: "Presencial e online" };
-export const FREQUENCIAS: Record<number, string> = { 1: "Semanal", 2: "Quinzenal", 4: "A cada 4 semanas" };

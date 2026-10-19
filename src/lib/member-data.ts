@@ -8,6 +8,8 @@ import { filiaisAdministradas, recursosDaFilial } from "@/lib/recursos-filial";
 import { avaliacaoPendente } from "@/lib/avaliacao";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
+import { avisosDosGrupos, meusGrupos } from "@/lib/grupos-dados";
+import { gruposDaAgenda } from "@/lib/grupos-portal";
 import { rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
 import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
 
@@ -200,7 +202,10 @@ export async function getMemberDashboard(memberId: string) {
       : Promise.resolve([]),
   ]);
 
-  const groupIds = member.classMemberships.filter(cm=>cm.role==='aluno'&&['BF','BM','CS'].includes(cm.classGroup.tipo)&&acessoVoluntario&&member.mercurioAtivo).map(cm=>cm.classGroupId);
+  // Reuniões dos grupos em que a pessoa é integrante: grupos de FV e secretarias com acesso de voluntário,
+  // GAF sempre, GDVE só para FV (regras em grupos-portal.ts).
+  const groupIds = await gruposDaAgenda({...member,classMemberships:member.classMemberships.filter(cm=>cm.role==='aluno'&&cm.classGroup.arquivadoEm===null)});
+  const [avisosGrupos,meusGafs] = await Promise.all([avisosDosGrupos({...member,classMemberships:member.classMemberships.filter(cm=>cm.classGroup.arquivadoEm===null)}),meusGrupos(member,['GAF'])]);
   await ensureGroupMeetingWindow(groupIds);
   const meetings = groupIds.length ? await db.groupMeeting.findMany({
     where:{classGroupId:{in:groupIds},endsAt:{gte:new Date()}},orderBy:{startsAt:'asc'},
@@ -323,6 +328,8 @@ export async function getMemberDashboard(memberId: string) {
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     fortunaBalances,
     agendaItems,
+    avisosGrupos,
+    meusGafs,
     availableToAdd,
     streakMeses,
     eventHistory: eventHistory.map(r=>({title:r.event.title,date:r.event.startsAt})),

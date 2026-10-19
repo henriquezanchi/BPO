@@ -43,6 +43,7 @@ import { StudyAreaPanel } from "./panels/study-area-panel";
 import { TransparenciaPanel } from "./panels/transparencia-panel";
 import { GafPanel, HelpPanel, VolunteerPanel } from "./misc-panels";
 import { useAgendaComUlisses } from "@/lib/ulisses/navegador";
+import { AvisosGrupos } from "./avisos-grupos";
 
 type ModalKey =
   | "cadastro"
@@ -204,6 +205,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
 
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         <NudgeCard memberId={member.id} />
+        <AvisosGrupos avisos={dashboard.avisosGrupos} />
 
         {/* Status financeiro */}
         <div
@@ -299,8 +301,8 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           {dashboard.recursos.voluntariado && (
             <FeatureTile icon={<HandHeart size={16} />} title={t.tiles.voluntariado.title} subtitle={t.tiles.voluntariado.subtitle} onClick={() => setModal("voluntariado")} />
           )}
-          {dashboard.recursos.gaf && (
-            <FeatureTile icon={<UsersRound size={16} />} title={t.tiles.gaf.title} subtitle={t.tiles.gaf.subtitle} onClick={() => setModal("gaf")} />
+          {(dashboard.recursos.gaf || dashboard.meusGafs.length > 0) && (
+            <FeatureTile icon={<UsersRound size={16} />} title={t.tiles.gaf.title} subtitle={dashboard.meusGafs.length ? dashboard.meusGafs.map((g) => g.nome).join(", ") : t.tiles.gaf.subtitle} onClick={() => setModal("gaf")} />
           )}
           <FeatureTile icon={<LifeBuoy size={16} />} title={t.tiles.ajuda.title} subtitle={t.tiles.ajuda.subtitle} onClick={() => setModal("ajuda")} />
           <FeatureTile
@@ -383,7 +385,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}
-          {modal === "gaf" && <GafPanel memberId={member.id} />}
+          {modal === "gaf" && <GafPanel memberId={member.id} gafs={dashboard.meusGafs} />}
           {modal === "jornada" && (
             <JornadaPanel
               dataEntrada={member.dataEntradaEscola}

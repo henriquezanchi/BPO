@@ -23,7 +23,9 @@ Pedido do responsável pelo Portal, em 19/10:
 
 10. **Profissões e áreas de atuação** (Relatório da Filial + painel nacional para a direção nacional). Em andamento desde 19/10.
 11. **Secretarias da filial e reuniões de secretaria** (cadastro de secretarias e responsáveis na Administração, com sugestão do Mercúrio). Em andamento desde 19/10.
-12. **GAF e GDVE** (grupos, encontros presenciais/online/mistos, participantes, aviso no Portal e pergunta de presença; GDVE só para FV). Em andamento desde 19/10. GDVE sai da lista de livres abaixo.
+12. **GAF, GDVE e secretarias** (publicado em 19/10). Grupos do Portal como `ClassGroup` de tipo `GAF`, `GDVE` e `SEC`; regras em `lib/grupos-portal.ts` (constantes para o navegador em `lib/grupos-comum.ts`), leituras em `lib/grupos-dados.ts`, ações em `lib/actions/grupos-actions.ts`. Atividades com responsáveis (`GrupoAtividade`) também para BF/BM/CS. Presença pós-encontro em `GrupoPresenca`. Página do grupo `/grupos/[id]`; Administração com abas Secretarias e GAF; Portal do Voluntário redesenhado (computador: duas colunas; celular: empilhado).
+    - **Mudanças em código do Codex:** `group-meeting-actions.ts` — `leader()` e a resposta usam `papelNoGrupo` (a administração gere GAF e secretarias; GAF não exige acesso de voluntário); a série ganhou `intervaloSemanas` (1, 2 ou 4) em `group-meetings.ts`/`meeting-series.ts`; `meeting-manager.tsx` ganhou frequência e o resumo de presença. A Agenda (`member-data.ts`) usa `gruposDaAgenda`.
+    - **Sincronização do Mercúrio:** `importar.ts` só remove vínculos de turmas e de BF/BM/CS (`TIPOS_DO_MERCURIO`); grupos do Portal não são tocados.
 
 Situação dos blocos 1 a 3 em 19/10: concluídos (avaliação, administração da filial e cadastro por solicitação). O bloco 4 (verificação por código) aguarda a escolha do provedor de envio.
 
