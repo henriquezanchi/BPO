@@ -1,0 +1,184 @@
+import { diaPorExtenso, horaCurta, resumo, type EventoCompartilhavel } from "@/lib/compartilhar-evento";
+
+/**
+ * Arte do evento para o Instagram, desenhada no navegador (canvas), nas
+ * medidas de cada formato: story 1080×1920 (9:16) e feed 1080×1350 (4:5).
+ * Cores e fonte da marca (Heket, Helios, Noto Sans — globals.css). No story,
+ * o conteúdo fica fora das faixas de cima e de baixo que o Instagram cobre
+ * com a barra de perfil e a de resposta.
+ */
+export type FormatoArte = "story" | "feed";
+
+/** Medidas por formato. `topo`/`base`: faixas que o Instagram cobre no story. */
+const MEDIDAS = {
+  story: { w: 1080, h: 1920, topo: 230, base: 250, logo: 300, faixa: 230, titulo: 104, linhasTitulo: 5, data: 48, local: 40 },
+  feed: { w: 1080, h: 1350, topo: 90, base: 0, logo: 280, faixa: 220, titulo: 88, linhasTitulo: 4, data: 42, local: 36 },
+} as const;
+
+const COR = {
+  papel: "#faf7ef",
+  heket: "#086357",
+  heketEscuro: "#054039",
+  helios: "#ffca00",
+  heliosEscuro: "#806500",
+  texto: "#1f2937",
+  textoSuave: "#4b5563",
+};
+
+const MARGEM = 96;
+const TITULO_MINIMO = 56;
+
+function carregarImagem(src: string): Promise<HTMLImageElement> {
+  return new Promise((ok, falha) => {
+    const img = new Image();
+    img.onload = () => ok(img);
+    img.onerror = () => falha(new Error(`Não carregou ${src}`));
+    img.src = src;
+  });
+}
+
+/** Quebra o texto em linhas que cabem na largura; corta com reticências após `maxLinhas`. */
+function quebrarLinhas(ctx: CanvasRenderingContext2D, texto: string, largura: number, maxLinhas: number): string[] {
+  const linhas: string[] = [];
+  for (const paragrafo of texto.split("\n")) {
+    let atual = "";
+    for (const palavra of paragrafo.split(/\s+/).filter(Boolean)) {
+      const tentativa = atual ? `${atual} ${palavra}` : palavra;
+      if (ctx.measureText(tentativa).width <= largura || !atual) atual = tentativa;
+      else {
+        linhas.push(atual);
+        atual = palavra;
+      }
+    }
+    if (atual) linhas.push(atual);
+  }
+  if (linhas.length <= maxLinhas) return linhas;
+  const cortadas = linhas.slice(0, maxLinhas);
+  let ultima = cortadas[maxLinhas - 1];
+  while (ultima.length > 1 && ctx.measureText(`${ultima}…`).width > largura) ultima = ultima.slice(0, -1).trimEnd();
+  cortadas[maxLinhas - 1] = `${ultima}…`;
+  return cortadas;
+}
+
+function primeiraMaiuscula(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoArte): Promise<Blob> {
+  const m = MEDIDAS[formato];
+  const canvas = document.createElement("canvas");
+  canvas.width = m.w;
+  canvas.height = m.h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Navegador sem suporte a desenho (canvas).");
+
+  // Mesma família que o Portal já carregou (next/font), com reserva.
+  const familia = getComputedStyle(document.body).fontFamily || "Arial, sans-serif";
+  const fonte = (peso: number, px: number) => `${peso} ${px}px ${familia}`;
+  await Promise.all([document.fonts.load(fonte(700, 80)), document.fonts.load(fonte(400, 40))]).catch(() => {});
+  const espacar = (px: number) => {
+    if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${px}px`;
+  };
+  const larguraUtil = m.w - MARGEM * 2;
+  const story = formato === "story";
+
+  // --- Medir antes de desenhar: o título encolhe até tudo caber acima da faixa.
+  const logo = await carregarImagem("/na-logo.png").catch(() => null);
+  const alturaLogo = logo ? (logo.height / logo.width) * m.logo : 0;
+  const yFaixa = m.h - m.base - m.faixa;
+  const yChamada = m.topo + alturaLogo + (story ? 80 : 56) + 10 + (story ? 56 : 44);
+  const yInicioTitulo = yChamada + (story ? 40 : 30);
+
+  ctx.font = fonte(400, m.local);
+  const linhasLocal = e.location ? quebrarLinhas(ctx, e.location, larguraUtil, 2) : [];
+  const passoData = Math.round(m.data * 1.35);
+  const passoLocal = Math.round(m.local * 1.45);
+  const espacoAntesData = story ? 110 : 90;
+  const alturaInfo = m.data + (e.allDay ? 0 : passoData) + linhasLocal.length * passoLocal;
+  const folgaFaixa = story ? 90 : 70;
+  const alturaParaTitulo = yFaixa - folgaFaixa - alturaInfo - espacoAntesData - yInicioTitulo;
+
+  let tamTitulo: number = m.titulo;
+  let linhasTitulo: string[] = [];
+  for (; tamTitulo >= TITULO_MINIMO; tamTitulo -= 4) {
+    ctx.font = fonte(700, tamTitulo);
+    linhasTitulo = quebrarLinhas(ctx, e.title, larguraUtil, 99);
+    const cabemLinhas = Math.min(m.linhasTitulo, Math.floor(alturaParaTitulo / Math.round(tamTitulo * 1.12)));
+    if (linhasTitulo.length <= cabemLinhas) break;
+  }
+  tamTitulo = Math.max(tamTitulo, TITULO_MINIMO);
+  const entrelinhaTitulo = Math.round(tamTitulo * 1.12);
+  ctx.font = fonte(700, tamTitulo);
+  linhasTitulo = quebrarLinhas(ctx, e.title, larguraUtil, Math.max(1, Math.min(m.linhasTitulo, Math.floor(alturaParaTitulo / entrelinhaTitulo))));
+
+  // --- Desenho.
+  ctx.fillStyle = COR.papel;
+  ctx.fillRect(0, 0, m.w, m.h);
+  ctx.textBaseline = "alphabetic";
+
+  if (logo) ctx.drawImage(logo, MARGEM, m.topo, m.logo, alturaLogo);
+
+  // Filete Helios + chamada.
+  const yFilete = m.topo + alturaLogo + (story ? 80 : 56);
+  ctx.fillStyle = COR.helios;
+  ctx.fillRect(MARGEM, yFilete, 120, 10);
+  ctx.fillStyle = COR.heliosEscuro;
+  ctx.font = fonte(700, story ? 34 : 30);
+  espacar(4);
+  ctx.fillText("EVENTO ABERTO AO PÚBLICO", MARGEM, yChamada);
+  espacar(0);
+
+  let y = yInicioTitulo;
+  ctx.fillStyle = COR.heketEscuro;
+  ctx.font = fonte(700, tamTitulo);
+  for (const linha of linhasTitulo) {
+    y += entrelinhaTitulo;
+    ctx.fillText(linha, MARGEM, y);
+  }
+
+  // Quando e onde.
+  y += espacoAntesData;
+  ctx.fillStyle = COR.texto;
+  ctx.font = fonte(700, m.data);
+  ctx.fillText(primeiraMaiuscula(diaPorExtenso(e.date)), MARGEM, y);
+  if (!e.allDay) {
+    y += passoData;
+    ctx.font = fonte(400, m.data);
+    ctx.fillText(`às ${horaCurta(e.date)} (Brasília)`, MARGEM, y);
+  }
+  ctx.fillStyle = COR.textoSuave;
+  ctx.font = fonte(400, m.local);
+  for (const linha of linhasLocal) {
+    y += passoLocal;
+    ctx.fillText(linha, MARGEM, y);
+  }
+
+  // Descrição curta só no story, no espaço que sobrar antes da faixa.
+  if (story && e.description) {
+    const entrelinha = 52;
+    const cabem = Math.min(6, Math.floor((yFaixa - folgaFaixa - (y + 60)) / entrelinha));
+    if (cabem >= 2) {
+      ctx.font = fonte(400, 36);
+      y += 60;
+      for (const linha of quebrarLinhas(ctx, resumo(e.description, 400), larguraUtil, cabem)) {
+        y += entrelinha;
+        ctx.fillText(linha, MARGEM, y);
+      }
+    }
+  }
+
+  // Faixa de inscrição (verde Heket) até o pé da imagem.
+  ctx.fillStyle = COR.heket;
+  ctx.fillRect(0, yFaixa, m.w, m.h - yFaixa);
+  ctx.fillStyle = COR.helios;
+  ctx.font = fonte(700, story ? 34 : 30);
+  espacar(4);
+  ctx.fillText("INSCRIÇÕES", MARGEM, yFaixa + (story ? 90 : 86));
+  espacar(0);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = fonte(700, story ? 44 : 40);
+  const site = new URL(e.registrationUrl).host.replace(/^www\./, "");
+  ctx.fillText(quebrarLinhas(ctx, site, larguraUtil, 1)[0], MARGEM, yFaixa + (story ? 154 : 146));
+
+  return new Promise((ok, falha) => canvas.toBlob((b) => (b ? ok(b) : falha(new Error("Falha ao gerar a imagem."))), "image/png"));
+}

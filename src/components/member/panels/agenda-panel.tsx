@@ -1,7 +1,9 @@
 "use client";
 
 import {usePaymentPolling} from "@/hooks/use-payment-polling";
+import { CompartilharEvento } from "@/components/member/compartilhar-evento";
 import { MeetingResponse } from "@/components/member/groups/meeting-response";
+import { eventoCompartilhavel } from "@/lib/compartilhar-evento";
 import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/event-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
@@ -264,6 +266,7 @@ function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item:
           </div>
         )}
         {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block text-sm font-semibold text-na-green dark:text-emerald-400">Inscrever-se no site do organizador ↗</a>}
+        {(() => { const publico = eventoCompartilhavel(item); return publico && <CompartilharEvento evento={publico} />; })()}
         {item.description && <p className="mt-1.5 text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
         {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{item.availableSpots??0} vagas disponíveis de {item.capacity}</p>}
         {item.participantInstructions&&<p className="mt-2 whitespace-pre-wrap text-xs"><strong>Orientações: </strong>{item.participantInstructions}</p>}
