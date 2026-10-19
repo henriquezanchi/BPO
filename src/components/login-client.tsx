@@ -5,6 +5,7 @@ import { getDictionary, type Locale } from "@/lib/i18n/dictionaries";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AlertTriangle, Loader2, LogIn } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -87,6 +88,9 @@ export function LoginClient({ next }: { next: string }) {
             <label className="text-[11px] font-semibold text-gray-800 dark:text-gray-300">{t.login.senha}</label>
             <input name="password" type="password" required autoComplete="current-password" className={INPUT_CLASS} />
             <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">{t.login.senhaDica}</p>
+            <Link href="/login/esqueci" className="mt-1 self-start text-[11px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
+              Esqueci minha senha
+            </Link>
           </div>
 
           {error && (

@@ -1637,3 +1637,13 @@ model TesourariaTrava {
   dono     String
   expiraEm DateTime
 }
+
+// Quem voltou a senha de quem para a inicial (6 primeiros números do CPF) —
+// feito pela administração da filial quando a pessoa esquece a senha.
+model RedefinicaoSenha {
+  id       String   @id @default(cuid())
+  memberId String
+  porId    String
+  em       DateTime @default(now())
+  @@index([memberId])
+}

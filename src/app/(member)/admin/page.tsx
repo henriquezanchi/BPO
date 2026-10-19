@@ -1,5 +1,6 @@
 import { AdminFilialPanel } from "@/components/admin/admin-filial-panel";
 import { GafAdmin, SecretariasAdmin } from "@/components/admin/grupos-admin";
+import { SenhasAdmin } from "@/components/admin/senhas-admin";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 const ABAS = [
   { id: "secretarias", rotulo: "Secretarias", icone: Building2, descricao: "Secretarias da filial, equipes de voluntários, atividades e reuniões." },
   { id: "gaf", rotulo: "GAF", icone: Sparkles, descricao: "Grupos de Acompanhamento Filosófico: coordenação, participantes, encontros e programa." },
-  { id: "recursos", rotulo: "Recursos e administradores", icone: Settings, descricao: "O que aparece para os alunos no Portal e quem mais administra a filial." },
+  { id: "recursos", rotulo: "Recursos e administradores", icone: Settings, descricao: "O que aparece para os alunos no Portal, quem mais administra a filial e senhas esquecidas." },
 ] as const;
 type Aba = (typeof ABAS)[number]["id"];
 
@@ -48,7 +49,7 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
     ]);
     const nomes = new Map(pessoas.map((p) => [p.id, p.name]));
     conteudo = (
-      <div className="max-w-2xl">
+      <div className="flex max-w-2xl flex-col gap-8">
         <AdminFilialPanel
           key={escola.id}
           schoolId={escola.id}
@@ -57,6 +58,7 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
           podeEscolherAdmins={direcao}
           pessoas={pessoas.filter((p) => p.id !== member.id)}
         />
+        <SenhasAdmin pessoas={pessoas} />
       </div>
     );
   } else if (aba === "secretarias") {
