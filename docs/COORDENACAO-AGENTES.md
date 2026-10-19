@@ -16,3 +16,16 @@ Pedido do responsável pelo Portal, em 19/10:
 4. **Verificação por código ao trocar celular ou e-mail.**
 
 Não mexer nesses blocos sem combinar. Os demais pendentes de `CONTINUIDADE-VOLUNTARIADO-DIARIOS.md` (escalas, ED/Pré-ED, GDVE, diário, informe mensal) seguem livres.
+
+## Regra de segurança: toda tabela nova com RLS
+
+Em 19/10/2026, 44 das 55 tabelas do schema `public` estavam sem RLS. A chave pública do Supabase, que vai no navegador, lia `Member`, `PaymentCharge`, `ContactChangeLog` etc. pela API REST. A falha foi corrigida pela migração `20261019130000_rls_todas_tabelas`.
+
+**Toda migração que cria tabela precisa terminar com `ALTER TABLE "X" ENABLE ROW LEVEL SECURITY;`.** O Portal acessa o banco só pelo servidor (Prisma), que não depende disso. Para conferir:
+
+```sql
+SELECT relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT c.relrowsecurity;
+```
+
+A consulta deve voltar vazia.
