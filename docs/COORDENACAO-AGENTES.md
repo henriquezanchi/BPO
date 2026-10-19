@@ -15,6 +15,12 @@ Pedido do responsável pelo Portal, em 19/10:
 3. **Alteração de cadastro só por solicitação.** Nenhum dado de cadastro muda o Mercúrio sozinho. Os pedidos vão para revisão.
 4. **Verificação por código ao trocar celular ou e-mail.**
 
+5. **Relatório da Filial** no Painel do Diretor (aba nova, `relatorio-tab.tsx`, resumo diário em `ResumoFilial`). Concluído em 19/10.
+6. **Regra da contribuição** (verde/amarelo/vermelho com desconto até o dia 10) em `src/lib/situacao-contribuicao.ts`. Concluído em 19/10. Reutilize essa regra em vez de recriar.
+7. **Tesouraria no módulo de Economia**: importar extrato, conferir o que já foi lançado no Mercúrio e lançar só o que falta. Adaptado de `C:\Scrapper\mercurio-tesouraria`. Em andamento desde 19/10.
+
+Situação dos blocos 1 a 3 em 19/10: concluídos (avaliação, administração da filial e cadastro por solicitação). O bloco 4 (verificação por código) aguarda a escolha do provedor de envio.
+
 Não mexer nesses blocos sem combinar. Os demais pendentes de `CONTINUIDADE-VOLUNTARIADO-DIARIOS.md` (escalas, ED/Pré-ED, GDVE, diário, informe mensal) seguem livres.
 
 ## Regra de segurança: toda tabela nova com RLS
