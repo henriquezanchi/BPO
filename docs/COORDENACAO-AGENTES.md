@@ -27,6 +27,8 @@ Pedido do responsável pelo Portal, em 19/10:
     - **Mudanças em código do Codex:** `group-meeting-actions.ts` — `leader()` e a resposta usam `papelNoGrupo` (a administração gere GAF e secretarias; GAF não exige acesso de voluntário); a série ganhou `intervaloSemanas` (1, 2 ou 4) em `group-meetings.ts`/`meeting-series.ts`; `meeting-manager.tsx` ganhou frequência e o resumo de presença. A Agenda (`member-data.ts`) usa `gruposDaAgenda`.
     - **Sincronização do Mercúrio:** `importar.ts` só remove vínculos de turmas e de BF/BM/CS (`TIPOS_DO_MERCURIO`); grupos do Portal não são tocados.
 
+13. **Validação de saque via webhook do Asaas** (`/api/webhooks/asaas-saque`, token `ASAAS_SAQUE_TOKEN`). Publicado em 19/10. Aprova `PIX_REFUND` só quando bate com uma inscrição cujo reembolso o Portal enviou (`refundSubmittedAt` nos últimos 60 min, mesmo valor restante) e registra `reembolso_autorizado` no `EventAudit`; aprova `PAYMENT_SPLIT`; recusa os demais tipos, salvo os de `ASAAS_SAQUE_OUTROS_APROVADOS`. Configurado na conta principal, vale também para as subcontas. **Codex:** ao mudar a emissão para a subconta da filial, manter `refundSubmittedAt` marcado antes do POST de estorno, que é o que a validação usa.
+
 Situação dos blocos 1 a 3 em 19/10: concluídos (avaliação, administração da filial e cadastro por solicitação). O bloco 4 (verificação por código) aguarda a escolha do provedor de envio.
 
 Não mexer nesses blocos sem combinar. Os demais pendentes de `CONTINUIDADE-VOLUNTARIADO-DIARIOS.md` (escalas, ED/Pré-ED, diário, informe mensal) seguem livres.
