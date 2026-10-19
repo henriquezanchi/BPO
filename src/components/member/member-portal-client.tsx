@@ -18,6 +18,7 @@ import {
   LogOut,
   MessageCircle,
   Pencil,
+  Settings,
   PiggyBank,
   TriangleAlert,
   UsersRound,
@@ -112,6 +113,15 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
   // ContributionStatusPanel/FortunaWalletCard/AgendaPanel, que recebem
   // `somenteConsulta` e escondem qualquer ação de cobrança).
   const somenteConsulta = member.school.language === "en";
+  const mostrarVoluntario =
+    dashboard.administradorNacional ||
+    member.isPedagogo ||
+    member.isDiretor ||
+    member.isSubChefe ||
+    member.isSecretarioEscolastica ||
+    member.isSecretarioEconomia ||
+    member.cargos.length > 0 ||
+    (dashboard.acessoVoluntario && member.classMemberships.some((cm) => cm.classGroup.tipo !== "turma"));
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
@@ -133,32 +143,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
         </div>
 
         <div data-tour-id="welcome" className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-left text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-semibold text-na-gold">{t.home.portalDoMembro}</span>
-              {(dashboard.administradorNacional || member.isPedagogo || member.isDiretor || member.isSubChefe || member.isSecretarioEscolastica || member.isSecretarioEconomia || member.cargos.length > 0 || (dashboard.acessoVoluntario && member.classMemberships.some((cm) => cm.classGroup.tipo !== "turma"))) && (
-                <>
-                  <span className="text-[10px] text-white/30">·</span>
-                  <Link
-                    href="/voluntario"
-                    className="text-[10px] font-semibold text-white/80 underline decoration-dotted underline-offset-2 transition hover:text-white"
-                  >
-                    {t.home.portalDoVoluntario}
-                  </Link>
-                </>
-              )}
-              {dashboard.administraFilial && (
-                <>
-                  <span className="text-[10px] text-white/30">·</span>
-                  <Link href="/admin" className="text-[10px] font-semibold text-white/80 underline decoration-dotted underline-offset-2 transition hover:text-white">
-                    Administração
-                  </Link>
-                </>
-              )}
-            </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-semibold tracking-wide text-na-gold uppercase">{t.home.portalDoMembro}</span>
             <button
               onClick={() => setModal("cadastro")}
-              className="flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-2 text-[10px] font-semibold transition hover:bg-white/25"
+              className="flex shrink-0 items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[10px] font-semibold whitespace-nowrap transition hover:bg-white/25"
             >
               <Pencil size={11} /> {t.home.editarDados}
             </button>
@@ -180,6 +169,20 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               {t.home.matricula}: <strong>#{member.registrationNo ?? "—"}</strong>
             </span>
           </div>
+          {(mostrarVoluntario || dashboard.administraFilial) && (
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {mostrarVoluntario && (
+                <Link href="/voluntario" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
+                  <HandHeart size={11} /> {t.home.portalDoVoluntario}
+                </Link>
+              )}
+              {dashboard.administraFilial && (
+                <Link href="/admin" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
+                  <Settings size={11} /> Administração
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
