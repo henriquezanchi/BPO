@@ -265,6 +265,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           >
             {t.home.verSituacao}
           </button>
+          {!somenteConsulta && (
+            <p className="text-center text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
+              Pelo Portal, sua contribuição é atualizada assim que o pagamento é confirmado.
+            </p>
+          )}
         </div>
 
         {/* Carteira Fortuna */}

@@ -378,6 +378,11 @@ function RealPaymentScreen({
       <div className="mb-4 rounded-xl border border-gray-200 p-4 text-center dark:border-gray-700">
         <p className="text-xs text-gray-500 dark:text-gray-400">Contribuição de {MESES[mes - 1]}/{year}</p>
         <p className="mt-1 text-2xl font-bold text-na-green-dark dark:text-emerald-400">{formatBRL(totalCobrado)}</p>
+        {!pago && (
+          <p className="mt-2 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+            Pelo Portal, sua contribuição é atualizada assim que o pagamento é confirmado.
+          </p>
+        )}
         {totalCobrado !== amount && (
           <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
             {formatBRL(amount)} de contribuição
