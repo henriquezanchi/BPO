@@ -1,6 +1,11 @@
 "use client";
 
-import { getSolicitacoesComposicaoDoMembro, removeContributionItem, solicitarItemComposicao, updateContributionItemValue } from "@/lib/actions/contribution-actions";
+import {
+  getSolicitacoesComposicaoDoMembro,
+  removeContributionItem,
+  solicitarItemComposicao,
+  updateContributionItemValue,
+} from "@/lib/actions/contribution-actions";
 import { formatBRL } from "@/lib/format";
 import type { SerializedCompositionItem } from "@/lib/member-data";
 import type { MercurioCatalogItem } from "@/lib/mercurio";
@@ -11,11 +16,15 @@ export function MyContributionPanel({
   memberId,
   compositionItems,
   initialAvailableToAdd,
+  somenteConsulta = false,
 }: {
   memberId: string;
   compositionItems: SerializedCompositionItem[];
   initialAvailableToAdd: MercurioCatalogItem[];
+  /** Filial sem escrita no Mercúrio liberada (School.mercurioEscrita): só mostra, sem incluir/alterar/remover. */
+  somenteConsulta?: boolean;
 }) {
+  const editavel = !somenteConsulta;
   const [items, setItems] = useState(compositionItems);
   const [catalog, setCatalog] = useState(initialAvailableToAdd);
   const [solicitacoes, setSolicitacoes] = useState<Awaited<ReturnType<typeof getSolicitacoesComposicaoDoMembro>>>([]);
@@ -87,7 +96,15 @@ export function MyContributionPanel({
         // Item lançado pelo Mercúrio: diminuir exige aprovação da Economia (2026-10-19); o valor atual continua até aprovar.
         setSolicitacoes((prev) => [
           ...prev,
-          { id: `temp-${item.id}`, tipo: res.tipo, compositionItemId: item.id, label: item.label, amount: novoValor, previousAmount: item.amount, createdAt: new Date() },
+          {
+            id: `temp-${item.id}`,
+            tipo: res.tipo,
+            compositionItemId: item.id,
+            label: item.label,
+            amount: novoValor,
+            previousAmount: item.amount,
+            createdAt: new Date(),
+          },
         ]);
         setNotice(
           res.tipo === "remocao"
@@ -116,7 +133,15 @@ export function MyContributionPanel({
         // Item lançado pela escola no Mercúrio — vira pedido pra Economia aprovar, não some da lista.
         setSolicitacoes((prev) => [
           ...prev,
-          { id: `temp-${item.id}`, tipo: "remocao" as const, compositionItemId: item.id, label: item.label, amount: item.amount, previousAmount: null, createdAt: new Date() },
+          {
+            id: `temp-${item.id}`,
+            tipo: "remocao" as const,
+            compositionItemId: item.id,
+            label: item.label,
+            amount: item.amount,
+            previousAmount: null,
+            createdAt: new Date(),
+          },
         ]);
         setNotice(`Solicitação pra remover "${item.label}" enviada — aguardando aprovação da Economia.`);
         return;
@@ -184,7 +209,7 @@ export function MyContributionPanel({
                   ) : (
                     <div className="flex items-center gap-2">
                       <strong>{formatBRL(item.amount)}</strong>
-                      {item.addedViaPortal && (
+                      {editavel && item.addedViaPortal && (
                         <>
                           <button
                             onClick={() => handleStartEdit(item)}
@@ -199,15 +224,11 @@ export function MyContributionPanel({
                             title="Excluir item incluído por você"
                             className="text-gray-400 transition hover:text-na-danger disabled:opacity-60"
                           >
-                            {isRemoving && removingId === item.id ? (
-                              <Loader2 size={13} className="animate-spin" />
-                            ) : (
-                              <Trash2 size={13} />
-                            )}
+                            {isRemoving && removingId === item.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                           </button>
                         </>
                       )}
-                      {!item.addedViaPortal && !remocaoPendente && (
+                      {editavel && !item.addedViaPortal && !remocaoPendente && (
                         <button
                           onClick={() => handleStartEdit(item)}
                           title="Alterar valor (aumentar vale na hora; diminuir vai para aprovação da Economia)"
@@ -216,18 +237,14 @@ export function MyContributionPanel({
                           <Pencil size={13} />
                         </button>
                       )}
-                      {!item.addedViaPortal && (
+                      {editavel && !item.addedViaPortal && (
                         <button
                           onClick={() => handleRemove(item)}
                           disabled={(isRemoving && removingId === item.id) || remocaoPendente}
                           title="Solicitar remoção deste item à Economia"
                           className="text-gray-400 transition hover:text-na-danger disabled:opacity-60"
                         >
-                          {isRemoving && removingId === item.id ? (
-                            <Loader2 size={13} className="animate-spin" />
-                          ) : (
-                            <Trash2 size={13} />
-                          )}
+                          {isRemoving && removingId === item.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                         </button>
                       )}
                     </div>
@@ -270,46 +287,54 @@ export function MyContributionPanel({
         </div>
       )}
 
-      <div className="mb-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-        <div className="mb-2 text-[11px] font-bold text-gray-900 dark:text-gray-100">Incluir novo item</div>
-        {catalog.length === 0 ? (
-          <p className="text-xs text-gray-500 dark:text-gray-400">Nenhum item novo disponível pra incluir.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <select
-              value={selectedGroup}
-              onChange={(e) => setSelectedGroup(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 p-2 text-[13px] text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-            >
-              <option value="">Selecione...</option>
-              {catalog.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-2">
-              <input
-                value={newItemValue}
-                onChange={(e) => setNewItemValue(e.target.value)}
-                placeholder="Valor (ex: 20,00)"
-                inputMode="decimal"
-                disabled={!selectedGroup}
-                className="min-w-0 flex-1 rounded-lg border border-gray-200 p-2 text-[13px] text-gray-900 outline-none disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-              />
-              <button
-                onClick={handleAdd}
-                disabled={!selectedGroup || isAdding}
-                className="flex shrink-0 items-center gap-1 rounded-lg bg-na-green px-3 py-2 text-[13px] font-semibold whitespace-nowrap text-white transition hover:bg-na-green-dark disabled:opacity-60"
+      {!editavel ? (
+        <p className="mb-4 rounded-xl border border-dashed border-gray-300 p-3 text-[12px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
+          Incluir ou alterar itens pelo Portal: em breve na sua filial. Por enquanto, fale com a secretaria.
+        </p>
+      ) : (
+        <div className="mb-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+          <div className="mb-2 text-[11px] font-bold text-gray-900 dark:text-gray-100">Incluir novo item</div>
+          {catalog.length === 0 ? (
+            <p className="text-xs text-gray-500 dark:text-gray-400">Nenhum item novo disponível pra incluir.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <select
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 p-2 text-[13px] text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
               >
-                {isAdding ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                Incluir
-              </button>
+                <option value="">Selecione...</option>
+                {catalog.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <input
+                  value={newItemValue}
+                  onChange={(e) => setNewItemValue(e.target.value)}
+                  placeholder="Valor (ex: 20,00)"
+                  inputMode="decimal"
+                  disabled={!selectedGroup}
+                  className="min-w-0 flex-1 rounded-lg border border-gray-200 p-2 text-[13px] text-gray-900 outline-none disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                />
+                <button
+                  onClick={handleAdd}
+                  disabled={!selectedGroup || isAdding}
+                  className="flex shrink-0 items-center gap-1 rounded-lg bg-na-green px-3 py-2 text-[13px] font-semibold whitespace-nowrap text-white transition hover:bg-na-green-dark disabled:opacity-60"
+                >
+                  {isAdding ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                  Incluir
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-400">
+                Qualquer item novo é incluído na hora — só a remoção de item lançado pela secretaria passa pela Economia.
+              </p>
             </div>
-            <p className="text-[10px] text-gray-400">Qualquer item novo é incluído na hora — só a remoção de item lançado pela secretaria passa pela Economia.</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {notice && (
         <div className="flex items-start gap-2 rounded-lg bg-na-success-light p-3 text-[11px] text-na-success-dark dark:bg-green-950/30 dark:text-green-300">

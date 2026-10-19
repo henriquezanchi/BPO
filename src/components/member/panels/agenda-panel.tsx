@@ -232,7 +232,7 @@ function InscricaoEvento({
   );
 }
 
-function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean }) {
+function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean; emBreve?: boolean }) {
   if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm">
     <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><h3 className="font-bold">{item.title}</h3><p>{item.date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</p>
     {item.status==='cancelada'?<p>Reunião cancelada: {item.cancellationReason}</p>:<><p>Comparecimento obrigatório. Se não puder participar, registre uma justificativa.</p>{item.fullUniform&&<p className="font-semibold">CRM com traje completo</p>}{item.description&&<p>{item.description}</p>}<MeetingResponse key={`${item.id}:${item.version}`} memberId={memberId} id={item.id} version={item.version} initial={item.myResponse}/></>}
@@ -279,7 +279,7 @@ function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item:
               {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
             </div>
             {!item.minhaInscricao&&(item.registrationClosed||item.availableSpots===0)?<p className="mt-2 text-xs font-semibold">{item.registrationClosed?'Inscrições encerradas':'Vagas esgotadas'}</p>:somenteConsulta ? (
-              <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Online payment isn&apos;t available for your branch yet — please contact your branch.</p>
+              <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">{emBreve ? "Inscrição paga pelo Portal: em breve na sua filial. Fale com a secretaria." : "Online payment isn't available for your branch yet — please contact your branch."}</p>
             ) : (
               <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} unavailableReason={item.paymentUnavailableReason} />
             )}
@@ -311,7 +311,7 @@ function itemKey(item: AgendaItem) {
   return `${item.kind}-${item.id}`;
 }
 
-export function AgendaPanel({ memberId, items, somenteConsulta }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean }) {
+export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean }) {
   const porDia = useMemo(() => {
     const mapa = new Map<string, AgendaItem[]>();
     for (const item of items) {
@@ -427,7 +427,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta }: { memberId: st
             Nada agendado para {formatDateBR(diaSelecionado)}.
           </p>
         ) : (
-          itensDoDiaSelecionado.map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} somenteConsulta={somenteConsulta} />)
+          itensDoDiaSelecionado.map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} somenteConsulta={somenteConsulta} emBreve={emBreve} />)
         )}
       </div>
     </div>

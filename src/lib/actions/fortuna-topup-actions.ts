@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
 import { asaasCreatePixCharge, asaasFindOrCreateCustomer, asaasGetPaymentStatus, asaasGetPixQrCode } from "@/lib/asaas/client";
 import { calcularSplitEscola } from "@/lib/asaas/split";
 import { requireAuthenticatedMember } from "@/lib/auth";
@@ -26,6 +27,7 @@ const VALOR_MAXIMO = 1000;
  */
 export async function createFortunaTopUpCharge(memberId: string, valor: number, cpf: string, branchId: number) {
   const member = await requireAuthenticatedMember(memberId);
+  exigirEscritaMercurio(member);
   if (!Number.isFinite(valor) || valor < VALOR_MINIMO || valor > VALOR_MAXIMO) {
     throw new Error(`Valor deve estar entre ${VALOR_MINIMO} e ${VALOR_MAXIMO}.`);
   }

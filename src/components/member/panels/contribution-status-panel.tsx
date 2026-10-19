@@ -54,6 +54,7 @@ export function ContributionStatusPanel({
   fortunaBalances,
   pixAutomaticStatus,
   somenteConsulta,
+  emBreve,
 }: {
   memberId: string;
   monthlyStatus: ContributionMonthlyStatus[];
@@ -62,6 +63,8 @@ export function ContributionStatusPanel({
   fortunaBalances: FortunaBalanceView[];
   pixAutomaticStatus: string | null;
   somenteConsulta?: boolean;
+  /** Filial brasileira ainda sem pagamento pelo Portal (School.mercurioEscrita). */
+  emBreve?: boolean;
 }) {
   const [recibo, setRecibo] = useState<{ recId: string; texto: string } | null>(null);
   const [mesPagamento, setMesPagamento] = useState<number | null>(null);
@@ -198,7 +201,9 @@ export function ContributionStatusPanel({
       )}
 
       {somenteConsulta ? (
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">Online payment isn&apos;t available for your branch yet — please contact your branch.</p>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+          {emBreve ? "Pagamento pelo Portal: em breve na sua filial. Por enquanto, pague como de costume na secretaria." : "Online payment isn't available for your branch yet — please contact your branch."}
+        </p>
       ) : mesesAtrasados.length > 0 ? (
         <p className="text-[11px] text-gray-400 dark:text-gray-500">
           Clique num mês em atraso pra pagar. Meses pagos mostram o comprovante.

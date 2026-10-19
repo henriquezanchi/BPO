@@ -112,8 +112,18 @@ export async function aprovarSolicitacaoCadastro(schoolId: string, logId: string
     db.contactChangeLog.update({ where: { id: logId }, data: { status: "aprovado", reviewedAt: new Date() } }),
   ]);
 
-  if (Object.keys(contato).length) await enqueueMercurioContactUpdate(log.memberId, contato);
-  if (Object.keys(pessoais).length) await enqueueMercurioPersonalUpdate(log.memberId, pessoais);
+  const escola = await db.school.findUniqueOrThrow({ where: { id: schoolId }, select: { mercurioEscrita: true } });
+  if (escola.mercurioEscrita) {
+    if (Object.keys(contato).length) await enqueueMercurioContactUpdate(log.memberId, contato);
+    if (Object.keys(pessoais).length) await enqueueMercurioPersonalUpdate(log.memberId, pessoais);
+  } else {
+    // Filial ainda sem escrita no Mercúrio liberada (School.mercurioEscrita, 2026-10-19): o Portal não grava lá;
+    // fica um lembrete na agenda de pendências para a secretaria atualizar o Mercúrio à mão.
+    const campos = Object.entries({ ...contato, ...pessoais }).map(([c, v]) => `${c}: ${v instanceof Date ? v.toLocaleDateString("pt-BR") : String(v ?? "")}`);
+    await db.scholasticPendency.create({
+      data: { schoolId, memberId: log.memberId, tipo: "atualizar_mercurio", title: `Atualizar no Mercúrio o cadastro de ${log.member.name}`, notes: campos.join("; "), dueDate: new Date() },
+    });
+  }
 
   revalidatePath("/escolastica");
   revalidatePath("/portal");

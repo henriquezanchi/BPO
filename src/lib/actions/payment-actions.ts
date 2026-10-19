@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
 import {
   asaasCancelPayment,
   asaasCreateCreditCardCharge,
@@ -73,6 +74,7 @@ export async function createContributionCharge(
 ) {
   const member = await requireAuthenticatedMember(memberId);
   await requireContributionOrder(memberId, year, month);
+  exigirEscritaMercurio(member);
   const metodo = opts?.metodo ?? "PIX";
   const fortunaTopUpAmount = opts?.fortunaTopUpAmount ? Math.round(opts.fortunaTopUpAmount * 100) / 100 : 0;
   if (fortunaTopUpAmount > 0) {

@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
@@ -44,7 +45,7 @@ function mesmoDiaUTC(a: Date, b: Date): boolean {
  * getCrescimentoComposicao em economia-actions.ts).
  */
 export async function solicitarItemComposicao(memberId: string, mercurioGroupId: string, label: string, valor: number) {
-  await requireAuthenticatedMember(memberId);
+  exigirEscritaMercurio(await requireAuthenticatedMember(memberId));
 
   if (!Number.isFinite(valor) || valor <= 0) {
     return { ok: false as const, error: "Valor inválido." };
@@ -88,7 +89,7 @@ export async function getSolicitacoesComposicaoDoMembro(memberId: string) {
  * Mercúrio.
  */
 export async function updateContributionItemValue(memberId: string, compositionItemId: string, novoValor: number) {
-  await requireAuthenticatedMember(memberId);
+  exigirEscritaMercurio(await requireAuthenticatedMember(memberId));
 
   if (!Number.isFinite(novoValor) || novoValor < 0) {
     return { ok: false as const, error: "Valor inválido." };
@@ -139,7 +140,7 @@ const DIAS_UTEIS_MINIMOS_PARA_REMOVER = 3;
  *    inclusão, só que pra tirar em vez de incluir.
  */
 export async function removeContributionItem(memberId: string, compositionItemId: string) {
-  await requireAuthenticatedMember(memberId);
+  exigirEscritaMercurio(await requireAuthenticatedMember(memberId));
 
   const item = await db.contributionCompositionItem.findUniqueOrThrow({ where: { id: compositionItemId } });
   if (item.memberId !== memberId) throw new Error("Este item não pertence a este membro.");

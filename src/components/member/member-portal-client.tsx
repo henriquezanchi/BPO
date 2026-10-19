@@ -120,7 +120,10 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
   // Portal em inglês não processa pagamento, só consulta (ver
   // ContributionStatusPanel/FortunaWalletCard/AgendaPanel, que recebem
   // `somenteConsulta` e escondem qualquer ação de cobrança).
-  const somenteConsulta = member.school.language === "en";
+  // Filiais em inglês (Mercury) e filiais ainda sem escrita no Mercúrio liberada (School.mercurioEscrita —
+  // pedido do usuário 2026-10-19) só consultam; nas brasileiras aparece "em breve".
+  const somenteConsulta = member.school.language === "en" || !member.school.mercurioEscrita;
+  const emBreve = member.school.language !== "en" && !member.school.mercurioEscrita;
 
 
   return (
@@ -255,6 +258,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               Pelo Portal, sua contribuição é atualizada assim que o pagamento é confirmado.
             </p>
           )}
+          {emBreve && <p className="text-center text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">Pagamento pelo Portal: em breve na sua filial.</p>}
         </div>
 
         {/* Carteira Fortuna */}
@@ -350,6 +354,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               memberId={member.id}
               compositionItems={member.compositionItems}
               initialAvailableToAdd={availableToAdd}
+              somenteConsulta={somenteConsulta}
             />
           )}
           {modal === "situacao" && (
@@ -361,10 +366,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               fortunaBalances={fortunaBalances}
               pixAutomaticStatus={member.pixAutomaticStatus}
               somenteConsulta={somenteConsulta}
+              emBreve={emBreve}
             />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
-          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} />}
+          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} emBreve={emBreve} />}
           {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}

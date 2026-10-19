@@ -117,6 +117,11 @@ model School {
   // por e-mail+CPF). Fora das abertas, só entram dirigentes e testadores
   // liberados por eles (ver src/lib/acesso-portal.ts).
   portalAberto            Boolean   @default(false)
+  // Pagamentos e alterações que GRAVAM no Mercúrio (contribuição, composição,
+  // recarga) liberados nesta filial? Pedido do usuário 2026-10-19: o
+  // responsável pelo Mercúrio quer ver as consultas funcionando antes de
+  // liberar a escrita; até lá só Barra do Garças, e as outras veem "em breve".
+  mercurioEscrita         Boolean   @default(false)
   whatsapp                String? // número da secretaria/economia, usado no botão de ajuda do Portal
   mercurioFilialLabel     String? // texto do link "CADASTRO" da filial no Mercúrio (ex: "BARRA DO GAR" — usado como regex de match, não precisa ser exato)
   // branchId da API externa de leitura "Mercury" (ver src/lib/mercury/client.ts)

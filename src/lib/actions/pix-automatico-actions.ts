@@ -1,5 +1,6 @@
 "use server";
 
+import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
 import {
   asaasCancelPixAutomaticAuthorization,
   asaasCreatePixAutomaticAuthorization,
@@ -20,6 +21,7 @@ import { db } from "@/lib/db";
  */
 export async function ativarPixAutomatico(memberId: string, cpf: string) {
   const member = await requireAuthenticatedMember(memberId);
+  exigirEscritaMercurio(member);
 
   const itens = await db.contributionCompositionItem.findMany({ where: { memberId } });
   const valor = itens.reduce((soma, i) => soma + Number(i.amount), 0);
