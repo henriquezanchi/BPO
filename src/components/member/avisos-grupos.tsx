@@ -2,7 +2,7 @@
 
 import { PerguntaPresenca } from "@/components/grupos/pergunta-presenca";
 import { MODALIDADES, TIPOS_GRUPO, type TipoGrupo } from "@/lib/grupos-comum";
-import { CalendarClock, ExternalLink, MapPin } from "lucide-react";
+import { CalendarClock, ChevronRight, MapPin, Video } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -28,11 +28,7 @@ export function AvisosGrupos({ avisos }: { avisos: Avisos }) {
   return (
     <section className="flex flex-col gap-2" aria-label="Seus grupos">
       {avisos.hoje.map((e) => (
-        <Link
-          key={e.id}
-          href={`/grupos/${e.classGroup.id}?de=portal`}
-          className="flex flex-col gap-1 rounded-2xl border border-na-gold/40 bg-na-gold/10 p-3.5 dark:border-na-gold/30 dark:bg-na-gold/10"
-        >
+        <div key={e.id} className="flex flex-col gap-1 rounded-2xl border border-na-gold/40 bg-na-gold/10 p-3.5 dark:border-na-gold/30 dark:bg-na-gold/10">
           <span className="flex items-center gap-1.5 text-[11px] font-bold text-na-gold-dark uppercase dark:text-na-gold">
             <CalendarClock size={13} /> Hoje às {hora(e.startsAt)} · {tipo(e.classGroup.tipo)}
           </span>
@@ -44,13 +40,26 @@ export function AvisosGrupos({ avisos }: { avisos: Avisos }) {
                 <MapPin size={12} /> {e.classGroup.local}
               </span>
             )}
-            {e.classGroup.linkOnline && (
-              <span className="flex items-center gap-1 font-semibold text-na-green-dark dark:text-emerald-400">
-                Link do encontro <ExternalLink size={11} />
-              </span>
-            )}
           </span>
-        </Link>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {e.classGroup.linkOnline && (
+              <a
+                href={e.classGroup.linkOnline}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-9 items-center gap-1.5 rounded-lg bg-na-green px-3 text-[12px] font-semibold text-white hover:bg-na-green-dark"
+              >
+                <Video size={13} /> Entrar na videochamada
+              </a>
+            )}
+            <Link
+              href={`/grupos/${e.classGroup.id}?de=portal`}
+              className="flex min-h-9 items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 text-[12px] font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+            >
+              Ver o grupo <ChevronRight size={13} />
+            </Link>
+          </div>
+        </div>
       ))}
       {perguntas.map((p) => (
         <div key={p.id} className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-900">
