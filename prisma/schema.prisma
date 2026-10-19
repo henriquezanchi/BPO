@@ -876,6 +876,11 @@ model Event {
   externalUid String?   @unique
   createdAt   DateTime  @default(now())
 
+  posterPath String?
+  capacity Int?
+  registrationClosesAt DateTime?
+  participantInstructions String? @db.Text
+  contactInfo String?
   audience String @default("todos_ativos")
   status String @default("publicado")
   registrationUrl String?

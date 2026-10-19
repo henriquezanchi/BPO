@@ -31,6 +31,7 @@ function textoDe(valor: ParameterValue | undefined): string | null {
 }
 
 async function main() {
+  if(process.env.ENABLE_LEGACY_NATIONAL_CALENDAR_IMPORT!=="1")throw new Error("Importação anterior desativada. A Agenda usa somente os eventos internos e fontes autorizadas atuais.");
   const url = process.env.NATIONAL_CALENDAR_ICS_URL;
   if (!url) throw new Error("NATIONAL_CALENDAR_ICS_URL não configurada.");
 

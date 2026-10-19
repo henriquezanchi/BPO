@@ -62,3 +62,15 @@ O erro reportado na tela foi investigado sem emitir cobranças: split da escola 
 Inscrição agora retorna resultado estruturado, preservando mensagens de negócio em produção. Pré-condições de gateway/taxas são verificadas antes da reserva de cobrança. Falha anterior ao POST retorna ao estado de nova tentativa; resposta incerta posterior ao POST permanece em revisão. Identificação do cliente é persistida antes do POST. Falhas registram etapa, código e status HTTP em auditoria, sem copiar o corpo do gateway, CPF ou credenciais. PIX existente é recuperado sem outra emissão.
 
 Sem `ASAAS_API_KEY` no servidor, a Agenda e a Direção mostram configuração pendente. Isso não prova que a chave esteja ausente no Vercel; a disponibilidade desse ambiente não foi inspecionada. Para conferir o Asaas diretamente, falta disponibilizar a credencial nas configurações seguras do ambiente de trabalho, que atualmente só tem credenciais Supabase. Salvo requisito `ASAAS_API_KEY` com destino `api.asaas.com`. Não solicitar valores no chat.
+
+## Cartaz, vagas e equipe em lote
+
+Eventos internos aceitam cartaz JPG/PNG/WebP até 3 MB, prazo de inscrição, capacidade opcional, orientações e contato. Cartazes ficam em bucket privado `event-posters`, com assinatura de leitura por uma hora, emitida somente nas consultas autorizadas. Upload valida assinatura do arquivo, formato, tamanho, sessão ativa e Direção. O caminho é derivado da escola autenticada e reconferido ao salvar.
+
+Inscrições pendentes também reservam vaga. A transação trava a revisão do evento e confere capacidade/prazo antes de criar nova inscrição; reabrir uma inscrição existente não consome outra vaga. Não reduzir capacidade abaixo do total já reservado. O público vê vagas disponíveis e encerramento. Não há expiração automática de reservas financeiras nessa etapa.
+
+Seleção de recepção agora usa caixas de marcação, busca e inclusão em lote. A lista é formada por voluntários ativos com acesso liberado; o servidor reconfere todos antes de incluir qualquer pessoa.
+
+A importação anterior de Google Calendar foi desativada por padrão e retirada do filtro da Agenda. Em 19/10/2026 foram arquivados os 870 registros dessa fonte sem inscrições; originais e auditoria foram preservados. Eventos manuais e pagamentos existentes não foram removidos. A migração `20261019190000_eventos_cartaz_vagas` foi aplicada.
+
+Verificações: testes automatizados de capacidade, prazo, equipe, arquivo e autorização; cenários de navegador em celular e computador; build, tipos e lint. Storage real foi testado com imagem descartável removida ao final: upload, leitura assinada e bloqueio de acesso público. Nenhum cartaz ou evento real foi criado durante o teste.

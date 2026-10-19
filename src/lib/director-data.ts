@@ -1,3 +1,5 @@
+import {comAcessoVoluntario} from "@/lib/acesso-voluntario";
+import {eventPosterUrl} from "@/lib/event-posters";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 
@@ -172,6 +174,10 @@ export async function getDirectorDashboard(schoolId: string) {
     avatarUrl: getAvatarUrl(m.avatarPath),
   }));
 
+  const activeMembers=membros.filter(m=>m.mercurioAtivo);
+  const [volunteerAccess,nationalAccess]=await Promise.all([comAcessoVoluntario(activeMembers.map(m=>m.id)),db.liberadorNacional.findMany({where:{mercurioId:{in:activeMembers.flatMap(m=>m.mercurioId?[m.mercurioId]:[])}},select:{mercurioId:true}})]);
+  const nationalIds=new Set(nationalAccess.map(m=>m.mercurioId));
+  const receptionCandidates=activeMembers.filter(m=>volunteerAccess.has(m.id)||(m.mercurioId&&nationalIds.has(m.mercurioId))).map(m=>({id:m.id,name:m.name}));
   const eventos = await db.event.findMany({
     where: { schoolId },
     include: { registrations: { include: { member: true } }, staff: true },
@@ -179,6 +185,7 @@ export async function getDirectorDashboard(schoolId: string) {
     take: 10,
   });
 
+  const eventPosters=new Map(await Promise.all(eventos.map(async e=>[e.id,await eventPosterUrl(e.posterPath)] as const)));
   const regrasDeCobranca = await db.chargingRule.findMany({ where: { schoolId }, include: { triggers: true } });
 
   const rascunhosPendentes = await db.chargeMessageDraft.findMany({
@@ -194,6 +201,7 @@ export async function getDirectorDashboard(schoolId: string) {
   });
 
   return {
+    receptionCandidates,
     eventPaymentConfigured: Boolean(process.env.ASAAS_API_KEY),
     kpis: {
       receitaPrevista,
@@ -264,6 +272,12 @@ export async function getDirectorDashboard(schoolId: string) {
       description: e.description,
       location: e.location,
       audience: e.audience,
+      posterPath:e.posterPath,
+      posterUrl:eventPosters.get(e.id)??null,
+      capacity:e.capacity,
+      registrationClosesAt:e.registrationClosesAt,
+      participantInstructions:e.participantInstructions,
+      contactInfo:e.contactInfo,
       revision: e.revision,
       status: e.status,
       source: e.source,

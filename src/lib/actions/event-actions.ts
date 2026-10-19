@@ -11,18 +11,20 @@ import {EventEnrollmentError,eventPaymentFailure} from '@/lib/event-payment-erro
 import {confirmEventPayment} from '@/lib/event-payments';
 import {revalidatePath} from 'next/cache';
 
-export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience:string;description:string;location:string}
+export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience:string;description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null}
 function refresh(eventId?:string){revalidatePath('/diretor');revalidatePath('/portal');if(eventId)revalidatePath(`/eventos/${eventId}/recepcao`);}
 export async function salvarEvento(schoolId:string,input:InternalEventInput,id?:string,revision?:number) {
  try {
   const actor=await requireDirector(schoolId);if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
   const data=validateInternalEvent(input);
+  if(data.posterPath&&(!data.posterPath.startsWith(`${schoolId}/event-posters/`)||data.posterPath.includes("..")||!/^[-a-zA-Z0-9/_.]+$/.test(data.posterPath)))throw Error("Cartaz inválido para esta escola.");
   await db.$transaction(async tx=>{
    let eventId=id;
    if(id){
     if(!Number.isSafeInteger(revision)||revision!<0)throw Error('Atualize o evento antes de editar.');
     const current=await tx.event.findFirstOrThrow({where:{id,schoolId,source:'manual',status:'publicado'}});
     if(current.startsAt<=new Date())throw Error('Eventos já iniciados preservam seu histórico e não podem ser editados.');
+    if(data.capacity!==null&&data.capacity<await tx.eventRegistration.count({where:{eventId:id}}))throw Error("O limite não pode ser menor que o número de inscrições já reservadas.");
     if(Number(current.price)!==data.price&&await tx.eventRegistration.count({where:{eventId:id}}))throw Error('O valor não pode mudar depois da primeira inscrição.');
     const changed=await tx.event.updateMany({where:{id,schoolId,source:'manual',revision,status:'publicado'},data:{...data,revision:{increment:1}}});
     if(!changed.count)throw Error('O evento mudou em outra sessão. Atualize antes de editar.');
@@ -91,6 +93,13 @@ async function enrollEvent(memberId:string,eventId:string,cpf?:string){
  const registration=await db.$transaction(async tx=>{
   const lock=await tx.event.updateMany({where:{...eligible,revision:event.revision},data:{revision:{increment:1}}});
   if(!lock.count)throw new EventEnrollmentError('O evento mudou. Atualize a Agenda antes de se inscrever.');
+  if(event.capacity!==null&&event.capacity!==undefined||event.registrationClosesAt){
+   const existing=await tx.eventRegistration.findUnique({where:{eventId_memberId:{eventId,memberId}},select:{id:true}});
+   if(!existing){
+    if(event.registrationClosesAt&&event.registrationClosesAt<=new Date())throw new EventEnrollmentError('As inscrições deste evento foram encerradas.');
+    if(event.capacity!==null&&event.capacity!==undefined&&await tx.eventRegistration.count({where:{eventId}})>=event.capacity)throw new EventEnrollmentError('Todas as vagas deste evento já foram reservadas.');
+   }
+  }
   return tx.eventRegistration.upsert({where:{eventId_memberId:{eventId,memberId}},create:{eventId,memberId,amount:price,paid:price===0,paymentState:price===0?'gratuito':'novo'},update:{}});
  });
  if(price===0||registration.paid){
@@ -158,4 +167,20 @@ export async function checkStatusInscricaoEvento(memberId:string,registrationId:
   await confirmEventPayment(r.id);refresh(r.eventId);return {status:'pago' as const};
  }
  return {status:'pendente' as const};
+}
+
+export async function definirRecepcaoEmLote(schoolId:string,eventId:string,memberIds:string[]){
+ try{
+  const actor=await requireDirector(schoolId);if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
+  const ids=[...new Set(memberIds)];
+  if(!ids.length||ids.length>200||ids.some(id=>typeof id!=="string"||id.length>100))throw Error('Selecione entre 1 e 200 pessoas.');
+  await db.event.findFirstOrThrow({where:{id:eventId,schoolId,source:'manual',status:'publicado'}});
+  const members=await db.member.findMany({where:{id:{in:ids},schoolId,mercurioAtivo:true}});
+  if(members.length!==ids.length)throw Error('Todas as pessoas precisam estar ativas nesta escola.');
+  if((await Promise.all(members.map(member=>temAcessoVoluntario(member)))).some(access=>!access))throw Error('Todas as pessoas precisam ter acesso de voluntário liberado.');
+  await db.$transaction(async tx=>{
+   await tx.eventReception.createMany({data:ids.map(memberId=>({eventId,memberId})),skipDuplicates:true});
+   await tx.eventAudit.create({data:{eventId,actorId:actor.id,action:'recepcao_designada_em_lote',changes:{memberIds:ids}}});
+  });refresh(eventId);return {ok:true};
+ }catch{return {ok:false,error:'Não foi possível liberar a equipe. Selecione voluntários ativos e com acesso liberado desta escola, em um evento publicado.'};}
 }

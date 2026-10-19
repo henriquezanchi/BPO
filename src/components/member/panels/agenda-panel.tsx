@@ -250,6 +250,10 @@ function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item:
             </>
           )}
         </div>
+        {item.posterUrl&&<a href={item.posterUrl} target="_blank" rel="noopener noreferrer" className="mb-3 block">
+          {/* eslint-disable-next-line @next/next/no-img-element -- cartaz privado com URL assinada */}
+          <img src={item.posterUrl} alt={`Cartaz de ${item.title}`} loading="lazy" className="max-h-96 w-full rounded-lg object-contain"/>
+        </a>}
         <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
         <div className="mt-1 text-[11px] capitalize text-gray-500 dark:text-gray-400">
           {item.allDay ? formatDateBR(item.date) : item.date.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"})+" (Brasília)"}
@@ -261,13 +265,16 @@ function ItemCard({ memberId, item, somenteConsulta }: { memberId: string; item:
         )}
         {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block text-sm font-semibold text-na-green dark:text-emerald-400">Inscrever-se no site do organizador ↗</a>}
         {item.description && <p className="mt-1.5 text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
+        {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{item.availableSpots??0} vagas disponíveis de {item.capacity}</p>}
+        {item.participantInstructions&&<p className="mt-2 whitespace-pre-wrap text-xs"><strong>Orientações: </strong>{item.participantInstructions}</p>}
+        {item.contactInfo&&<p className="mt-2 break-words text-xs"><strong>Dúvidas: </strong>{item.contactInfo}</p>}
         {item.status === "cancelado" && <p className="mt-2 text-sm font-semibold text-red-700 dark:text-red-300">Evento cancelado. Consulte a Economia se houver pagamento.</p>}
         {item.status !== "cancelado" && item.source === "manual" && item.scope === "filial" && (
           <>
             <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
               {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
             </div>
-            {somenteConsulta ? (
+            {!item.minhaInscricao&&(item.registrationClosed||item.availableSpots===0)?<p className="mt-2 text-xs font-semibold">{item.registrationClosed?'Inscrições encerradas':'Vagas esgotadas'}</p>:somenteConsulta ? (
               <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Online payment isn&apos;t available for your branch yet — please contact your branch.</p>
             ) : (
               <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} unavailableReason={item.paymentUnavailableReason} />

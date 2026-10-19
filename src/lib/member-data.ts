@@ -1,3 +1,4 @@
+import {eventPosterUrl} from "@/lib/event-posters";
 import {portalLabel} from "@/lib/display-labels";
 import {eventAudienceWhere,safeEventRegistrationUrl} from "@/lib/event-policy";
 import {ensureGroupMeetingWindow} from "@/lib/meeting-series";
@@ -58,6 +59,12 @@ export type AgendaItem =
       // não se inscreveu. Sempre null pra scope "nacional"/"regional" (não
       // têm fluxo de inscrição/pagamento ainda).
       minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null } | null;
+      posterUrl?: string | null;
+      capacity?: number | null;
+      availableSpots?: number | null;
+      registrationClosed?: boolean;
+      participantInstructions?: string | null;
+      contactInfo?: string | null;
       paymentUnavailableReason?: string | null;
       source?: string;
       registrationUrl?: string | null;
@@ -165,6 +172,7 @@ export async function getMemberDashboard(memberId: string) {
         startsAt: { gte: new Date(Date.now()-86400000) },
       },
       orderBy: { startsAt: "asc" },
+      include:{_count:{select:{registrations:true}}},
     }),
     studentClassGroupIds.length
       ? db.activity.findMany({
@@ -222,6 +230,7 @@ export async function getMemberDashboard(memberId: string) {
     return [...contagemPorEmoji.entries()].map(([emoji, count]) => ({ emoji, count, reactedByMe: minhasReacoes.has(emoji) }));
   }
 
+  const eventPosters=new Map(await Promise.all(schoolEvents.map(async e=>[e.id,await eventPosterUrl(e.posterPath)] as const)));
   const agendaItems: AgendaItem[] = [
     ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
     ...schoolEvents.map(
@@ -235,6 +244,12 @@ export async function getMemberDashboard(memberId: string) {
         minhaInscricao: inscricaoDoEvento(e.id),
         scope: e.scope,
         source: e.source,
+        posterUrl:eventPosters.get(e.id)??null,
+        capacity:e.capacity,
+        availableSpots:e.capacity===null?null:Math.max(0,e.capacity-e._count.registrations),
+        registrationClosed:Boolean(e.registrationClosesAt&&e.registrationClosesAt<=new Date()),
+        participantInstructions:e.participantInstructions,
+        contactInfo:e.contactInfo,
         paymentUnavailableReason: e.source!=="manual"||Number(e.price)<=0?null:!member.school.asaasWalletId?"O recebimento deste evento ainda precisa ser configurado pela escola.":!process.env.ASAAS_API_KEY?"O pagamento on-line ainda não foi configurado. A administração precisa configurar o Asaas antes de liberar o PIX.":null,
         registrationUrl: safeEventRegistrationUrl(e.registrationUrl),
         status: e.status,

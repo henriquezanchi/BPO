@@ -19,7 +19,7 @@ mock.module('next/cache',{exports:{revalidatePath:()=>{}}});
 const{inscreverEmEvento,marcarPresencaEvento,salvarEvento,excluirEvento}=await import('../src/lib/actions/event-actions.ts');
 test('público é explícito e papéis desconhecidos do Ágora ficam bloqueados',()=>{
  const where=eventAudienceWhere({...actor,isMembroPrograma:false},false);
- assert.deepEqual(where.audience,{in:['todos_ativos']});assert.deepEqual(where.source,{not:'agora'});
+ assert.deepEqual(where.audience,{in:['todos_ativos']});assert.deepEqual(where.source,{notIn:['agora','google_calendar_nacional']});
 });
 test('datas, público e valor do evento são validados antes de gravar',()=>{
  const data={title:'Curso',startsAt:'2099-01-01T19:00Z',endsAt:'2099-01-01T21:00Z',price:50,audience:'membros',description:'',location:'Escola'};
@@ -62,4 +62,30 @@ test('erro de preparação volta como mensagem legível, sem cobrança; timeout 
 test('falta de credencial é explicada e não dispara pedido de cobrança',async()=>{
  delete process.env.ASAAS_API_KEY;const before=payCalls;
  const result=await inscreverEmEvento('member','event','12345678901');assert.equal(result.ok,false);assert.match(result.error,/configurar o Asaas/);assert.equal(payCalls,before);
+});
+
+test('capacidade e prazo são conferidos no servidor; inscrição existente conserva sua reserva',async()=>{
+ process.env.ASAAS_API_KEY='test-only';
+ event.startsAt=new Date('2099-01-01T19:00Z');event.capacity=1;event.registrationClosesAt=null;
+ current={...current,pixPayload:'saved-qr',asaasPaymentId:null,paymentState:'novo'};
+ let existing=false;tx.eventRegistration.findUnique=async()=>existing?{id:current.id}:null;tx.eventRegistration.count=async()=>1;
+ const full=await inscreverEmEvento('member','event','12345678901');assert.equal(full.ok,false);assert.match(full.error,/vagas/);
+ existing=true;assert.equal((await inscreverEmEvento('member','event','12345678901')).ok,true);
+ event.capacity=null;event.registrationClosesAt=new Date('2020-01-01');existing=false;const closed=await inscreverEmEvento('member','event','12345678901');assert.match(closed.error,/encerradas/);
+ existing=true;assert.equal((await inscreverEmEvento('member','event','12345678901')).ok,true);
+ event.registrationClosesAt=null;
+});
+test('limite de vagas e fechamento inválidos são recusados',()=>{
+ const data={title:'Curso',startsAt:'2099-01-01T19:00Z',endsAt:'2099-01-01T21:00Z',price:0,audience:'membros',description:'',location:'Escola'};
+ for(const change of [{capacity:0},{capacity:1.5},{capacity:-1},{registrationClosesAt:'2099-01-01T20:00Z'}])assert.throws(()=>validateInternalEvent({...data,...change}));
+ assert.equal(validateInternalEvent({...data,capacity:30}).capacity,30);
+});
+test('recepção em lote verifica todos os voluntários antes de gravar e deduplica IDs',async()=>{
+ const {db:store}=await import('../src/lib/db.ts');const {definirRecepcaoEmLote}=await import('../src/lib/actions/event-actions.ts');
+ store.event.findFirstOrThrow=async()=>event;
+ store.member={findMany:async()=>[{...actor,id:'one'},{...actor,id:'two'}]};
+ let batch;tx.eventReception={createMany:async args=>{batch=args.data;}};
+ const result=await definirRecepcaoEmLote('school','event',['one','two','one']);assert.equal(result.ok,true);assert.equal(batch.length,2);
+ store.member.findMany=async()=>[{...actor,id:'one'}];batch=null;
+ assert.equal((await definirRecepcaoEmLote('school','event',['one','outside'])).ok,false);assert.equal(batch,null);
 });
