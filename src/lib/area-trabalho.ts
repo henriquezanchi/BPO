@@ -1,7 +1,6 @@
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { getAuthenticatedMember } from "@/lib/auth";
-import { escolasQueGereAvaliacao } from "@/lib/avaliacao";
 import { db } from "@/lib/db";
 import { ehFV } from "@/lib/grupos-portal";
 import { filiaisAdministradas } from "@/lib/recursos-filial";
@@ -41,12 +40,11 @@ type Pessoa = Pick<
 >;
 
 export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
-  const [acesso, fv, nacional, administra, avaliacao, lideraFV, temGrupo, areas] = await Promise.all([
+  const [acesso, fv, nacional, administra, lideraFV, temGrupo, areas] = await Promise.all([
     temAcessoVoluntario(m),
     ehFV(m.id),
     ehAdministradorNacional(m),
     filiaisAdministradas(m),
-    escolasQueGereAvaliacao(m),
     db.classMembership.count({ where: { memberId: m.id, role: "professor", classGroup: { tipo: { in: ["BF", "BM", "CS"] } } } }),
     // GAF não faz de ninguém voluntário (alunos participam).
     db.classMembership.count({ where: { memberId: m.id, classGroup: { tipo: { in: ["GDVE", "SEC", "BF", "BM", "CS"] }, arquivadoEm: null } } }),
@@ -78,7 +76,6 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       secao: "Secretarias",
       pendentes: pedidosCadastro,
     },
-    avaliacao.length > 0 && { href: "/escolastica/avaliacao", rotulo: "Avaliação dos instrutores", descricao: "Questionário, rodadas e relatórios", icone: "avaliacao", secao: "Secretarias" },
     tem("economia") && {
       href: pedidosComposicao ? "/economia?aba=composicao" : "/economia",
       rotulo: "Economia",

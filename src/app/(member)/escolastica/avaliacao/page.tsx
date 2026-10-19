@@ -1,3 +1,4 @@
+import { ABAS_ESCOLASTICA, AbasArea } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { CampanhasPanel } from "@/components/avaliacao/campanhas-panel";
 import { QuestionarioEditor } from "@/components/avaliacao/questionario-editor";
@@ -46,8 +47,10 @@ export default async function GestaoAvaliacaoPage(props: { searchParams: Promise
 
   return (
     <ShellTrabalho largura="estreita">
-      <div>
-        <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Avaliação dos instrutores</h1>
+      <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
+      <AbasArea base="/escolastica" atual="avaliacao" abas={ABAS_ESCOLASTICA} />
+      <div className="max-w-2xl">
+        <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Avaliação dos instrutores</h2>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           Os alunos só veem a avaliação enquanto houver uma rodada aberta. Cada aluno avalia os instrutores da própria turma, segundo o Mercúrio. As respostas não guardam quem respondeu.
         </p>

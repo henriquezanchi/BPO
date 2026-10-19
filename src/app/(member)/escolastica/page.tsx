@@ -1,5 +1,5 @@
 import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
-import { AbasArea, MembrosEscolastica } from "@/components/trabalho/areas";
+import { ABAS_ESCOLASTICA, AbasArea, MembrosEscolastica } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { exigirArea } from "@/lib/area-trabalho";
 import { getDirectorDashboard } from "@/lib/director-data";
@@ -21,10 +21,7 @@ export default async function EscolasticaPage(props: { searchParams: Promise<{ a
       <AbasArea
         base="/escolastica"
         atual={aba}
-        abas={[
-          ["pendencias", "Pendências e solicitações"],
-          ["membros", "Membros"],
-        ]}
+        abas={ABAS_ESCOLASTICA}
       />
       {aba === "membros" ? (
         <MembrosEscolastica schoolId={member.schoolId} data={await getDirectorDashboard(member.schoolId)} />

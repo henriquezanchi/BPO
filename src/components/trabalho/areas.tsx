@@ -13,13 +13,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /** Abas de uma área da filial (links com ?aba=, funcionam no computador e no celular). */
-export function AbasArea({ base, abas, atual }: { base: string; abas: [string, string][]; atual: string }) {
+export function AbasArea({ base, abas, atual }: { base: string; abas: ([string, string] | [string, string, string])[]; atual: string }) {
   return (
     <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-gray-200 px-4 lg:mx-0 lg:px-0 dark:border-gray-800" aria-label="Seções">
-      {abas.map(([id, rotulo]) => (
+      {abas.map(([id, rotulo, href]) => (
         <Link
           key={id}
-          href={`${base}?aba=${id}`}
+          href={href ?? `${base}?aba=${id}`}
           aria-current={atual === id ? "page" : undefined}
           className={`shrink-0 border-b-2 px-3 py-2 text-[13px] font-semibold ${
             atual === id ? "border-na-green text-na-green-dark dark:text-emerald-400" : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
@@ -120,3 +120,10 @@ export function MembrosEscolastica({ schoolId, data }: { schoolId: string; data:
     </div>
   );
 }
+
+/** Abas da Escolástica — a Avaliação dos instrutores fica dentro dela (pedido do usuário 2026-10-19). */
+export const ABAS_ESCOLASTICA: ([string, string] | [string, string, string])[] = [
+  ["pendencias", "Pendências e solicitações"],
+  ["membros", "Membros"],
+  ["avaliacao", "Avaliação dos instrutores", "/escolastica/avaliacao"],
+];
