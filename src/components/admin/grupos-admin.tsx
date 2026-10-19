@@ -63,7 +63,7 @@ export function SecretariasAdmin({ schoolId, grupos }: { schoolId: string; grupo
     try {
       const s = await getSugestoesSecretarias(schoolId);
       setSugestoes(s);
-      setEscolhidas(s.filter((x) => !x.jaExiste && x.responsaveis.some((r) => r.memberId)).map((x) => x.nome));
+      setEscolhidas(s.filter((x) => !x.jaExiste && (x.nome === "Abertura de Turma" || x.responsaveis.some((r) => r.memberId))).map((x) => x.nome));
     } catch {
       setAviso("Não foi possível consultar o Mercúrio agora.");
     } finally {

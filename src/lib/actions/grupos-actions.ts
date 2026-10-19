@@ -295,6 +295,8 @@ export async function getSugestoesSecretarias(schoolId: string): Promise<Sugesta
     const p = porMatricula.get(f.matricula);
     return { memberId: p && p.schoolId === schoolId ? p.id : null, nome: p?.name ?? `Matrícula ${f.matricula}`, funcao: f.descricao };
   };
+  // Abertura de Turma sempre aparece entre as sugestões, mesmo sem função registrada no Mercúrio (pedido do usuário 2026-10-19).
+  if (!sugestoes.some((s) => s.nome === "Abertura de Turma")) sugestoes.unshift({ nome: "Abertura de Turma", responsaveis: [], equipe: [] });
   return sugestoes.map((s) => ({ nome: s.nome, jaExiste: existentes.has(s.nome.toLocaleLowerCase("pt-BR")), responsaveis: s.responsaveis.map(pessoa), equipe: s.equipe.map(pessoa) }));
 }
 
