@@ -7,8 +7,6 @@ import crypto from "node:crypto";
  * configurado, a rota fica fechada.
  */
 export const maxDuration = 300;
-// Roda em São Paulo: o Cloudflare do Ulisses desafia acessos vindos dos EUA (região padrão da Vercel).
-export const preferredRegion = "gru1";
 
 function autorizado(req: Request) {
   const segredo = process.env.CRON_SECRET;
