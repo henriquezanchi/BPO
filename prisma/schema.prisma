@@ -1504,3 +1504,13 @@ model AvaliacaoResposta {
   @@index([schoolId])
   @@index([instrutorMatr])
 }
+
+// Resumo diário da filial para o Relatório do Painel do Diretor (pessoas,
+// movimento, aniversariantes, contribuição, receita, turmas) — calculado
+// pela sincronização a partir do banco de consulta do Mercúrio. Ver
+// src/lib/mercurio-db/resumo-filial.ts.
+model ResumoFilial {
+  schoolId String   @id
+  geradoEm DateTime @default(now())
+  dados    Json
+}

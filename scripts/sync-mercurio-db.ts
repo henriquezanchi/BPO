@@ -8,6 +8,7 @@
  */
 import { db } from "../src/lib/db";
 import { sincronizarUnidade } from "../src/lib/mercurio-db/importar";
+import { gerarResumoFilial } from "../src/lib/mercurio-db/resumo-filial";
 
 async function main() {
   const pedidas = process.argv.slice(2);
@@ -21,6 +22,8 @@ async function main() {
     try {
       const { school, importados } = await sincronizarUnidade(uni);
       console.log(`✓ ${uni} (${school.name}): ${importados} membro(s) em ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+      // Relatório do Painel do Diretor — falha aqui não derruba a sincronização.
+      await gerarResumoFilial(uni, school.id).catch((e) => console.error(`  resumo ${uni}:`, (e as Error).message));
     } catch (e) {
       falhas++;
       console.error(`✗ ${uni}:`, (e as Error).message);
