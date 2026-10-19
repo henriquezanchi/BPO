@@ -292,13 +292,13 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
       >
         {isPending && <Loader2 size={14} className="animate-spin" />}
-        {isPending ? "Salvando e enviando ao Mercúrio..." : "Salvar Endereço"}
+        {isPending ? "Enviando..." : "Solicitar alteração do endereço"}
       </button>
 
       {result?.changed && (
         <div className="mt-3 flex items-start gap-2 rounded-lg bg-na-success-light p-3 text-[11px] text-na-success-dark dark:bg-green-950/30 dark:text-green-300">
           <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-          <span>Endereço atualizado com sucesso. A alteração pode levar até 24h para ser confirmada no Mercúrio.</span>
+          <span>Solicitação enviada. A secretaria vai conferir — o endereço só muda no seu cadastro depois da aprovação.</span>
         </div>
       )}
 
@@ -306,8 +306,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         <div className="mt-2 flex items-start gap-2 rounded-lg bg-na-warning-light p-3 text-[11px] text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
           <span>
-            Como sua contribuição está em atraso, a secretaria de economia foi notificada desta alteração de
-            contato.
+            Como sua contribuição está em atraso, a secretaria de economia também foi avisada desta solicitação.
           </span>
         </div>
       )}

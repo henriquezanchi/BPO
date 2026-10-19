@@ -27,7 +27,7 @@ const LABEL_CLASS = "text-[11px] font-semibold text-gray-800 dark:text-gray-300"
 export function MaisDadosClient(props: MaisDadosClientProps) {
   const { memberId } = props;
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ changed: boolean } | null>(null);
+  const [result, setResult] = useState<{ changed: boolean; pendente?: boolean } | null>(null);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -63,7 +63,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
 
       <form action={handleSubmit} autoComplete="on" className="flex flex-1 flex-col gap-4 p-5 text-left">
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Esses dados vêm do seu cadastro oficial no Mercúrio e podem ser corrigidos por aqui.
+          Esses dados vêm do seu cadastro oficial na escola. Se algo estiver errado, peça a correção por aqui — a secretaria confere antes de alterar.
         </p>
 
         <div className="flex flex-col gap-1">
@@ -138,13 +138,13 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
         >
           {isPending && <Loader2 size={14} className="animate-spin" />}
-          {isPending ? "Salvando e enviando ao Mercúrio..." : "Salvar Alterações"}
+          {isPending ? "Enviando..." : "Solicitar alteração"}
         </button>
 
         {result?.changed && (
           <div className="flex items-start gap-2 rounded-lg bg-na-success-light p-3 text-[11px] text-na-success-dark dark:bg-green-950/30 dark:text-green-300">
             <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-            <span>Dados atualizados com sucesso. A alteração pode levar até 24h para ser confirmada no Mercúrio.</span>
+            <span>Solicitação enviada. A secretaria vai conferir — os dados só mudam no seu cadastro depois da aprovação.</span>
           </div>
         )}
       </form>

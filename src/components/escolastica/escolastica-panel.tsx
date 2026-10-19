@@ -19,7 +19,25 @@ const TIPOS = [
   { value: "outro", label: "Outro" },
 ];
 
-const LABEL_CAMPO: Record<string, string> = { whatsapp: "WhatsApp", email: "E-mail" };
+const LABEL_CAMPO: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  email: "E-mail",
+  addressStreet: "Rua",
+  addressNumber: "Número",
+  addressComplement: "Complemento",
+  addressNeighborhood: "Bairro",
+  addressCity: "Cidade",
+  addressState: "UF",
+  addressZip: "CEP",
+  birthDate: "Nascimento",
+  naturalidade: "Naturalidade",
+  profession: "Profissão",
+  estadoCivil: "Estado civil",
+  escolaridade: "Escolaridade",
+  rgNumero: "RG",
+  rgOrgaoEmissor: "Órgão emissor",
+  rgDataEmissao: "Emissão do RG",
+};
 
 type Pendencia = Awaited<ReturnType<typeof getPendenciasEscolastica>>[number];
 type MembroOpcao = Awaited<ReturnType<typeof getMembrosParaPendencia>>[number];

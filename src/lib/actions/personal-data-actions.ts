@@ -2,7 +2,6 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enqueueMercurioPersonalUpdate } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
 export interface PersonalDataInput {
@@ -42,14 +41,13 @@ export async function updatePersonalData(memberId: string, changes: PersonalData
 
   const oldValues: Record<string, string | null> = {};
   const newValues: Record<string, string | null> = {};
-  const newValuesData: Record<string, Date | null> = {};
 
   for (const field of CAMPOS_TEXTO) {
     const incoming = changes[field];
     const current = member[field] ?? null;
-    if (incoming !== undefined && incoming !== current) {
+    if (incoming !== undefined && (incoming || null) !== current) {
       oldValues[field] = current;
-      newValues[field] = incoming;
+      newValues[field] = incoming || null;
     }
   }
 
@@ -62,7 +60,6 @@ export async function updatePersonalData(memberId: string, changes: PersonalData
     if (incomingIso !== currentIso) {
       oldValues[field] = currentIso;
       newValues[field] = incomingIso;
-      newValuesData[field] = incoming;
     }
   }
 
@@ -72,37 +69,14 @@ export async function updatePersonalData(memberId: string, changes: PersonalData
 
   const wasOverdue = OVERDUE_STATUSES.has(member.status);
 
-  // newValues tem tudo como string (pro audit log); pro update de verdade,
-  // os campos de data precisam ir como Date/null (newValuesData), não a
-  // string ISO usada só pra comparação/log.
-  const dbUpdateData: Record<string, string | Date | null> = { ...newValues, ...newValuesData };
-
-  await db.$transaction([
-    db.member.update({ where: { id: memberId }, data: dbUpdateData }),
-    db.contactChangeLog.create({
-      data: {
-        memberId,
-        oldValues,
-        newValues,
-        memberWasOverdue: wasOverdue,
-        alertedEconomia: wasOverdue,
-      },
-    }),
-  ]);
-
-  await enqueueMercurioPersonalUpdate(memberId, {
-    naturalidade: newValues.naturalidade ?? undefined,
-    profession: newValues.profession ?? undefined,
-    estadoCivil: newValues.estadoCivil ?? undefined,
-    escolaridade: newValues.escolaridade ?? undefined,
-    rgNumero: newValues.rgNumero ?? undefined,
-    rgOrgaoEmissor: newValues.rgOrgaoEmissor ?? undefined,
-    birthDate: "birthDate" in newValuesData ? newValuesData.birthDate : undefined,
-    rgDataEmissao: "rgDataEmissao" in newValuesData ? newValuesData.rgDataEmissao : undefined,
+  // Pedido do usuário 2026-10-19: vira SOLICITAÇÃO pendente — nada muda no
+  // Portal nem no Mercúrio até a Escolástica/Direção aprovar (ver
+  // aprovarSolicitacaoCadastro). Datas ficam como "AAAA-MM-DD" no registro.
+  await db.contactChangeLog.create({
+    data: { memberId, oldValues, newValues, status: "pendente", memberWasOverdue: wasOverdue, alertedEconomia: wasOverdue },
   });
 
   revalidatePath("/portal");
   revalidatePath("/portal/mais-dados");
-
-  return { changed: true, alerted: wasOverdue };
+  return { changed: true, alerted: wasOverdue, pendente: true };
 }

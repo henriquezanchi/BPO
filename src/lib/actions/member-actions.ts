@@ -3,7 +3,6 @@
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { OVERDUE_STATUSES } from "@/lib/member-data";
-import { enqueueMercurioContactUpdate } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
 export interface AddressChangeInput {
@@ -34,21 +33,14 @@ const CAMPOS_ENDERECO = [
 const CAMPOS_SENSIVEIS = ["whatsapp", "email"] as const;
 
 /**
- * Atualiza SÓ o endereço do membro — edição direta, igual sempre foi.
- * WhatsApp e e-mail saíram daqui (ver solicitarAlteracaoContato): pedido do
- * usuário 2026-10-08 — são os dois dados de contato realmente sensíveis
- * (usados pra comunicação/identificação), então passam a exigir aprovação
- * do Secretário de Escolástica em vez de edição livre. Endereço é só
- * logística, risco bem menor, continua de autoatendimento.
- *
- * Também propaga a mudança pro Mercúrio: só enfileira em MercurioSyncTask
- * (histórico/retry) — quem processa de fato é o worker separado
- * (scripts/process-mercurio-queue.ts), NÃO esta Server Action (segurava a
- * resposta HTTP pelos ~5-10s de uma sessão de navegador inteira antes).
+ * Pedido do usuário 2026-10-19: NENHUM dado de cadastro muda sozinho — nem
+ * no Portal, nem no Mercúrio. O endereço vira uma SOLICITAÇÃO pendente,
+ * igual a WhatsApp/e-mail, e só é aplicado (e enfileirado pro Mercúrio)
+ * quando a Secretaria de Escolástica ou a Direção aprova (ver
+ * aprovarSolicitacaoCadastro em escolastica-actions.ts).
  *
  * requireAuthenticatedMember confere que quem está logado É o memberId
- * recebido — Server Actions não passam pelo matcher do proxy.ts, então sem
- * isso qualquer um poderia chamar a action com o id de outra pessoa.
+ * recebido — Server Actions não passam pelo matcher do proxy.ts.
  */
 export async function updateMemberAddress(memberId: string, changes: AddressChangeInput) {
   await requireAuthenticatedMember(memberId);
@@ -60,37 +52,23 @@ export async function updateMemberAddress(memberId: string, changes: AddressChan
   for (const field of CAMPOS_ENDERECO) {
     const incoming = changes[field];
     const current = member[field] ?? null;
-    if (incoming !== undefined && incoming !== current) {
+    if (incoming !== undefined && (incoming || null) !== current) {
       oldValues[field] = current;
       newValues[field] = incoming;
     }
   }
 
   if (Object.keys(newValues).length === 0) {
-    return { changed: false, alerted: false };
+    return { changed: false, alerted: false, pendente: false };
   }
 
   const wasOverdue = OVERDUE_STATUSES.has(member.status);
-
-  await db.$transaction([
-    db.member.update({ where: { id: memberId }, data: newValues }),
-    db.contactChangeLog.create({
-      data: {
-        memberId,
-        oldValues,
-        newValues,
-        status: "aplicado",
-        memberWasOverdue: wasOverdue,
-        alertedEconomia: wasOverdue,
-      },
-    }),
-  ]);
-
-  await enqueueMercurioContactUpdate(memberId, newValues);
+  await db.contactChangeLog.create({
+    data: { memberId, oldValues, newValues, status: "pendente", memberWasOverdue: wasOverdue, alertedEconomia: wasOverdue },
+  });
 
   revalidatePath("/portal");
-
-  return { changed: true, alerted: wasOverdue };
+  return { changed: true, alerted: wasOverdue, pendente: true };
 }
 
 /**
