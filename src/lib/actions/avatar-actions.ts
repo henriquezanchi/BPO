@@ -34,7 +34,7 @@ export async function uploadAvatar(memberId: string, formData: FormData) {
   if (antigo) await supabaseAdmin.storage.from(BUCKET).remove([antigo]).catch(() => {});
 
   revalidatePath("/portal");
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
   return { avatarUrl: getAvatarUrl(path) };
 }
 
@@ -44,5 +44,5 @@ export async function removerAvatar(memberId: string) {
   if (member.avatarPath) await supabaseAdmin.storage.from(BUCKET).remove([member.avatarPath]).catch(() => {});
   await db.member.update({ where: { id: memberId }, data: { avatarPath: null } });
   revalidatePath("/portal");
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }

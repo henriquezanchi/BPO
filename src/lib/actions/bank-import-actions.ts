@@ -1,6 +1,6 @@
 "use server";
 
-import { requireDirector } from "@/lib/auth";
+import { requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseOfxDebitos } from "@/lib/ofx-parser";
 import { revalidatePath } from "next/cache";
@@ -64,7 +64,7 @@ async function preverContasProximoMes(schoolId: string): Promise<number> {
  * Ao final, roda a previsão de recorrência pro mês seguinte.
  */
 export async function importarExtratoOfx(schoolId: string, formData: FormData) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) throw new Error("Selecione um arquivo OFX.");
@@ -88,24 +88,24 @@ export async function importarExtratoOfx(schoolId: string, formData: FormData) {
   }
 
   const previstas = await preverContasProximoMes(schoolId);
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
   return { importadas, duplicadas, previstas };
 }
 
 export async function confirmarPrevisao(schoolId: string, payableId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const payable = await db.payable.findUniqueOrThrow({ where: { id: payableId } });
   if (payable.schoolId !== schoolId) throw new Error("Conta não pertence a esta escola.");
 
   await db.payable.update({ where: { id: payableId }, data: { predicted: false } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function removerPrevisao(schoolId: string, payableId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const payable = await db.payable.findUniqueOrThrow({ where: { id: payableId } });
   if (payable.schoolId !== schoolId || !payable.predicted) throw new Error("Só é possível remover previsões automáticas.");
 
   await db.payable.delete({ where: { id: payableId } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }

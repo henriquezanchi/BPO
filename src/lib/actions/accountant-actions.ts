@@ -1,6 +1,6 @@
 "use server";
 
-import { requireDirector } from "@/lib/auth";
+import { requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ACCOUNTANT_DOCS_BUCKET as BUCKET } from "@/lib/storage-constants";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -23,7 +23,7 @@ async function recalcularHasInvoice(payableId: string) {
  * pagamento errado. Marca hasInvoice automaticamente.
  */
 export async function uploadAccountantDocument(schoolId: string, payableId: string, formData: FormData) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const payable = await db.payable.findUniqueOrThrow({ where: { id: payableId } });
   if (payable.schoolId !== schoolId) throw new Error("Conta não pertence a esta escola.");
 
@@ -40,22 +40,22 @@ export async function uploadAccountantDocument(schoolId: string, payableId: stri
 
   await db.accountantDocument.create({ data: { payableId, title, filePath: path } });
   await recalcularHasInvoice(payableId);
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function excluirAccountantDocument(schoolId: string, documentId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const doc = await db.accountantDocument.findUniqueOrThrow({ where: { id: documentId }, include: { payable: true } });
   if (doc.payable.schoolId !== schoolId) throw new Error("Documento não pertence a esta escola.");
 
   await supabaseAdmin.storage.from(BUCKET).remove([doc.filePath]);
   await db.accountantDocument.delete({ where: { id: documentId } });
   await recalcularHasInvoice(doc.payableId);
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function getAccountantDocumentUrl(schoolId: string, documentId: string): Promise<string> {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const doc = await db.accountantDocument.findUniqueOrThrow({ where: { id: documentId }, include: { payable: true } });
   if (doc.payable.schoolId !== schoolId) throw new Error("Documento não pertence a esta escola.");
 

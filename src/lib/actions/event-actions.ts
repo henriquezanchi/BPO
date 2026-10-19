@@ -2,7 +2,7 @@
 
 import {asaasCreatePixCharge,asaasFindOrCreateCustomer,asaasGetPaymentStatus,asaasGetPixQrCode} from '@/lib/asaas/client';
 import {calcularSplitEscola} from '@/lib/asaas/split';
-import {requireAuthenticatedMember,requireDirector} from '@/lib/auth';
+import {requireAuthenticatedMember,requireArea} from '@/lib/auth';
 import {temAcessoVoluntario} from '@/lib/acesso-voluntario';
 import {db} from '@/lib/db';
 import {eventAudienceWhere,eventNoticePlan,validateInternalEvent} from '@/lib/event-policy';
@@ -13,10 +13,10 @@ import {processEventRefundQueue} from '@/lib/event-refunds';
 import {revalidatePath} from 'next/cache';
 
 export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience:string;description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null}
-function refresh(eventId?:string){revalidatePath('/diretor');revalidatePath('/portal');if(eventId)revalidatePath(`/eventos/${eventId}/recepcao`);}
+function refresh(eventId?:string){revalidatePath('/','layout');revalidatePath('/portal');if(eventId)revalidatePath(`/eventos/${eventId}/recepcao`);}
 export async function salvarEvento(schoolId:string,input:InternalEventInput,id?:string,revision?:number) {
  try {
-  const actor=await requireDirector(schoolId);if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
+  const actor=await requireArea(schoolId, "eventos");if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
   const data=validateInternalEvent(input);
   if(data.posterPath&&(!data.posterPath.startsWith(`${schoolId}/event-posters/`)||data.posterPath.includes("..")||!/^[-a-zA-Z0-9/_.]+$/.test(data.posterPath)))throw Error("Cartaz inválido para esta escola.");
   await db.$transaction(async tx=>{
@@ -41,7 +41,7 @@ export async function salvarEvento(schoolId:string,input:InternalEventInput,id?:
 export async function criarEvento(schoolId:string,title:string,startsAt:string,price:number){return salvarEvento(schoolId,{title,startsAt,endsAt:new Date(new Date(startsAt).getTime()+7200000).toISOString(),price,audience:'todos_ativos',description:'',location:''});}
 export async function excluirEvento(schoolId:string,eventId:string,reembolsar=false){
  if(typeof reembolsar!=='boolean')throw Error('Opção de reembolso inválida.');
- const actor=await requireDirector(schoolId);if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
+ const actor=await requireArea(schoolId, "eventos");if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
  await db.$transaction(async tx=>{
   const changed=await tx.event.updateMany({where:{id:eventId,schoolId,source:'manual',OR:[{status:'publicado'},...(reembolsar?[{status:'cancelado',refundOnCancellation:false}]:[])]},data:{status:'cancelado',...(reembolsar?{refundOnCancellation:true}:{}),revision:{increment:1}}});
   if(!changed.count)throw Error('Evento indisponível para cancelamento.');
@@ -55,7 +55,7 @@ export async function excluirEvento(schoolId:string,eventId:string,reembolsar=fa
  refresh(eventId);
 }
 export async function definirRecepcaoEvento(schoolId:string,eventId:string,memberId:string,add:boolean){
- const actor=await requireDirector(schoolId);if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
+ const actor=await requireArea(schoolId, "eventos");if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
  await db.event.findFirstOrThrow({where:{id:eventId,schoolId,source:'manual'}});
  if(add){const member=await db.member.findFirstOrThrow({where:{id:memberId,schoolId,mercurioAtivo:true}});if(!await temAcessoVoluntario(member))throw Error('A pessoa precisa ter acesso de voluntário liberado.');}
  await db.$transaction(async tx=>{
@@ -177,7 +177,7 @@ export async function checkStatusInscricaoEvento(memberId:string,registrationId:
 
 export async function definirRecepcaoEmLote(schoolId:string,eventId:string,memberIds:string[]){
  try{
-  const actor=await requireDirector(schoolId);if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
+  const actor=await requireArea(schoolId, "eventos");if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
   const ids=[...new Set(memberIds)];
   if(!ids.length||ids.length>200||ids.some(id=>typeof id!=="string"||id.length>100))throw Error('Selecione entre 1 e 200 pessoas.');
   await db.event.findFirstOrThrow({where:{id:eventId,schoolId,source:'manual',status:'publicado'}});

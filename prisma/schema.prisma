@@ -1647,3 +1647,17 @@ model RedefinicaoSenha {
   em       DateTime @default(now())
   @@index([memberId])
 }
+
+// Sub-chefe tem por padrão todos os acessos do chefe (pedido do usuário
+// 2026-10-19); o chefe pode retirar áreas específicas manualmente. Uma linha
+// por área retirada (direcao, escolastica, economia, eventos, cafe, admin).
+model AcessoRetiradoSubchefe {
+  id       String   @id @default(cuid())
+  schoolId String
+  memberId String
+  area     String
+  porId    String
+  em       DateTime @default(now())
+  @@unique([schoolId, memberId, area])
+  @@index([memberId])
+}

@@ -56,7 +56,7 @@ export async function criarPendenciaEscolastica(
     },
   });
   revalidatePath("/escolastica");
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function concluirPendenciaEscolastica(schoolId: string, pendencyId: string) {
@@ -66,7 +66,7 @@ export async function concluirPendenciaEscolastica(schoolId: string, pendencyId:
 
   await db.scholasticPendency.update({ where: { id: pendencyId }, data: { completedAt: new Date() } });
   revalidatePath("/escolastica");
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 /**

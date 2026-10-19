@@ -1,7 +1,7 @@
 "use server";
 
 import { ehAdministradorNacional } from "@/lib/acesso-voluntario";
-import { getAuthenticatedMember, requireDirector } from "@/lib/auth";
+import { getAuthenticatedMember, requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
 import type { ResumoProfissoes } from "@/lib/mercurio-db/resumo-profissoes";
 
@@ -19,7 +19,7 @@ export async function getProfissoesNacional(): Promise<ResumoProfissoes | null> 
 
 /** Relatório da Filial: só o recorte da unidade da escola. */
 export async function getProfissoesFilial(schoolId: string): Promise<ResumoProfissoes | null> {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "direcao");
   const [resumo, escola] = await Promise.all([lerResumo(), db.school.findUnique({ where: { id: schoolId }, select: { mercurioUnidade: true } })]);
   const uni = escola?.mercurioUnidade;
   if (!resumo || !uni) return null;

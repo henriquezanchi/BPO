@@ -216,7 +216,7 @@ export function EmptyState({ text }: { text: string }) {
  * 2026-10-19: uma visão só). Números do Mercúrio no topo (RelatorioTab), o
  * financeiro do Portal logo abaixo deles (children) e o detalhe em seguida.
  */
-function VisaoGeralTab({
+export function VisaoGeralTab({
   schoolId,
   data,
   onNavigate,
@@ -373,7 +373,7 @@ function CabecalhoOrdenavel({
   );
 }
 
-function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data: DirectorDashboard; filtroInicial?: string }) {
+export function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data: DirectorDashboard; filtroInicial?: string }) {
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<string>(filtroInicial ?? "todos");
   const [composicaoFiltro, setComposicaoFiltro] = useState<string>("todas");

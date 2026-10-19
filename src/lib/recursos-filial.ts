@@ -34,7 +34,8 @@ export async function ehDirecaoDaFilial(m: Pessoa, schoolId: string): Promise<bo
 /** Filiais que a pessoa administra no Portal (direção + designados). */
 export async function filiaisAdministradas(m: Pessoa): Promise<string[]> {
   const ids = new Set(await escolasChefiadas(m));
-  if (m.isSubChefe) ids.add(m.schoolId);
+  // Sub-chefe administra a própria filial, salvo se o chefe retirou esse acesso.
+  if (m.isSubChefe && !(await db.acessoRetiradoSubchefe.count({ where: { schoolId: m.schoolId, memberId: m.id, area: "admin" } }))) ids.add(m.schoolId);
   for (const a of await db.administradorFilial.findMany({ where: { memberId: m.id }, select: { schoolId: true } })) ids.add(a.schoolId);
   return [...ids];
 }

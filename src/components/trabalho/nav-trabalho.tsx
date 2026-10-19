@@ -2,7 +2,7 @@
 
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import type { Destino, IconeDestino } from "@/lib/area-trabalho";
-import { ArrowLeft, Banknote, CalendarClock, ClipboardCheck, Crown, FileSignature, Globe2, GraduationCap, Home, KeyRound, Menu, Settings, Users, X } from "lucide-react";
+import { ArrowLeft, Banknote, CalendarClock, ClipboardCheck, Coffee, Crown, FileSignature, Globe2, GraduationCap, Home, KeyRound, Menu, Settings, Ticket, Users, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,13 +14,15 @@ const ICONES: Record<IconeDestino, typeof Home> = {
   escolastica: CalendarClock,
   avaliacao: ClipboardCheck,
   economia: Banknote,
+  eventos: Ticket,
+  cafe: Coffee,
   direcao: Crown,
   admin: Settings,
   acessos: KeyRound,
   nacional: Globe2,
   termo: FileSignature,
 };
-const SECOES: Destino["secao"][] = ["Meu trabalho", "Gestão da filial", "Nacional"];
+const SECOES: Destino["secao"][] = ["Meu trabalho", "Secretarias", "Gestão da filial", "Nacional"];
 
 /** Destino ativo: o mais específico cujo endereço começa a página atual (/escolastica/avaliacao vence /escolastica). */
 function ativo(destinos: Destino[], caminho: string, forcado?: string) {

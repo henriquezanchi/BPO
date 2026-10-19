@@ -1,6 +1,6 @@
 "use server";
 
-import { requireDirector } from "@/lib/auth";
+import { requireArea } from "@/lib/auth";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import { enqueueMercurioEconomicNotesUpdate } from "@/lib/mercurio/sync-queue";
@@ -13,7 +13,7 @@ import { revalidatePath } from "next/cache";
  * resolvedAt), se houver.
  */
 export async function getMemberDetail(schoolId: string, memberId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "escolastica", "economia");
 
   const member = await db.member.findUniqueOrThrow({
     where: { id: memberId },
@@ -55,7 +55,7 @@ export async function getMemberDetail(schoolId: string, memberId: string) {
  * (scripts/process-mercurio-queue.ts) processa em background.
  */
 export async function updateMemberEconomicNotes(schoolId: string, memberId: string, texto: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
   if (member.schoolId !== schoolId) throw new Error("Membro não pertence a esta escola.");
 
@@ -63,7 +63,7 @@ export async function updateMemberEconomicNotes(schoolId: string, memberId: stri
   await db.member.update({ where: { id: memberId }, data: { economicNotes: textoLimitado } });
   await enqueueMercurioEconomicNotesUpdate(memberId, textoLimitado);
 
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -72,10 +72,10 @@ export async function updateMemberEconomicNotes(schoolId: string, memberId: stri
  * Mercúrio ainda, então é preenchimento manual do diretor por ora.
  */
 export async function updateMemberDataEntrada(schoolId: string, memberId: string, data: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "escolastica");
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
   if (member.schoolId !== schoolId) throw new Error("Membro não pertence a esta escola.");
 
   await db.member.update({ where: { id: memberId }, data: { dataEntradaEscola: data ? new Date(data) : null } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }

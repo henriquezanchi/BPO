@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAuthenticatedMember, requireDirector } from "@/lib/auth";
+import { requireAuthenticatedMember, requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getTransparenciaFechada } from "@/lib/transparency-data";
 import { revalidatePath } from "next/cache";
@@ -13,22 +13,22 @@ export async function getTransparenciaParaMembro(memberId: string, ano: number, 
 
 /** Lançamento manual de receita que não passa pelo Portal (livraria, cursos, doações) — ver finance-categories.ts. */
 export async function lancarOutraReceita(schoolId: string, category: string, amount: number, receivedAt: string, note?: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   if (amount <= 0) throw new Error("Valor deve ser maior que zero.");
   await db.otherIncome.create({ data: { schoolId, category, amount, receivedAt: new Date(receivedAt), note: note?.trim() || null } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function excluirOutraReceita(schoolId: string, id: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const registro = await db.otherIncome.findUniqueOrThrow({ where: { id } });
   if (registro.schoolId !== schoolId) throw new Error("Registro não pertence a esta escola.");
   await db.otherIncome.delete({ where: { id } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function listarOutrasReceitas(schoolId: string, ano: number, mes: number) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const inicioMes = new Date(Date.UTC(ano, mes - 1, 1));
   const fimMes = new Date(Date.UTC(ano, mes, 1));
   const registros = await db.otherIncome.findMany({

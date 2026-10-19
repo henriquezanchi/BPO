@@ -1,6 +1,6 @@
 "use server";
 
-import { requireDirector } from "@/lib/auth";
+import { requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fortunaCreditarSaldo, fortunaGetClient, fortunaSearchClientsByName, type FortunaClient } from "@/lib/fortuna/client";
 import { revalidatePath } from "next/cache";
@@ -19,7 +19,7 @@ export interface FortunaBalancesForDirector {
  * (best-effort por membro, 1 falhar não derruba os outros).
  */
 export async function getFortunaBalancesForDirector(schoolId: string): Promise<FortunaBalancesForDirector> {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "cafe", "direcao");
 
   const vinculados = await db.member.findMany({ where: { schoolId, fortunaClientId: { not: null } } });
 
@@ -42,18 +42,18 @@ export async function getFortunaBalancesForDirector(schoolId: string): Promise<F
 
 /** Busca no Fortuna por nome — só pra RESOLVER manualmente qual fortunaClientId vincular (mesma cautela do script scripts/link-fortuna-clients.ts: confirmar por e-mail/telefone antes de vincular, nunca confiar só no nome). */
 export async function buscarClientesFortunaPorNome(schoolId: string, nome: string): Promise<FortunaClient[]> {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "cafe");
   if (nome.trim().length < 3) return [];
   return fortunaSearchClientsByName(nome.trim());
 }
 
 export async function vincularMembroFortuna(schoolId: string, memberId: string, fortunaClientId: number) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "cafe");
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
   if (member.schoolId !== schoolId) throw new Error("Membro não pertence a esta escola.");
 
   await db.member.update({ where: { id: memberId }, data: { fortunaClientId } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -63,7 +63,7 @@ export async function vincularMembroFortuna(schoolId: string, memberId: string, 
  * API fora do ar etc.).
  */
 export async function tentarNovamenteCreditoFortuna(schoolId: string, topUpChargeId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "cafe");
   const charge = await db.fortunaTopUpCharge.findUniqueOrThrow({ where: { id: topUpChargeId }, include: { member: true } });
   if (charge.member.schoolId !== schoolId) throw new Error("Recarga não pertence a esta escola.");
   if (charge.status !== "pago") throw new Error("Só é possível creditar uma recarga já paga.");
@@ -74,12 +74,12 @@ export async function tentarNovamenteCreditoFortuna(schoolId: string, topUpCharg
     where: { id: topUpChargeId },
     data: { launchedAt: new Date(), launchedBy: "Automático (nova tentativa)", autoCreditError: null },
   });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 /** Marca como lançada manualmente (fallback final se a nova tentativa automática também falhar). `launchedBy` é texto livre. */
 export async function marcarRecargaFortunaComoLancada(schoolId: string, topUpChargeId: string, launchedBy: string) {
-  const director = await requireDirector(schoolId);
+  const director = await requireArea(schoolId, "cafe");
   const charge = await db.fortunaTopUpCharge.findUniqueOrThrow({ where: { id: topUpChargeId }, include: { member: true } });
   if (charge.member.schoolId !== schoolId) throw new Error("Recarga não pertence a esta escola.");
   if (charge.status !== "pago") throw new Error("Só é possível marcar como lançada uma recarga já paga.");
@@ -88,7 +88,7 @@ export async function marcarRecargaFortunaComoLancada(schoolId: string, topUpCha
     where: { id: topUpChargeId },
     data: { launchedAt: new Date(), launchedBy: launchedBy.trim() || director.name },
   });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -99,7 +99,7 @@ export async function marcarRecargaFortunaComoLancada(schoolId: string, topUpCha
  * acima.
  */
 export async function tentarNovamenteCreditoFortunaContribuicao(schoolId: string, chargeId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "cafe");
   const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: chargeId }, include: { member: true } });
   if (charge.member.schoolId !== schoolId) throw new Error("Cobrança não pertence a esta escola.");
   if (charge.status !== "pago" || !charge.fortunaTopUpAmount) throw new Error("Só é possível creditar uma recarga combinada já paga.");
@@ -111,11 +111,11 @@ export async function tentarNovamenteCreditoFortunaContribuicao(schoolId: string
     where: { id: chargeId },
     data: { fortunaTopUpLaunchedAt: new Date(), fortunaTopUpLaunchedBy: "Automático (nova tentativa)", fortunaTopUpError: null },
   });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function marcarRecargaContribuicaoFortunaComoLancada(schoolId: string, chargeId: string, launchedBy: string) {
-  const director = await requireDirector(schoolId);
+  const director = await requireArea(schoolId, "cafe");
   const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: chargeId }, include: { member: true } });
   if (charge.member.schoolId !== schoolId) throw new Error("Cobrança não pertence a esta escola.");
   if (charge.status !== "pago" || !charge.fortunaTopUpAmount) throw new Error("Só é possível marcar como lançada uma recarga combinada já paga.");
@@ -124,5 +124,5 @@ export async function marcarRecargaContribuicaoFortunaComoLancada(schoolId: stri
     where: { id: chargeId },
     data: { fortunaTopUpLaunchedAt: new Date(), fortunaTopUpLaunchedBy: launchedBy.trim() || director.name },
   });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }

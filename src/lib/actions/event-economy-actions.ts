@@ -33,7 +33,7 @@ export async function recordEventMercurioReceipt(schoolId:string,registrationId:
   if(!r.paidAt||!r.asaasPaymentId)throw Error('Somente recebimentos confirmados podem ter referência de lançamento.');
   await tx.eventRegistration.update({where:{id:r.id},data:{mercurioReceiptNo:value,mercurioRecordedAt:new Date(),mercurioRecordedBy:actor.id,mercurioStatus:'informado_pela_economia'}});
   await tx.eventAudit.create({data:{eventId:r.eventId,actorId:actor.id,action:'lancamento_mercurio_informado',changes:{registrationId,receipt:value,previousReceipt:r.mercurioReceiptNo}}});
- });revalidatePath('/economia');revalidatePath('/diretor');
+ });revalidatePath('/economia');revalidatePath('/','layout');
 }
 export async function reconcileEventRefund(schoolId:string,registrationId:string) {
  const actor=await requireEconomiaOuDirecao(schoolId);if(!actor.mercurioAtivo)throw Error('Acesso indisponível para cadastro inativo.');

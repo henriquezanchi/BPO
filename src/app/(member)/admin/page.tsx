@@ -1,6 +1,8 @@
 import { AdminFilialPanel } from "@/components/admin/admin-filial-panel";
 import { GafAdmin, SecretariasAdmin } from "@/components/admin/grupos-admin";
+import { AcessosSubchefe } from "@/components/admin/acessos-subchefe";
 import { SenhasAdmin } from "@/components/admin/senhas-admin";
+import { escolasChefiadas } from "@/lib/acesso-voluntario";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -48,6 +50,17 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
       db.member.findMany({ where: { schoolId: escola.id, mercurioAtivo: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     ]);
     const nomes = new Map(pessoas.map((p) => [p.id, p.name]));
+    // Só o chefe (ou quem chefia a filial) retira acessos do sub-chefe.
+    const chefe = (member.schoolId === escola.id && member.isDiretor) || (await escolasChefiadas(member)).includes(escola.id);
+    const subchefes = chefe
+      ? await Promise.all(
+          (await db.member.findMany({ where: { schoolId: escola.id, isSubChefe: true, mercurioAtivo: true }, select: { id: true, name: true } })).map(async (s) => ({
+            id: s.id,
+            nome: s.name,
+            retiradas: (await db.acessoRetiradoSubchefe.findMany({ where: { schoolId: escola.id, memberId: s.id }, select: { area: true } })).map((r) => r.area),
+          })),
+        )
+      : [];
     conteudo = (
       <div className="flex max-w-2xl flex-col gap-8">
         <AdminFilialPanel
@@ -58,6 +71,7 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
           podeEscolherAdmins={direcao}
           pessoas={pessoas.filter((p) => p.id !== member.id)}
         />
+        {chefe && <AcessosSubchefe schoolId={escola.id} subchefes={subchefes} />}
         <SenhasAdmin pessoas={pessoas} />
       </div>
     );

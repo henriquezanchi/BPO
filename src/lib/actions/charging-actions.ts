@@ -1,34 +1,34 @@
 "use server";
 
-import { requireDirector } from "@/lib/auth";
+import { requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 import type { ChargeTriggerType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 export async function createChargingRule(schoolId: string, name: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   if (!name.trim()) throw new Error("Nome da régua não pode ser vazio.");
   await db.chargingRule.create({ data: { schoolId, name: name.trim() } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function createChargeTrigger(schoolId: string, chargingRuleId: string, type: ChargeTriggerType, messageTemplate: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const rule = await db.chargingRule.findUniqueOrThrow({ where: { id: chargingRuleId } });
   if (rule.schoolId !== schoolId) throw new Error("Régua não pertence a esta escola.");
   if (!messageTemplate.trim()) throw new Error("Modelo de mensagem não pode ser vazio.");
 
   await db.chargeTrigger.create({ data: { chargingRuleId, type, messageTemplate: messageTemplate.trim() } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function toggleChargeTrigger(schoolId: string, triggerId: string, active: boolean) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const trigger = await db.chargeTrigger.findUniqueOrThrow({ where: { id: triggerId }, include: { chargingRule: true } });
   if (trigger.chargingRule.schoolId !== schoolId) throw new Error("Gatilho não pertence a esta escola.");
   await db.chargeTrigger.update({ where: { id: triggerId }, data: { active } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 function renderizarTemplate(template: string, member: { name: string }, valores: { valor: number; valorAtraso: number; mesesAtraso: number }) {
@@ -57,7 +57,7 @@ function renderizarTemplate(template: string, member: { name: string }, valores:
  *   atrasado/negociando.
  */
 export async function gerarRascunhosDeCobranca(schoolId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
 
   const rules = await db.chargingRule.findMany({ where: { schoolId }, include: { triggers: { where: { active: true } } } });
   const triggers = rules.flatMap((r) => r.triggers);
@@ -116,12 +116,12 @@ export async function gerarRascunhosDeCobranca(schoolId: string) {
     }
   }
 
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
   return { criados };
 }
 
 export async function aprovarEEnviarRascunho(schoolId: string, draftId: string, bodyEditado?: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const draft = await db.chargeMessageDraft.findUniqueOrThrow({ where: { id: draftId }, include: { member: true } });
   if (draft.member.schoolId !== schoolId) throw new Error("Rascunho não pertence a esta escola.");
   if (draft.status !== "pendente_aprovacao") throw new Error("Este rascunho já foi decidido.");
@@ -130,19 +130,19 @@ export async function aprovarEEnviarRascunho(schoolId: string, draftId: string, 
   const result = await sendWhatsAppMessage(draft.member.whatsapp, corpoFinal);
   if(!result.ok) throw new Error(result.error ?? "Não foi possível enviar pelo WhatsApp.");
   await db.chargeMessageDraft.update({ where: { id: draftId }, data: { status: "enviado", body: corpoFinal, decidedAt: new Date() } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function descartarRascunho(schoolId: string, draftId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const draft = await db.chargeMessageDraft.findUniqueOrThrow({ where: { id: draftId }, include: { member: true } });
   if (draft.member.schoolId !== schoolId) throw new Error("Rascunho não pertence a esta escola.");
   await db.chargeMessageDraft.update({ where: { id: draftId }, data: { status: "descartado", decidedAt: new Date() } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function abrirNegociacao(schoolId: string, memberId: string, notes: string, promisedPaymentDate?: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
   if (member.schoolId !== schoolId) throw new Error("Membro não pertence a esta escola.");
 
@@ -157,11 +157,11 @@ export async function abrirNegociacao(schoolId: string, memberId: string, notes:
     }),
     db.member.update({ where: { id: memberId }, data: { status: "negociando" } }),
   ]);
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function resolverNegociacao(schoolId: string, crmContactId: string, novoStatus: "atrasado" | "em_dia") {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const contato = await db.crmContact.findUniqueOrThrow({ where: { id: crmContactId }, include: { member: true } });
   if (contato.member.schoolId !== schoolId) throw new Error("Registro não pertence a esta escola.");
 
@@ -169,5 +169,5 @@ export async function resolverNegociacao(schoolId: string, crmContactId: string,
     db.crmContact.update({ where: { id: crmContactId }, data: { resolvedAt: new Date() } }),
     db.member.update({ where: { id: contato.memberId }, data: { status: novoStatus } }),
   ]);
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }

@@ -1,6 +1,6 @@
 "use server";
 
-import { requireDirector } from "@/lib/auth";
+import { requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ACCOUNTANT_DOCS_BUCKET as BUCKET } from "@/lib/storage-constants";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -38,12 +38,12 @@ function proximaData(data: Date, frequency: RecurrenceFrequency): Date {
 
 /** Registro MANUAL de repasse — decisão explícita do usuário: sem leitura em tempo real da API do Asaas (ver plano). */
 export async function registrarRepasse(schoolId: string, amount: number, referenceYear: number, referenceMonth: number, note?: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Valor inválido.");
   if (referenceMonth < 1 || referenceMonth > 12) throw new Error("Mês inválido.");
 
   await db.repasse.create({ data: { schoolId, amount, referenceYear, referenceMonth, note: note?.trim() || null } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -86,7 +86,7 @@ async function gerarProximaOcorrencia(payable: { schoolId: string; vendor: strin
  * sempre mensal).
  */
 export async function criarContaAPagar(schoolId: string, vendor: string, amount: number, dueDate: string, recurring: boolean, frequency: RecurrenceFrequency | null) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   if (!vendor.trim()) throw new Error("Fornecedor não pode ser vazio.");
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Valor inválido.");
 
@@ -94,43 +94,43 @@ export async function criarContaAPagar(schoolId: string, vendor: string, amount:
   const recurrenceFrequency = recurring ? (frequency ?? "mensal") : null;
   const payable = await db.payable.create({ data: { schoolId, vendor: vendor.trim(), amount, dueDate: parsedDueDate, recurring, recurrenceFrequency } });
   if (recurring) await gerarProximaOcorrencia(payable);
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function marcarContaComoPaga(schoolId: string, payableId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const payable = await db.payable.findUniqueOrThrow({ where: { id: payableId } });
   if (payable.schoolId !== schoolId) throw new Error("Conta não pertence a esta escola.");
 
   await db.payable.update({ where: { id: payableId }, data: { paidAt: new Date() } });
   if (payable.recurring) await gerarProximaOcorrencia(payable);
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 /** Desfaz "Marcar pago" — volta pra Previstas (ex: marcou por engano). */
 export async function desmarcarContaComoPaga(schoolId: string, payableId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const payable = await db.payable.findUniqueOrThrow({ where: { id: payableId } });
   if (payable.schoolId !== schoolId) throw new Error("Conta não pertence a esta escola.");
 
   await db.payable.update({ where: { id: payableId }, data: { paidAt: null } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 export async function editarContaAPagar(schoolId: string, payableId: string, vendor: string, amount: number, dueDate: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const payable = await db.payable.findUniqueOrThrow({ where: { id: payableId } });
   if (payable.schoolId !== schoolId) throw new Error("Conta não pertence a esta escola.");
   if (!vendor.trim()) throw new Error("Fornecedor não pode ser vazio.");
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Valor inválido.");
 
   await db.payable.update({ where: { id: payableId }, data: { vendor: vendor.trim(), amount, dueDate: new Date(dueDate) } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }
 
 /** Exclui a conta E os documentos anexados a ela (arquivo real no Storage também — não deixa órfão). */
 export async function excluirContaAPagar(schoolId: string, payableId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "economia");
   const payable = await db.payable.findUniqueOrThrow({ where: { id: payableId }, include: { documents: true } });
   if (payable.schoolId !== schoolId) throw new Error("Conta não pertence a esta escola.");
 
@@ -139,5 +139,5 @@ export async function excluirContaAPagar(schoolId: string, payableId: string) {
     await db.accountantDocument.deleteMany({ where: { payableId } });
   }
   await db.payable.delete({ where: { id: payableId } });
-  revalidatePath("/diretor");
+  revalidatePath("/", "layout");
 }

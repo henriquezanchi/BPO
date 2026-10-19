@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
+import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { db } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -49,6 +50,19 @@ export async function requireAuthenticatedMember(expectedMemberId: string) {
  * em src/app/(member)/diretor/page.tsx, mas Server Actions não passam pelo
  * proxy, então cada uma precisa checar de novo.
  */
+/**
+ * Acesso por área da filial (areas-filial.ts): a direção passa em todas; o
+ * secretário (cargo do Mercúrio ou responsável pela secretaria no Portal),
+ * só na dele. Substitui requireDirector nas ações de cada área.
+ */
+export async function requireArea(schoolId: string, ...areas: AreaFilial[]) {
+  const member = await getAuthenticatedMember();
+  if (!member || !(await areasNaFilial(member, schoolId)).some((a) => areas.includes(a))) {
+    throw new Error("Não autenticado ou sem permissão para esta área da filial.");
+  }
+  return member;
+}
+
 export async function requireDirector(schoolId: string) {
   const member = await getAuthenticatedMember();
   if (!member || member.schoolId !== schoolId || (!member.isDiretor && !member.isSubChefe)) {
@@ -66,20 +80,13 @@ export async function requireDirector(schoolId: string) {
  * nenhum até o cargo ser preenchido no Mercúrio.
  */
 export async function requireEscolasticaOuDirecao(schoolId: string) {
-  const member = await getAuthenticatedMember();
-  if (!member || member.schoolId !== schoolId || (!member.isSecretarioEscolastica && !member.isDiretor && !member.isSubChefe)) {
-    throw new Error("Não autenticado ou sem permissão de Escolástica/Direção nesta escola.");
-  }
-  return member;
+  // Área da filial (areas-filial.ts): cargo do Mercúrio, responsável pela secretaria no Portal ou direção.
+  return requireArea(schoolId, "escolastica");
 }
 
 /** Mesmo padrão de requireEscolasticaOuDirecao, pro Secretário de Economia (aprova inclusão de item de composição — ver contribution-actions.ts). */
 export async function requireEconomiaOuDirecao(schoolId: string) {
-  const member = await getAuthenticatedMember();
-  if (!member || member.schoolId !== schoolId || (!member.isSecretarioEconomia && !member.isDiretor && !member.isSubChefe)) {
-    throw new Error("Não autenticado ou sem permissão de Economia/Direção nesta escola.");
-  }
-  return member;
+  return requireArea(schoolId, "economia");
 }
 
 /**

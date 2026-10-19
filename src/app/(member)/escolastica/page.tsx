@@ -1,25 +1,38 @@
-import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
-import { getAuthenticatedMember } from "@/lib/auth";
 import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
-import { redirect } from "next/navigation";
+import { AbasArea, MembrosEscolastica } from "@/components/trabalho/areas";
+import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
+import { exigirArea } from "@/lib/area-trabalho";
+import { getDirectorDashboard } from "@/lib/director-data";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Área do Secretário de Escolástica — isSecretarioEscolastica vem da
- * sincronização real de "Diretor > Colaboradores" do Mercúrio (ver
- * scripts/sync-diretoria.ts). Direção também entra (requireEscolasticaOuDirecao
- * cobre os dois) porque nem toda filial já tem esse cargo preenchido lá.
+ * Escolástica: pendências e solicitações de correção de cadastro, e a lista
+ * de membros (sem dados financeiros — esses ficam na Economia). Entra o
+ * Secretário de Escolástica (Mercúrio), o responsável pela secretaria no
+ * Portal e a direção (areas-filial.ts).
  */
-export default async function EscolasticaPage() {
-  const member = await getAuthenticatedMember();
-  if (!member) redirect("/login?next=/escolastica");
-  if (!member.isSecretarioEscolastica && !member.isDiretor && !member.isSubChefe) redirect("/portal");
-
+export default async function EscolasticaPage(props: { searchParams: Promise<{ aba?: string }> }) {
+  const member = await exigirArea("escolastica", "/escolastica");
+  const { aba = "pendencias" } = await props.searchParams;
   return (
-    <ShellTrabalho largura="estreita">
-      <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Escolástica</h1>
-      <EscolasticaPanel schoolId={member.schoolId} />
+    <ShellTrabalho>
+      <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
+      <AbasArea
+        base="/escolastica"
+        atual={aba}
+        abas={[
+          ["pendencias", "Pendências e solicitações"],
+          ["membros", "Membros"],
+        ]}
+      />
+      {aba === "membros" ? (
+        <MembrosEscolastica schoolId={member.schoolId} data={await getDirectorDashboard(member.schoolId)} />
+      ) : (
+        <div className="max-w-3xl">
+          <EscolasticaPanel schoolId={member.schoolId} />
+        </div>
+      )}
     </ShellTrabalho>
   );
 }

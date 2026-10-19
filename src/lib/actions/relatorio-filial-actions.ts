@@ -1,6 +1,6 @@
 "use server";
 
-import { requireDirector } from "@/lib/auth";
+import { requireArea } from "@/lib/auth";
 import { relatorioCampanha } from "@/lib/avaliacao";
 import { db } from "@/lib/db";
 import type { ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
@@ -11,7 +11,7 @@ import type { ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
  * números do próprio Portal calculados na hora.
  */
 export async function getRelatorioFilial(schoolId: string) {
-  await requireDirector(schoolId);
+  await requireArea(schoolId, "direcao");
   const agora = new Date();
   const em30dias = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000);
 
