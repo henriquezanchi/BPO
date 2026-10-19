@@ -1520,6 +1520,14 @@ model ResumoFilial {
   dados    Json
 }
 
+// Resumos de toda a OINAB-N (todas as unidades do Mercúrio, não só as
+// filiais com Portal), gerados na sincronização diária. chave = "profissoes"...
+model ResumoNacional {
+  chave    String   @id
+  geradoEm DateTime @default(now())
+  dados    Json
+}
+
 // ===================== Tesouraria (importar extrato → Mercúrio) =====================
 // Trazida para dentro do Portal em 2026-10-19 (antes: mercurio-tesouraria
 // com Upstash Redis). Ver src/tesouraria/lib/armazenamento.js. escopo = id

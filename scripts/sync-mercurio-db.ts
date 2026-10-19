@@ -9,6 +9,7 @@
 import { db } from "../src/lib/db";
 import { sincronizarUnidade } from "../src/lib/mercurio-db/importar";
 import { gerarResumoFilial } from "../src/lib/mercurio-db/resumo-filial";
+import { gerarResumoProfissoes } from "../src/lib/mercurio-db/resumo-profissoes";
 
 async function main() {
   const pedidas = process.argv.slice(2);
@@ -29,6 +30,8 @@ async function main() {
       console.error(`✗ ${uni}:`, (e as Error).message);
     }
   }
+  // Profissões de toda a OINAB-N (painel nacional e Relatório da Filial).
+  if (!pedidas.length) await gerarResumoProfissoes().catch((e) => console.error("  resumo de profissões:", (e as Error).message));
   if (falhas) process.exitCode = 1;
 }
 

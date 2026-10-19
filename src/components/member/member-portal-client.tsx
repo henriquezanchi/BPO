@@ -23,6 +23,7 @@ import {
   PiggyBank,
   TriangleAlert,
   UsersRound,
+  Globe2,
 } from "lucide-react";
 import Image from "next/image";
 import { situacaoGeral } from "@/lib/situacao-contribuicao";
@@ -177,7 +178,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               {t.home.matricula}: <strong>#{member.registrationNo ?? "—"}</strong>
             </span>
           </div>
-          {(mostrarVoluntario || dashboard.administraFilial) && (
+          {(mostrarVoluntario || dashboard.administraFilial || dashboard.administradorNacional) && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {mostrarVoluntario && (
                 <Link href="/voluntario" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
@@ -187,6 +188,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               {dashboard.administraFilial && (
                 <Link href="/admin" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
                   <Settings size={11} /> Administração
+                </Link>
+              )}
+              {dashboard.administradorNacional && (
+                <Link href="/nacional" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
+                  <Globe2 size={11} /> Painel Nacional
                 </Link>
               )}
             </div>

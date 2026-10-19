@@ -1,6 +1,9 @@
 "use client";
 
+import { PainelProfissoes } from "@/components/relatorios/painel-profissoes";
+import { getProfissoesFilial } from "@/lib/actions/profissoes-actions";
 import { getRelatorioFilial, type RelatorioFilial } from "@/lib/actions/relatorio-filial-actions";
+import type { ResumoProfissoes } from "@/lib/mercurio-db/resumo-profissoes";
 import { formatBRL } from "@/lib/format";
 import { DIA_LIMITE_DESCONTO } from "@/lib/situacao-contribuicao";
 import { AlertTriangle, Cake, Loader2 } from "lucide-react";
@@ -29,6 +32,22 @@ function Cartao({ titulo, children, aviso }: { titulo: string; children: React.R
       {children}
       {aviso && <p className="text-[11px] text-gray-500 dark:text-gray-400">{aviso}</p>}
     </section>
+  );
+}
+
+/** Profissões e áreas de atuação da filial (mesmo painel do nacional, recortado na unidade). */
+function ProfissoesDaFilial({ schoolId }: { schoolId: string }) {
+  const [dados, setDados] = useState<ResumoProfissoes | null | undefined>(undefined);
+  useEffect(() => {
+    getProfissoesFilial(schoolId)
+      .then(setDados)
+      .catch(() => setDados(null));
+  }, [schoolId]);
+  if (dados === undefined) return null;
+  return (
+    <Cartao titulo="Profissões e áreas de atuação">
+      {dados ? <PainelProfissoes dados={dados} /> : <p className="text-[12px] text-gray-500 dark:text-gray-400">Disponível depois da próxima sincronização com o Mercúrio.</p>}
+    </Cartao>
   );
 }
 
@@ -314,6 +333,8 @@ export function RelatorioTab({ schoolId }: { schoolId: string }) {
           )}
         </Cartao>
       </div>
+
+      <ProfissoesDaFilial schoolId={schoolId} />
 
       <p className="text-[11px] text-gray-500 dark:text-gray-400">
         Presenças e faltas nas aulas ainda não aparecem: o banco de consulta do Mercúrio não traz a frequência das turmas.
