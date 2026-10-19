@@ -33,7 +33,7 @@ export type IconeDestino =
   | "nacional"
   | "termo";
 
-export type Destino = { href: string; rotulo: string; descricao: string; icone: IconeDestino; secao: "Meu trabalho" | "Secretarias" | "Gestão da filial" | "Nacional" };
+export type Destino = { href: string; rotulo: string; descricao: string; icone: IconeDestino; secao: "Meu trabalho" | "Secretarias" | "Gestão da filial" | "Nacional"; pendentes?: number };
 
 type Pessoa = Pick<
   Member,
@@ -54,6 +54,12 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
   ]);
   const chefe = m.isDiretor || m.filiaisChefiadas.length > 0 || nacional;
   const tem = (a: AreaFilial) => areas.includes(a);
+  // Pedidos aguardando quem tem a área (pedido do usuário 2026-10-19): alterações de cadastro (Escolástica)
+  // e pedidos de diminuir/remover itens da contribuição (Economia).
+  const [pedidosCadastro, pedidosComposicao] = await Promise.all([
+    tem("escolastica") ? db.contactChangeLog.count({ where: { status: "pendente", member: { schoolId: m.schoolId } } }) : 0,
+    tem("economia") ? db.compositionChangeRequest.count({ where: { status: "pendente", member: { schoolId: m.schoolId } } }) : 0,
+  ]);
   const d: (Destino | false)[] = [
     { href: "/voluntario", rotulo: "Início", descricao: "Seus grupos, secretarias e encontros", icone: "inicio", secao: "Meu trabalho" },
     (m.isPedagogo || lideraFV > 0) && {
@@ -64,9 +70,23 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       secao: "Meu trabalho",
     },
     { href: "/voluntario/termo", rotulo: "Termo de voluntariado", descricao: "Assinatura do termo", icone: "termo", secao: "Meu trabalho" },
-    tem("escolastica") && { href: "/escolastica", rotulo: "Escolástica", descricao: "Membros, pendências e solicitações de cadastro", icone: "escolastica", secao: "Secretarias" },
+    tem("escolastica") && {
+      href: "/escolastica",
+      rotulo: "Escolástica",
+      descricao: pedidosCadastro ? `${pedidosCadastro} alteraç${pedidosCadastro === 1 ? "ão" : "ões"} de cadastro aguardando` : "Membros, pendências e solicitações de cadastro",
+      icone: "escolastica",
+      secao: "Secretarias",
+      pendentes: pedidosCadastro,
+    },
     avaliacao.length > 0 && { href: "/escolastica/avaliacao", rotulo: "Avaliação dos instrutores", descricao: "Questionário, rodadas e relatórios", icone: "avaliacao", secao: "Secretarias" },
-    tem("economia") && { href: "/economia", rotulo: "Economia", descricao: "Contribuições, cobrança, contas e tesouraria", icone: "economia", secao: "Secretarias" },
+    tem("economia") && {
+      href: pedidosComposicao ? "/economia?aba=composicao" : "/economia",
+      rotulo: "Economia",
+      descricao: pedidosComposicao ? `${pedidosComposicao} pedido${pedidosComposicao === 1 ? "" : "s"} de contribuição aguardando` : "Contribuições, cobrança, contas e tesouraria",
+      icone: "economia",
+      secao: "Secretarias",
+      pendentes: pedidosComposicao,
+    },
     tem("eventos") && { href: "/voluntario/eventos", rotulo: "Eventos", descricao: "Gestão de eventos e calendário", icone: "eventos", secao: "Secretarias" },
     tem("cafe") && { href: "/voluntario/cafe", rotulo: "Café", descricao: "Caixa Fortuna", icone: "cafe", secao: "Secretarias" },
     tem("direcao") && { href: "/voluntario/filial", rotulo: "Visão da filial", descricao: "Resumo da filial e de cada área", icone: "direcao", secao: "Gestão da filial" },

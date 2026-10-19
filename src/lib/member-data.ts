@@ -333,6 +333,8 @@ export async function getMemberDashboard(memberId: string) {
     meusGafs,
     // Um atalho só para a Área do Voluntário, quando a pessoa tem algo lá (mesma regra do menu).
     areaVoluntario: destinosVoluntario.length > 0,
+    // Pedidos aguardando quem tem Escolástica/Economia — número no botão da Área do Voluntário.
+    pendenciasVoluntario: destinosVoluntario.reduce((soma, d) => soma + (d.pendentes ?? 0), 0),
     availableToAdd,
     streakMeses,
     eventHistory: eventHistory.map(r=>({title:r.event.title,date:r.event.startsAt})),

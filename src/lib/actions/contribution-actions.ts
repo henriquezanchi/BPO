@@ -70,17 +70,19 @@ export async function getSolicitacoesComposicaoDoMembro(memberId: string) {
   });
   return pendentes.map((p) => ({
     id: p.id,
-    tipo: p.tipo as "inclusao" | "remocao",
+    tipo: p.tipo as "inclusao" | "remocao" | "reducao",
     compositionItemId: p.compositionItemId,
     label: p.label,
     amount: Number(p.amount),
+    previousAmount: p.previousAmount === null ? null : Number(p.previousAmount),
     createdAt: p.createdAt,
   }));
 }
 
 /**
- * Altera o valor de um item — só permitido se o PRÓPRIO membro o incluiu
- * pelo Portal (addedViaPortal). Diferente da inclusão: aqui o valor É
+ * Altera o valor de um item. Incluído pelo próprio membro no Portal
+ * (addedViaPortal): muda na hora. Lançado pelo Mercúrio: aumentar muda na
+ * hora; diminuir vira pedido "reducao" para a Economia (2026-10-19). Diferente da inclusão: aqui o valor É
  * conhecido na hora (o membro digitou), então escreve local já (mesmo
  * padrão de updateMemberContact) e só enfileira a propagação real pro
  * Mercúrio.
@@ -94,15 +96,27 @@ export async function updateContributionItemValue(memberId: string, compositionI
 
   const item = await db.contributionCompositionItem.findUniqueOrThrow({ where: { id: compositionItemId } });
   if (item.memberId !== memberId) throw new Error("Este item não pertence a este membro.");
-  if (!item.addedViaPortal) {
-    return { ok: false as const, error: "Este item foi lançado pela secretaria e não pode ser alterado pelo Portal." };
+  // Item lançado pelo Mercúrio (regra do usuário 2026-10-19): aumentar vale na
+  // hora; diminuir vira pedido para a Secretaria de Economia aprovar. Item
+  // incluído pela própria pessoa no Portal muda na hora, para cima ou para baixo.
+  if (!item.addedViaPortal && novoValor < Number(item.amount)) {
+    const jaTemPedido = await db.compositionChangeRequest.findFirst({ where: { compositionItemId, status: "pendente", tipo: { in: ["remocao", "reducao"] } } });
+    if (jaTemPedido) return { ok: false as const, error: "Já existe um pedido para este item aguardando a Economia." };
+    await db.compositionChangeRequest.create({
+      data:
+        novoValor === 0
+          ? { memberId, tipo: "remocao", compositionItemId: item.id, mercurioGroupId: item.mercurioGroupId, label: item.label, amount: item.amount }
+          : { memberId, tipo: "reducao", compositionItemId: item.id, mercurioGroupId: item.mercurioGroupId, label: item.label, amount: novoValor, previousAmount: item.amount },
+    });
+    revalidatePath("/portal");
+    return { ok: true as const, solicitado: true as const, tipo: novoValor === 0 ? ("remocao" as const) : ("reducao" as const) };
   }
 
   const salvo = await db.contributionCompositionItem.update({ where: { id: compositionItemId }, data: { amount: novoValor } });
   await enqueueMercurioCompositionEdit(memberId, item.mercurioGroupId, novoValor);
 
   revalidatePath("/portal");
-  return { ok: true as const, pending: true as const, item: { ...salvo, amount: Number(salvo.amount), pendingSync: true } };
+  return { ok: true as const, solicitado: false as const, pending: true as const, item: { ...salvo, amount: Number(salvo.amount), pendingSync: true } };
 }
 
 const DIAS_UTEIS_MINIMOS_PARA_REMOVER = 3;

@@ -31,7 +31,7 @@ export function MyContributionPanel({
   const [isSavingEdit, startSaveEdit] = useTransition();
 
   const total = items.reduce((soma, i) => soma + i.amount, 0);
-  const idsComRemocaoPendente = new Set(solicitacoes.filter((s) => s.tipo === "remocao").map((s) => s.compositionItemId));
+  const idsComRemocaoPendente = new Set(solicitacoes.filter((s) => s.tipo === "remocao" || s.tipo === "reducao").map((s) => s.compositionItemId));
 
   useEffect(() => {
     getSolicitacoesComposicaoDoMembro(memberId).then(setSolicitacoes);
@@ -82,8 +82,22 @@ export function MyContributionPanel({
         setError(res.error ?? "Falha ao alterar valor.");
         return;
       }
-      setItems((prev) => prev.map((i) => (i.id === res.item.id ? res.item : i)));
       setEditingId(null);
+      if (res.solicitado) {
+        // Item lançado pelo Mercúrio: diminuir exige aprovação da Economia (2026-10-19); o valor atual continua até aprovar.
+        setSolicitacoes((prev) => [
+          ...prev,
+          { id: `temp-${item.id}`, tipo: res.tipo, compositionItemId: item.id, label: item.label, amount: novoValor, previousAmount: item.amount, createdAt: new Date() },
+        ]);
+        setNotice(
+          res.tipo === "remocao"
+            ? `Pedido para retirar "${item.label}" enviado — aguardando aprovação da Economia.`
+            : `Pedido para baixar "${item.label}" de ${formatBRL(item.amount)} para ${formatBRL(novoValor)} enviado — aguardando aprovação da Economia.`,
+        );
+        return;
+      }
+      const atualizado = res.item;
+      setItems((prev) => prev.map((i) => (i.id === atualizado.id ? atualizado : i)));
       setNotice("Valor atualizado — a confirmação no Mercúrio pode levar até 24h.");
     });
   }
@@ -102,7 +116,7 @@ export function MyContributionPanel({
         // Item lançado pela escola no Mercúrio — vira pedido pra Economia aprovar, não some da lista.
         setSolicitacoes((prev) => [
           ...prev,
-          { id: `temp-${item.id}`, tipo: "remocao" as const, compositionItemId: item.id, label: item.label, amount: item.amount, createdAt: new Date() },
+          { id: `temp-${item.id}`, tipo: "remocao" as const, compositionItemId: item.id, label: item.label, amount: item.amount, previousAmount: null, createdAt: new Date() },
         ]);
         setNotice(`Solicitação pra remover "${item.label}" enviada — aguardando aprovação da Economia.`);
         return;
@@ -142,7 +156,7 @@ export function MyContributionPanel({
                     )}
                     {remocaoPendente && (
                       <span className="flex items-center gap-1 text-[10px] font-medium text-na-warning-dark dark:text-amber-400">
-                        <Clock size={10} /> Remoção aguardando aprovação da Economia
+                        <Clock size={10} /> Pedido aguardando aprovação da Economia
                       </span>
                     )}
                   </span>
@@ -193,6 +207,15 @@ export function MyContributionPanel({
                           </button>
                         </>
                       )}
+                      {!item.addedViaPortal && !remocaoPendente && (
+                        <button
+                          onClick={() => handleStartEdit(item)}
+                          title="Alterar valor (aumentar vale na hora; diminuir vai para aprovação da Economia)"
+                          className="text-gray-400 transition hover:text-na-green"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
                       {!item.addedViaPortal && (
                         <button
                           onClick={() => handleRemove(item)}
@@ -223,22 +246,24 @@ export function MyContributionPanel({
       </div>
 
       <p className="mb-2 flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
-        <Lock size={10} /> Itens com cadeado foram lançados pela secretaria — remover exige aprovação da Economia.
+        <Lock size={10} /> Itens com cadeado vieram do Mercúrio: aumentar vale na hora; diminuir ou remover vai para aprovação da Economia.
       </p>
 
       {solicitacoes.length > 0 && (
         <div className="mb-4 rounded-xl border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
           <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold text-na-warning-dark dark:text-amber-300">
-            <Clock size={12} /> Remoção aguardando aprovação da Economia
+            <Clock size={12} /> Aguardando aprovação da Economia
           </div>
           <ul className="flex flex-col gap-1">
             {solicitacoes.map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-2 text-[12px] text-na-warning-dark dark:text-amber-300">
                 <span className="flex items-center gap-1">
-                  {s.tipo === "remocao" ? <Minus size={11} /> : <Plus size={11} />}
-                  {s.label}
+                  {s.tipo === "inclusao" ? <Plus size={11} /> : <Minus size={11} />}
+                  {s.tipo === "remocao" ? `Retirar ${s.label}` : s.tipo === "reducao" ? `Baixar ${s.label}` : s.label}
                 </span>
-                <span className="font-semibold">{formatBRL(s.amount)}</span>
+                <span className="font-semibold">
+                  {s.tipo === "reducao" && s.previousAmount !== null ? `${formatBRL(s.previousAmount)} → ${formatBRL(s.amount)}` : formatBRL(s.amount)}
+                </span>
               </li>
             ))}
           </ul>

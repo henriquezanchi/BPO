@@ -432,12 +432,14 @@ model CompositionChangeRequest {
   id                String                    @id @default(cuid())
   memberId          String
   member            Member                    @relation(fields: [memberId], references: [id])
-  tipo              String                    @default("inclusao") // "inclusao" | "remocao"
+  tipo              String                    @default("inclusao") // "inclusao" | "remocao" | "reducao"
   compositionItemId String? // só em "remocao" — item de verdade que será removido se aprovado
   compositionItem   ContributionCompositionItem? @relation(fields: [compositionItemId], references: [id])
   mercurioGroupId   String
   label             String
   amount            Decimal                   @db.Decimal(10, 2)
+  // "reducao" (pedido do usuário 2026-10-19: diminuir valor exige aprovação): amount = valor novo, previousAmount = valor atual.
+  previousAmount    Decimal?                  @db.Decimal(10, 2)
   status            String                    @default("pendente") // "pendente" | "aprovado" | "rejeitado"
   reviewedAt        DateTime?
   createdAt         DateTime                  @default(now())

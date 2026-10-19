@@ -2,7 +2,7 @@
 
 import { requireEconomiaOuDirecao } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
 /** Solicitações de inclusão de item de composição (ver solicitarItemComposicao em contribution-actions.ts) pendentes de aprovação. */
@@ -15,14 +15,16 @@ export async function getSolicitacoesComposicaoPendentes(schoolId: string) {
   });
   // amount vem como Decimal do Prisma — não serializa de Server Action pra
   // Client Component sem isso (mesmo motivo de SerializedCompositionItem).
-  return solicitacoes.map((s) => ({ ...s, amount: Number(s.amount) }));
+  return solicitacoes.map((s) => ({ ...s, amount: Number(s.amount), previousAmount: s.previousAmount === null ? null : Number(s.previousAmount) }));
 }
 
 /**
  * Aprova — comportamento depende do tipo:
  * - "inclusao": cria o item de verdade (addedViaPortal) e enfileira a inclusão no Mercúrio.
- * - "remocao" (pedido do usuário 2026-10-08, item que a escola lançou direto
- *   no Mercúrio): apaga o item de verdade e enfileira a remoção no Mercúrio.
+ * - "remocao": apaga o item de verdade e enfileira a remoção no Mercúrio.
+ * - "reducao" (2026-10-19): aplica o valor menor e enfileira a alteração.
+ * Desde 2026-10-19 o Portal só pede remoção/redução de itens que o próprio
+ * membro incluiu pelo Portal; itens lançados pela secretaria não se mexem.
  */
 export async function aprovarSolicitacaoComposicao(schoolId: string, requestId: string) {
   await requireEconomiaOuDirecao(schoolId);
@@ -30,7 +32,16 @@ export async function aprovarSolicitacaoComposicao(schoolId: string, requestId: 
   if (solicitacao.member.schoolId !== schoolId) throw new Error("Solicitação não pertence a esta escola.");
   if (solicitacao.status !== "pendente") throw new Error("Solicitação já foi revisada.");
 
-  if (solicitacao.tipo === "remocao") {
+  if (solicitacao.tipo === "reducao") {
+    // Diminuir valor de item incluído pelo Portal (pedido do usuário 2026-10-19): aplica o valor novo e propaga ao Mercúrio.
+    const valor = Number(solicitacao.amount);
+    if (!solicitacao.compositionItemId) throw new Error("Pedido sem item.");
+    await db.$transaction([
+      db.contributionCompositionItem.update({ where: { id: solicitacao.compositionItemId }, data: { amount: valor } }),
+      db.compositionChangeRequest.update({ where: { id: requestId }, data: { status: "aprovado", reviewedAt: new Date() } }),
+    ]);
+    await enqueueMercurioCompositionEdit(solicitacao.memberId, solicitacao.mercurioGroupId, valor);
+  } else if (solicitacao.tipo === "remocao") {
     await db.$transaction([
       ...(solicitacao.compositionItemId ? [db.contributionCompositionItem.delete({ where: { id: solicitacao.compositionItemId } })] : []),
       db.compositionChangeRequest.update({ where: { id: requestId }, data: { status: "aprovado", reviewedAt: new Date() } }),

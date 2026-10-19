@@ -123,14 +123,14 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
       )}
 
       <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-        Solicitações de remoção de item de composição ({solicitacoes.length})
+        Pedidos para diminuir ou remover itens da contribuição ({solicitacoes.length})
       </p>
       {solicitacoes.length === 0 ? (
         <p className="text-xs text-gray-400">Nenhuma solicitação pendente.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {solicitacoes.map((s) => {
-            const ehRemocao = s.tipo === "remocao";
+            const ehRemocao = s.tipo === "remocao" || s.tipo === "reducao";
             return (
               <div
                 key={s.id}
@@ -144,12 +144,14 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
                     }`}
                   >
                     {ehRemocao ? <Minus size={10} /> : <Plus size={10} />}
-                    {ehRemocao ? "Remover" : "Incluir"}
+                    {s.tipo === "reducao" ? "Diminuir valor" : ehRemocao ? "Remover" : "Incluir"}
                   </span>
                 </div>
                 <p className="mt-1 flex justify-between text-[12px] text-gray-700 dark:text-gray-300">
                   <span>{s.label}</span>
-                  <span className="font-semibold">{formatBRL(s.amount)}/mês</span>
+                  <span className="font-semibold">
+                    {s.tipo === "reducao" && s.previousAmount !== null ? `${formatBRL(s.previousAmount)} → ${formatBRL(s.amount)}/mês` : `${formatBRL(s.amount)}/mês`}
+                  </span>
                 </p>
                 <p className="mt-1 text-[10px] text-gray-400">Solicitado em {formatDateBR(s.createdAt)}</p>
                 <div className="mt-2 flex gap-2">

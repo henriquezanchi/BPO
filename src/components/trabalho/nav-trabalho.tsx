@@ -27,7 +27,8 @@ const SECOES: Destino["secao"][] = ["Meu trabalho", "Secretarias", "Gestão da f
 /** Destino ativo: o mais específico cujo endereço começa a página atual (/escolastica/avaliacao vence /escolastica). */
 function ativo(destinos: Destino[], caminho: string, forcado?: string) {
   if (forcado) return forcado;
-  return [...destinos].sort((a, b) => b.href.length - a.href.length).find((d) => caminho === d.href || caminho.startsWith(`${d.href}/`))?.href ?? "/voluntario";
+  const base = (h: string) => h.split("?")[0];
+  return [...destinos].sort((a, b) => base(b.href).length - base(a.href).length).find((d) => caminho === base(d.href) || caminho.startsWith(`${base(d.href)}/`))?.href ?? "/voluntario";
 }
 
 function Lista({ destinos, atual, aoEscolher }: { destinos: Destino[]; atual: string; aoEscolher?: () => void }) {
@@ -52,7 +53,12 @@ function Lista({ destinos, atual, aoEscolher }: { destinos: Destino[]; atual: st
                     marcado ? "bg-na-green text-white" : "text-gray-700 hover:bg-white dark:text-gray-300 dark:hover:bg-gray-900"
                   }`}
                 >
-                  <Icone size={16} className={marcado ? "" : "text-gray-400"} /> {d.rotulo}
+                  <Icone size={16} className={marcado ? "" : "text-gray-400"} /> <span className="flex-1">{d.rotulo}</span>
+                  {!!d.pendentes && (
+                    <span className="min-w-5 rounded-full bg-na-danger px-1.5 py-0.5 text-center text-[10px] font-bold text-white" aria-label={`${d.pendentes} aguardando`}>
+                      {d.pendentes}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -109,6 +115,7 @@ export function NavTrabalho({ destinos, nome, filial, forcado }: { destinos: Des
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-gray-200 bg-na-bg/95 px-4 py-3 backdrop-blur lg:hidden dark:border-gray-800 dark:bg-gray-950/95">
         <button onClick={() => setAberto(true)} aria-label="Abrir menu" aria-expanded={aberto} className="flex items-center gap-2 rounded-lg py-1 pr-2 text-[14px] font-bold text-gray-900 dark:text-gray-100">
           <Menu size={20} /> {rotuloAtual}
+          {destinos.some((d) => d.pendentes) && <span className="h-2 w-2 rounded-full bg-na-danger" aria-label="Há pedidos aguardando" />}
         </button>
         <ThemeToggle />
       </header>

@@ -173,6 +173,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               <Link href="/voluntario" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
                 <HandHeart size={11} /> {t.home.portalDoVoluntario}
+                {dashboard.pendenciasVoluntario > 0 && (
+                  <span className="ml-0.5 rounded-full bg-na-danger px-1.5 text-[9px] font-bold text-white" aria-label={`${dashboard.pendenciasVoluntario} pedidos aguardando`}>
+                    {dashboard.pendenciasVoluntario}
+                  </span>
+                )}
               </Link>
             </div>
           )}

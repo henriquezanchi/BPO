@@ -50,6 +50,26 @@ export default async function VoluntarioPage() {
         )}
       </header>
 
+      {/* Pedidos aguardando quem tem a área (Escolástica: cadastro; Economia: contribuição). */}
+      {destinos
+        .filter((d) => d.pendentes)
+        .map((d) => (
+          <Link
+            key={`pend-${d.href}`}
+            href={d.href}
+            className="flex items-center justify-between gap-3 rounded-2xl border border-na-danger/30 bg-na-danger-light px-4 py-3 text-na-danger-dark dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"
+          >
+            <span className="flex items-center gap-3">
+              <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-na-danger px-2 text-sm font-black text-white">{d.pendentes}</span>
+              <span>
+                <span className="block text-[13px] font-bold">{d.rotulo}</span>
+                <span className="block text-[12px]">{d.descricao}</span>
+              </span>
+            </span>
+            <ChevronRight size={16} className="shrink-0" />
+          </Link>
+        ))}
+
       {secoes.length === 0 && (
         <p className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-[13px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
           {acesso ? "Você ainda não faz parte de nenhum grupo ou secretaria." : "Seus grupos aparecem aqui depois que o responsável liberar seu acesso à área de voluntários."}
