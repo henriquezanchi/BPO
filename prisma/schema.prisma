@@ -1399,3 +1399,28 @@ model EventNotice {
   @@unique([registrationId,kind])
   @@index([status,dueAt])
 }
+
+// Recursos do Portal do Aluno liberados por filial (pedido do usuário
+// 2026-10-19): painéis sem função real ficam ocultos até um administrador
+// da filial liberar. Chaves em src/lib/recursos-filial.ts.
+model RecursoFilial {
+  schoolId      String
+  chave         String
+  ativo         Boolean  @default(false)
+  alteradoPorId String
+  alteradoEm    DateTime @default(now())
+
+  @@id([schoolId, chave])
+}
+
+// Administradores da filial no Portal: escolhidos pelo Chefe ou pelo
+// Sub-Chefe da filial (que já são administradores por natureza).
+model AdministradorFilial {
+  schoolId       String
+  memberId       String
+  designadoPorId String
+  criadoEm       DateTime @default(now())
+
+  @@id([schoolId, memberId])
+  @@index([memberId])
+}

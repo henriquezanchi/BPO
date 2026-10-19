@@ -147,6 +147,14 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
                   </Link>
                 </>
               )}
+              {dashboard.administraFilial && (
+                <>
+                  <span className="text-[10px] text-white/30">·</span>
+                  <Link href="/admin" className="text-[10px] font-semibold text-white/80 underline decoration-dotted underline-offset-2 transition hover:text-white">
+                    Administração
+                  </Link>
+                </>
+              )}
             </div>
             <button
               onClick={() => setModal("cadastro")}
@@ -255,8 +263,13 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             onClick={() => setModal("agenda")}
           />
           <FeatureTile icon={<BookOpen size={16} />} title={t.tiles.estudos.title} subtitle={t.tiles.estudos.subtitle} onClick={() => setModal("estudos")} />
-          <FeatureTile icon={<HandHeart size={16} />} title={t.tiles.voluntariado.title} subtitle={t.tiles.voluntariado.subtitle} onClick={() => setModal("voluntariado")} />
-          <FeatureTile icon={<UsersRound size={16} />} title={t.tiles.gaf.title} subtitle={t.tiles.gaf.subtitle} onClick={() => setModal("gaf")} />
+          {/* Voluntariado, GAF e Transparência só aparecem se a filial liberou (Administração da filial). */}
+          {dashboard.recursos.voluntariado && (
+            <FeatureTile icon={<HandHeart size={16} />} title={t.tiles.voluntariado.title} subtitle={t.tiles.voluntariado.subtitle} onClick={() => setModal("voluntariado")} />
+          )}
+          {dashboard.recursos.gaf && (
+            <FeatureTile icon={<UsersRound size={16} />} title={t.tiles.gaf.title} subtitle={t.tiles.gaf.subtitle} onClick={() => setModal("gaf")} />
+          )}
           <FeatureTile icon={<LifeBuoy size={16} />} title={t.tiles.ajuda.title} subtitle={t.tiles.ajuda.subtitle} onClick={() => setModal("ajuda")} />
           <FeatureTile
             icon={<Compass size={16} />}
@@ -264,12 +277,14 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             subtitle={dashboard.streakMeses > 0 ? t.tiles.jornada.subtitleComStreak(dashboard.streakMeses) : t.tiles.jornada.subtitleSemStreak}
             onClick={() => setModal("jornada")}
           />
-          <FeatureTile
-            icon={<PiggyBank size={16} />}
-            title={t.tiles.transparencia.title}
-            subtitle={t.tiles.transparencia.subtitle}
-            onClick={() => setModal("transparencia")}
-          />
+          {dashboard.recursos.transparencia && (
+            <FeatureTile
+              icon={<PiggyBank size={16} />}
+              title={t.tiles.transparencia.title}
+              subtitle={t.tiles.transparencia.subtitle}
+              onClick={() => setModal("transparencia")}
+            />
+          )}
         </section>
       </main>
 
@@ -321,7 +336,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
           {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} />}
-          {modal === "estudos" && <StudyAreaPanel />}
+          {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}
           {modal === "gaf" && <GafPanel memberId={member.id} />}

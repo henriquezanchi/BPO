@@ -21,7 +21,7 @@ export async function ehAdministradorNacional(m: Pick<Member, "mercurioId">): Pr
 }
 
 /** Escolas (ids) que a pessoa chefia: a própria, se é diretora, e as de filiaisChefiadas — ou todas, se é administração nacional. */
-async function escolasChefiadas(m: Pessoa): Promise<string[]> {
+export async function escolasChefiadas(m: Pessoa): Promise<string[]> {
   if (await ehAdministradorNacional(m)) return (await db.school.findMany({ select: { id: true } })).map((s) => s.id);
   const outras = m.filiaisChefiadas.length
     ? (await db.school.findMany({ where: { mercurioUnidade: { in: m.filiaisChefiadas } }, select: { id: true } })).map((s) => s.id)

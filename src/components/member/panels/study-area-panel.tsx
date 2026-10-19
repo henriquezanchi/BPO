@@ -3,7 +3,8 @@
 import { BookOpen, BookOpenText, Clapperboard, FileText, PlaySquare } from "lucide-react";
 import { useState } from "react";
 
-export function StudyAreaPanel() {
+/** Acrópole Play e Apostilas só aparecem se a filial liberou (ver recursos-filial.ts). */
+export function StudyAreaPanel({ mostrarAcropolePlay = false, mostrarApostilas = false }: { mostrarAcropolePlay?: boolean; mostrarApostilas?: boolean }) {
   const [apostilasAvisoAtivo, setApostilasAvisoAtivo] = useState(false);
 
   return (
@@ -15,6 +16,7 @@ export function StudyAreaPanel() {
       </div>
 
       <div className="flex w-full flex-col gap-2.5">
+        {mostrarAcropolePlay && (
         <a
           href="https://membros.acropoleplay.com/auth/login"
           target="_blank"
@@ -23,6 +25,7 @@ export function StudyAreaPanel() {
         >
           <Clapperboard size={16} /> Acrópole Play — vídeos e séries
         </a>
+        )}
         <a
           href="https://biblioteca.acropolebrasil.com.br/"
           target="_blank"
@@ -31,6 +34,8 @@ export function StudyAreaPanel() {
         >
           <BookOpenText size={16} /> Acessar Biblioteca
         </a>
+        {mostrarApostilas && (
+          <>
         <button
           onClick={() => setApostilasAvisoAtivo(true)}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
@@ -39,6 +44,8 @@ export function StudyAreaPanel() {
         </button>
         {apostilasAvisoAtivo && (
           <p className="text-[11px] text-gray-500 dark:text-gray-400">As apostilas ainda não estão disponíveis por aqui — em breve.</p>
+        )}
+          </>
         )}
         <a
           href="https://www.youtube.com/novaacropole"
