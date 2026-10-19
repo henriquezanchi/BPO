@@ -2,6 +2,7 @@
 
 import { getRelatorioFilial, type RelatorioFilial } from "@/lib/actions/relatorio-filial-actions";
 import { formatBRL } from "@/lib/format";
+import { DIA_LIMITE_DESCONTO } from "@/lib/situacao-contribuicao";
 import { AlertTriangle, Cake, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -62,6 +63,8 @@ export function RelatorioTab({ schoolId }: { schoolId: string }) {
   const mesAtual = d.movimento.meses.at(-1)!;
   const maxMov = Math.max(1, ...d.movimento.meses.flatMap((m) => [m.entradas, m.saidas]));
   const c = d.contribuicao.mesAtual;
+  // Regra do desconto (situacao-contribuicao.ts): até o dia 10 o mês está "a vencer"; depois, quem não pagou perdeu o desconto (amarelo).
+  const passouDoDia10 = hojeDia > DIA_LIMITE_DESCONTO;
   const totalFichas = c.paga + c.emBranco + c.atrasada + c.isenta || 1;
   const adesao = d.pessoas.ativos ? Math.round((rel.portal.comLogin / d.pessoas.ativos) * 100) : 0;
   const [recAnt, recAtual] = d.receita;
@@ -150,12 +153,14 @@ export function RelatorioTab({ schoolId }: { schoolId: string }) {
           )}
         </Cartao>
 
-        <Cartao titulo={`Contribuição de ${rotuloMes(d.mesReferencia)}`} aviso="Situação mês a mês das fichas no Mercúrio. “Em branco” ainda não venceu ou não foi lançado.">
+        <Cartao
+          titulo={`Contribuição de ${rotuloMes(d.mesReferencia)}`}
+          aviso={`Pago até o dia ${DIA_LIMITE_DESCONTO}: em dia, com desconto. Depois do dia ${DIA_LIMITE_DESCONTO} sem pagamento: perdeu o desconto, mas só fica em atraso quando o mês termina.`}
+        >
           <div className="flex h-4 w-full gap-[2px] overflow-hidden rounded-full" role="img" aria-label="Situação das contribuições do mês">
             {[
               [c.paga, "bg-na-success"],
-              [c.emBranco, "bg-gray-300 dark:bg-gray-600"],
-              [c.atrasada, "bg-na-danger"],
+              [c.emBranco, passouDoDia10 ? "bg-na-warning" : "bg-gray-300 dark:bg-gray-600"],
               [c.isenta, "bg-gray-200 dark:bg-gray-700"],
             ].map(([v, cls], i) => ((v as number) > 0 ? <span key={i} className={cls as string} style={{ width: `${((v as number) / totalFichas) * 100}%` }} /> : null))}
           </div>
@@ -164,10 +169,11 @@ export function RelatorioTab({ schoolId }: { schoolId: string }) {
               <span className="h-2.5 w-2.5 rounded-sm bg-na-success" /> Paga: <strong className="tabular-nums">{c.paga}</strong>
             </li>
             <li className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-gray-300 dark:bg-gray-600" /> Em branco: <strong className="tabular-nums">{c.emBranco}</strong>
+              <span className={`h-2.5 w-2.5 rounded-sm ${passouDoDia10 ? "bg-na-warning" : "bg-gray-300 dark:bg-gray-600"}`} />
+              {passouDoDia10 ? "Sem desconto (ainda no prazo)" : `A vencer até dia ${DIA_LIMITE_DESCONTO}`}: <strong className="tabular-nums">{c.emBranco}</strong>
             </li>
             <li className="flex items-center gap-1.5">
-              <AlertTriangle size={11} className="text-na-danger" /> Em atraso: <strong className="tabular-nums">{c.atrasada}</strong>
+              <AlertTriangle size={11} className="text-na-danger" /> Em atraso (meses encerrados): <strong className="tabular-nums">{d.contribuicao.pessoasComAtraso}</strong>
             </li>
             <li className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-sm bg-gray-200 dark:bg-gray-700" /> Isenta: <strong className="tabular-nums">{c.isenta}</strong>

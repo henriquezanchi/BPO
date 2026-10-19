@@ -53,6 +53,9 @@ export interface Dictionary {
     statusEmDia: string;
     venceuHa: (dias: number, dia: number, mes: number) => string;
     venceHoje: string;
+    contribuicaoSemDesconto: string;
+    mensagemSemDesconto: (nome: string) => string;
+    mensagemAVencer: (nome: string) => string;
     proximoVencimento: (dia: number, mes: number, dias: number) => string;
     verSituacao: string;
     falarNoWhatsapp: string;
@@ -103,13 +106,16 @@ const pt: Dictionary = {
     editarDados: "Editar Dados",
     matricula: "Matrícula",
     sair: "Sair",
-    contribuicaoPendente: "Contribuição Pendente",
+    contribuicaoPendente: "Contribuição em Atraso",
     contribuicaoEmDia: "Contribuição em Dia",
     ola: (nome) => `Olá, ${nome}. Sua contribuição deste mês está`,
     statusAtrasada: "atrasada",
     statusEmDia: "em dia",
     venceuHa: (dias, dia, mes) => `Venceu há ${dias} dia(s) — vencimento dia ${dia}/${mes}`,
     venceHoje: "Vence hoje",
+    contribuicaoSemDesconto: "Prazo do desconto encerrado",
+    mensagemSemDesconto: (nome) => `Olá, ${nome}. O prazo com desconto (até o dia 10) passou, mas você ainda pode pagar este mês sem ficar em atraso.`,
+    mensagemAVencer: (nome) => `Olá, ${nome}. Pague a contribuição deste mês até o dia 10 para manter o desconto.`,
     proximoVencimento: (dia, mes, dias) => `Próximo vencimento: dia ${dia}/${mes} (em ${dias} dia${dias === 1 ? "" : "s"})`,
     verSituacao: "Ver Situação",
     falarNoWhatsapp: "Falar com a escola no WhatsApp",
@@ -171,13 +177,16 @@ const en: Dictionary = {
     editarDados: "Edit Profile",
     matricula: "Member ID",
     sair: "Log out",
-    contribuicaoPendente: "Contribution Pending",
+    contribuicaoPendente: "Contribution Overdue",
     contribuicaoEmDia: "Contribution Up to Date",
     ola: (nome) => `Hi, ${nome}. Your contribution this month is`,
     statusAtrasada: "overdue",
     statusEmDia: "up to date",
     venceuHa: (dias, dia, mes) => `Due ${dias} day(s) ago — due date ${mes}/${dia}`,
     venceHoje: "Due today",
+    contribuicaoSemDesconto: "Discount period ended",
+    mensagemSemDesconto: (nome) => `Hi, ${nome}. The discount period (until the 10th) has passed, but you can still pay this month without being overdue.`,
+    mensagemAVencer: (nome) => `Hi, ${nome}. Pay this month's contribution by the 10th to keep the discount.`,
     proximoVencimento: (dia, mes, dias) => `Next due date: ${mes}/${dia} (in ${dias} day${dias === 1 ? "" : "s"})`,
     verSituacao: "View Status",
     falarNoWhatsapp: "Message your branch on WhatsApp",

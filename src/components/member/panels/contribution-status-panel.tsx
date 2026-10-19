@@ -16,6 +16,7 @@ import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import type { FortunaBalanceView } from "@/lib/member-data";
 import type { ContributionMonthlyStatus } from "@prisma/client";
 import { gerarPdfRecibo } from "@/lib/recibo-pdf";
+import { situacaoDoMes } from "@/lib/situacao-contribuicao";
 import { AlertTriangle, Coffee, CreditCard, Download, ExternalLink, HeartHandshake, Loader2, QrCode, RefreshCw, Zap } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
@@ -26,6 +27,8 @@ const ESTILO_POR_STATUS: Record<string, string> = {
   atrasado: "border-na-danger/40 bg-na-danger-light text-na-danger-dark dark:border-red-800 dark:bg-red-950/30 dark:text-red-400",
   isento: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400",
   em_branco: "border-gray-200 bg-white text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-500",
+  // Mês atual sem pagamento depois do dia 10: perdeu o desconto, mas não está em atraso (amarelo).
+  sem_desconto: "border-na-warning/40 bg-na-warning-light text-na-warning-dark dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300",
 };
 
 const LABEL_POR_STATUS: Record<string, string> = {
@@ -33,6 +36,7 @@ const LABEL_POR_STATUS: Record<string, string> = {
   atrasado: "Em atraso",
   isento: "Isento",
   em_branco: "—",
+  sem_desconto: "Sem desconto",
 };
 
 /**
@@ -161,9 +165,12 @@ export function ContributionStatusPanel({
           const mes = i + 1;
           const registro = porMes.get(mes);
           const paid = payments.some(item=>item.referenceYear===selectedYear&&item.referenceMonth===mes&&item.status==="pago");
-    const status = paid ? "paga" : registro?.status ?? "em_branco";
+          const statusBase = paid ? "paga" : registro?.status ?? "em_branco";
+          // Regra do desconto até o dia 10 (situacao-contribuicao.ts): mês atual em aberto vira amarelo; mês encerrado sem pagamento, vermelho.
+          const situacaoMes = registro ? situacaoDoMes(statusBase, registro.year, mes) : null;
+          const status = statusBase === "em_branco" && situacaoMes === "sem_desconto" ? "sem_desconto" : statusBase === "em_branco" && situacaoMes === "em_atraso" ? "atrasado" : statusBase;
           const blocked = !!firstOpen && periodNumber({year:registro?.year??selectedYear,month:mes}) > periodNumber(firstOpen);
-          const clicavel = status === "paga" || (!somenteConsulta && !blocked && !!registro && (status === "atrasado" || status === "em_branco"));
+          const clicavel = status === "paga" || (!somenteConsulta && !blocked && !!registro && (status === "atrasado" || status === "em_branco" || status === "sem_desconto"));
           return (
             <button
               key={mes}

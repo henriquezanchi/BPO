@@ -25,6 +25,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import Image from "next/image";
+import { situacaoGeral } from "@/lib/situacao-contribuicao";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
@@ -104,7 +105,10 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isDelayed = member.status === "atrasado" || member.status === "negociando";
+  // Verde (pago/até dia 10), amarelo (perdeu o desconto, ainda no mês) ou vermelho (mês encerrado sem pagamento) — ver situacao-contribuicao.ts.
+  const situacao = situacaoGeral(member.monthlyStatus, member.status);
+  const isDelayed = situacao === "em_atraso";
+  const semDesconto = situacao === "sem_desconto";
   const schoolWhatsapp = member.school.whatsapp ?? member.whatsapp;
   const compositionTotal = member.compositionItems.reduce((soma, i) => soma + i.amount, 0);
   const proximoVencimento = calcularProximoVencimento(member.monthlyStatus);
@@ -198,29 +202,37 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           className={`flex flex-col gap-3 rounded-2xl border p-4 ${
             isDelayed
               ? "border-na-danger/40 bg-na-danger-light dark:border-red-900 dark:bg-red-950/30"
-              : "border-na-success/40 bg-na-success-light dark:border-emerald-900 dark:bg-emerald-950/30"
+              : semDesconto
+                ? "border-na-warning/40 bg-na-warning-light dark:border-amber-900 dark:bg-amber-950/30"
+                : "border-na-success/40 bg-na-success-light dark:border-emerald-900 dark:bg-emerald-950/30"
           }`}
         >
           <div className="flex items-center gap-2.5">
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full ${
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                 isDelayed
                   ? "bg-na-danger-light text-na-danger-dark dark:bg-red-900/50 dark:text-red-300"
-                  : "bg-na-success-light text-na-success-dark dark:bg-emerald-900/50 dark:text-emerald-300"
+                  : semDesconto
+                    ? "bg-na-warning-light text-na-warning-dark dark:bg-amber-900/50 dark:text-amber-300"
+                    : "bg-na-success-light text-na-success-dark dark:bg-emerald-900/50 dark:text-emerald-300"
               }`}
             >
-              {isDelayed ? <TriangleAlert size={16} /> : <CheckCircle2 size={16} />}
+              {isDelayed || semDesconto ? <TriangleAlert size={16} /> : <CheckCircle2 size={16} />}
             </div>
             <div>
               <h4
                 className={`text-[13px] font-bold ${
-                  isDelayed ? "text-na-danger-dark dark:text-red-300" : "text-na-success-dark dark:text-emerald-300"
+                  isDelayed ? "text-na-danger-dark dark:text-red-300" : semDesconto ? "text-na-warning-dark dark:text-amber-300" : "text-na-success-dark dark:text-emerald-300"
                 }`}
               >
-                {isDelayed ? t.home.contribuicaoPendente : t.home.contribuicaoEmDia}
+                {isDelayed ? t.home.contribuicaoPendente : semDesconto ? t.home.contribuicaoSemDesconto : t.home.contribuicaoEmDia}
               </h4>
               <p className="mt-0.5 text-xs text-gray-700 dark:text-gray-400">
-                {t.home.ola(member.name.split(" ")[0])} {isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.
+                {semDesconto
+                  ? t.home.mensagemSemDesconto(member.name.split(" ")[0])
+                  : situacao === "a_vencer"
+                    ? t.home.mensagemAVencer(member.name.split(" ")[0])
+                    : `${t.home.ola(member.name.split(" ")[0])} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
               </p>
               <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-500">
                 {proximoVencimento.diasRestantes < 0
@@ -237,7 +249,9 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold transition ${
               isDelayed
                 ? "bg-na-danger text-white hover:bg-red-700"
-                : "bg-white/70 text-na-success-dark hover:bg-white dark:bg-black/20 dark:text-emerald-300"
+                : semDesconto
+                  ? "bg-na-warning-dark text-white hover:opacity-90 dark:bg-amber-600"
+                  : "bg-white/70 text-na-success-dark hover:bg-white dark:bg-black/20 dark:text-emerald-300"
             }`}
           >
             {t.home.verSituacao}
