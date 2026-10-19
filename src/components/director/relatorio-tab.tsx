@@ -56,7 +56,7 @@ function ProfissoesDaFilial({ schoolId }: { schoolId: string }) {
  * maior gestor — pessoas, movimento, aniversariantes, contribuição, turmas,
  * avaliação dos instrutores, pendências e próximos eventos.
  */
-export function RelatorioTab({ schoolId }: { schoolId: string }) {
+export function RelatorioTab({ schoolId, children }: { schoolId: string; children?: React.ReactNode }) {
   const [rel, setRel] = useState<RelatorioFilial | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -66,15 +66,22 @@ export function RelatorioTab({ schoolId }: { schoolId: string }) {
       .catch(() => setErro("Não foi possível carregar o relatório."));
   }, [schoolId]);
 
-  if (erro) return <p className="text-sm text-na-danger-dark dark:text-red-300">{erro}</p>;
+  // Sem o resumo do Mercúrio, o bloco financeiro do Portal (children) continua aparecendo.
+  const soFinanceiro = (aviso: React.ReactNode) => (
+    <div className="flex flex-col gap-5">
+      {aviso}
+      {children}
+    </div>
+  );
+  if (erro) return soFinanceiro(<p className="text-sm text-na-danger-dark dark:text-red-300">{erro}</p>);
   if (!rel)
-    return (
+    return soFinanceiro(
       <p className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <Loader2 size={14} className="animate-spin" /> Carregando relatório…
-      </p>
+        <Loader2 size={14} className="animate-spin" /> Carregando dados do Mercúrio…
+      </p>,
     );
   if (!rel.resumo)
-    return <p className="text-sm text-gray-500 dark:text-gray-400">O relatório é gerado na sincronização diária com o Mercúrio (3h30). Volte amanhã.</p>;
+    return soFinanceiro(<p className="text-sm text-gray-500 dark:text-gray-400">Os dados do Mercúrio são gerados na sincronização diária (3h30). Volte amanhã.</p>);
 
   const d = rel.resumo.dados;
   const agora = rel.agora;
@@ -103,6 +110,8 @@ export function RelatorioTab({ schoolId }: { schoolId: string }) {
         <Kpi rotulo="Com atraso no ano" valor={d.contribuicao.pessoasComAtraso} detalhe={`${d.contribuicao.mesesEmAtraso} meses em atraso somados`} />
         <Kpi rotulo="Recebido no mês" valor={formatBRL(recAtual?.valor ?? 0)} detalhe={recAnt ? `mês anterior: ${formatBRL(recAnt.valor)}` : undefined} />
       </div>
+
+      {children}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Cartao titulo="Pessoas por nível">

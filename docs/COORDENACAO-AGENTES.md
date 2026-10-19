@@ -15,7 +15,7 @@ Pedido do responsável pelo Portal, em 19/10:
 3. **Alteração de cadastro só por solicitação.** Nenhum dado de cadastro muda o Mercúrio sozinho. Os pedidos vão para revisão.
 4. **Verificação por código ao trocar celular ou e-mail.**
 
-5. **Relatório da Filial** no Painel do Diretor (aba nova, `relatorio-tab.tsx`, resumo diário em `ResumoFilial`). Concluído em 19/10.
+5. **Relatório da Filial** no Painel do Diretor (`relatorio-tab.tsx`, resumo diário em `ResumoFilial`). Concluído em 19/10; no mesmo dia passou a fazer parte da aba Visão Geral (uma visão só, a pedido do usuário).
 6. **Regra da contribuição** (verde/amarelo/vermelho com desconto até o dia 10) em `src/lib/situacao-contribuicao.ts`. Concluído em 19/10. Reutilize essa regra em vez de recriar.
 7. **Tesouraria no módulo de Economia**: importar extrato, conferir o que já foi lançado no Mercúrio e lançar só o que falta. Adaptado do repositório `mercurio-tesouraria` (versão publicada de 11/10). Publicado em 19/10 em `/economia/tesouraria` (`src/pages/api/tesouraria`, código em `src/tesouraria/`, armazenamento no Postgres em vez de Redis). Ainda falta: corrigir a conferência de duplicidade (contar ocorrências, usar o FITID do OFX) e conferir pelo banco de consulta quando houver a tabela de movimento de caixas.
 8. **Calendário inteligente** (aba Calendário do Diretor + aviso de conflito em `eventos-tab.tsx`). Publicado em 19/10.

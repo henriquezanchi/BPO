@@ -8,7 +8,23 @@ import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import type { DirectorDashboard } from "@/lib/director-data";
 import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
 import { EconomiaPanel } from "@/components/economia/economia-panel";
-import { ArrowLeft, ArrowUpDown, BadgePercent, Banknote, CalendarClock, CalendarDays, ClipboardList, Coffee, FileWarning, Handshake, LayoutDashboard, Menu, Search, Ticket, Users, Wallet } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpDown,
+  BadgePercent,
+  Banknote,
+  CalendarClock,
+  CalendarDays,
+  Coffee,
+  FileWarning,
+  Handshake,
+  LayoutDashboard,
+  Menu,
+  Search,
+  Ticket,
+  Users,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FortunaTab } from "./fortuna-tab";
@@ -21,7 +37,6 @@ import { ContasConciliacoesTab } from "./contas-conciliacoes-tab";
 
 const ABAS = [
   { id: "visao-geral", label: "Visão Geral", icon: LayoutDashboard },
-  { id: "relatorio", label: "Relatório da Filial", icon: ClipboardList },
   { id: "calendario", label: "Calendário", icon: CalendarDays },
   { id: "membros", label: "Gestão de Membros", icon: Users },
   { id: "eventos", label: "Gestão de Eventos", icon: Ticket },
@@ -80,9 +95,7 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
-      {menuMobileAberto && (
-        <div className="fixed inset-0 z-20 bg-black/50 lg:hidden" onClick={() => setMenuMobileAberto(false)} />
-      )}
+      {menuMobileAberto && <div className="fixed inset-0 z-20 bg-black/50 lg:hidden" onClick={() => setMenuMobileAberto(false)} />}
 
       <aside
         className={`fixed inset-y-0 left-0 z-30 flex w-64 shrink-0 -translate-x-full flex-col bg-slate-900 text-white transition-transform lg:static lg:translate-x-0 ${
@@ -131,9 +144,14 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
 
         <div className="p-4 sm:p-8">
           {aba === "visao-geral" && (
-            <VisaoGeralTab data={data} onNavigate={navegarPara} saldoFortunaConsolidado={fortunaBalances.saldoConsolidado} fortunaCarregando={fortunaCarregando} />
+            <VisaoGeralTab
+              schoolId={schoolId}
+              data={data}
+              onNavigate={navegarPara}
+              saldoFortunaConsolidado={fortunaBalances.saldoConsolidado}
+              fortunaCarregando={fortunaCarregando}
+            />
           )}
-          {aba === "relatorio" && <RelatorioTab schoolId={schoolId} />}
           {aba === "calendario" && <CalendarioTab schoolId={schoolId} />}
           {aba === "membros" && <MembrosTab schoolId={schoolId} data={data} filtroInicial={membrosFiltroInicial} />}
           {aba === "eventos" && <EventosTab schoolId={schoolId} data={data} />}
@@ -193,12 +211,19 @@ export function EmptyState({ text }: { text: string }) {
   return <p className="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{text}</p>;
 }
 
+/**
+ * Visão Geral = antiga Visão Geral + Relatório da Filial (pedido do usuário
+ * 2026-10-19: uma visão só). Números do Mercúrio no topo (RelatorioTab), o
+ * financeiro do Portal logo abaixo deles (children) e o detalhe em seguida.
+ */
 function VisaoGeralTab({
+  schoolId,
   data,
   onNavigate,
   saldoFortunaConsolidado,
   fortunaCarregando,
 }: {
+  schoolId: string;
   data: DirectorDashboard;
   onNavigate: (aba: AbaId, opts?: { statusFiltro?: string }) => void;
   saldoFortunaConsolidado: number;
@@ -208,73 +233,77 @@ function VisaoGeralTab({
   const resultadoPositivo = kpis.resultadoFinanceiroMes >= 0;
   return (
     <div className="flex flex-col gap-5">
-      <div
-        className={`rounded-2xl border p-5 ${
-          resultadoPositivo
-            ? "border-na-success/30 bg-na-success-light dark:border-emerald-900 dark:bg-emerald-950/30"
-            : "border-na-danger/30 bg-na-danger-light dark:border-red-900 dark:bg-red-950/30"
-        }`}
-      >
-        <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Resultado Financeiro do Mês</p>
-        <p className={`mt-1 text-3xl font-bold ${resultadoPositivo ? "text-na-success-dark dark:text-emerald-400" : "text-na-danger-dark dark:text-red-400"}`}>
-          {formatBRL(kpis.resultadoFinanceiroMes)}
-        </p>
-        <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-          Contribuições {formatBRL(kpis.receitaPrevista)} + Eventos {formatBRL(kpis.receitaEventosMes)} − Despesas do mês{" "}
-          {formatBRL(kpis.despesasTotaisMes)}
-        </p>
-      </div>
+      <RelatorioTab schoolId={schoolId}>
+        <h3 className="-mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Financeiro no Portal</h3>
+        <div
+          className={`rounded-2xl border p-5 ${
+            resultadoPositivo
+              ? "border-na-success/30 bg-na-success-light dark:border-emerald-900 dark:bg-emerald-950/30"
+              : "border-na-danger/30 bg-na-danger-light dark:border-red-900 dark:bg-red-950/30"
+          }`}
+        >
+          <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Resultado Financeiro do Mês</p>
+          <p
+            className={`mt-1 text-3xl font-bold ${resultadoPositivo ? "text-na-success-dark dark:text-emerald-400" : "text-na-danger-dark dark:text-red-400"}`}
+          >
+            {formatBRL(kpis.resultadoFinanceiroMes)}
+          </p>
+          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            Contribuições {formatBRL(kpis.receitaPrevista)} + Eventos {formatBRL(kpis.receitaEventosMes)} − Despesas do mês {formatBRL(kpis.despesasTotaisMes)}
+          </p>
+        </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <KpiCard
-          title="Receita Prevista (Mensal)"
-          value={formatBRL(kpis.receitaPrevista)}
-          sub={`${kpis.membrosAtivos} membros ativos`}
-          accent="green"
-          icon={Wallet}
-          onClick={() => onNavigate("membros")}
-        />
-        <KpiCard
-          title="Despesas Pendentes"
-          value={formatBRL(kpis.despesasPrevistas)}
-          sub="Contas a pagar em aberto"
-          accent="danger"
-          icon={FileWarning}
-          onClick={() => onNavigate("repasses")}
-        />
-        <KpiCard
-          title="Despesas Pagas (Mês)"
-          value={formatBRL(kpis.despesasRealizadasMes)}
-          sub="Já pagas este mês"
-          accent="blue"
-          icon={FileWarning}
-          onClick={() => onNavigate("repasses")}
-        />
-        <KpiCard
-          title="Taxa de Inadimplência"
-          value={`${kpis.taxaInadimplencia.toFixed(1)}%`}
-          sub="dos membros ativos"
-          accent="warning"
-          icon={BadgePercent}
-          onClick={() => onNavigate("recuperacao")}
-        />
-        <KpiCard
-          title="Total em Atraso"
-          value={formatBRL(kpis.totalEmAtraso)}
-          sub="Soma da composição de quem está atrasado"
-          accent="gold"
-          icon={Handshake}
-          onClick={() => onNavigate("membros", { statusFiltro: "atrasado" })}
-        />
-        <KpiCard
-          title="Saldo Fortuna Consolidado"
-          value={fortunaCarregando ? "..." : formatBRL(saldoFortunaConsolidado)}
-          sub="Membros vinculados ao Fortuna"
-          accent="blue"
-          icon={Coffee}
-          onClick={() => onNavigate("fortuna")}
-        />
-      </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <KpiCard
+            title="Receita Prevista (Mensal)"
+            value={formatBRL(kpis.receitaPrevista)}
+            sub={`${kpis.membrosAtivos} membros ativos`}
+            accent="green"
+            icon={Wallet}
+            onClick={() => onNavigate("membros")}
+          />
+          <KpiCard
+            title="Despesas Pendentes"
+            value={formatBRL(kpis.despesasPrevistas)}
+            sub="Contas a pagar em aberto"
+            accent="danger"
+            icon={FileWarning}
+            onClick={() => onNavigate("repasses")}
+          />
+          <KpiCard
+            title="Despesas Pagas (Mês)"
+            value={formatBRL(kpis.despesasRealizadasMes)}
+            sub="Já pagas este mês"
+            accent="blue"
+            icon={FileWarning}
+            onClick={() => onNavigate("repasses")}
+          />
+          <KpiCard
+            title="Taxa de Inadimplência"
+            value={`${kpis.taxaInadimplencia.toFixed(1)}%`}
+            sub="dos membros ativos"
+            accent="warning"
+            icon={BadgePercent}
+            onClick={() => onNavigate("recuperacao")}
+          />
+          <KpiCard
+            title="Total em Atraso"
+            value={formatBRL(kpis.totalEmAtraso)}
+            sub="Soma da composição de quem está atrasado"
+            accent="gold"
+            icon={Handshake}
+            onClick={() => onNavigate("membros", { statusFiltro: "atrasado" })}
+          />
+          <KpiCard
+            title="Saldo Fortuna Consolidado"
+            value={fortunaCarregando ? "..." : formatBRL(saldoFortunaConsolidado)}
+            sub="Membros vinculados ao Fortuna"
+            accent="blue"
+            icon={Coffee}
+            onClick={() => onNavigate("fortuna")}
+          />
+        </div>
+      </RelatorioTab>
 
       <QrCodeCadastroCard />
 
@@ -300,8 +329,12 @@ function VisaoGeralTab({
                     <td className="border-b border-gray-100 py-2.5 whitespace-nowrap text-gray-500 dark:border-gray-800 dark:text-gray-400">
                       {t.tipo === "recarga_fortuna" ? "Recarga Fortuna" : "Contribuição"}
                     </td>
-                    <td className="border-b border-gray-100 py-2.5 whitespace-nowrap text-gray-500 dark:border-gray-800 dark:text-gray-400">{formatDateBR(t.paidAt)}</td>
-                    <td className="border-b border-gray-100 py-2.5 font-semibold whitespace-nowrap text-na-green dark:border-gray-800 dark:text-emerald-400">{formatBRL(t.amount)}</td>
+                    <td className="border-b border-gray-100 py-2.5 whitespace-nowrap text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                      {formatDateBR(t.paidAt)}
+                    </td>
+                    <td className="border-b border-gray-100 py-2.5 font-semibold whitespace-nowrap text-na-green dark:border-gray-800 dark:text-emerald-400">
+                      {formatBRL(t.amount)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -330,7 +363,10 @@ function CabecalhoOrdenavel({
 }) {
   return (
     <th className={className}>
-      <button onClick={onClick} className="inline-flex items-center gap-1 text-gray-500 hover:text-na-green-dark dark:text-gray-400 dark:hover:text-emerald-400">
+      <button
+        onClick={onClick}
+        className="inline-flex items-center gap-1 text-gray-500 hover:text-na-green-dark dark:text-gray-400 dark:hover:text-emerald-400"
+      >
         {label} <ArrowUpDown size={11} className={ordenarPor === campo ? "opacity-100" : "opacity-30"} />
       </button>
     </th>
@@ -451,7 +487,10 @@ function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data:
                       <span className="text-[10px] text-gray-500 dark:text-gray-400">—</span>
                     ) : (
                       m.compositionLabels.map((l, i) => (
-                        <span key={i} className="rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[9px] whitespace-nowrap text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                        <span
+                          key={i}
+                          className="rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[9px] whitespace-nowrap text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                        >
                           {l}
                         </span>
                       ))
@@ -460,7 +499,9 @@ function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data:
                 </td>
                 <td className="py-3 font-semibold whitespace-nowrap text-gray-900 dark:text-gray-100">{formatBRL(m.compositionTotal)}</td>
                 <td className="py-3">
-                  <span className={`rounded px-2 py-0.5 text-[10px] font-bold whitespace-nowrap uppercase ${STATUS_ESTILO[statusEfetivo(m)] ?? STATUS_ESTILO.em_dia}`}>
+                  <span
+                    className={`rounded px-2 py-0.5 text-[10px] font-bold whitespace-nowrap uppercase ${STATUS_ESTILO[statusEfetivo(m)] ?? STATUS_ESTILO.em_dia}`}
+                  >
                     {STATUS_LABEL[statusEfetivo(m)] ?? statusEfetivo(m)}
                   </span>
                 </td>
