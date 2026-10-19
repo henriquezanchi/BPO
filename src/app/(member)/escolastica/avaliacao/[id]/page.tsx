@@ -1,4 +1,4 @@
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { podeGerirAvaliacao, relatorioCampanha, type RelatorioCampanha } from "@/lib/avaliacao";
 import { MINIMO_RESPOSTAS, type Pergunta } from "@/lib/avaliacao-comum";
@@ -124,13 +124,10 @@ export default async function RelatorioAvaliacaoPage(props: { params: Promise<{ 
     `rounded-full border px-3 py-1 text-[11px] font-semibold ${ativo ? "border-na-green bg-na-green/10 text-na-green-dark dark:text-emerald-400" : "border-gray-300 text-gray-600 dark:border-gray-700 dark:text-gray-400"}`;
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-8 p-6">
-      <div className="flex items-center justify-between">
-        <Link href={`/escolastica/avaliacao?filial=${rel.campanha.schoolId}`} className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+    <ShellTrabalho>
+      <Link href={`/escolastica/avaliacao?filial=${rel.campanha.schoolId}`} className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
           <ArrowLeft size={14} /> Avaliação dos instrutores
         </Link>
-        <ThemeToggle />
-      </div>
       <div>
         <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">{rel.campanha.titulo}</h1>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Respostas anônimas. Recortes com menos de {MINIMO_RESPOSTAS} respostas ficam ocultos.</p>
@@ -183,6 +180,6 @@ export default async function RelatorioAvaliacaoPage(props: { params: Promise<{ 
 
       <SecaoBloco titulo={sp.instrutor ? "Avaliação do instrutor" : "Avaliação dos instrutores"} bloco={rel.instrutor} perguntasPorId={perguntasPorId} verIndividuais={verIndividuais} />
       {!sp.instrutor && <SecaoBloco titulo={sp.turma ? "Perguntas gerais da turma" : "Perguntas gerais da escola"} bloco={rel.geral} perguntasPorId={perguntasPorId} verIndividuais={verIndividuais} />}
-    </main>
+    </ShellTrabalho>
   );
 }

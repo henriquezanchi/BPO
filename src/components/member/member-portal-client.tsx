@@ -19,11 +19,9 @@ import {
   LogOut,
   MessageCircle,
   Pencil,
-  Settings,
   PiggyBank,
   TriangleAlert,
   UsersRound,
-  Globe2,
 } from "lucide-react";
 import Image from "next/image";
 import { situacaoGeral } from "@/lib/situacao-contribuicao";
@@ -123,15 +121,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
   // ContributionStatusPanel/FortunaWalletCard/AgendaPanel, que recebem
   // `somenteConsulta` e escondem qualquer ação de cobrança).
   const somenteConsulta = member.school.language === "en";
-  const mostrarVoluntario =
-    dashboard.administradorNacional ||
-    member.isPedagogo ||
-    member.isDiretor ||
-    member.isSubChefe ||
-    member.isSecretarioEscolastica ||
-    member.isSecretarioEconomia ||
-    member.cargos.length > 0 ||
-    (dashboard.acessoVoluntario && member.classMemberships.some((cm) => cm.classGroup.tipo !== "turma"));
+
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
@@ -179,23 +169,11 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
               {t.home.matricula}: <strong>#{member.registrationNo ?? "—"}</strong>
             </span>
           </div>
-          {(mostrarVoluntario || dashboard.administraFilial || dashboard.administradorNacional) && (
+          {dashboard.areaVoluntario && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {mostrarVoluntario && (
-                <Link href="/voluntario" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
-                  <HandHeart size={11} /> {t.home.portalDoVoluntario}
-                </Link>
-              )}
-              {dashboard.administraFilial && (
-                <Link href="/admin" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
-                  <Settings size={11} /> Administração
-                </Link>
-              )}
-              {dashboard.administradorNacional && (
-                <Link href="/nacional" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
-                  <Globe2 size={11} /> Painel Nacional
-                </Link>
-              )}
+              <Link href="/voluntario" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
+                <HandHeart size={11} /> {t.home.portalDoVoluntario}
+              </Link>
             </div>
           )}
         </div>

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { db } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -10,7 +11,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * então qualquer action que recebe um `memberId` precisa validar aqui que
  * ele bate com quem está de fato logado.
  */
-export async function getAuthenticatedMember() {
+// cache(): a mesma requisição (ex.: a moldura da Área do Voluntário e a página) consulta uma vez só.
+export const getAuthenticatedMember = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -19,7 +21,7 @@ export async function getAuthenticatedMember() {
   if (!user) return null;
 
   return db.member.findUnique({ where: { authUserId: user.id }, include: { school: true } });
-}
+});
 
 /**
  * Mesma resolução, mas lança se ninguém estiver logado, o memberId não

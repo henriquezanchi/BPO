@@ -8,6 +8,7 @@ import { filiaisAdministradas, recursosDaFilial } from "@/lib/recursos-filial";
 import { avaliacaoPendente } from "@/lib/avaliacao";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
+import { destinosDaPessoa } from "@/lib/area-trabalho";
 import { avisosDosGrupos, meusGrupos } from "@/lib/grupos-dados";
 import { gruposDaAgenda } from "@/lib/grupos-portal";
 import { rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
@@ -205,7 +206,7 @@ export async function getMemberDashboard(memberId: string) {
   // Reuniões dos grupos em que a pessoa é integrante: grupos de FV e secretarias com acesso de voluntário,
   // GAF sempre, GDVE só para FV (regras em grupos-portal.ts).
   const groupIds = await gruposDaAgenda({...member,classMemberships:member.classMemberships.filter(cm=>cm.role==='aluno'&&cm.classGroup.arquivadoEm===null)});
-  const [avisosGrupos,meusGafs] = await Promise.all([avisosDosGrupos({...member,classMemberships:member.classMemberships.filter(cm=>cm.classGroup.arquivadoEm===null)}),meusGrupos(member,['GAF'])]);
+  const [avisosGrupos,meusGafs,destinosVoluntario] = await Promise.all([avisosDosGrupos({...member,classMemberships:member.classMemberships.filter(cm=>cm.classGroup.arquivadoEm===null)}),meusGrupos(member,['GAF']),destinosDaPessoa(member)]);
   await ensureGroupMeetingWindow(groupIds);
   const meetings = groupIds.length ? await db.groupMeeting.findMany({
     where:{classGroupId:{in:groupIds},endsAt:{gte:new Date()}},orderBy:{startsAt:'asc'},
@@ -330,6 +331,8 @@ export async function getMemberDashboard(memberId: string) {
     agendaItems,
     avisosGrupos,
     meusGafs,
+    // Um atalho só para a Área do Voluntário, quando a pessoa tem algo lá (mesma regra do menu).
+    areaVoluntario: destinosVoluntario.length > 0,
     availableToAdd,
     streakMeses,
     eventHistory: eventHistory.map(r=>({title:r.event.title,date:r.event.startsAt})),

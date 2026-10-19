@@ -1,9 +1,7 @@
+import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { AcessosVoluntarioPanel } from "@/components/member/volunteer/acessos-voluntario-panel";
 import { candidatosParaLiberar, ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -24,13 +22,7 @@ export default async function AcessosVoluntarioPage() {
   if (!chefeDeFilial && pessoas.length === 0) redirect("/voluntario");
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-5 p-6">
-      <div className="flex items-center justify-between">
-        <Link href="/voluntario" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-          <ArrowLeft size={14} /> Portal do Voluntário
-        </Link>
-        <ThemeToggle />
-      </div>
+    <ShellTrabalho largura="estreita">
       <div>
         <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Liberar acessos</h1>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -43,6 +35,6 @@ export default async function AcessosVoluntarioPage() {
         </p>
       </div>
       <AcessosVoluntarioPanel pessoas={pessoas} mostrarSugeridos={chefeDeFilial} />
-    </main>
+    </ShellTrabalho>
   );
 }

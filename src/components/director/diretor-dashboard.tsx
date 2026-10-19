@@ -120,7 +120,7 @@ export function DiretorDashboard({ schoolId, schoolName, data }: { schoolId: str
           ))}
         </nav>
         <Link href="/voluntario" className="flex items-center gap-2 border-t border-slate-700 px-6 py-4 text-xs font-medium text-slate-400 hover:text-white">
-          <ArrowLeft size={14} /> Portal do Voluntário
+          <ArrowLeft size={14} /> Área do Voluntário
         </Link>
       </aside>
 

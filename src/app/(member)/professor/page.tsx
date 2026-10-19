@@ -1,8 +1,8 @@
+import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { formatDateBR } from "@/lib/format";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { getTeacherClasses, lideraAlgumGrupo } from "@/lib/teacher-data";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -19,14 +19,7 @@ export default async function ProfessorPage() {
   const classes = await getTeacherClasses(member.id);
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 p-6">
-      <div className="flex items-center justify-between">
-        <Link href="/voluntario" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-          <ArrowLeft size={14} /> Portal do Voluntário
-        </Link>
-        <ThemeToggle />
-      </div>
-
+    <ShellTrabalho largura="estreita">
       <div className="flex flex-col gap-3">
         <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">
           {!member.isPedagogo ? "Meus Grupos" : classes.some((c) => c.tipo !== "turma") ? "Turmas e Grupos" : "Minhas Turmas"}
@@ -82,6 +75,6 @@ export default async function ProfessorPage() {
             ))}
           </section>
         ))}
-    </main>
+    </ShellTrabalho>
   );
 }

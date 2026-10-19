@@ -1,9 +1,7 @@
+import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { PaymentReviewPanel } from "@/components/economia/payment-review-panel";
 import { EconomiaPanel } from "@/components/economia/economia-panel";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -20,16 +18,10 @@ export default async function EconomiaPage() {
   if (!member.isSecretarioEconomia && !member.isDiretor && !member.isSubChefe) redirect("/portal");
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <Link href="/voluntario" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-          <ArrowLeft size={14} /> Portal do Voluntário
-        </Link>
-        <ThemeToggle />
-      </div>
+    <ShellTrabalho largura="estreita">
       <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Economia</h1>
       <PaymentReviewPanel schoolId={member.schoolId} />
       <EconomiaPanel schoolId={member.schoolId} />
-    </main>
+    </ShellTrabalho>
   );
 }

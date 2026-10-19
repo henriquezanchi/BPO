@@ -102,7 +102,7 @@ const pt: Dictionary = {
   },
   home: {
     portalDoMembro: "PORTAL DO MEMBRO",
-    portalDoVoluntario: "Portal do Voluntário",
+    portalDoVoluntario: "Área do Voluntário",
     editarDados: "Editar Dados",
     matricula: "Matrícula",
     sair: "Sair",
@@ -173,7 +173,7 @@ const en: Dictionary = {
   },
   home: {
     portalDoMembro: "MEMBER PORTAL",
-    portalDoVoluntario: "Volunteer Portal",
+    portalDoVoluntario: "Volunteer Area",
     editarDados: "Edit Profile",
     matricula: "Member ID",
     sair: "Log out",

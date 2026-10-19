@@ -1,3 +1,4 @@
+import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { MeetingManager } from "@/components/member/groups/meeting-manager";
 import { CreateActivityForm } from "@/components/member/professor/create-activity-form";
 import { CreatePollForm } from "@/components/member/professor/create-poll-form";
@@ -26,7 +27,7 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
   const slackDisponivel = !!tokenSlackDaFilial(turma.mercurioUnidade);
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+    <ShellTrabalho largura="estreita">
       <Link href="/professor" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
         <ArrowLeft size={14} /> {ehGrupo ? "Meus grupos" : "Minhas Turmas"}
       </Link>
@@ -108,6 +109,6 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
           </div>
         )}
       </section>
-    </main>
+    </ShellTrabalho>
   );
 }

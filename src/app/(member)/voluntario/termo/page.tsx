@@ -1,10 +1,10 @@
+import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { SignTermForm } from "@/components/member/volunteer/sign-term-form";
 import { formatDateBR, formatDateTimeBR } from "@/lib/format";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { montarTermo, termoVigente } from "@/lib/volunteer-term";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
-import Link from "next/link";
+import { CheckCircle2 } from "lucide-react";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +19,7 @@ export default async function VolunteerTermPage() {
   const texto = signature?.signedText ?? montarTermo(member, school, null);
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-      <Link href="/voluntario" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-        <ArrowLeft size={14} /> Portal do Voluntário
-      </Link>
+    <ShellTrabalho largura="estreita">
       <div>
         <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Termo de Adesão ao Serviço Voluntário</h1>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -50,6 +47,6 @@ export default async function VolunteerTermPage() {
       ) : (
         <SignTermForm memberId={member.id} />
       )}
-    </main>
+    </ShellTrabalho>
   );
 }
