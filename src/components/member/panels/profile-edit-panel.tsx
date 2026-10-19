@@ -71,7 +71,7 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
           <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={isPending} />
         </label>
         {avatarUrl && (
-          <button onClick={handleRemover} disabled={isPending} className="inline-flex w-fit items-center gap-1 text-[11px] text-gray-400 hover:text-na-danger">
+          <button type="button" onClick={handleRemover} disabled={isPending} className="inline-flex w-fit items-center gap-1 text-[11px] text-gray-400 hover:text-na-danger">
             <Trash2 size={11} /> Remover foto
           </button>
         )}
@@ -91,50 +91,69 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
 function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; whatsapp: string; email: string | null }) {
   const [editando, setEditando] = useState(false);
   const [pendente, setPendente] = useState<Awaited<ReturnType<typeof getSolicitacaoContatoPendente>>>(null);
+  const [novoWhatsapp, setNovoWhatsapp] = useState(whatsapp);
+  const [novoEmail, setNovoEmail] = useState(email ?? "");
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     getSolicitacaoContatoPendente(memberId).then(setPendente);
   }, [memberId]);
 
-  function handleSolicitar(formData: FormData) {
+  // Não é um <form>: este cartão fica dentro do formulário do endereço, e
+  // formulário dentro de formulário faz o botão enviar o de fora (bug real
+  // 2026-10-19: "Enviar solicitação" não fazia nada com o contato).
+  function handleSolicitar() {
+    setAviso(null);
     startTransition(async () => {
-      const novoWhatsapp = String(formData.get("whatsapp") ?? "").trim();
-      const novoEmail = String(formData.get("email") ?? "").trim();
-      const res = await solicitarAlteracaoContato(memberId, { whatsapp: novoWhatsapp, email: novoEmail });
-      if (res.solicitado) {
+      try {
+        const res = await solicitarAlteracaoContato(memberId, { whatsapp: novoWhatsapp.trim(), email: novoEmail.trim() });
+        if (!res.solicitado) {
+          setAviso({ ok: false, texto: "Nada mudou: altere o WhatsApp ou o e-mail antes de enviar." });
+          return;
+        }
         setEditando(false);
+        setAviso({ ok: true, texto: "Solicitação enviada. A secretaria vai conferir antes de alterar seu cadastro." });
         getSolicitacaoContatoPendente(memberId).then(setPendente);
+      } catch (e) {
+        setAviso({ ok: false, texto: (e as Error).message || "Não foi possível enviar agora. Tente de novo." });
       }
     });
   }
 
   return (
-    <div className="mb-4 flex flex-col gap-1">
+    <div className="mb-4 flex flex-col gap-2">
       {pendente ? (
         <div className="flex items-start gap-2 rounded-lg bg-na-warning-light p-3 text-[11px] text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300">
           <Clock size={14} className="mt-0.5 shrink-0" />
           <span>Você já tem uma solicitação de correção em análise com a secretaria — aguarde a aprovação antes de enviar outra.</span>
         </div>
       ) : editando ? (
-        <form action={handleSolicitar} className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+        <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
           <div className="flex flex-col gap-1">
-            <label className={LABEL_CLASS}>WhatsApp correto</label>
-            <input name="whatsapp" type="tel" inputMode="tel" defaultValue={whatsapp} className={INPUT_CLASS} />
+            <label htmlFor="contato-whatsapp" className={LABEL_CLASS}>WhatsApp correto</label>
+            <input id="contato-whatsapp" type="tel" inputMode="tel" value={novoWhatsapp} onChange={(e) => setNovoWhatsapp(e.target.value)} className={INPUT_CLASS} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className={LABEL_CLASS}>E-mail correto</label>
-            <input name="email" type="email" defaultValue={email ?? ""} className={INPUT_CLASS} />
+            <label htmlFor="contato-email" className={LABEL_CLASS}>E-mail correto</label>
+            <input id="contato-email" type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} className={INPUT_CLASS} />
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={isPending} className="rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60">
+            <button type="button" onClick={handleSolicitar} disabled={isPending} className="rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60">
               {isPending ? <Loader2 size={12} className="animate-spin" /> : "Enviar solicitação"}
             </button>
-            <button type="button" onClick={() => setEditando(false)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300">
+            <button
+              type="button"
+              onClick={() => {
+                setEditando(false);
+                setAviso(null);
+              }}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300"
+            >
               Cancelar
             </button>
           </div>
-        </form>
+        </div>
       ) : (
         <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
           <div className="text-[13px]">
@@ -142,12 +161,21 @@ function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; 
             <p className="text-gray-500 dark:text-gray-400">{email || "Sem e-mail cadastrado"}</p>
           </div>
           <button
+            type="button"
             onClick={() => setEditando(true)}
             className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
           >
             <Pencil size={11} /> Solicitar correção
           </button>
         </div>
+      )}
+      {aviso && (
+        <p
+          role="status"
+          className={`rounded-lg p-2.5 text-[11px] ${aviso.ok ? "bg-na-success-light text-na-success-dark dark:bg-green-950/30 dark:text-green-300" : "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300"}`}
+        >
+          {aviso.texto}
+        </p>
       )}
     </div>
   );
