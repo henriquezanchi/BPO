@@ -1,0 +1,73 @@
+{
+  "_leiame": [
+    "Copie este arquivo para 'regras.json' (na mesma pasta) e edite.",
+    "Cada regra diz: se a descrição do Pix contiver uma destas palavras, lance assim no Mercúrio.",
+    "'contem': lista de trechos (sem acento/maiúscula não importa) que, se aparecerem na descrição da transação, casam com a regra.",
+    "'aplicaEm': 'debito' (dinheiro saindo, ex: Pix enviado) ou 'credito' (dinheiro entrando, ex: Pix recebido).",
+    "'acao.tela': 'pagamento_outros' (despesas), 'recebimento_contribuicao' (Pix recebidos — mensalidade/contribuição de aluno ou membro) ou 'recebimento_doacao' (doação avulsa, sem ficha pendente nenhuma — caso raro).",
+    "Para 'pagamento_outros': rubricaId/rubricaNome vêm da lista em RUBRICAS_PAGAMENTO.md. fornecedorId é opcional (deixe null se não houver cadastro de fornecedor).",
+    "Para 'recebimento_contribuicao' (o caso normal de Pix recebido): 'matricula' é OBRIGATÓRIO (número da matrícula do aluno/membro no Mercúrio — a busca por nome não é confiável, veja RUBRICAS_CONTRIBUICAO.md). 'mesReferencia' é opcional, formato 'MM/AAAA' (ex: '10/2026') — informe quando souber exatamente a qual mês o Pix se refere; se não informar, o script tenta descobrir sozinho comparando o valor do Pix com as fichas pendentes daquele aluno, mas só lança se achar uma resposta SEM ambiguidade (senão fica SEM REGRA e você decide na mão). 'nomeAluno' é opcional, só ajuda a desempatar se a busca por matrícula trouxer mais de um resultado (não deveria acontecer).",
+    "Para 'recebimento_doacao': só existem 6 rubricas possíveis — veja RUBRICAS_DOACAO.md. Use isso só pra doação avulsa de alguém sem mensalidade/ficha nenhuma pendente (ex: doador externo pontual) — o Pix comum de aluno/membro é 'recebimento_contribuicao'.",
+    "Toda transação SEM nenhuma regra correspondente fica marcada 'SEM REGRA' no relatório e NUNCA é lançada sozinha — você decide o que fazer com ela. Isso vale também se 'recebimento_contribuicao' não conseguir achar um mês pendente que bata com o valor: nesse caso a transação some do relatório de 'lançados' e aparece como erro/pulada — confira no fim.",
+    "Se duas regras combinarem com a mesma transação, vence a de palavra-chave mais longa (mais específica).",
+    "'ativa': false desliga uma regra sem precisar apagar (útil pra regras de exemplo, como as abaixo)."
+  ],
+  "regras": [
+    {
+      "nome": "EXEMPLO — Aluguel (RNI / Regional Negócios Imobiliários)",
+      "ativa": false,
+      "contem": ["REGIONAL NEGOCIOS IMOBILIARIOS", "RNI"],
+      "aplicaEm": "debito",
+      "acao": {
+        "tela": "pagamento_outros",
+        "rubricaId": "367",
+        "rubricaNome": "ALUGUEL",
+        "descricao": "",
+        "fornecedorId": null,
+        "interessado": "REGIONAL NEGOCIOS IMOBILIARIOS LTDA",
+        "complemento": ""
+      }
+    },
+    {
+      "nome": "EXEMPLO — Contribuição mensal de aluno/membro específico (mês detectado pelo valor)",
+      "ativa": false,
+      "contem": ["NOME DA PESSOA AQUI"],
+      "aplicaEm": "credito",
+      "acao": {
+        "tela": "recebimento_contribuicao",
+        "matricula": 12345,
+        "nomeAluno": "Nome da Pessoa Aqui",
+        "interessado": "Nome da Pessoa Aqui",
+        "complemento": "",
+        "emitirRecibo": false
+      }
+    },
+    {
+      "nome": "EXEMPLO — Contribuição de aluno/membro, mês explícito (quando o valor sozinho pode ser ambíguo)",
+      "ativa": false,
+      "contem": ["OUTRO NOME AQUI"],
+      "aplicaEm": "credito",
+      "acao": {
+        "tela": "recebimento_contribuicao",
+        "matricula": 54321,
+        "mesReferencia": "10/2026",
+        "interessado": "Outro Nome Aqui",
+        "complemento": "",
+        "emitirRecibo": false
+      }
+    },
+    {
+      "nome": "EXEMPLO — Doação avulsa (sem ficha/mensalidade pendente)",
+      "ativa": false,
+      "contem": ["NOME DO DOADOR AQUI"],
+      "aplicaEm": "credito",
+      "acao": {
+        "tela": "recebimento_doacao",
+        "rubricaId": "333",
+        "rubricaNome": "DOAÇÃO DE MEMBRO/PROVACIONISTA",
+        "interessado": "Nome do Doador Aqui",
+        "complemento": ""
+      }
+    }
+  ]
+}

@@ -1514,3 +1514,48 @@ model ResumoFilial {
   geradoEm DateTime @default(now())
   dados    Json
 }
+
+// ===================== Tesouraria (importar extrato → Mercúrio) =====================
+// Trazida para dentro do Portal em 2026-10-19 (antes: mercurio-tesouraria
+// com Upstash Redis). Ver src/tesouraria/lib/armazenamento.js. escopo = id
+// da filial no Portal (regras e catálogos separados por filial).
+model TesourariaArquivo {
+  escopo       String
+  nome         String
+  conteudo     String   @db.Text
+  atualizadoEm DateTime @default(now())
+
+  @@id([escopo, nome])
+}
+
+model TesourariaValor {
+  escopo       String
+  chave        String
+  valor        Json
+  atualizadoEm DateTime @default(now())
+
+  @@id([escopo, chave])
+}
+
+model TesourariaJob {
+  id       String   @id
+  criadoEm DateTime @default(now())
+
+  @@index([criadoEm])
+}
+
+model TesourariaJobEvento {
+  jobId    String
+  posicao  Int
+  evento   Json
+  criadoEm DateTime @default(now())
+
+  @@id([jobId, posicao])
+  @@index([criadoEm])
+}
+
+model TesourariaTrava {
+  chave    String   @id
+  dono     String
+  expiraEm DateTime
+}

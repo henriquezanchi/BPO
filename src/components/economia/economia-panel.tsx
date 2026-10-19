@@ -7,7 +7,7 @@ import {
   rejeitarSolicitacaoComposicao,
 } from "@/lib/actions/economia-actions";
 import { formatBRL, formatDateBR } from "@/lib/format";
-import { Check, ExternalLink, Landmark, Loader2, Minus, Plus, TrendingUp, X } from "lucide-react";
+import { Check, ChevronRight, Landmark, Loader2, Minus, Plus, TrendingUp, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 type Solicitacao = Awaited<ReturnType<typeof getSolicitacoesComposicaoPendentes>>[number];
@@ -80,12 +80,10 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Tesouraria (importar extrato e lançar no Mercúrio só o que falta) — ferramenta já em uso, aberta com o
-          login do próprio Mercúrio de quem tem o módulo Tesouraria liberado. Fase 1 da integração (2026-10-19). */}
+      {/* Tesouraria dentro do Portal (src/pages/api/tesouraria): importar extrato e lançar no Mercúrio só o que
+          falta, com o login do próprio Mercúrio de quem tem o módulo Tesouraria liberado (2026-10-19). */}
       <a
-        href="https://mercurio-tesouraria.vercel.app/entrar"
-        target="_blank"
-        rel="noreferrer"
+        href="/economia/tesouraria"
         className="flex items-center gap-3 rounded-xl border border-gray-200 p-3 transition hover:border-na-gold dark:border-gray-700"
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-na-gold/15 text-na-gold-dark dark:text-amber-300">
@@ -95,7 +93,7 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
           <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">Tesouraria: importar extrato bancário</span>
           <span className="block text-[11px] text-gray-500 dark:text-gray-400">Confere o que já está no Mercúrio e lança só o que falta. Entre com sua matrícula e senha do Mercúrio.</span>
         </span>
-        <ExternalLink size={14} className="shrink-0 text-gray-400" />
+        <ChevronRight size={14} className="shrink-0 text-gray-400" />
       </a>
       {crescimentoAtual && (
         <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">

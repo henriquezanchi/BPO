@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tesouraria — Importação de Extrato</title>
+<link rel="icon" href="/economia/tesouraria/logo.png">
+<link rel="stylesheet" href="/economia/tesouraria/estilo.css">
+<script>
+  // Aplica o tema salvo ANTES da 1ª pintura da página (evita o "flash" de
+  // tela clara e depois escura) — roda inline, não espera o app.js. Sem
+  // preferência salva ainda, segue o tema do sistema operacional/navegador.
+  (function () {
+    try {
+      var salvo = localStorage.getItem('mercurio_tesouraria_tema');
+      var tema = salvo || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');
+      document.documentElement.setAttribute('data-tema', tema);
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-decoracao" aria-hidden="true">
+      <svg viewBox="0 0 200 200" class="coluna-watermark"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M40 20c8 14 24 14 32 0"/><path d="M128 20c8 14 24 14 32 0"/>
+        <circle cx="46" cy="24" r="7"/><circle cx="154" cy="24" r="7"/>
+        <line x1="30" y1="40" x2="170" y2="40"/>
+        <line x1="45" y1="52" x2="45" y2="150"/><line x1="75" y1="52" x2="75" y2="150"/>
+        <line x1="105" y1="52" x2="105" y2="150"/><line x1="135" y1="52" x2="135" y2="150"/>
+        <line x1="155" y1="52" x2="155" y2="150"/>
+      </g></svg>
+    </div>
+    <div class="topo-conteudo">
+      <div class="logo-placa">
+        <img src="/economia/tesouraria/logo.png" alt="Nova Acrópole" class="logo" onerror="this.parentElement.style.visibility='hidden'">
+      </div>
+      <div class="topo-textos">
+        <span class="topo-etiqueta">Secretaria de Economia</span>
+        <h1>Lançamento em Lote - Mercúrio<br>(Importação de Extrato)</h1>
+        <p>Lê o extrato bancário, aplica suas regras de categorização e mostra o plano completo antes de lançar qualquer coisa no Mercúrio.</p>
+      </div>
+      <div class="topo-selo" data-modo="local" title="Este servidor roda só nesta máquina">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Ambiente local</span>
+      </div>
+      <div class="topo-selo" data-modo="online" title="Só entra quem tem a Tesouraria liberada no Mercúrio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Acesso restrito</span>
+      </div>
+      <button type="button" class="botao-tema" id="btnAbrirConfigRegras" aria-label="Configurar regras" title="Regras — ver, criar, editar, exportar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10"/><path d="M18 6h2"/><circle cx="16" cy="6" r="2"/><path d="M4 12h4"/><path d="M12 12h8"/><circle cx="10" cy="12" r="2"/><path d="M4 18h12"/><circle cx="18" cy="18" r="2"/></svg>
+      </button>
+      <button type="button" class="botao-tema" id="btnAbrirManual" aria-label="Abrir manual de uso" title="Manual — como usar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5"/><circle cx="12" cy="16.7" r="0.4" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button type="button" class="botao-tema" id="btnAlternarTema" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="icone-tema-claro"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5"/><path d="M12 19v2.5"/><path d="M4.6 4.6l1.8 1.8"/><path d="M17.6 17.6l1.8 1.8"/><path d="M2.5 12h2.5"/><path d="M19 12h2.5"/><path d="M4.6 19.4l1.8-1.8"/><path d="M17.6 6.4l1.8-1.8"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="icone-tema-escuro"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="trilha" aria-hidden="true"></div>
+
+    <div class="aviso-sessao" id="avisoSessaoSalva" role="status" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+      <span id="textoSessaoSalva"></span>
+      <span class="aviso-sessao-botoes">
+        <button type="button" id="btnRestaurarSessao">Restaurar</button>
+        <button type="button" class="botao-secundario" id="btnDescartarSessao">Descartar</button>
+      </span>
+    </div>
+
+    <section class="cartao" id="cartaoLogin">
+      <h2><span class="numero">1</span>
+        <span class="titulo-cartao">
+          <span class="titulo-cartao-texto">Acesso ao Mercúrio</span>
+          <span class="titulo-cartao-sub" data-modo="local">Login individual, filial e caixa — pedidos a cada rodada</span>
+          <span class="titulo-cartao-sub" data-modo="online">Filial e caixa onde os lançamentos vão entrar</span>
+        </span>
+      </h2>
+      <div class="resumo-colapsado" id="resumoAcesso"></div>
+      <p class="texto-secundario" id="linhaConectado" hidden>
+        Conectado ao Mercúrio como <strong id="textoMatriculaConectada"></strong><span id="textoNomeConectado"></span> · <a href="/economia/tesouraria/sair" class="link-sair">Sair</a>
+      </p>
+      <div id="blocoLoginManual">
+      <div class="linha-campos">
+        <label class="campo">
+          <span>Matrícula</span>
+          <input type="text" id="inputMatricula" name="mercurio-matricula-individual" autocomplete="off" inputmode="numeric">
+        </label>
+        <label class="campo">
+          <span>Senha</span>
+          <div class="campo-senha-wrap">
+            <input type="password" id="inputSenha" name="mercurio-senha-individual" autocomplete="off">
+            <button type="button" id="btnMostrarSenha" class="botao-icone" aria-label="Mostrar senha" tabindex="-1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </label>
+      </div>
+      <label class="checkbox">
+        <input type="checkbox" id="chkLembrarLogin">
+        Lembrar neste navegador (fica salvo sem criptografia, só neste computador — marque só se for de confiança)
+      </label>
+      </div>
+
+      <div class="campo campo-bloco">
+        <span>Filial</span>
+        <div class="campo-com-botao">
+          <select id="selectFilial" disabled>
+            <option value="">— clique em "Listar filiais" —</option>
+          </select>
+          <button type="button" class="botao-secundario" id="btnListarFiliais">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            Listar filiais
+          </button>
+        </div>
+        <span id="statusFiliais" class="texto-secundario"></span>
+      </div>
+
+      <div class="campo campo-bloco" id="blocoCaixaPadrao" hidden>
+        <span>Caixa padrão</span>
+        <div class="campo-com-botao">
+          <select id="selectCaixaPadrao" disabled>
+            <option value="">— escolha a filial —</option>
+          </select>
+          <button type="button" class="botao-secundario" id="btnListarCaixas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            Listar caixas
+          </button>
+        </div>
+        <p class="texto-secundario">Vale para todo o lote; dá para trocar por transação na tabela do plano.</p>
+        <span id="statusCaixas" class="texto-secundario"></span>
+      </div>
+    </section>
+
+    <section class="cartao" id="cartaoUpload" hidden>
+      <h2><span class="numero">2</span>
+        <span class="titulo-cartao">
+          <span class="titulo-cartao-texto">Escolha o extrato</span>
+          <span class="titulo-cartao-sub">Arquivo do banco, formato .ofx ou .csv</span>
+        </span>
+      </h2>
+      <div class="resumo-colapsado" id="resumoExtrato"></div>
+      <label class="area-arquivo" id="areaArquivo" for="inputArquivo">
+        <input type="file" id="inputArquivo" accept=".ofx,.csv">
+        <div class="area-arquivo-conteudo">
+          <span class="area-arquivo-icone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>
+          </span>
+          <span id="textoArquivo">Clique para escolher, ou arraste um arquivo <strong>.ofx</strong> ou <strong>.csv</strong> aqui</span>
+        </div>
+      </label>
+      <div class="linha-acoes">
+        <button id="btnGerarPlano" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+          Gerar plano
+        </button>
+        <span id="statusUpload" class="texto-secundario"></span>
+      </div>
+    </section>
+
+    <section class="cartao" id="cartaoPlano" hidden>
+      <h2><span class="numero">3</span>
+        <span class="titulo-cartao">
+          <span class="titulo-cartao-texto">Plano de importação</span>
+          <span class="titulo-cartao-sub">O que seria lançado — nada foi gravado ainda</span>
+        </span>
+      </h2>
+      <div class="barra-sessao">
+        <span id="statusSessao" class="status-sessao">A sessão é salva sozinha neste navegador a cada 30 segundos.</span>
+        <button type="button" class="botao-secundario" id="btnSalvarSessao" title="Guarda extrato, caixas, verificação e lançamentos neste navegador (a senha nunca é guardada)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+          Salvar agora
+        </button>
+      </div>
+      <div class="resumo" id="resumoPlano"></div>
+      <div class="linha-verificacao" id="cartaoVerificar" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span><strong>Verificação de duplicidade:</strong> <span id="statusVerificar"></span></span>
+        <button id="btnVerificar" class="botao-link" type="button" title="Confere de novo no Mercúrio se cada transação já foi lançada (só leitura)">Verificar de novo</button>
+        <div id="logVerificacao" class="log-andamento" hidden></div>
+      </div>
+      <div class="tabela-wrap">
+        <table id="tabelaPlano">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Valor</th>
+              <th>Descrição</th>
+              <th>Status</th>
+              <th>Ação no Mercúrio</th>
+              <th>Caixa</th>
+              <th>Já está no Mercúrio?</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaPlano"></tbody>
+        </table>
+      </div>
+      <p class="texto-secundario" id="textoBuscaLote" hidden>
+        Loga uma vez só e busca todos os nomes das transações de crédito SEM REGRA de uma vez
+        (mais rápido que buscar um por um) — quando achar, a matrícula já fica pronta pra quando
+        você clicar em "Criar regra" naquela linha.
+      </p>
+      <div class="linha-acoes" id="acaoBuscaLote" hidden>
+        <button type="button" class="botao-secundario" id="btnBuscarLote">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          Buscar matrículas em lote (créditos sem regra)
+        </button>
+        <span id="statusBuscaLote" class="texto-secundario"></span>
+      </div>
+    </section>
+
+    <section class="cartao cartao-final" id="cartaoLancar" hidden>
+      <h2><span class="numero">4</span>
+        <span class="titulo-cartao">
+          <span class="titulo-cartao-texto">Lançar no Mercúrio</span>
+          <span class="titulo-cartao-sub">Ação real — grava na Tesouraria</span>
+        </span>
+      </h2>
+      <p class="aviso">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><circle cx="12" cy="17" r="0.3" fill="currentColor"/></svg>
+        <span><strong>Isso grava lançamentos reais</strong> na Tesouraria — não é mais
+        um teste. Confira o plano acima com atenção antes de continuar. Uma única confirmação vale pro lote
+        inteiro — ele lança tudo de uma vez, sem parar em momento nenhum. Se alguma transação der problema
+        (inclusive uma duplicata ambígua), ela é abortada sozinha e o lote segue pro resto — o relatório final
+        lista o que não foi lançado e por quê, com opção de corrigir e rodar de novo só essas.</span>
+      </p>
+      <div class="linha-acoes">
+        <button id="btnLancar" class="botao-perigo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          Lançar no Mercúrio
+        </button>
+      </div>
+
+      <div id="painelAndamento" hidden>
+        <h3>Acompanhamento</h3>
+        <div id="logAndamento" class="log-andamento"></div>
+        <div id="conciliacaoSaldo" class="confirmacao-pendente" hidden></div>
+        <div id="resumoFinal" class="resumo-final" hidden></div>
+        <div id="listaLancamentosRodada" class="log-andamento" hidden></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <img src="/economia/tesouraria/logo.png" alt="" class="rodape-logo" aria-hidden="true" onerror="this.style.display='none'">
+    <span data-modo="local">Nova Acrópole — ferramenta interna de apoio à Economia. Roda só localmente, nada sai desta máquina.</span>
+    <span data-modo="online">Nova Acrópole — ferramenta interna de apoio à Economia. Acesso restrito a quem tem a Tesouraria liberada no Mercúrio.</span>
+  </footer>
+
+  <div class="modal-fundo" id="modalCriarRegra" hidden>
+    <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modalCriarRegraTitulo">
+      <div class="modal-cabecalho">
+        <h3 id="modalCriarRegraTitulo">Criar regra a partir desta transação</h3>
+        <button type="button" class="botao-icone" id="btnFecharModalRegra" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-transacao" id="modalTransacaoPreview"></div>
+
+      <p class="texto-secundario">
+        Toda transação futura cujo texto contenha as palavras-chave abaixo passa a cair aqui
+        automaticamente — sem precisar cadastrar de novo. Confira os campos antes de salvar.
+        <span data-modo="online">As regras ficam salvas no servidor e valem para toda a equipe.</span>
+      </p>
+
+      <div class="campo campo-bloco">
+        <span>Nome da regra</span>
+        <input type="text" id="regraNome">
+      </div>
+
+      <div class="campo campo-bloco">
+        <span>Contém (separe por vírgula se quiser mais de uma palavra-chave)</span>
+        <input type="text" id="regraContem">
+      </div>
+
+      <div class="campo campo-bloco">
+        <span>O que fazer com essa transação</span>
+        <select id="regraTela">
+          <option value="recebimento_contribuicao">Recebimento &gt; Contribuições (Pix de aluno/membro)</option>
+          <option value="pagamento_outros">Pagamento Outros (uma despesa)</option>
+          <option value="recebimento_doacao">Recebimento &gt; Doações (doação avulsa, sem mensalidade)</option>
+          <option value="recebimento_avulso">Recebimento &gt; Avulsos (rubrica não ligada a um aluno)</option>
+          <option value="recebimento_inscricao">Recebimento &gt; Inscrições</option>
+          <option value="transferencia">Transferência entre caixas</option>
+          <option value="recebimento_composto">Recebimento &gt; Vários itens num recibo só (ex: 2 mensalidades + lanchonete)</option>
+        </select>
+      </div>
+
+      <div id="regraCamposContribuicao" class="regra-campos-tela" hidden>
+        <div class="aviso-pix-maior" id="avisoPixMaior" hidden>
+          <span id="textoAvisoPixMaior"></span>
+          <button type="button" id="btnAvisoMaisItens">Montar recibo com vários itens</button>
+        </div>
+        <label class="campo campo-bloco">
+          <span>Buscar aluno/membro por nome (opcional — preenche a matrícula sozinho)</span>
+          <div class="campo-com-botao">
+            <input type="text" id="regraBuscaNomeAluno" placeholder="Digite o nome...">
+            <button type="button" class="botao-secundario" id="btnBuscarAluno">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              Buscar
+            </button>
+          </div>
+        </label>
+        <div id="buscaAlunoResultado" class="busca-aluno-resultado" hidden></div>
+        <div class="linha-campos">
+          <label class="campo">
+            <span>Matrícula (obrigatória)</span>
+            <input type="text" id="regraMatricula" inputmode="numeric">
+          </label>
+          <label class="campo">
+            <span>Mês de referência (opcional, MM/AAAA)</span>
+            <input type="text" id="regraMesReferencia" placeholder="ex: 10/2026">
+          </label>
+        </div>
+        <button type="button" class="botao-link botao-mais-itens-recibo" id="btnMaisItensRecibo">+ Adicionar outro item a este recibo (ex: a mensalidade e a lanchonete no mesmo Pix)</button>
+        <p class="texto-secundario">Sem mês informado, o script tenta descobrir sozinho comparando o valor com as fichas pendentes — só lança se achar uma resposta sem ambiguidade. A matrícula fica gravada na regra: se o pagamento não vier da conta de um aluno/membro cadastrado, digite a matrícula manualmente (a busca por nome é só uma ajuda).</p>
+      </div>
+
+      <div id="regraCamposPagamento" class="regra-campos-tela" hidden>
+        <label class="campo campo-bloco">
+          <span>Rubrica</span>
+          <input type="text" id="regraRubricaPagamentoBusca" list="listaRubricasPagamento" placeholder="Digite pra buscar...">
+          <datalist id="listaRubricasPagamento"></datalist>
+        </label>
+        <button type="button" class="botao-link" id="btnAtualizarRubricasPagamento">Rubricas desatualizadas? Atualizar do Mercúrio</button>
+      </div>
+
+      <div id="regraCamposDoacao" class="regra-campos-tela" hidden>
+        <label class="campo campo-bloco">
+          <span>Tipo de doação</span>
+          <select id="regraRubricaDoacao"></select>
+        </label>
+        <button type="button" class="botao-link" id="btnAtualizarRubricasDoacao">Rubricas desatualizadas? Atualizar do Mercúrio</button>
+      </div>
+
+      <div id="regraCamposAvulso" class="regra-campos-tela" hidden>
+        <label class="campo campo-bloco">
+          <span>Rubrica (digite um trecho do nome pra ver sugestões)</span>
+          <input type="text" id="regraRubricaAvulsoNome" list="listaRubricasAvulso" placeholder="ex: círculo de amigos">
+          <datalist id="listaRubricasAvulso"></datalist>
+          <datalist id="listaRubricasInscricao"></datalist>
+        </label>
+        <button type="button" class="botao-link" id="btnAtualizarRubricasAvulso">Rubricas desatualizadas? Atualizar do Mercúrio</button>
+        <p class="texto-secundario">Avulsos e Inscrições não têm um "id" — precisa bater o nome exatamente como está no Mercúrio (acentos incluídos); a lista de sugestões ajuda a não precisar decorar. O valor lançado é sempre o da transação, mesmo que a rubrica tenha outro valor cadastrado.</p>
+      </div>
+      <div id="regraCamposComposto" class="regra-campos-tela" hidden>
+        <p class="texto-secundario">Um único Pix pagando vários itens: todos entram no mesmo recibo do Mercúrio. A soma precisa ser igual ao valor do Pix. Contribuição sem mês usa os meses pendentes mais antigos, em ordem.</p>
+        <div id="listaItensRecibo" class="lista-itens-recibo"></div>
+        <div class="linha-itens-recibo-rodape">
+          <button type="button" class="botao-secundario" id="btnAdicionarItemRecibo">+ Adicionar item</button>
+          <span id="somaItensRecibo" class="soma-itens-recibo"></span>
+        </div>
+      </div>
+      <div id="regraCamposTransferencia" class="regra-campos-tela" hidden>
+        <label class="campo campo-bloco">
+          <span id="rotuloCaixaOutro">Outro caixa</span>
+          <select id="regraCaixaOutro"></select>
+        </label>
+        <p class="texto-secundario" id="explicacaoTransferencia"></p>
+      </div>
+      <div id="statusAtualizarRubricas" class="texto-secundario" hidden></div>
+
+      <div class="linha-campos" id="regraLinhaInteressadoComplemento">
+        <label class="campo">
+          <span>Interessado (opcional)</span>
+          <input type="text" id="regraInteressado">
+        </label>
+        <label class="campo">
+          <span>Complemento (opcional)</span>
+          <input type="text" id="regraComplemento">
+        </label>
+      </div>
+
+      <p class="texto-secundario" id="regraInfoValorExato" hidden></p>
+
+      <div class="campo campo-bloco" id="blocoValorRegra" hidden>
+        <span>Quais valores esta regra pega?</span>
+        <label class="checkbox">
+          <input type="radio" name="regraValorModo" value="qualquer" id="regraValorQualquer" checked>
+          Qualquer valor — todas as transações com essa palavra-chave (ex: tudo do mesmo fornecedor vai para a mesma rubrica)
+        </label>
+        <label class="checkbox">
+          <input type="radio" name="regraValorModo" value="exato" id="regraValorExato">
+          <span>Só quando o valor for exatamente <strong id="textoValorExatoRegra"></strong> (ex: a mesma pessoa paga coisas diferentes)</span>
+        </label>
+        <p class="texto-secundario" id="regraOutrasTransacoes" hidden></p>
+      </div>
+
+      <label class="checkbox" id="regraLinhaEmitirRecibo" hidden>
+        <input type="checkbox" id="regraEmitirRecibo">
+        Emitir recibo ao lançar
+      </label>
+
+      <p class="texto-erro" id="regraErro" hidden></p>
+
+      <div class="modal-rodape">
+        <button type="button" class="botao-perigo" id="btnExcluirRegra" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Excluir regra
+        </button>
+        <span class="modal-rodape-espaco"></span>
+        <button type="button" class="botao-secundario" id="btnCancelarRegra">Cancelar</button>
+        <button type="button" id="btnSalvarRegra">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+          <span id="btnSalvarRegraTexto">Salvar regra</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-fundo" id="modalConfigRegras" hidden>
+    <div class="modal-caixa modal-config" role="dialog" aria-modal="true" aria-labelledby="modalConfigRegrasTitulo">
+      <div class="modal-cabecalho">
+        <h3 id="modalConfigRegrasTitulo">Regras</h3>
+        <button type="button" class="botao-icone" id="btnFecharConfigRegras" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div id="cfgVisaoLista" class="cfg-conteudo">
+        <p class="texto-secundario">Todas as regras salvas<span data-modo="online"> (valem para toda a equipe)</span>. Desmarque "Ativa" para pausar uma regra sem apagá-la.</p>
+        <div class="cfg-barra">
+          <input type="search" id="cfgBusca" placeholder="Buscar por nome, palavra-chave, rubrica, matrícula..." aria-label="Buscar regras">
+          <button type="button" id="cfgNova">+ Nova regra</button>
+          <button type="button" class="botao-secundario" id="cfgExportar">Exportar</button>
+          <button type="button" class="botao-secundario" id="cfgImportar">Importar</button>
+          <input type="file" id="cfgArquivoImportar" accept=".json,application/json" hidden>
+        </div>
+        <div id="cfgImportacao" class="cfg-importacao" hidden>
+          <span id="cfgImportacaoTexto"></span>
+          <button type="button" class="botao-perigo" id="cfgImportarSubstituir">Substituir todas</button>
+          <button type="button" class="botao-secundario" id="cfgImportarAcrescentar">Acrescentar às atuais</button>
+          <button type="button" class="botao-link" id="cfgImportarCancelar">Cancelar</button>
+        </div>
+        <div id="cfgStatus" class="texto-secundario" aria-live="polite"></div>
+        <div class="tabela-wrap">
+          <table class="cfg-tabela">
+            <thead><tr><th>Ativa</th><th>Nome</th><th>Palavras-chave</th><th>Aplica em</th><th>O que faz</th><th>Valor</th><th></th></tr></thead>
+            <tbody id="cfgCorpoTabela"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <form id="cfgVisaoForm" class="cfg-conteudo" hidden novalidate>
+        <h4 id="cfgFormTitulo">Nova regra</h4>
+        <div class="linha-campos">
+          <label class="campo"><span>Nome da regra</span><input type="text" id="cfgNome"></label>
+          <label class="campo"><span>Aplica em</span>
+            <select id="cfgAplicaEm">
+              <option value="debito">Saídas (débitos)</option>
+              <option value="credito">Entradas (créditos)</option>
+              <option value="">Entradas e saídas</option>
+            </select>
+          </label>
+        </div>
+        <label class="campo campo-bloco"><span>Contém (separe por vírgula se quiser mais de uma palavra-chave)</span><input type="text" id="cfgContem" placeholder="ex: ALBATROZ"></label>
+        <div class="campo campo-bloco">
+          <span>Valor</span>
+          <label class="checkbox"><input type="radio" name="cfgValorModo" value="qualquer" id="cfgValorQualquer" checked> Qualquer valor</label>
+          <label class="checkbox"><input type="radio" name="cfgValorModo" value="exato" id="cfgValorExatoModo"> Só quando o valor for exatamente R$ <input type="text" id="cfgValorExato" inputmode="decimal" class="cfg-valor" placeholder="0,00"></label>
+        </div>
+        <label class="campo campo-bloco"><span>O que fazer</span>
+          <select id="cfgTela">
+            <option value="pagamento_outros">Pagamento Outros (uma despesa)</option>
+            <option value="recebimento_contribuicao">Recebimento &gt; Contribuições (Pix de aluno/membro)</option>
+            <option value="recebimento_doacao">Recebimento &gt; Doações</option>
+            <option value="recebimento_avulso">Recebimento &gt; Avulsos</option>
+            <option value="recebimento_inscricao">Recebimento &gt; Inscrições</option>
+            <option value="transferencia">Transferência entre caixas</option>
+          </select>
+        </label>
+        <div class="regra-campos-tela" data-cfg-tela="recebimento_contribuicao">
+          <div class="linha-campos">
+            <label class="campo"><span>Matrícula (obrigatória)</span><input type="text" id="cfgMatricula" inputmode="numeric"></label>
+            <label class="campo"><span>Mês de referência (opcional, MM/AAAA)</span><input type="text" id="cfgMes" placeholder="ex: 10/2026"></label>
+          </div>
+        </div>
+        <div class="regra-campos-tela" data-cfg-tela="pagamento_outros">
+          <label class="campo campo-bloco"><span>Rubrica (digite um trecho do nome)</span><input type="text" id="cfgRubricaPagamento" list="listaRubricasPagamento"></label>
+        </div>
+        <div class="regra-campos-tela" data-cfg-tela="recebimento_doacao">
+          <label class="campo campo-bloco"><span>Tipo de doação</span><select id="cfgRubricaDoacao"></select></label>
+        </div>
+        <div class="regra-campos-tela" data-cfg-tela="recebimento_avulso recebimento_inscricao">
+          <label class="campo campo-bloco"><span>Rubrica (nome exato, como no Mercúrio)</span><input type="text" id="cfgRubricaAvulso" list="listaRubricasAvulso"></label>
+        </div>
+        <div class="regra-campos-tela" data-cfg-tela="transferencia">
+          <label class="campo campo-bloco"><span>Outro caixa (destino numa saída do extrato; origem numa entrada)</span><input type="text" id="cfgCaixaOutro" list="cfgListaCaixas" placeholder="ex: CAIXA CENTRAL"><datalist id="cfgListaCaixas"></datalist></label>
+        </div>
+        <div class="linha-campos" data-cfg-tela="pagamento_outros recebimento_contribuicao recebimento_doacao recebimento_avulso recebimento_inscricao">
+          <label class="campo"><span>Interessado (opcional)</span><input type="text" id="cfgInteressado"></label>
+          <label class="campo"><span>Complemento (opcional)</span><input type="text" id="cfgComplemento"></label>
+        </div>
+        <label class="checkbox" data-cfg-tela="recebimento_contribuicao recebimento_doacao recebimento_avulso recebimento_inscricao"><input type="checkbox" id="cfgEmitirRecibo"> Emitir recibo ao lançar</label>
+        <label class="checkbox"><input type="checkbox" id="cfgAtiva" checked> Ativa</label>
+        <p class="texto-erro" id="cfgErro" hidden></p>
+        <div class="modal-rodape">
+          <span class="modal-rodape-espaco"></span>
+          <button type="button" class="botao-secundario" id="cfgCancelarForm">Voltar à lista</button>
+          <button type="submit" id="cfgSalvar">Salvar regra</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-fundo" id="modalManual" hidden>
+    <div class="modal-caixa modal-manual" role="dialog" aria-modal="true" aria-labelledby="modalManualTitulo">
+      <div class="modal-cabecalho">
+        <h3 id="modalManualTitulo">Manual — como usar esta ferramenta</h3>
+        <button type="button" class="botao-icone" id="btnFecharModalManual" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="manual-conteudo">
+        <p class="texto-secundario">
+          Esta ferramenta lê o extrato do banco (o arquivo <strong>.ofx</strong> ou
+          <strong>.csv</strong> que você baixa no site/app do banco) e lança os
+          pagamentos e recebimentos no Mercúrio sozinha, seguindo regras que
+          você mesmo ensina ("toda vez que aparecer tal palavra no extrato,
+          lance assim"). <strong>Ela nunca grava nada no Mercúrio sem você
+          conferir a tela e clicar em confirmar</strong> — até lá, é só uma
+          simulação na tela, sem risco nenhum.
+        </p>
+
+        <h4>Passo 1 — Filial e caixa</h4>
+        <ol data-modo="online">
+          <li>Você já entrou com sua <strong>matrícula e senha pessoal</strong> do Mercúrio na tela de entrada — só entra quem tem a Tesouraria liberada.</li>
+          <li>Escolha a <strong>filial</strong>. Se você só tem acesso a uma, ela já vem escolhida.</li>
+          <li>Escolha o <strong>caixa</strong> correspondente ao extrato que você vai importar (ex: "Banco Conta Corrente").</li>
+          <li>Ao escolher o caixa, a lista de rubricas é atualizada sozinha com o Mercúrio, em segundo plano — pode seguir usando a tela normalmente.</li>
+        </ol>
+        <ol data-modo="local">
+          <li>Digite sua <strong>matrícula e senha pessoal</strong> do Mercúrio — a mesma que você já usa para entrar lá normalmente.</li>
+          <li>Clique em <strong>"Listar filiais"</strong> e escolha a sua filial na lista que aparecer. Os caixas dela são listados sozinhos.</li>
+          <li>Escolha o caixa correspondente ao extrato que você vai importar (ex: "Banco Conta Corrente"). A lista de rubricas é atualizada sozinha com o Mercúrio, em segundo plano.</li>
+          <li>Se este é o seu computador pessoal, pode marcar <strong>"Lembrar neste navegador"</strong> para não digitar matrícula/senha de novo da próxima vez.</li>
+        </ol>
+
+        <h4>Passo 2 — Escolher o extrato</h4>
+        <ol>
+          <li>Baixe o extrato do banco no formato <strong>.ofx</strong> ou <strong>.csv</strong> (qualquer um dos dois serve).</li>
+          <li>Arraste o arquivo para a área indicada na tela, ou clique nela para escolher o arquivo pelo computador.</li>
+          <li>Clique em <strong>"Gerar plano"</strong>.</li>
+        </ol>
+
+        <h4>Passo 3 — Conferir o plano</h4>
+        <p>
+          Cada linha da tabela é uma transação do extrato. O badge na coluna
+          "Status" diz o que vai acontecer com ela:
+        </p>
+        <ul>
+          <li><span class="badge badge-ok">OK</span> — já existe uma regra que sabe o que fazer com essa transação. Nada a fazer.</li>
+          <li><span class="badge badge-sem-regra">SEM REGRA</span> — a ferramenta ainda não reconhece essa transação. Clique em <strong>"Criar regra"</strong> para ensinar o que fazer (uma vez só — da próxima vez que aparecer algo parecido, ela já sabe sozinha), ou em <strong>"Somente este lançamento"</strong> se for um caso único que não deve virar regra geral.</li>
+        </ul>
+
+        <h4>Verificação de duplicidade (roda sozinha, dentro do passo 3)</h4>
+        <p>
+          Assim que o plano aparece, a ferramenta já entra no Mercúrio sozinha
+          para conferir se cada transação já foi lançada antes (evita lançar a
+          mesma coisa duas vezes). Uma tela escura com "Processando... aguarde"
+          cobre a tela nesse momento — <strong>é só esperar terminar, sem clicar
+          em nada</strong>. No final, cada linha ganha um selo na coluna "Já
+          está no Mercúrio?":
+        </p>
+        <ul>
+          <li><span class="badge badge-novo">novo</span> — não achei nada parecido; segue normalmente.</li>
+          <li><span class="badge badge-duplicata">duplicata</span> — já existe algo igual lançado; essa transação será pulada sozinha, para não duplicar.</li>
+          <li><span class="badge badge-ambiguo">ambíguo</span> — achei mais de uma parecida e não sei dizer sozinho qual é qual; essa fica de fora e precisa ser conferida à mão no Mercúrio.</li>
+          <li><span class="badge badge-nao-verificado">erro ao conferir</span> — não consegui checar esse dia (ex: conexão instável); tente rodar de novo mais tarde.</li>
+        </ul>
+
+        <h4>Passo 4 — Lançar no Mercúrio (a parte que grava de verdade)</h4>
+        <ol>
+          <li>Depois de conferir tudo, clique em <strong>"Lançar no Mercúrio"</strong>.</li>
+          <li>Vai aparecer um aviso de confirmação — leia com atenção, é a partir daqui que os lançamentos são gravados de verdade na Tesouraria.</li>
+          <li>Acompanhe a lista de lançamentos aparecendo em tempo real, um por um.</li>
+          <li>No final, aparece um resumo (quantos foram lançados, pulados e com erro). Se alguma transação der problema, tem um botão <strong>"Rodar novamente só os que falharam"</strong> — não precisa refazer tudo de novo.</li>
+        </ol>
+
+        <h4>Se der algum problema</h4>
+        <ul>
+          <li data-modo="local"><strong>Mensagem "Failed to fetch"</strong>: a "janelinha preta" (terminal) que ficou aberta por trás do navegador pode ter fechado ou travado. Feche o navegador, abra o atalho de novo e tente uma vez mais.</li>
+          <li data-modo="online"><strong>Mensagem de "sem conexão com o servidor"</strong>: confira sua internet e recarregue a página (F5). Se um lançamento estava em andamento, ele continua rodando no servidor — confira no Mercúrio antes de lançar de novo.</li>
+          <li data-modo="online"><strong>Voltou para a tela de entrada</strong>: a sessão dura 12 horas, e a sua senha só fica na aba onde você entrou — abrir a ferramenta em outra aba ou fechar o navegador pede para entrar de novo.</li>
+          <li data-modo="online"><strong>"Já existe uma operação em andamento"</strong>: outra pessoa da equipe está usando o Mercúrio pela ferramenta neste momento. Espere alguns minutos e tente de novo.</li>
+          <li><strong>Uma transação específica com "erro ao conferir"</strong>: geralmente é instabilidade momentânea — tente de novo. Se continuar, avise quem instalou a ferramenta pra você.</li>
+          <li><strong>Dia "travado" no Mercúrio</strong> (mês já fechado pelo sistema): a ferramenta avisa e pula essa transação sozinha — lance ela manualmente, direto no Mercúrio.</li>
+        </ul>
+
+        <h4>Segurança</h4>
+        <p class="texto-secundario" data-modo="local">
+          Tudo roda só neste computador — nenhum dado é enviado para fora, a
+          não ser para o próprio Mercúrio (o mesmo lugar onde você já lança
+          manualmente). Sua senha não fica salva em lugar nenhum, a não ser
+          que você marque "Lembrar neste navegador" — e mesmo assim, fica só
+          neste computador, nunca é enviada a mais ninguém.
+        </p>
+        <p class="texto-secundario" data-modo="online">
+          A ferramenta roda num servidor da organização na internet, e só
+          entra quem tem a Tesouraria liberada no Mercúrio. Sua senha do
+          Mercúrio não fica guardada no servidor: ela fica só nesta aba do
+          navegador e some quando você sai ou fecha a aba. O extrato é lido
+          na hora e não fica salvo — só o andamento de cada verificação ou
+          lançamento fica guardado por 24 horas, para a tela poder acompanhar.
+          As regras criadas ficam salvas no servidor e valem para toda a equipe.
+        </p>
+
+        <h4>Tema claro/escuro</h4>
+        <p class="texto-secundario">
+          O botão de sol/lua no topo da tela alterna entre um visual claro e
+          um escuro — escolha o que for mais confortável para os seus olhos.
+        </p>
+      </div>
+
+      <div class="modal-rodape">
+        <button type="button" id="btnFecharModalManualRodape">Entendi, fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-processando" id="overlayProcessando" hidden aria-live="polite" role="status">
+    <div class="overlay-processando-caixa">
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="overlay-processando-texto" id="overlayProcessandoTexto">Processando... aguarde.</span>
+      <span class="overlay-processando-sub">Não mexa na tela enquanto isso — é rápido.</span>
+    </div>
+  </div>
+
+  <script src="/economia/tesouraria/app.js"></script>
+  <script src="/economia/tesouraria/sessao.js"></script>
+  <script src="/economia/tesouraria/regras-config.js"></script>
+</body>
+</html>
