@@ -6,7 +6,8 @@ import {localInZone,validateMeeting,type MeetingInput} from "@/lib/group-meeting
 
 type Meeting=Awaited<ReturnType<typeof getGroupMeetings>>[number];
 function readableError(error:unknown){const text=error instanceof Error?error.message:'';return /minified react|server components/i.test(text)||!text?'Não foi possível concluir. Atualize a página e tente novamente.':text;}
-export function MeetingManager({groupId}:{groupId:string}) {
+/** mostrarTraje: "CRM com traje completo" só nos grupos de FV (BF, BM, CS, GDVE). */
+export function MeetingManager({groupId,mostrarTraje=true}:{groupId:string;mostrarTraje?:boolean}) {
  const [rows,setRows]=useState<Meeting[]>([]),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [editing,setEditing]=useState<Meeting|null>(null),[scope,setScope]=useState<'esta'|'seguintes'>('esta');
  const [cancelScopes,setCancelScopes]=useState<Record<string,'esta'|'seguintes'>>({});
@@ -16,7 +17,7 @@ export function MeetingManager({groupId}:{groupId:string}) {
  function submit(event:React.FormEvent<HTMLFormElement>){
   event.preventDefault();const form=event.currentTarget,data=new FormData(form);setError('');setNotice('');
   const day=String(data.get('day'));
-  const input:MeetingInput={title:String(data.get('title')||'Reunião semanal'),startsLocal:`${day}T${data.get('start')}`,endsLocal:`${day}T${data.get('end')}`,timeZone:editing?.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone,weekly:!point,intervalWeeks:Number(data.get('frequencia')||1),publicDetails:String(data.get('publicDetails')),internalDetails:String(data.get('internalDetails')),fullUniform:data.get('fullUniform')==='on'};
+  const input:MeetingInput={title:String(data.get('title')||'Reunião semanal'),startsLocal:`${day}T${data.get('start')}`,endsLocal:`${day}T${data.get('end')}`,timeZone:editing?.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone,weekly:!point,intervalWeeks:Number(data.get('frequencia')||1),publicDetails:String(data.get('publicDetails')),internalDetails:String(data.get('internalDetails')),fullUniform:mostrarTraje&&data.get('fullUniform')==='on'};
   try{validateMeeting(input);}catch(e){setError(readableError(e));return;}
   start(async()=>{try{
    const result=editing?await changeGroupMeeting(editing.id,editing.version,scope,input):await createGroupMeetings(groupId,input);
@@ -46,7 +47,7 @@ export function MeetingManager({groupId}:{groupId:string}) {
    <div className="grid grid-cols-2 gap-3"><label className="min-w-0 text-sm">Início<input name="start" type="time" required defaultValue={begin.slice(11)} className={inputStyle}/></label><label className="min-w-0 text-sm">Fim<input name="end" type="time" required defaultValue={end.slice(11)} className={inputStyle}/></label></div>
    {!editing&&!point&&<label className="block text-sm">Frequência<select name="frequencia" defaultValue="1" className={inputStyle}><option value="1">Toda semana</option><option value="2">A cada 2 semanas (quinzenal)</option><option value="4">A cada 4 semanas</option></select><span className="mt-1 block text-xs text-gray-600 dark:text-gray-300">Repete neste dia da semana e horário, sem data final.</span></label>}
    {editing?.seriesId&&<label className="block text-sm">Aplicar alteração<select aria-label="Alcance da edição" value={scope} onChange={e=>setScope(e.target.value as typeof scope)} className={inputStyle}><option value="esta">Somente esta reunião</option><option value="seguintes">Esta e todas as seguintes</option></select></label>}
-   <label className="flex items-start gap-2 text-sm"><input name="fullUniform" type="checkbox" defaultChecked={editing?.fullUniform} className="mt-1"/> CRM com traje completo (visível a todos)</label>
+   {mostrarTraje&&<label className="flex items-start gap-2 text-sm"><input name="fullUniform" type="checkbox" defaultChecked={editing?.fullUniform} className="mt-1"/> CRM com traje completo (visível a todos)</label>}
    <details className="border-t border-gray-200 pt-3 dark:border-gray-700"><summary className="cursor-pointer text-sm font-semibold">Características e outras opções</summary><div className="mt-3 space-y-3">
     {!editing&&<label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={point} onChange={e=>setPoint(e.target.checked)}/> É uma reunião extra, sem repetição</label>}
     <label className="block text-sm">Nome<input name="title" defaultValue={editing?.title??'Reunião semanal'} maxLength={120} className={inputStyle}/></label>

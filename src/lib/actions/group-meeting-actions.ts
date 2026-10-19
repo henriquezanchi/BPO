@@ -18,8 +18,13 @@ async function leader(groupId:string) {
 }
 function refresh(groupId:string) {revalidatePath(`/professor/turma/${groupId}`);revalidatePath(`/grupos/${groupId}`);revalidatePath('/portal');}
 function fields(input:MeetingInput) {return {title:input.title.trim(),timeZone:input.timeZone,publicDetails:input.publicDetails.trim(),internalDetails:input.internalDetails.trim(),fullUniform:input.fullUniform,required:true};}
-async function createMeeting(groupId:string,input:MeetingInput) {
- const actor=await leader(groupId);const date=validateMeeting(input);const weekly=input.weekly??!!input.repeatUntil;
+// "CRM com traje completo" é só de FV (pedido do usuário 2026-10-19): fora dos grupos de FV, sempre desligado.
+async function semTrajeForaDeFV(groupId:string,input:MeetingInput) {
+ const g=await db.classGroup.findUnique({where:{id:groupId},select:{tipo:true}});
+ return g&&['BF','BM','CS','GDVE'].includes(g.tipo)?input:{...input,fullUniform:false};
+}
+async function createMeeting(groupId:string,entrada:MeetingInput) {
+ const actor=await leader(groupId);const input=await semTrajeForaDeFV(groupId,entrada);const date=validateMeeting(input);const weekly=input.weekly??!!input.repeatUntil;
  const count=await db.$transaction(async tx=>{
   if(weekly){
    const series=await tx.groupMeetingSeries.create({data:{classGroupId:groupId,createdById:actor.id,startsLocal:input.startsLocal,endsLocal:input.endsLocal,timeZone:input.timeZone,template:fields(input),intervaloSemanas:input.intervalWeeks??1}});
@@ -40,9 +45,10 @@ export async function getGroupMeetings(groupId:string) {
  const nomes=new Map(membros.map(m=>[m.memberId,m.member.name]));
  return rows.map(row=>({...row,presencas:row.presencas.map(p=>({...p,nome:nomes.get(p.memberId)??'Integrante'}))}));
 }
-async function changeMeeting(id:string,version:number,scope:'esta'|'seguintes',input:MeetingInput|null,cancellationReason?:string) {
+async function changeMeeting(id:string,version:number,scope:'esta'|'seguintes',entrada:MeetingInput|null,cancellationReason?:string) {
  if(!Number.isSafeInteger(version)||version<0)throw new MeetingError('Versão de reunião inválida.');
  const anchor=await db.groupMeeting.findUniqueOrThrow({where:{id}});const actor=await leader(anchor.classGroupId);
+ const input=entrada&&await semTrajeForaDeFV(anchor.classGroupId,entrada);
  if(!['esta','seguintes'].includes(scope))throw new MeetingError('Escolha o alcance da alteração.');
  if(anchor.status!=='agendada'||anchor.startsAt<=new Date())throw new MeetingError('Só é possível alterar reuniões futuras agendadas.');
  if(!input&&(!cancellationReason?.trim()||cancellationReason.length>300))throw new MeetingError('Informe o motivo do cancelamento, em até 300 caracteres.');

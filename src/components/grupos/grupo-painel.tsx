@@ -458,7 +458,7 @@ function ConteudoEncontros({ dados, recarregar, futuros, passados }: { dados: D;
   return (
     <>
       {papel.podeGerir ? (
-        <MeetingManager groupId={grupo.id} />
+        <MeetingManager groupId={grupo.id} mostrarTraje={["BF", "BM", "CS", "GDVE"].includes(grupo.tipo)} />
       ) : futuros.length === 0 ? (
         <p className="text-[12px] text-gray-500">Nenhum encontro marcado.</p>
       ) : (
