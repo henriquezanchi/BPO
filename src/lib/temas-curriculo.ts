@@ -1,0 +1,82 @@
+/**
+ * Catálogo de temas por matéria (pedido do usuário 2026-10-19/21): as
+ * disciplinas e os temas são padrão, então o instrutor escolhe numa lista em
+ * vez de digitar (prova, trabalho, leitura). Base também para o currículo dos
+ * instrutores (quais temas cada um já deu), ainda por fazer.
+ *
+ * As chaves são as siglas de matéria do Mercúrio (TurmaMateria.materiaSigla).
+ * Fontes: "00 tema do curso.pdf" (N1, Filosofia para Viver, 3 blocos) e a
+ * lista de Psicologia 1 a 13 enviadas pelo usuário. ISO e as demais
+ * matérias entram quando o usuário mandar as listas.
+ */
+export type Tema = { titulo: string; topicos?: string[] };
+export type CatalogoMateria = { curso: string; bloco?: string; temas: Tema[] };
+
+export const TEMAS_POR_MATERIA: Record<string, CatalogoMateria> = {
+  NET: {
+    curso: "Filosofia para Viver (N1)",
+    bloco: "Potencializar a ética e os valores",
+    temas: [
+      { titulo: "1. Filosofia natural", topicos: ["Filosofia ativa: uma forma de vida", "Como reconhecer e desenvolver os valores humanos?"] },
+      { titulo: "2. O ser humano e o cosmos", topicos: ["Constituição humana e da natureza", "Teoria de Dharma e Karma na Índia"] },
+      { titulo: "3. A sabedoria da Índia", topicos: ["Simbolismo do Bhagavad Gita", "Abordagem do conflito interior"] },
+      { titulo: "4. Os mistérios do Tibet", topicos: ["Antigos textos tibetanos: A Voz do Silêncio", "O valor da introspecção e da reflexão"] },
+      { titulo: "5. Filosofia budista", topicos: ["A dor como veículo de consciência", "As crises: compreensão e superação"] },
+      { titulo: "6. A sabedoria na China", topicos: ["Confúcio e seus ensinamentos", "A ética como marco do coletivo"] },
+    ],
+  },
+  NSC: {
+    curso: "Filosofia para Viver (N1)",
+    bloco: "Para melhorar as relações humanas",
+    temas: [
+      { titulo: "1. O desafio de viver na sociedade", topicos: ["A convivência", "Os problemas do mundo e do ser humano atual"] },
+      { titulo: "2. Platão", topicos: ["O mito da caverna: chaves de interpretação"] },
+      { titulo: "3. Aristóteles", topicos: ["A busca da felicidade"] },
+      { titulo: "4. Plotino e a escola neoplatônica", topicos: ["Importância do ecletismo para a convivência"] },
+      { titulo: "5. Importância da educação", topicos: ["O cidadão e seu protagonismo", "O valor da educação"] },
+      { titulo: "6. Egito", topicos: ["A regra de Maat", "A justiça como impulso coletivo"] },
+      { titulo: "7. Roma e os estoicos", topicos: ["Roma e os cidadãos do mundo", "Estoicos: Sêneca, Epíteto e Marco Aurélio"] },
+    ],
+  },
+  NFH: {
+    curso: "Filosofia para Viver (N1)",
+    bloco: "Para construir o futuro",
+    temas: [
+      { titulo: "1. Filosofia da história", topicos: ["A experiência como motor do futuro"] },
+      { titulo: "2. Importância da transmissão", topicos: ["História: fontes, fundamentos e ciências complementares"] },
+      { titulo: "3. História e mitologia", topicos: ["Realidade psicológica dos mitos", "Propriedade dos símbolos"] },
+      { titulo: "4. Os ciclos da história", topicos: ["O movimento da humanidade", "O ciclo da história"] },
+      { titulo: "5. Liberdade e destino", topicos: ["Teoria histórica de Cícero", "Os arquétipos fixos e a evolução da humanidade", "Nosso passado e nosso futuro"] },
+    ],
+  },
+  PSI: {
+    curso: "Psicologia",
+    temas: [
+      "Introdução",
+      "Consciência",
+      "Atenção",
+      "Memória",
+      "Inteligência",
+      "Imaginação",
+      "Hábitos",
+      "Sensações",
+      "Fenômenos afetivos",
+      "Personalidade",
+      "Vontade",
+      "Psicanálise e psicossíntese",
+      "Parapsicologia",
+    ].map((t, i) => ({ titulo: `Psicologia ${i + 1}: ${t}` })),
+  },
+};
+
+export function catalogoDaMateria(sigla: string | null | undefined): CatalogoMateria | null {
+  return (sigla && TEMAS_POR_MATERIA[sigla.toUpperCase()]) || null;
+}
+
+/** Mantém só temas que existem no catálogo da matéria (na ordem do catálogo). */
+export function temasValidos(sigla: string | null | undefined, escolhidos: string[]): string[] {
+  const catalogo = catalogoDaMateria(sigla);
+  if (!catalogo) return [];
+  const set = new Set(escolhidos);
+  return catalogo.temas.map((t) => t.titulo).filter((t) => set.has(t));
+}

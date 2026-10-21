@@ -10,8 +10,8 @@ import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
-import { Check, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { CalendarClock, Check, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper, Users, UtensilsCrossed } from "lucide-react";
+import { useMemo, useRef, useState, useTransition } from "react";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   prova: "Prova",
@@ -278,6 +278,11 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
             <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
               {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
             </div>
+            {item.lancheCompartilhado && (
+              <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-na-gold/15 px-2.5 py-1.5 text-xs font-bold text-na-gold-dark dark:bg-amber-950/40 dark:text-amber-300">
+                <UtensilsCrossed size={13} className="shrink-0" /> Lanche compartilhado: leve algo para partilhar
+              </div>
+            )}
             {!item.minhaInscricao&&(item.registrationClosed||item.availableSpots===0)?<p className="mt-2 text-xs font-semibold">{item.registrationClosed?'Inscrições encerradas':'Vagas esgotadas'}</p>:somenteConsulta ? (
               <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">{emBreve ? "Inscrição paga pelo Portal: em breve na sua filial. Fale com a secretaria." : "Online payment isn't available for your branch yet — please contact your branch."}</p>
             ) : (
@@ -296,6 +301,17 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
       </div>
       <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
       <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Data: {formatDateTimeBR(item.date)}</div>
+      {item.materiaNome && <div className="mt-1 text-[11px] font-semibold text-gray-700 dark:text-gray-300">Matéria: {item.materiaNome}</div>}
+      {!!item.temas?.length && (
+        <div className="mt-2 rounded-lg bg-white p-2 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <span className="font-semibold">Temas:</span>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {item.temas.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {item.studyItems && (
         <div className="mt-2 rounded-lg bg-white p-2 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
           <span className="font-semibold">Conteúdo a estudar: </span>
@@ -309,6 +325,55 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
 
 function itemKey(item: AgendaItem) {
   return `${item.kind}-${item.id}`;
+}
+
+const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const DIAS_CURTOS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const POR_PAGINA = 6;
+
+/** Linha compacta da lista "Próximos eventos": data em destaque, título e tipo; tocar abre o dia. */
+function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "enquete" }>; onAbrir: () => void }) {
+  const Icone = item.kind === "evento" ? PartyPopper : item.kind === "reuniao" ? Users : GraduationCap;
+  const tipo =
+    item.kind === "evento"
+      ? item.filialOrigem
+        ? `Evento de ${item.filialOrigem.replace(/^Nova Acrópole\s*-\s*/i, "")}`
+        : item.scope === "filial"
+          ? "Evento da escola"
+          : `Evento ${item.scope === "nacional" ? "nacional" : "regional"}`
+      : item.kind === "reuniao"
+        ? item.className
+        : `${ACTIVITY_LABEL[item.type] ?? item.type} · ${item.className}`;
+  const semHora = item.kind === "evento" && item.allDay;
+  const cancelado = (item.kind === "evento" && item.status === "cancelado") || (item.kind === "reuniao" && item.status === "cancelada");
+  return (
+    <li>
+      <button onClick={onAbrir} className="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-2.5 text-left transition hover:border-na-green/50 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/60">
+        <span className="flex w-11 shrink-0 flex-col items-center rounded-lg bg-gray-100 py-1 leading-tight dark:bg-gray-800">
+          <span className="text-[9px] font-semibold text-gray-500 uppercase dark:text-gray-400">{DIAS_CURTOS[item.date.getDay()]}</span>
+          <span className="text-base font-black text-gray-900 dark:text-gray-100">{item.date.getDate()}</span>
+          <span className="text-[9px] font-semibold text-gray-500 uppercase dark:text-gray-400">{MESES_CURTOS[item.date.getMonth()]}</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+            <Icone size={11} className="shrink-0" /> <span className="truncate">{tipo}</span>
+          </span>
+          <span className={`block truncate text-[13px] font-semibold ${cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</span>
+          <span className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+            {!semHora && (
+              <>
+                <CalendarClock size={11} className="shrink-0" />
+                {item.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </>
+            )}
+            {cancelado && <span className="font-semibold text-red-700 dark:text-red-300">Cancelado</span>}
+            {!cancelado && item.kind === "evento" && item.lancheCompartilhado && <span className="font-semibold text-na-gold-dark dark:text-amber-300">· Lanche compartilhado</span>}
+          </span>
+        </span>
+        <ChevronRight size={14} className="shrink-0 text-gray-400" />
+      </button>
+    </li>
+  );
 }
 
 export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean }) {
@@ -330,6 +395,8 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
   // pra onde navegar. O mês exibido acompanha esse mesmo dia.
   const [diaSelecionado, setDiaSelecionado] = useState(() => (items.length > 0 ? items[0].date : hoje));
   const [mesExibido, setMesExibido] = useState(() => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1));
+  const [limiteProximos, setLimiteProximos] = useState(POR_PAGINA);
+  const topo = useRef<HTMLDivElement>(null);
 
   if (items.length === 0) {
     return (
@@ -349,6 +416,11 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
   ];
 
   const itensDoDiaSelecionado = porDia.get(chaveDia(diaSelecionado)) ?? [];
+  // Próximos compromissos de OUTRAS datas (pedido do usuário 2026-10-21), de hoje em diante.
+  const inicioDeHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const proximos = items
+    .filter((i): i is Exclude<AgendaItem, { kind: "enquete" }> => i.kind !== "enquete" && i.date >= inicioDeHoje && chaveDia(i.date) !== chaveDia(diaSelecionado))
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   function mudarMes(delta: number) {
     setMesExibido(new Date(ano, mes + delta, 1));
@@ -360,7 +432,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={topo} className="flex flex-col gap-4">
       <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-2 flex items-center justify-between">
           <button
@@ -430,6 +502,39 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
           itensDoDiaSelecionado.map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} somenteConsulta={somenteConsulta} emBreve={emBreve} />)
         )}
       </div>
+
+      {proximos.length > 0 && (
+        <section aria-labelledby="proximos-eventos" className="flex flex-col gap-2 pt-1">
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-gray-300 dark:bg-gray-700" />
+            <h3 id="proximos-eventos" className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
+              Próximos eventos
+            </h3>
+            <span className="h-px flex-1 bg-gray-300 dark:bg-gray-700" />
+          </div>
+          <p className="text-center text-[11px] text-gray-500 dark:text-gray-400">Em outras datas, não em {formatDateBR(diaSelecionado)}. Toque para ver o dia.</p>
+          <ul className="flex flex-col gap-1.5">
+            {proximos.slice(0, limiteProximos).map((item) => (
+              <LinhaProximo
+                key={itemKey(item)}
+                item={item}
+                onAbrir={() => {
+                  selecionarDia(item.date);
+                  topo.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              />
+            ))}
+          </ul>
+          {proximos.length > limiteProximos && (
+            <button
+              onClick={() => setLimiteProximos((n) => n + POR_PAGINA)}
+              className="mt-1 rounded-xl border border-gray-300 px-4 py-2.5 text-[12px] font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Carregar mais eventos
+            </button>
+          )}
+        </section>
+      )}
     </div>
   );
 }

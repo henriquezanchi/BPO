@@ -6,6 +6,8 @@ import { SlackChannelPanel } from "@/components/member/professor/slack-channel-p
 import { linkDoCanal, tokenSlackDaFilial } from "@/lib/slack";
 import { PublishedActivities } from "@/components/member/professor/published-activities";
 import { getAuthenticatedMember } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
 import { getTeacherClassDetail } from "@/lib/teacher-data";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -25,6 +27,14 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
   const ehGrupo = turma.tipo !== "turma";
   const pessoas = ehGrupo ? "integrantes" : "alunos";
   const slackDisponivel = !!tokenSlackDaFilial(turma.mercurioUnidade);
+  // Matérias em curso na turma (vêm do Mercúrio) com os temas do catálogo, para a prova/trabalho/leitura.
+  const materias = ehGrupo
+    ? []
+    : (await db.turmaMateria.findMany({ where: { classGroupId: turma.id }, orderBy: { materiaNome: "asc" }, select: { materiaSigla: true, materiaNome: true } })).map((m) => ({
+        sigla: m.materiaSigla,
+        nome: m.materiaNome,
+        catalogo: TEMAS_POR_MATERIA[m.materiaSigla] ?? null,
+      }));
 
   return (
     <ShellTrabalho largura="estreita">
@@ -72,7 +82,7 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{ehGrupo ? "Novo aviso" : "Nova atividade"}</h2>
-        <CreateActivityForm classGroupId={turma.id} ehGrupo={ehGrupo} temSlack={slackDisponivel && !!turma.slackChannelId} />
+        <CreateActivityForm classGroupId={turma.id} ehGrupo={ehGrupo} temSlack={slackDisponivel && !!turma.slackChannelId} materias={materias} />
 
         {turma.activities.length > 0 && (
           <div>

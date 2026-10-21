@@ -285,7 +285,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             subtitle={agendaItems.length > 0 ? t.tiles.agenda.subtitleComItens(agendaItems.length) : t.tiles.agenda.subtitleSemItens}
             onClick={() => setModal("agenda")}
           />
-          <FeatureTile icon={<BookOpen size={16} />} title={t.tiles.estudos.title} subtitle={t.tiles.estudos.subtitle} onClick={() => setModal("estudos")} />
+          <FeatureTile icon={<BookOpen size={16} />} title={t.tiles.estudos.title} subtitle={dashboard.bibliotecaLiberada || member.school.language === "en" ? t.tiles.estudos.subtitle : "Apostilas e Acrópole Play"} onClick={() => setModal("estudos")} />
           {/* Voluntariado, GAF e Transparência só aparecem se a filial liberou (Administração da filial). */}
           {dashboard.recursos.voluntariado && (
             <FeatureTile icon={<HandHeart size={16} />} title={t.tiles.voluntariado.title} subtitle={t.tiles.voluntariado.subtitle} onClick={() => setModal("voluntariado")} />
@@ -373,7 +373,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
           {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} emBreve={emBreve} />}
-          {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} />}
+          {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} mostrarBiblioteca={dashboard.bibliotecaLiberada} />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}
           {modal === "gaf" && <GafPanel memberId={member.id} gafs={dashboard.meusGafs} />}

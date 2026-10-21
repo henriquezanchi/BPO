@@ -5,6 +5,7 @@ import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { enviarPush } from "@/lib/push";
 import { postarNoCanal, tokenSlackDaFilial } from "@/lib/slack";
+import { temasValidos } from "@/lib/temas-curriculo";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 import { revalidatePath } from "next/cache";
 import type { ActivityType } from "@prisma/client";
@@ -14,6 +15,9 @@ export interface CreateActivityInput {
   type: ActivityType;
   title: string;
   studyItems?: string;
+  /** Matéria em curso na turma (TurmaMateria.materiaSigla) e temas do catálogo — 2026-10-21. */
+  materiaSigla?: string;
+  temas?: string[];
   description?: string;
   dueDate: Date;
   /** Também posta no canal do Slack vinculado ao grupo (se houver). */
@@ -33,12 +37,22 @@ export interface CreateActivityInput {
 export async function createActivity(input: CreateActivityInput) {
   const professor = await requireTeacherOfClass(input.classGroupId);
 
+  // Só aceita matéria que a turma está cursando e temas que existem no catálogo dela.
+  const materia = input.materiaSigla
+    ? await db.turmaMateria.findUnique({ where: { classGroupId_materiaSigla: { classGroupId: input.classGroupId, materiaSigla: input.materiaSigla } } })
+    : null;
+  if (input.materiaSigla && !materia) throw new Error("Essa matéria não está em curso nesta turma.");
+  const temas = materia ? temasValidos(materia.materiaSigla, input.temas ?? []) : [];
+
   const activity = await db.activity.create({
     data: {
       classGroupId: input.classGroupId,
       createdById: professor.id,
       type: input.type,
       title: input.title,
+      materiaSigla: materia?.materiaSigla ?? null,
+      materiaNome: materia?.materiaNome ?? null,
+      temas,
       studyItems: input.studyItems,
       description: input.description,
       dueDate: input.dueDate,
@@ -66,8 +80,8 @@ export async function createActivity(input: CreateActivityInput) {
   const dueDateLabel = input.dueDate.toLocaleDateString("pt-BR", { timeZone: "UTC" });
   const origem = grupo.tipo === "turma" ? "da turma" : `— ${grupo.name}`;
   const corpo = `${input.type === "aviso" ? "Novo aviso" : "Nova atividade"} ${origem}: *${input.title}* (${dueDateLabel}).${
-    input.studyItems ? `\nConteúdo: ${input.studyItems}` : ""
-  }${input.description ? `\n${input.description}` : ""}`;
+    materia ? `\nMatéria: ${materia.materiaNome}` : ""
+  }${temas.length ? `\nTemas: ${temas.join("; ")}` : ""}${input.studyItems ? `\nConteúdo: ${input.studyItems}` : ""}${input.description ? `\n${input.description}` : ""}`;
   const message = `${corpo}\nConfira em Agenda & Eventos no Portal do Aluno.`;
 
   // Slack é complemento: uma falha lá não desfaz a publicação no Portal.
@@ -99,7 +113,7 @@ export async function createActivity(input: CreateActivityInput) {
     roster.map((r) => r.memberId),
     {
       titulo: `${input.type === "aviso" ? "Novo aviso" : "Nova atividade"} ${grupo.tipo === "turma" ? "da turma" : `· ${grupo.name}`}`,
-      corpo: `${input.title} (${dueDateLabel})`,
+      corpo: `${input.title}${materia ? ` · ${materia.materiaNome}` : ""} (${dueDateLabel})`,
       url: "/portal",
       etiqueta: `atividade-${activity.id}`,
     },

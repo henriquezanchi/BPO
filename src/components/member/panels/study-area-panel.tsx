@@ -4,7 +4,16 @@ import { BookOpen, BookOpenText, Clapperboard, FileText, PlaySquare } from "luci
 import { useState } from "react";
 
 /** Acrópole Play e Apostilas só aparecem se a filial liberou (ver recursos-filial.ts). */
-export function StudyAreaPanel({ mostrarAcropolePlay = false, mostrarApostilas = false }: { mostrarAcropolePlay?: boolean; mostrarApostilas?: boolean }) {
+export function StudyAreaPanel({
+  mostrarAcropolePlay = false,
+  mostrarApostilas = false,
+  mostrarBiblioteca = false,
+}: {
+  mostrarAcropolePlay?: boolean;
+  mostrarApostilas?: boolean;
+  /** Só membros (2º nível em diante); N1 e programa complementar não veem. */
+  mostrarBiblioteca?: boolean;
+}) {
   const [apostilasAvisoAtivo, setApostilasAvisoAtivo] = useState(false);
 
   return (
@@ -26,14 +35,16 @@ export function StudyAreaPanel({ mostrarAcropolePlay = false, mostrarApostilas =
           <Clapperboard size={16} /> Acrópole Play — vídeos e séries
         </a>
         )}
-        <a
-          href="https://biblioteca.acropolebrasil.com.br/"
-          target="_blank"
-          rel="noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-        >
-          <BookOpenText size={16} /> Acessar Biblioteca
-        </a>
+        {mostrarBiblioteca && (
+          <a
+            href="https://bastiao.oinabn.com.br/"
+            target="_blank"
+            rel="noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            <BookOpenText size={16} /> Acessar Biblioteca
+          </a>
+        )}
         {mostrarApostilas && (
           <>
         <button

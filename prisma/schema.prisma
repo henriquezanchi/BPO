@@ -913,6 +913,8 @@ model Event {
   // "estados" (UFs).
   abertoA       String   @default("filial")
   abertoValores String[] @default([])
+  // Lanche compartilhado (pedido do usuário 2026-10-21): cada um leva algo; aparece em destaque no evento.
+  lancheCompartilhado Boolean @default(false)
   status String @default("publicado")
   registrationUrl String?
   // Imagem pública do evento no Ulisses (https). Cartaz próprio da filial fica em posterPath.
@@ -1167,6 +1169,11 @@ model Activity {
   type         ActivityType
   title        String
   studyItems   String?      @db.Text // itens/conteúdo a estudar
+  // Prova/trabalho/leitura de turma (2026-10-21): matéria em curso na turma
+  // (TurmaMateria) e temas escolhidos do catálogo (lib/temas-curriculo.ts).
+  materiaSigla String?
+  materiaNome  String?
+  temas        String[]     @default([])
   description  String?      @db.Text
   dueDate      DateTime
   createdAt    DateTime     @default(now())

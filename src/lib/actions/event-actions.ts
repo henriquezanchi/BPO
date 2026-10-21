@@ -12,7 +12,7 @@ import {confirmEventPayment} from '@/lib/event-payments';
 import {processEventRefundQueue} from '@/lib/event-refunds';
 import {revalidatePath} from 'next/cache';
 
-export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null}
+export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null;lancheCompartilhado?:boolean}
 function refresh(eventId?:string){revalidatePath('/','layout');revalidatePath('/portal');if(eventId)revalidatePath(`/eventos/${eventId}/recepcao`);}
 export async function salvarEvento(schoolId:string,input:InternalEventInput,id?:string,revision?:number) {
  try {

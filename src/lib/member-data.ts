@@ -1,6 +1,6 @@
 import {eventPosterUrl} from "@/lib/event-posters";
 import {portalLabel} from "@/lib/display-labels";
-import {eventAudienceWhere,safeEventRegistrationUrl, eventScopeWhere } from "@/lib/event-policy";
+import {eventAudienceWhere,safeEventRegistrationUrl, eventScopeWhere, publicosDaPessoa } from "@/lib/event-policy";
 import {ensureGroupMeetingWindow} from "@/lib/meeting-series";
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
@@ -81,6 +81,7 @@ export type AgendaItem =
       location: string | null;
       endsAt: Date | null;
       allDay: boolean;
+      lancheCompartilhado?: boolean;
     }
   | {
       kind: "atividade";
@@ -88,6 +89,8 @@ export type AgendaItem =
       title: string;
       date: Date;
       type: ActivityType;
+      materiaNome?: string | null;
+      temas?: string[];
       studyItems: string | null;
       description: string | null;
       className: string;
@@ -278,6 +281,7 @@ export async function getMemberDashboard(memberId: string) {
         location: e.location,
         endsAt: e.endsAt,
         allDay: e.allDay,
+        lancheCompartilhado: e.lancheCompartilhado,
       }),
     ),
     ...classActivities.map(
@@ -287,6 +291,8 @@ export async function getMemberDashboard(memberId: string) {
         title: a.title,
         date: a.dueDate,
         type: a.type,
+        materiaNome: a.materiaNome,
+        temas: a.temas,
         studyItems: a.studyItems,
         description: a.description,
         className: portalLabel(a.classGroup.name),
@@ -334,6 +340,9 @@ export async function getMemberDashboard(memberId: string) {
     fortunaBalances,
     agendaItems,
     avisosGrupos,
+    // Biblioteca (bastião) só para membros — 2º nível em diante, mesma regra do público "Membros" dos eventos;
+    // N1 e programa complementar não veem (pedido do usuário 2026-10-21).
+    bibliotecaLiberada: publicosDaPessoa(member).includes("membros"),
     meusGafs,
     // Um atalho só para a Área do Voluntário, quando a pessoa tem algo lá (mesma regra do menu).
     areaVoluntario: destinosVoluntario.length > 0,

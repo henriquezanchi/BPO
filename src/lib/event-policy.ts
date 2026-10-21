@@ -88,7 +88,7 @@ function validarAbertura(abertoA: string | undefined, valores: string[] | undefi
   return { abertoA: a, abertoValores: v.slice(0, 200) };
 }
 
-export function validateInternalEvent(input: {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null}) {
+export function validateInternalEvent(input: {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null;lancheCompartilhado?:boolean}) {
  const start=new Date(input.startsAt),end=new Date(input.endsAt);
  if(!input.title.trim()||input.title.length>160||input.description.length>5000||input.location.length>300)throw Error('Confira o título, a descrição e o local.');
  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||start<=new Date()||end<=start)throw Error('Informe início futuro e término depois do início.');
@@ -101,7 +101,7 @@ export function validateInternalEvent(input: {title:string;startsAt:string;endsA
  const closes=input.registrationClosesAt?new Date(input.registrationClosesAt):null;
  if(closes&&(!Number.isFinite(closes.getTime())||closes>start))throw Error('O prazo de inscrição deve terminar até o início do evento.');
  if((input.participantInstructions?.length??0)>5000||(input.contactInfo?.length??0)>300)throw Error('Reduza as orientações ou o contato do evento.');
- return {capacity,registrationClosesAt:closes,participantInstructions:input.participantInstructions?.trim()||null,contactInfo:input.contactInfo?.trim()||null,posterPath:input.posterPath||null,title:input.title.trim(),startsAt:start,endsAt:end,price:input.price,audience:publicos[0],publicos,...abertura,description:input.description.trim(),location:input.location.trim()};
+ return {capacity,registrationClosesAt:closes,participantInstructions:input.participantInstructions?.trim()||null,contactInfo:input.contactInfo?.trim()||null,posterPath:input.posterPath||null,title:input.title.trim(),startsAt:start,endsAt:end,price:input.price,audience:publicos[0],publicos,...abertura,description:input.description.trim(),location:input.location.trim(),lancheCompartilhado:!!input.lancheCompartilhado};
 }
 export function eventNoticePlan(startsAt:Date,endsAt:Date,now=new Date()) {
  return [{kind:'inscricao',dueAt:now},{kind:'vespera',dueAt:new Date(startsAt.getTime()-86400000)},{kind:'uma_hora',dueAt:new Date(startsAt.getTime()-3600000)},{kind:'avaliar_presenca',dueAt:new Date(endsAt.getTime()+3600000)}].filter(n=>n.dueAt>=now);
