@@ -11,7 +11,7 @@ import { useEffect, useState, useSyncExternalStore, useTransition } from "react"
  * No iPhone o Safari só permite notificação com o Portal instalado na tela de
  * início (iOS 16.4+); antes disso o banner de instalação já orienta.
  */
-type Estado = "carregando" | "sem_suporte" | "instalar_iphone" | "bloqueado" | "desativado" | "ativo";
+type Estado = "carregando" | "indisponivel" | "sem_suporte" | "instalar_iphone" | "bloqueado" | "desativado" | "ativo";
 
 const CHAVE_DISPENSADO = "na-notificacoes-dispensado";
 const ouvintes = new Set<() => void>();
@@ -34,6 +34,7 @@ async function estadoAtual(): Promise<Estado> {
   const iphone = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const instalado = window.matchMedia("(display-mode: standalone)").matches || ("standalone" in navigator && (navigator as { standalone?: boolean }).standalone === true);
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return iphone && !instalado ? "instalar_iphone" : "sem_suporte";
+  if (!(await chavePublicaPush())) return "indisponivel"; // chaves VAPID ainda não configuradas no servidor
   if (Notification.permission === "denied") return "bloqueado";
   const registro = await navigator.serviceWorker.getRegistration("/");
   const inscricao = await registro?.pushManager.getSubscription();
@@ -147,6 +148,7 @@ export function AtivarNotificacoes({ variante = "cartao" }: { variante?: "cartao
       </p>
       <p className="mt-1 text-[11px] leading-relaxed text-gray-600 dark:text-gray-400">
         {estado === "carregando" && "Verificando..."}
+        {estado === "indisponivel" && "Em breve: as notificações no celular estão sendo liberadas no Portal."}
         {estado === "ativo" && "Ativas. Você recebe lembretes dos encontros, atividades novas e respostas da secretaria."}
         {estado === "desativado" && "Desligadas. Ative para receber lembretes dos encontros e avisos, mesmo com o Portal fechado."}
         {estado === "bloqueado" && "Bloqueadas nas configurações do navegador. Libere as notificações para este site nas configurações do celular e volte aqui."}
