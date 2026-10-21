@@ -35,16 +35,20 @@ function publicosDaTurma(nivel: string): Publico[] {
   return /^N[2-9]$/.test(nivel) ? ["todos", "membros", "fv", "provacionistas", "hd", "dirigentes"] : ["todos"];
 }
 
-/** Público de um evento interno do Portal (campo audience, ver EVENT_AUDIENCES). */
-function publicosDoEvento(audience: string): Publico[] {
+/** Quem um evento interno do Portal alcança (publicos, vários — ver EVENT_AUDIENCES): "Todos" inclui todos; "Membros" inclui FV, HD, dirigentes e provacionistas. */
+function publicosDoEvento(publicos: string[], audience: string): Publico[] {
   const mapa: Record<string, Publico[]> = {
     todos_ativos: ["todos", "membros", "fv", "provacionistas", "hd", "dirigentes"],
     membros: ["membros", "fv", "provacionistas", "hd", "dirigentes"],
+    fv: ["fv"],
     provacionistas: ["provacionistas"],
+    hd: ["hd"],
+    dirigentes: ["dirigentes"],
     voluntarios: ["fv"],
     direcao: ["dirigentes"],
   };
-  return mapa[audience] ?? ["todos"];
+  const lista = [...new Set((publicos.length ? publicos : [audience]).flatMap((p) => mapa[p] ?? []))];
+  return lista.length ? lista : ["todos"];
 }
 
 async function feriados(ano: number): Promise<{ data: string; nome: string }[]> {
@@ -100,7 +104,7 @@ export async function itensDoCalendario(schoolId: string, de: Date, ate: Date): 
     itens.push({ id: `reuniao-${r.id}`, camada: "reuniao_grupo", titulo: r.title, inicio: r.startsAt.toISOString(), fim: r.endsAt.toISOString(), diaInteiro: false, detalhe: g?.name ?? null, publicos: ["fv"], pessoas: g?._count.memberships ?? null });
   }
   for (const e of eventosFilial) {
-    itens.push({ id: `evento-${e.id}`, camada: "evento_filial", titulo: e.title, inicio: e.startsAt.toISOString(), fim: e.endsAt?.toISOString() ?? null, diaInteiro: e.allDay, detalhe: e.location, publicos: publicosDoEvento(e.audience), pessoas: null });
+    itens.push({ id: `evento-${e.id}`, camada: "evento_filial", titulo: e.title, inicio: e.startsAt.toISOString(), fim: e.endsAt?.toISOString() ?? null, diaInteiro: e.allDay, detalhe: e.location, publicos: publicosDoEvento(e.publicos, e.audience), pessoas: null });
   }
   for (const e of eventosExternos) {
     // O calendário nacional ainda não diz a quem o evento se destina nem se o chefe deve estar (virá do Ágora): tratado como "todos".

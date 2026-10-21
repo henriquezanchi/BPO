@@ -110,6 +110,8 @@ model School {
   // ex: "BGA", "GYN") — chave de importação/sincronização via
   // src/lib/mercurio-db. Pedido do usuário 2026-10-18.
   mercurioUnidade         String?   @unique
+  // UF da unidade (unidades.uni_uf) — eventos abertos por estado/regional.
+  uf                      String?
   // Id da filial no Ulisses (eventos públicos, api.acropolebrasil.com.br/eventos/{id}).
   // Não é o código do Mercúrio: Barra do Garças = 44 ("bdg"), Sede Central = 7.
   ulissesFilialId         Int?      @unique
@@ -285,6 +287,16 @@ model Member {
   // uma lista) — por isso são booleans separados, não um enum único.
   isProvacionista       Boolean      @default(false)
   isMembroPrograma      Boolean      @default(false)
+  // Público dos eventos (pedido do usuário 2026-10-19), vindos do Mercúrio:
+  // nível (cad_nivel: N1…N9, PP, CA…), HD (cad_machado HDA/HDR), dirigente
+  // (cad_dirigente 'S') e FV/brigadista (cad_situacao_fv 'BRG').
+  nivel                 String?
+  isHD                  Boolean      @default(false)
+  isDirigente           Boolean      @default(false)
+  isFV                  Boolean      @default(false)
+  // Em provacionismo para o FV (cad_situacao_fv 'PRO') — o público
+  // "Provacionistas" dos eventos. Diferente de isProvacionista (nível PP).
+  emProvacionismo       Boolean      @default(false)
   isCirculoDeAmigos     Boolean      @default(false)
   isCorrentinha         Boolean      @default(false)
   isTavolas             Boolean      @default(false)
@@ -892,6 +904,14 @@ model Event {
   participantInstructions String? @db.Text
   contactInfo String?
   audience String @default("todos_ativos")
+  // Vários públicos ao mesmo tempo (2026-10-19): todos_ativos, membros, fv,
+  // provacionistas, hd, dirigentes. "audience" fica com o primeiro, por compatibilidade.
+  publicos String[] @default([])
+  // Inscrições de outras filiais: "filial" (só a dona), "todas", "filiais"
+  // (ids em abertoValores), "regionais" (centro_oeste, df, nordeste, norte) ou
+  // "estados" (UFs).
+  abertoA       String   @default("filial")
+  abertoValores String[] @default([])
   status String @default("publicado")
   registrationUrl String?
   // Imagem pública do evento no Ulisses (https). Cartaz próprio da filial fica em posterPath.

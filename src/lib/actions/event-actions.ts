@@ -5,14 +5,14 @@ import {calcularSplitEscola} from '@/lib/asaas/split';
 import {requireAuthenticatedMember,requireArea} from '@/lib/auth';
 import {temAcessoVoluntario} from '@/lib/acesso-voluntario';
 import {db} from '@/lib/db';
-import {eventAudienceWhere,eventNoticePlan,validateInternalEvent} from '@/lib/event-policy';
+import {eventAudienceWhere,eventNoticePlan,validateInternalEvent,eventScopeWhere} from '@/lib/event-policy';
 import {requireEventReception} from '@/lib/event-data';
 import {EventEnrollmentError,eventPaymentFailure} from '@/lib/event-payment-errors';
 import {confirmEventPayment} from '@/lib/event-payments';
 import {processEventRefundQueue} from '@/lib/event-refunds';
 import {revalidatePath} from 'next/cache';
 
-export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience:string;description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null}
+export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null}
 function refresh(eventId?:string){revalidatePath('/','layout');revalidatePath('/portal');if(eventId)revalidatePath(`/eventos/${eventId}/recepcao`);}
 export async function salvarEvento(schoolId:string,input:InternalEventInput,id?:string,revision?:number) {
  try {
@@ -88,7 +88,8 @@ async function enrollEvent(memberId:string,eventId:string,cpf?:string){
  const member=await requireAuthenticatedMember(memberId);
  if(member.isJanos)throw new EventEnrollmentError('Seu perfil permite somente consulta.');
  const volunteer=await temAcessoVoluntario(member);
- const eligible={id:eventId,schoolId:member.schoolId,source:'manual',status:'publicado',startsAt:{gt:new Date()},AND:[eventAudienceWhere(member,volunteer)]};
+ // Filial da pessoa ou evento de outra filial aberto a ela (abertoA — 2026-10-19).
+ const eligible={id:eventId,source:'manual',status:'publicado',startsAt:{gt:new Date()},AND:[eventAudienceWhere(member,volunteer),eventScopeWhere(member.school)]};
  const event=await db.event.findFirst({where:eligible});
  if(!event)throw new EventEnrollmentError('Evento indisponível para seu perfil ou inscrições encerradas.');
  const price=Number(event.price);

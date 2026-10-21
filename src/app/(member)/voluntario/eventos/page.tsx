@@ -19,7 +19,7 @@ export default async function EventosAreaPage(props: { searchParams: Promise<{ a
         atual={aba}
         abas={[
           ["eventos", "Gestão de eventos"],
-          ["calendario", "Calendário"],
+          ["calendario", "Calendário", "/voluntario/calendario"],
         ]}
       />
       {aba === "calendario" ? <CalendarioTab schoolId={member.schoolId} /> : <EventosTab schoolId={member.schoolId} data={await getDirectorDashboard(member.schoolId)} />}

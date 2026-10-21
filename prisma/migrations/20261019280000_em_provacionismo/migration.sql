@@ -1,0 +1,1 @@
+ALTER TABLE "Member" ADD COLUMN "emProvacionismo" BOOLEAN NOT NULL DEFAULT false;

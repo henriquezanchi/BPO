@@ -30,7 +30,8 @@ export type IconeDestino =
   | "admin"
   | "acessos"
   | "nacional"
-  | "termo";
+  | "termo"
+  | "calendario";
 
 export type Destino = { href: string; rotulo: string; descricao: string; icone: IconeDestino; secao: "Meu trabalho" | "Secretarias" | "Gestão da filial" | "Nacional"; pendentes?: number };
 
@@ -65,6 +66,13 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       rotulo: m.isPedagogo ? "Instrutor" : "Avisos dos grupos",
       descricao: m.isPedagogo ? "Turmas, atividades e enquetes" : "Avisos e atividades dos grupos de FV",
       icone: "instrutor",
+      secao: "Meu trabalho",
+    },
+    (tem("eventos") || tem("direcao")) && {
+      href: "/voluntario/calendario",
+      rotulo: "Calendário",
+      descricao: "Aulas, reuniões, eventos e feriados da filial",
+      icone: "calendario",
       secao: "Meu trabalho",
     },
     { href: "/voluntario/termo", rotulo: "Termo de voluntariado", descricao: "Assinatura do termo", icone: "termo", secao: "Meu trabalho" },

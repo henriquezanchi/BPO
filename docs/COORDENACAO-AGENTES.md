@@ -34,6 +34,8 @@ Pedido do responsável pelo Portal, em 19/10:
     - **Sub-chefe:** tem todas as áreas por padrão; o chefe retira em Administração → Recursos (`AcessoRetiradoSubchefe`, inclusive `admin`).
     - `revalidatePath("/diretor")` virou `revalidatePath("/", "layout")`.
 
+15. **Eventos internos: público com vários grupos e abertura a outras filiais** (19/10, pedido do usuário como prioridade). `Event.publicos` (lista: todos_ativos, membros, fv, provacionistas, hd, dirigentes; `audience` guarda o primeiro), `Event.abertoA` + `abertoValores` (filial, todas, filiais, regionais, estados) e `School.uf`. Regras em `lib/event-policy.ts` (`publicosDaPessoa`, `eventAudienceWhere`, `eventScopeWhere`, `REGIONAIS`); `Member.nivel/isHD/isDirigente/isFV` vêm do Mercúrio pelo importador. **Codex:** `enrollEvent` deixou de exigir a mesma escola (usa `eventScopeWhere`); o pagamento continua indo para a carteira da filial dona do evento. O teste de público em `tests/events.test.mjs` foi atualizado; as outras falhas desse arquivo já existiam antes.
+
 Situação dos blocos 1 a 3 em 19/10: concluídos (avaliação, administração da filial e cadastro por solicitação). O bloco 4 (verificação por código) aguarda a escolha do provedor de envio.
 
 Não mexer nesses blocos sem combinar. Os demais pendentes de `CONTINUIDADE-VOLUNTARIADO-DIARIOS.md` (escalas, ED/Pré-ED, diário, informe mensal) seguem livres.

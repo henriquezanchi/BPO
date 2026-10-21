@@ -81,7 +81,7 @@ export async function garantirEscola(uniId: string, opcoes: { portalAberto?: boo
   const existente = await db.school.findUnique({ where: { mercurioUnidade: uniId } });
   if (existente) return existente;
 
-  const [u] = await consultarMercurio(`SELECT uni_nome, uni_cidade, uni_cnpj, uni_ddd, uni_fone, uni_fundacao FROM unidades WHERE uni_id=${sqlTexto(uniId)}`);
+  const [u] = await consultarMercurio(`SELECT uni_nome, uni_cidade, uni_uf, uni_cnpj, uni_ddd, uni_fone, uni_fundacao FROM unidades WHERE uni_id=${sqlTexto(uniId)}`);
   if (!u) throw new Error(`Unidade ${uniId} não existe no banco do Mercúrio.`);
   const nome = nomeProprio(u.uni_nome ?? uniId);
   return db.school.create({
@@ -89,6 +89,7 @@ export async function garantirEscola(uniId: string, opcoes: { portalAberto?: boo
       name: `Nova Acrópole - ${nome}`,
       city: nome,
       mercurioUnidade: uniId,
+      uf: textoOuNull(u.uni_uf),
       portalAberto: opcoes.portalAberto ?? false,
       cnpj: textoOuNull(u.uni_cnpj),
       telefoneUnidade: u.uni_fone ? `${u.uni_ddd ?? ""}${u.uni_fone}` : null,
@@ -267,6 +268,12 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
       isCorrentinha: nivel === "CO",
       isTavolas: nivel === "TA",
       isJanos: nivel === "JN",
+      // Público dos eventos (2026-10-19).
+      nivel: nivel || null,
+      isHD: c.cad_machado === "HDA" || c.cad_machado === "HDR",
+      isDirigente: c.cad_dirigente === "S",
+      isFV: c.cad_situacao_fv === "BRG",
+      emProvacionismo: c.cad_situacao_fv === "PRO",
       perfilGruposSyncedAt: new Date(),
     };
 

@@ -1,6 +1,6 @@
 import {eventPosterUrl} from "@/lib/event-posters";
 import {portalLabel} from "@/lib/display-labels";
-import {eventAudienceWhere,safeEventRegistrationUrl} from "@/lib/event-policy";
+import {eventAudienceWhere,safeEventRegistrationUrl, eventScopeWhere } from "@/lib/event-policy";
 import {ensureGroupMeetingWindow} from "@/lib/meeting-series";
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
@@ -73,6 +73,7 @@ export type AgendaItem =
       paymentUnavailableReason?: string | null;
       source?: string;
       externalUid?: string | null;
+      filialOrigem?: string | null;
       registrationUrl?: string | null;
       status?: string;
       scope: string; // "nacional" | "regional" | "filial"
@@ -180,12 +181,13 @@ export async function getMemberDashboard(memberId: string) {
     // ainda (isso fica pra quando resolvermos o modelo de perfis/eventos).
     db.event.findMany({
       where: {
-        OR: [{ schoolId: member.schoolId }, { scope: { in: ["nacional", "regional"] } }],
+        // Filial da pessoa, eventos de outras filiais abertos a ela (abertoA) e nacionais/regionais.
+        OR: [...(eventScopeWhere(member.school).OR ?? []), { scope: { in: ["nacional", "regional"] } }],
         AND: [eventAudienceWhere(member,acessoVoluntario),{OR:[{status:"publicado"},{status:"cancelado",registrations:{some:{memberId}}}]}],
         startsAt: { gte: new Date(Date.now()-86400000) },
       },
       orderBy: { startsAt: "asc" },
-      include:{_count:{select:{registrations:true}}},
+      include:{_count:{select:{registrations:true}},school:{select:{name:true}}},
     }),
     studentClassGroupIds.length
       ? db.activity.findMany({
@@ -261,6 +263,8 @@ export async function getMemberDashboard(memberId: string) {
         scope: e.scope,
         source: e.source,
         externalUid: e.externalUid,
+        // Evento de outra filial aberto à pessoa (abertoA, 2026-10-19): mostra de onde é.
+        filialOrigem: e.schoolId && e.schoolId !== member.schoolId ? (e.school?.name ?? null) : null,
         posterUrl:eventPosters.get(e.id)??e.imageUrl??null,
         capacity:e.capacity,
         availableSpots:e.capacity===null?null:Math.max(0,e.capacity-e._count.registrations),

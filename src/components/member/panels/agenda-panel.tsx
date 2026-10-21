@@ -245,7 +245,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
         <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
           {item.scope === "filial" ? (
             <>
-              <PartyPopper size={14} /> EVENTO DA ESCOLA
+              <PartyPopper size={14} /> {item.filialOrigem ? `EVENTO DE ${item.filialOrigem.replace(/^Nova Acrópole\s*-\s*/i, "").toUpperCase()}` : "EVENTO DA ESCOLA"}
             </>
           ) : (
             <>

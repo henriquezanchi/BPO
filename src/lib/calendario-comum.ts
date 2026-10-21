@@ -10,16 +10,20 @@ export const PUBLICOS: { id: Publico; rotulo: string }[] = [
   { id: "dirigentes", rotulo: "Dirigentes" },
 ];
 
-/** Converte o público do evento do Portal (EVENT_AUDIENCES) para o calendário. */
-export function publicosDeAudiencia(audience: string): Publico[] {
+/** Converte os públicos do evento do Portal (EVENT_AUDIENCES, vários) para o calendário. */
+export function publicosDeAudiencia(audiencias: string | string[]): Publico[] {
   const mapa: Record<string, Publico[]> = {
     todos_ativos: ["todos"],
     membros: ["membros"],
+    fv: ["fv"],
     provacionistas: ["provacionistas"],
+    hd: ["hd"],
+    dirigentes: ["dirigentes"],
     voluntarios: ["fv"],
     direcao: ["dirigentes"],
   };
-  return mapa[audience] ?? ["todos"];
+  const lista = [...new Set((Array.isArray(audiencias) ? audiencias : [audiencias]).flatMap((a) => mapa[a] ?? []))];
+  return lista.length ? lista : ["todos"];
 }
 
 export const ROTULO_CAMADA = {

@@ -10,7 +10,7 @@ const hora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { timeZo
 
 /**
  * Aviso de conflito dentro do formulário de evento (Gestão de Eventos):
- * observa os campos startsAt/endsAt/audience do próprio <form> em que está
+ * observa os campos startsAt/endsAt/publicos do próprio <form> em que está
  * e consulta o calendário da filial. Não bloqueia o cadastro.
  */
 export function AvisoConflitosEvento({ schoolId }: { schoolId: string }) {
@@ -35,7 +35,7 @@ export function AvisoConflitosEvento({ schoolId }: { schoolId: string }) {
         if (!(termino > inicio)) return setConflitos(null);
         setCarregando(true);
         try {
-          setConflitos(await verificarConflitos(schoolId, inicio.toISOString(), termino.toISOString(), publicosDeAudiencia(String(dados.get("audience") ?? "todos_ativos"))));
+          setConflitos(await verificarConflitos(schoolId, inicio.toISOString(), termino.toISOString(), publicosDeAudiencia(dados.getAll("publicos").map(String).length ? dados.getAll("publicos").map(String) : ["todos_ativos"])));
         } catch {
           setConflitos(null);
         } finally {

@@ -1,5 +1,5 @@
 import {test,mock} from 'node:test';import assert from 'node:assert/strict';
-import {eventAudienceWhere,validateInternalEvent,eventNoticePlan} from '../src/lib/event-policy.ts';
+import {eventAudienceWhere,validateInternalEvent,eventNoticePlan,publicosDaPessoa,eventScopeWhere,regionalDaUf} from '../src/lib/event-policy.ts';
 const actor={id:'member',schoolId:'school',mercurioAtivo:true,isJanos:false,isMembroPrograma:true,isProvacionista:false,isDiretor:false,isSubChefe:false,name:'Aluno teste',email:null};
 process.env.ASAAS_API_KEY='test-only';
 let failureMode='off';
@@ -20,7 +20,26 @@ mock.module('next/cache',{exports:{revalidatePath:()=>{}}});
 const{inscreverEmEvento,marcarPresencaEvento,salvarEvento,excluirEvento}=await import('../src/lib/actions/event-actions.ts');
 test('público é explícito e papéis desconhecidos do Ágora ficam bloqueados',()=>{
  const where=eventAudienceWhere({...actor,isMembroPrograma:false},false);
- assert.deepEqual(where.audience,{in:['todos_ativos']});assert.deepEqual(where.source,{notIn:['agora','google_calendar_nacional']});
+ assert.deepEqual(where.publicos,{hasSome:['todos_ativos']});assert.deepEqual(where.source,{notIn:['agora','google_calendar_nacional']});
+});
+test('membros = 2º nível em diante, incluindo FV, HD, dirigentes e provacionistas; N1 fica só com todos os ativos',()=>{
+ const base={isMembroPrograma:true,isProvacionista:false};
+ assert.deepEqual(publicosDaPessoa({...base,nivel:'N1'}),['todos_ativos']);
+ assert.deepEqual(publicosDaPessoa({...base,nivel:'N2'}),['todos_ativos','membros']);
+ assert.deepEqual(publicosDaPessoa({...base,nivel:'N1',isFV:true}),['todos_ativos','membros','fv']);
+ assert.deepEqual(publicosDaPessoa({...base,nivel:'N3',isHD:true,isDirigente:true}),['todos_ativos','membros','hd','dirigentes']);
+ assert.deepEqual(publicosDaPessoa({isMembroPrograma:false,isProvacionista:true,nivel:'PP'}),['todos_ativos']);
+ assert.deepEqual(publicosDaPessoa({...base,nivel:'N2',emProvacionismo:true}),['todos_ativos','membros','provacionistas']);
+ assert.ok(!publicosDaPessoa({...base,nivel:'N3'}).includes('fv'));
+});
+test('abertura a outras filiais: por filial, regional e estado',()=>{
+ const or=eventScopeWhere({id:'escola-go',uf:'GO'}).OR;
+ assert.ok(or.some(c=>c.schoolId==='escola-go'));assert.ok(or.some(c=>c.abertoA==='todas'));
+ assert.ok(or.some(c=>c.abertoA==='regionais'&&c.abertoValores.has==='centro_oeste'));assert.ok(or.some(c=>c.abertoA==='estados'&&c.abertoValores.has==='GO'));
+ assert.equal(regionalDaUf('DF'),'df');assert.equal(regionalDaUf('PA'),'norte');assert.equal(regionalDaUf('CE'),'nordeste');
+ const v=validateInternalEvent({title:'Curso',startsAt:'2099-01-01T19:00Z',endsAt:'2099-01-01T21:00Z',price:0,publicos:['membros','fv'],abertoA:'regionais',abertoValores:['df','norte'],description:'',location:'Escola'});
+ assert.deepEqual(v.publicos,['membros','fv']);assert.equal(v.abertoA,'regionais');
+ assert.throws(()=>validateInternalEvent({title:'Curso',startsAt:'2099-01-01T19:00Z',endsAt:'2099-01-01T21:00Z',price:0,publicos:['membros'],abertoA:'filiais',abertoValores:[],description:'',location:'Escola'}));
 });
 test('datas, público e valor do evento são validados antes de gravar',()=>{
  const data={title:'Curso',startsAt:'2099-01-01T19:00Z',endsAt:'2099-01-01T21:00Z',price:50,audience:'membros',description:'',location:'Escola'};

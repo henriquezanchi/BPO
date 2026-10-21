@@ -125,3 +125,9 @@ Migração aditiva `20261019220000_eventos_reembolsos_relatorio` aplicada em pro
 Contrato consultado: [estornar cobrança](https://docs.asaas.com/reference/estornar-cobranca), [interpretação de estornos](https://docs.asaas.com/docs/estornos) e [split](https://docs.asaas.com/docs/split-de-pagamentos). O Asaas pode exigir saldo suficiente e as taxas originais do PIX não são necessariamente devolvidas. O participante recebe o valor integral; custos/pendências da operação não são silenciosamente descontados dele.
 
 O nome no PIX é o da conta emissora. Para aparecer a filial, novas cobranças precisam ser criadas com a credencial da subconta dela e o split deve direcionar a margem do BPO à carteira do BPO. Isso exige definir a carteira de destino, acompanhar cada cobrança pela conta que a emitiu e ajustar webhooks. Esta entrega não muda a conta emissora de cobranças existentes nem cria subcontas. Os dados cadastrais das filiais podem ser obtidos pela rotina nacional do Mercúrio já existente; não substituir informações faltantes por valores inventados para abrir conta financeira.
+
+## Público com vários grupos e inscrições de outras filiais (19/10/2026)
+
+- **Públicos (marque um ou mais):** Todos os ativos, Membros, FV, Provacionistas, HD, Dirigentes. "Membros" = 2º nível em diante e inclui FV, HD, dirigentes e provacionistas; quem é do 1º nível só entra em "Todos os ativos". Quem não está no público não vê o evento nem consegue se inscrever (conferido no servidor).
+- **Abertura:** só a filial, todas, filiais escolhidas, regionais (Centro-Oeste: GO/MT/MS; DF; Nordeste: MA/PI/CE/RN/PB/PE/AL/SE/BA; Norte: AC/AM/AP/PA/RO/RR/TO) ou estados. O público vale também para as outras filiais; o pagamento vai para a filial dona. Na Agenda, o evento aparece como "EVENTO DE <filial>".
+- Nível, HD (cad_machado HDA/HDR), dirigente (cad_dirigente) e FV (cad_situacao_fv BRG) vêm do Mercúrio na sincronização diária.
