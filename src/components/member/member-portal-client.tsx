@@ -31,6 +31,7 @@ import { FortunaWalletCard } from "./fortuna-wallet-card";
 import { InstallPrompt } from "./install-prompt";
 import { NudgeCard } from "./nudge-card";
 import { OnboardingTour } from "./onboarding-tour";
+import { AtivarNotificacoes } from "@/components/pwa/ativar-notificacoes";
 import { AgendaPanel } from "./panels/agenda-panel";
 import { ContributionStatusPanel } from "./panels/contribution-status-panel";
 import { FortunaTopUpPanel } from "./panels/fortuna-topup-panel";
@@ -192,6 +193,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         <NudgeCard memberId={member.id} />
         <AvisosGrupos avisos={dashboard.avisosGrupos} />
+        <AtivarNotificacoes />
 
         {/* Status financeiro */}
         <div

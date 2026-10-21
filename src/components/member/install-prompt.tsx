@@ -79,7 +79,7 @@ export function InstallPrompt() {
         <p className="text-[12px] font-semibold text-na-green-dark dark:text-emerald-400">Instale o Portal no seu celular</p>
         {isIOS ? (
           <p className="text-[11px] text-gray-600 dark:text-gray-400">
-            Toque em compartilhar <span aria-hidden>⎋</span> e depois em &quot;Adicionar à Tela de Início&quot;.
+            Toque em compartilhar <span aria-hidden>⎋</span> e depois em &quot;Adicionar à Tela de Início&quot;. Assim você também recebe as notificações dos encontros e avisos.
           </p>
         ) : (
           <button onClick={handleInstalar} className="mt-1 text-[11px] font-semibold text-na-green underline dark:text-emerald-400">

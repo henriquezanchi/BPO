@@ -2,6 +2,7 @@
 
 import { requireEconomiaOuDirecao } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { avisarSemEsperar } from "@/lib/push";
 import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
@@ -60,6 +61,8 @@ export async function aprovarSolicitacaoComposicao(schoolId: string, requestId: 
     await enqueueMercurioCompositionAdd(solicitacao.memberId, solicitacao.mercurioGroupId, solicitacao.label, valor);
   }
 
+  const oQue = solicitacao.tipo === "remocao" ? "remover" : solicitacao.tipo === "reducao" ? "diminuir" : "incluir";
+  await avisarSemEsperar([solicitacao.memberId], { titulo: "Contribuição atualizada", corpo: `A Economia aprovou seu pedido para ${oQue} "${solicitacao.label}".`, url: "/portal", etiqueta: `composicao-${requestId}` });
   revalidatePath("/economia");
   revalidatePath("/portal");
 }
@@ -72,6 +75,7 @@ export async function rejeitarSolicitacaoComposicao(schoolId: string, requestId:
   if (solicitacao.status !== "pendente") throw new Error("Solicitação já foi revisada.");
 
   await db.compositionChangeRequest.update({ where: { id: requestId }, data: { status: "rejeitado", reviewedAt: new Date() } });
+  await avisarSemEsperar([solicitacao.memberId], { titulo: "Pedido de contribuição não aprovado", corpo: `A Economia não aprovou seu pedido sobre "${solicitacao.label}". Em caso de dúvida, fale com a secretaria.`, url: "/portal", etiqueta: `composicao-${requestId}` });
   revalidatePath("/economia");
 }
 

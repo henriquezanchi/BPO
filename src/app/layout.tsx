@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import { RegistrarServiceWorker } from "@/components/pwa/registrar-service-worker";
+import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Noto_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -27,6 +28,14 @@ export const metadata: Metadata = {
   },
 };
 
+// Cor da barra do sistema no celular (PWA instalado e navegador).
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#086357" },
+    { media: "(prefers-color-scheme: dark)", color: "#030712" },
+  ],
+};
+
 // Roda ANTES da hidratação (script síncrono no <head>) pra aplicar a
 // classe "dark" já no primeiro paint — sem isso, a página nasceria clara
 // e só escureceria um instante depois (flash visível), mesmo pra quem já
@@ -53,7 +62,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <RegistrarServiceWorker />
+      </body>
     </html>
   );
 }

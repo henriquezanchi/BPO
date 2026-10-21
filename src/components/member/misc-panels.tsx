@@ -1,5 +1,6 @@
 "use client";
 
+import { AtivarNotificacoes } from "@/components/pwa/ativar-notificacoes";
 import { getMinhasSolicitacoes, oferecerApoioVoluntario, solicitarAdesaoGaf } from "@/lib/actions/misc-request-actions";
 import { formatDateBR, whatsappHref } from "@/lib/format";
 import type { ResumoGrupo } from "@/lib/grupos-dados";
@@ -187,6 +188,10 @@ export function HelpPanel({ whatsapp }: { whatsapp: string }) {
           </li>
         ))}
       </ul>
+
+      <div className="mb-4">
+        <AtivarNotificacoes variante="ajustes" />
+      </div>
 
       <div className="rounded-xl border border-gray-200 p-3 text-center dark:border-gray-700">
         <p className="mb-3 text-[11px] text-gray-500 dark:text-gray-400">Não achou o que precisava? Fale com a Economia:</p>

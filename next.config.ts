@@ -12,6 +12,19 @@ const nextConfig: NextConfig = {
       "./node_modules/@sparticuz/chromium/bin/**/*",
     ],
   },
+  // Service worker do PWA: sempre a versão mais nova (sem cache), só scripts do próprio site.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     return [
       { source: "/economia/tesouraria", destination: "/api/tesouraria" },

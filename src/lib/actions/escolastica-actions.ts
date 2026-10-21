@@ -2,6 +2,7 @@
 
 import { requireEscolasticaOuDirecao } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { avisarSemEsperar } from "@/lib/push";
 import { enqueueMercurioContactUpdate, enqueueMercurioPersonalUpdate } from "@/lib/mercurio/sync-queue";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -125,6 +126,7 @@ export async function aprovarSolicitacaoCadastro(schoolId: string, logId: string
     });
   }
 
+  await avisarSemEsperar([log.memberId], { titulo: "Cadastro atualizado", corpo: "A secretaria aprovou a alteração dos seus dados.", url: "/portal", etiqueta: `cadastro-${logId}` });
   revalidatePath("/escolastica");
   revalidatePath("/portal");
 }
@@ -137,5 +139,6 @@ export async function rejeitarSolicitacaoCadastro(schoolId: string, logId: strin
   if (log.status !== "pendente") throw new Error("Solicitação já foi revisada.");
 
   await db.contactChangeLog.update({ where: { id: logId }, data: { status: "rejeitado", reviewedAt: new Date() } });
+  await avisarSemEsperar([log.memberId], { titulo: "Alteração de cadastro não aprovada", corpo: "A secretaria não aprovou a alteração dos seus dados. Em caso de dúvida, fale com a Escolástica.", url: "/portal", etiqueta: `cadastro-${logId}` });
   revalidatePath("/escolastica");
 }

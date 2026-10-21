@@ -189,6 +189,7 @@ model Member {
   groupMeetingsCreated GroupMeeting[] @relation("MeetingCreator")
   meetingResponses GroupMeetingResponse[]
   meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
+  pushSubscriptions PushSubscription[]
   id                    String       @id @default(cuid())
   schoolId              String
   school                School       @relation(fields: [schoolId], references: [id])
@@ -1380,6 +1381,9 @@ model GroupMeeting {
   status String @default("agendada")
   cancellationReason String?
   version Int @default(0)
+  // Notificações push (2026-10-21): marcam o envio para não repetir.
+  lembreteEnviadoEm DateTime?
+  presencaPerguntadaEm DateTime?
   createdAt DateTime @default(now())
   responses GroupMeetingResponse[]
   auditLog GroupMeetingAudit[]
@@ -1686,5 +1690,22 @@ model AcessoRetiradoSubchefe {
   porId    String
   em       DateTime @default(now())
   @@unique([schoolId, memberId, area])
+  @@index([memberId])
+}
+
+// Inscrição de notificação push (PWA) de um aparelho — pedido do usuário
+// 2026-10-21 ("como ainda não temos o app, prepare a versão PWA"). Cada
+// navegador/celular em que a pessoa ativou as notificações vira uma linha;
+// inscrições que o serviço de push recusa (404/410) são apagadas no envio.
+model PushSubscription {
+  id         String   @id @default(cuid())
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  ultimoEnvioEm DateTime?
   @@index([memberId])
 }

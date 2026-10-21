@@ -23,7 +23,7 @@ const TYPES_GRUPO: { value: ActivityType; label: string }[] = [
 export function CreateActivityForm({ classGroupId, ehGrupo = false, temSlack = false }: { classGroupId: string; ehGrupo?: boolean; temSlack?: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [done, setDone] = useState<{ slack: "enviado" | "falhou" | null; whatsapp:{sent:number;total:number;failed:number} } | null>(null);
+  const [done, setDone] = useState<{ slack: "enviado" | "falhou" | null; whatsapp: { sent: number; total: number; failed: number }; push: { pessoas: number; total: number } } | null>(null);
   const tipos = ehGrupo ? TYPES_GRUPO : TYPES;
 
   function handleSubmit(formData: FormData) {
@@ -37,7 +37,7 @@ export function CreateActivityForm({ classGroupId, ehGrupo = false, temSlack = f
         dueDate: new Date(String(formData.get("dueDate"))),
         publicarNoSlack: formData.get("publicarNoSlack") === "on",
       });
-      setDone({ slack: res.slack, whatsapp:res.whatsapp });
+      setDone({ slack: res.slack, whatsapp: res.whatsapp, push: res.push });
       router.refresh();
     });
   }
@@ -105,8 +105,9 @@ export function CreateActivityForm({ classGroupId, ehGrupo = false, temSlack = f
 
       {done && (
         <div className="flex items-center gap-2 rounded-lg bg-na-success-light p-2.5 text-xs text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">
-          <CheckCircle2 size={14} /> Publicado na Agenda do Portal. {done.whatsapp.sent ? `${done.whatsapp.sent} de ${done.whatsapp.total} envio(s) confirmado(s) pelo provedor de WhatsApp.` : "Nenhuma mensagem enviada pelo WhatsApp."}
-          {done.slack === "enviado" ? " e no Slack" : ""}.
+          <CheckCircle2 size={14} /> Publicado na Agenda do Portal{done.slack === "enviado" ? " e no Slack" : ""}.{" "}
+          {done.push.pessoas ? `Notificação no celular para ${done.push.pessoas} de ${done.push.total} pessoa(s).` : "Ninguém do grupo ativou as notificações no celular ainda."}
+          {done.whatsapp.sent ? ` WhatsApp: ${done.whatsapp.sent} de ${done.whatsapp.total}.` : ""}
         </div>
       )}
       {done?.slack === "falhou" && (

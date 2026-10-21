@@ -3,6 +3,7 @@
 import { comAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { enviarPush } from "@/lib/push";
 import { postarNoCanal, tokenSlackDaFilial } from "@/lib/slack";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 import { revalidatePath } from "next/cache";
@@ -25,8 +26,9 @@ export interface CreateActivityInput {
  * "Agenda & Eventos" no Portal do Aluno automaticamente — não é uma seção
  * nova, é a mesma agenda que já lista os eventos da escola.
  *
- * O aviso por WhatsApp é disparado na hora; um push nativo (PWA) fica como
- * evolução futura quando tivermos esse canal.
+ * O aviso por WhatsApp é disparado na hora (quando o provedor estiver
+ * conectado) e, desde 2026-10-21, também por notificação push (PWA) para
+ * quem ativou as notificações no celular.
  */
 export async function createActivity(input: CreateActivityInput) {
   const professor = await requireTeacherOfClass(input.classGroupId);
@@ -93,10 +95,23 @@ export async function createActivity(input: CreateActivityInput) {
     }),
   );
 
+  const push = await enviarPush(
+    roster.map((r) => r.memberId),
+    {
+      titulo: `${input.type === "aviso" ? "Novo aviso" : "Nova atividade"} ${grupo.tipo === "turma" ? "da turma" : `· ${grupo.name}`}`,
+      corpo: `${input.title} (${dueDateLabel})`,
+      url: "/portal",
+      etiqueta: `atividade-${activity.id}`,
+    },
+  ).catch((e) => {
+    console.error("Falha ao enviar push da atividade:", e);
+    return { pessoas: 0, aparelhos: 0 };
+  });
+
   revalidatePath("/portal");
   revalidatePath(`/professor/turma/${input.classGroupId}`);
 
-  return { id: activity.id, slack, whatsapp: { sent: results.filter(Boolean).length, total: roster.length, failed: results.filter(ok=>!ok).length } };
+  return { id: activity.id, slack, push: { pessoas: push.pessoas, total: roster.length }, whatsapp: { sent: results.filter(Boolean).length, total: roster.length, failed: results.filter(ok=>!ok).length } };
 }
 
 
