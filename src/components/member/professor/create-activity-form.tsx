@@ -291,7 +291,7 @@ export function CreateActivityForm({
  * "dropdown" em vez da lista aberta). Os escolhidos ficam como etiquetas
  * abaixo do campo, removíveis com um toque.
  */
-function SeletorTemas({
+export function SeletorTemas({
   rotulo,
   bloco,
   opcoes,

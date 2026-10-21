@@ -1,7 +1,9 @@
 "use client";
 
 import { manageActivity } from "@/lib/actions/activity-actions";
+import { SeletorTemas } from "@/components/member/professor/create-activity-form";
 import { formatDateBR } from "@/lib/format";
+import { catalogoDaMateria } from "@/lib/temas-curriculo";
 import type { Activity } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -20,6 +22,9 @@ function PublishedActivity({ activity, ehGrupo }: { activity: Activity; ehGrupo:
   const [removed, setRemoved] = useState(false);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+  // Temas do catálogo da matéria (2026-10-21): aparecem no cartão e podem ser trocados ao editar.
+  const catalogo = catalogoDaMateria(activity.materiaSigla);
+  const [temas, setTemas] = useState<string[]>(activity.temas ?? []);
   if (removed) return null;
 
   function save(data: FormData) {
@@ -31,6 +36,7 @@ function PublishedActivity({ activity, ehGrupo }: { activity: Activity; ehGrupo:
           dueDate: new Date(String(data.get("dueDate")) + "T00:00:00Z"),
           description: String(data.get("description") ?? ""),
           studyItems: String(data.get("studyItems") ?? ""),
+          temas: catalogo ? temas : undefined,
         });
         if (!result.ok) { setMessage(result.error ?? "Não foi possível salvar."); return; }
         setEditing(false); setMessage("Alterações salvas na Agenda. Mensagens externas já enviadas não são alteradas."); router.refresh();
@@ -61,12 +67,14 @@ function PublishedActivity({ activity, ehGrupo }: { activity: Activity; ehGrupo:
             <label className="flex min-w-0 flex-col gap-1">Tipo<select name="type" defaultValue={activity.type} className={field}>{Object.entries(labels).filter(([key]) => !ehGrupo || ["aviso", "atividade_turma"].includes(key)).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label className="flex min-w-0 flex-col gap-1">Data<input type="date" name="dueDate" required defaultValue={new Date(activity.dueDate).toISOString().slice(0, 10)} className={field} /></label>
           </div>
-          {!ehGrupo && <label className="flex flex-col gap-1">Itens a estudar<textarea name="studyItems" maxLength={5000} defaultValue={activity.studyItems ?? ""} className={field} /></label>}
+          {catalogo && <SeletorTemas rotulo={`Temas${activity.materiaNome ? ` · ${activity.materiaNome}` : ""}`} bloco={catalogo.bloco} opcoes={catalogo.temas} marcados={temas} onChange={setTemas} />}
+          {!ehGrupo && <label className="flex flex-col gap-1">{catalogo ? "Complemento" : "Itens a estudar"}<textarea name="studyItems" maxLength={5000} defaultValue={activity.studyItems ?? ""} className={field} /></label>}
           <label className="flex flex-col gap-1">Mensagem<textarea name="description" rows={4} maxLength={5000} defaultValue={activity.description ?? ""} className={field} /></label>
           <div className="flex flex-wrap gap-2"><button disabled={pending} className="rounded-lg bg-na-green px-4 py-2.5 font-semibold text-white disabled:opacity-50">{pending ? "Salvando…" : "Salvar alterações"}</button><button type="button" disabled={pending} onClick={() => setEditing(false)} className="rounded-lg px-4 py-2.5">Cancelar</button></div>
         </form> : <>
-          <p className="text-gray-500 dark:text-gray-400">{labels[activity.type]}</p>
-          {activity.studyItems && <p className="whitespace-pre-wrap break-words"><strong>Itens a estudar: </strong>{activity.studyItems}</p>}
+          <p className="text-gray-500 dark:text-gray-400">{labels[activity.type]}{activity.materiaNome ? ` · ${activity.materiaNome}` : ""}</p>
+          {!!activity.temas?.length && <div><strong>Temas:</strong><ul className="mt-1 flex flex-col gap-0.5">{activity.temas.map((t) => <li key={t}>{t}</li>)}</ul></div>}
+          {activity.studyItems && <p className="whitespace-pre-wrap break-words"><strong>{catalogo ? "Complemento: " : "Itens a estudar: "}</strong>{activity.studyItems}</p>}
           <p className="whitespace-pre-wrap break-words">{activity.description || "Sem mensagem adicional."}</p>
           {!deleting && <div className="flex gap-2"><button disabled={pending} onClick={() => { setEditing(true); setMessage(""); }} className="rounded-lg border border-gray-300 px-4 py-2.5 font-semibold dark:border-gray-600">Editar</button><button disabled={pending} onClick={() => { setDeleting(true); setMessage(""); }} className="rounded-lg px-4 py-2.5 text-red-700 dark:text-red-300">Excluir</button></div>}
         </>}

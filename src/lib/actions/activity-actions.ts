@@ -132,7 +132,7 @@ export async function createActivity(input: CreateActivityInput) {
 /** Edição/exclusão sempre conferem o responsável pelo grupo real do registro. */
 export async function manageActivity(id: string, input: Omit<CreateActivityInput, "classGroupId" | "publicarNoSlack"> | null) {
   try {
-    const activity = await db.activity.findUniqueOrThrow({ where: { id }, select: { classGroupId: true } });
+    const activity = await db.activity.findUniqueOrThrow({ where: { id }, select: { classGroupId: true, materiaSigla: true } });
     await requireTeacherOfClass(activity.classGroupId);
     if (input) {
       const group = await db.classGroup.findUniqueOrThrow({ where: { id: activity.classGroupId }, select: { tipo: true } });
@@ -140,7 +140,7 @@ export async function manageActivity(id: string, input: Omit<CreateActivityInput
       if (!types.includes(input.type) || !input.title.trim() || input.title.length > 160 || (input.description?.length ?? 0) > 5000 || (input.studyItems?.length ?? 0) > 5000 || !(input.dueDate instanceof Date) || !Number.isFinite(input.dueDate.getTime())) {
         return { ok: false, error: "Confira o título, a data e o conteúdo da publicação." };
       }
-      await db.activity.update({ where: { id }, data: { type: input.type, title: input.title.trim(), description: input.description?.trim() || null, studyItems: input.studyItems?.trim() || null, dueDate: input.dueDate } });
+      await db.activity.update({ where: { id }, data: { type: input.type, title: input.title.trim(), description: input.description?.trim() || null, studyItems: input.studyItems?.trim() || null, dueDate: input.dueDate, ...(input.temas ? { temas: temasValidos(activity.materiaSigla, input.temas) } : {}) } });
     } else {
       await db.$transaction(async tx => {
         await tx.activityNotification.deleteMany({ where: { activityId: id } });
