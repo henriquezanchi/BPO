@@ -5,7 +5,7 @@ import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { enviarPush } from "@/lib/push";
 import { postarNoCanal, tokenSlackDaFilial } from "@/lib/slack";
-import { temasValidos } from "@/lib/temas-curriculo";
+import { PROVAS_CONJUNTAS, temasValidos } from "@/lib/temas-curriculo";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 import { revalidatePath } from "next/cache";
 import type { ActivityType } from "@prisma/client";
@@ -38,9 +38,15 @@ export async function createActivity(input: CreateActivityInput) {
   const professor = await requireTeacherOfClass(input.classGroupId);
 
   // Só aceita matéria que a turma está cursando e temas que existem no catálogo dela.
-  const materia = input.materiaSigla
-    ? await db.turmaMateria.findUnique({ where: { classGroupId_materiaSigla: { classGroupId: input.classGroupId, materiaSigla: input.materiaSigla } } })
-    : null;
+  // Prova conjunta (ex.: conclusão do N1): vale se a turma cursa alguma das matérias dela.
+  const conjunta = input.materiaSigla ? PROVAS_CONJUNTAS[input.materiaSigla] : undefined;
+  const materia = conjunta
+    ? (await db.turmaMateria.count({ where: { classGroupId: input.classGroupId, materiaSigla: { in: conjunta.materias.map((m) => m.sigla) } } }))
+      ? { materiaSigla: input.materiaSigla!, materiaNome: conjunta.nome }
+      : null
+    : input.materiaSigla
+      ? await db.turmaMateria.findUnique({ where: { classGroupId_materiaSigla: { classGroupId: input.classGroupId, materiaSigla: input.materiaSigla } } })
+      : null;
   if (input.materiaSigla && !materia) throw new Error("Essa matéria não está em curso nesta turma.");
   const temas = materia ? temasValidos(materia.materiaSigla, input.temas ?? []) : [];
 

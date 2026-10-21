@@ -1,7 +1,12 @@
 "use client";
 
 import { createActivity } from "@/lib/actions/activity-actions";
-import type { CatalogoMateria } from "@/lib/temas-curriculo";
+import {
+  catalogoDaMateria,
+  PROVAS_CONJUNTAS,
+  provaConjuntaDa,
+  type CatalogoMateria,
+} from "@/lib/temas-curriculo";
 import type { ActivityType } from "@prisma/client";
 import { CheckCircle2, ChevronDown, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -26,6 +31,29 @@ export type MateriaDaTurma = {
   nome: string;
   catalogo: CatalogoMateria | null;
 };
+
+/**
+ * Na prova, as matérias de uma prova conjunta (N1: Ética, Sociedade e
+ * Filosofia da História) viram uma opção só — pedido do usuário 2026-10-21.
+ */
+function opcoesDeMateria(
+  materias: MateriaDaTurma[],
+  tipo: ActivityType,
+): MateriaDaTurma[] {
+  if (tipo !== "prova") return materias;
+  const lista: MateriaDaTurma[] = [];
+  for (const m of materias) {
+    const chave = provaConjuntaDa(m.sigla);
+    if (!chave) lista.push(m);
+    else if (!lista.some((x) => x.sigla === chave))
+      lista.push({
+        sigla: chave,
+        nome: PROVAS_CONJUNTAS[chave].rotuloCurto,
+        catalogo: catalogoDaMateria(chave),
+      });
+  }
+  return lista;
+}
 
 // Tipos ligados a conteúdo: escolhem matéria e temas numa lista (pedido do usuário 2026-10-21).
 const TIPOS_COM_CONTEUDO: ActivityType[] = ["prova", "trabalho", "leitura"];
@@ -56,16 +84,24 @@ export function CreateActivityForm({
   const [erro, setErro] = useState<string | null>(null);
   const comConteudo =
     !ehGrupo && TIPOS_COM_CONTEUDO.includes(tipo) && materias.length > 0;
+  const opcoes = opcoesDeMateria(materias, tipo);
   const materia = comConteudo
-    ? materias.find((m) => m.sigla === sigla)
+    ? opcoes.find((m) => m.sigla === sigla)
     : undefined;
 
-  // Título sugerido ("Prova de Psicologia") até o instrutor escrever o dele.
+  // Título sugerido ("Prova de Psicologia", "Prova de conclusão do N1") até o instrutor escrever o dele.
   function sugerirTitulo(novoTipo: ActivityType, novaSigla: string) {
     if (tituloEditado) return;
-    const m = materias.find((x) => x.sigla === novaSigla);
+    const conjunta = PROVAS_CONJUNTAS[novaSigla];
+    const m = opcoesDeMateria(materias, novoTipo).find(
+      (x) => x.sigla === novaSigla,
+    );
     setTitulo(
-      m && NOME_TIPO[novoTipo] ? `${NOME_TIPO[novoTipo]} de ${m.nome}` : "",
+      conjunta && novoTipo === "prova"
+        ? conjunta.tituloSugerido
+        : m && NOME_TIPO[novoTipo]
+          ? `${NOME_TIPO[novoTipo]} de ${m.nome}`
+          : "",
     );
   }
   const [done, setDone] = useState<{
@@ -116,7 +152,15 @@ export function CreateActivityForm({
             onChange={(e) => {
               const novo = e.target.value as ActivityType;
               setTipo(novo);
-              sugerirTitulo(novo, sigla);
+              // A matéria escolhida pode não existir no novo tipo (a conclusão do N1 só existe na prova).
+              const continua = opcoesDeMateria(materias, novo).some(
+                (m) => m.sigla === sigla,
+              );
+              if (!continua) {
+                setSigla("");
+                setTemas([]);
+              }
+              sugerirTitulo(novo, continua ? sigla : "");
             }}
             className="rounded-lg border border-gray-300 p-2 text-sm dark:border-gray-700"
           >
@@ -160,12 +204,17 @@ export function CreateActivityForm({
                 ? "Escolha a matéria"
                 : "Escolha a matéria (opcional)"}
             </option>
-            {materias.map((m) => (
+            {opcoes.map((m) => (
               <option key={m.sigla} value={m.sigla}>
                 {m.nome}
               </option>
             ))}
           </select>
+          {PROVAS_CONJUNTAS[sigla] && tipo === "prova" && (
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              {PROVAS_CONJUNTAS[sigla].cobre}
+            </p>
+          )}
         </div>
       )}
 
@@ -300,7 +349,12 @@ export function SeletorTemas({
 }: {
   rotulo: string;
   bloco?: string;
-  opcoes: { titulo: string; topicos?: string[] }[];
+  opcoes: {
+    titulo: string;
+    topicos?: string[];
+    rotulo?: string;
+    grupo?: string;
+  }[];
   marcados: string[];
   onChange: (temas: string[]) => void;
 }) {
@@ -376,30 +430,38 @@ export function SeletorTemas({
             aria-multiselectable="true"
             className="absolute top-full right-0 left-0 z-20 mt-1 max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"
           >
-            {opcoes.map((t) => {
+            {opcoes.map((t, i) => {
               const marcado = marcados.includes(t.titulo);
+              // Prova conjunta: cabeçalho a cada bloco (Ética, Sociedade, Filosofia da História).
+              const novoGrupo = t.grupo && t.grupo !== opcoes[i - 1]?.grupo;
               return (
-                <label
-                  key={t.titulo}
-                  className={`flex cursor-pointer items-start gap-2 rounded-lg p-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-800 ${marcado ? "bg-na-green-light dark:bg-emerald-950/30" : ""}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={marcado}
-                    onChange={() => alternar(t.titulo)}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-na-green"
-                  />
-                  <span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                      {t.titulo}
-                    </span>
-                    {t.topicos && (
-                      <span className="block text-[11px] text-gray-500 dark:text-gray-400">
-                        {t.topicos.join(" · ")}
+                <div key={t.titulo}>
+                  {novoGrupo && (
+                    <p className="px-2 pt-2 pb-1 text-[10px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                      {t.grupo}
+                    </p>
+                  )}
+                  <label
+                    className={`flex cursor-pointer items-start gap-2 rounded-lg p-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-800 ${marcado ? "bg-na-green-light dark:bg-emerald-950/30" : ""}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={marcado}
+                      onChange={() => alternar(t.titulo)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-na-green"
+                    />
+                    <span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        {t.rotulo ?? t.titulo}
                       </span>
-                    )}
-                  </span>
-                </label>
+                      {t.topicos && (
+                        <span className="block text-[11px] text-gray-500 dark:text-gray-400">
+                          {t.topicos.join(" · ")}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                </div>
               );
             })}
             <div className="sticky bottom-0 flex justify-end border-t border-gray-100 bg-white p-1.5 dark:border-gray-800 dark:bg-gray-900">

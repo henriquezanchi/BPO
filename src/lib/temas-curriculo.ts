@@ -9,7 +9,8 @@
  * lista de Psicologia 1 a 13 e a apostila da ISO (sumário) enviadas pelo
  * usuário. As demais matérias entram quando o usuário mandar as listas.
  */
-export type Tema = { titulo: string; topicos?: string[] };
+/** `titulo` é o que fica gravado; `rotulo`/`grupo` só organizam a lista (prova conjunta). */
+export type Tema = { titulo: string; topicos?: string[]; rotulo?: string; grupo?: string };
 export type CatalogoMateria = { curso: string; bloco?: string; temas: Tema[] };
 
 export const TEMAS_POR_MATERIA: Record<string, CatalogoMateria> = {
@@ -90,8 +91,44 @@ export const TEMAS_POR_MATERIA: Record<string, CatalogoMateria> = {
   },
 };
 
+/**
+ * Provas que cobrem várias matérias de uma vez (pedido do usuário 2026-10-21:
+ * "no N1 só tem uma prova, que é a de conclusão do nível, com Ética,
+ * Sociedade e Filosofia da História"). A chave vira a "matéria" da atividade
+ * (Activity.materiaSigla = "N1") e os temas dos blocos aparecem juntos,
+ * separados por bloco, gravados com o nome do bloco na frente.
+ */
+export const PROVAS_CONJUNTAS: Record<string, { nome: string; rotuloCurto: string; cobre: string; tituloSugerido: string; materias: { sigla: string; rotulo: string }[] }> = {
+  N1: {
+    nome: "Conclusão do N1 (Ética, Sociedade e Filosofia da História)",
+    rotuloCurto: "Conclusão do N1",
+    cobre: "Prova única do nível: cobre Ética, Sociedade e Filosofia da História.",
+    tituloSugerido: "Prova de conclusão do N1",
+    materias: [
+      { sigla: "NET", rotulo: "Ética" },
+      { sigla: "NSC", rotulo: "Sociedade" },
+      { sigla: "NFH", rotulo: "Filosofia da História" },
+    ],
+  },
+};
+
+/** Prova conjunta de que a matéria faz parte (ex.: NET → "N1"), se houver. */
+export function provaConjuntaDa(sigla: string) {
+  return Object.keys(PROVAS_CONJUNTAS).find((k) => PROVAS_CONJUNTAS[k].materias.some((m) => m.sigla === sigla)) ?? null;
+}
+
 export function catalogoDaMateria(sigla: string | null | undefined): CatalogoMateria | null {
-  return (sigla && TEMAS_POR_MATERIA[sigla.toUpperCase()]) || null;
+  if (!sigla) return null;
+  const conjunta = PROVAS_CONJUNTAS[sigla.toUpperCase()];
+  if (conjunta) {
+    return {
+      curso: conjunta.nome,
+      temas: conjunta.materias.flatMap((m) =>
+        (TEMAS_POR_MATERIA[m.sigla]?.temas ?? []).map((t) => ({ ...t, titulo: `${m.rotulo} · ${t.titulo}`, rotulo: t.titulo, grupo: m.rotulo })),
+      ),
+    };
+  }
+  return TEMAS_POR_MATERIA[sigla.toUpperCase()] ?? null;
 }
 
 /** Mantém só temas que existem no catálogo da matéria (na ordem do catálogo). */

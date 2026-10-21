@@ -7,7 +7,7 @@ import { linkDoCanal, tokenSlackDaFilial } from "@/lib/slack";
 import { PublishedActivities } from "@/components/member/professor/published-activities";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
+import { catalogoDaMateria } from "@/lib/temas-curriculo";
 import { getTeacherClassDetail } from "@/lib/teacher-data";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -33,7 +33,7 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
     : (await db.turmaMateria.findMany({ where: { classGroupId: turma.id }, orderBy: { materiaNome: "asc" }, select: { materiaSigla: true, materiaNome: true } })).map((m) => ({
         sigla: m.materiaSigla,
         nome: m.materiaNome,
-        catalogo: TEMAS_POR_MATERIA[m.materiaSigla] ?? null,
+        catalogo: catalogoDaMateria(m.materiaSigla),
       }));
 
   return (
