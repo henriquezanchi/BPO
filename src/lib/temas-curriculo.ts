@@ -6,8 +6,8 @@
  *
  * As chaves são as siglas de matéria do Mercúrio (TurmaMateria.materiaSigla).
  * Fontes: "00 tema do curso.pdf" (N1, Filosofia para Viver, 3 blocos) e a
- * lista de Psicologia 1 a 13 enviadas pelo usuário. ISO e as demais
- * matérias entram quando o usuário mandar as listas.
+ * lista de Psicologia 1 a 13 e a apostila da ISO (sumário) enviadas pelo
+ * usuário. As demais matérias entram quando o usuário mandar as listas.
  */
 export type Tema = { titulo: string; topicos?: string[] };
 export type CatalogoMateria = { curso: string; bloco?: string; temas: Tema[] };
@@ -47,6 +47,27 @@ export const TEMAS_POR_MATERIA: Record<string, CatalogoMateria> = {
       { titulo: "3. História e mitologia", topicos: ["Realidade psicológica dos mitos", "Propriedade dos símbolos"] },
       { titulo: "4. Os ciclos da história", topicos: ["O movimento da humanidade", "O ciclo da história"] },
       { titulo: "5. Liberdade e destino", topicos: ["Teoria histórica de Cícero", "Os arquétipos fixos e a evolução da humanidade", "Nosso passado e nosso futuro"] },
+    ],
+  },
+  // Apostila "Introdução à Sabedoria do Oriente" (revisão 2019), 15 temas do sumário.
+  IS1: {
+    curso: "Introdução à Sabedoria do Oriente (ISO)",
+    temas: [
+      { titulo: "Tema I: O Enigma de Deus", topicos: ["A Filosofia Natural ou Esotérica", "Os três princípios", "Constituição setenária do homem", "Corpos e subcorpos"] },
+      { titulo: "Tema II: Sistema Solar", topicos: ["O Triplo Logos Solar", "Sistema, Cadeia, Ronda, Globo e Humanidade"] },
+      { titulo: "Tema III: Antropogênese Oculta", topicos: ["Da Primeira à Sétima Humanidade"] },
+      { titulo: "Tema IV: Dharma e Karma", topicos: ["Categorias e modalidades kármicas", "Livre-arbítrio", "Reencarnação"] },
+      { titulo: "Tema V: Conceito Geral de Religião e de Religiões", topicos: ["Religiões naturais e reveladas", "O segundo princípio no religioso"] },
+      { titulo: "Tema VI: Conceito Esotérico de Religião", topicos: ["Manifestação sétupla do Triplo Logos", "Os três tipos de avatares", "Ronda de avatares"] },
+      { titulo: "Tema VII: Particularidades de cada Mestre", topicos: ["Vyasa, Hermes Trimegisto, Zoroastro, Orfeu e Buda", "Jesus Cristo e Maomé"] },
+      { titulo: "Tema VIII: A Filosofia Atemporal e suas Expressões Limitadas", topicos: ["Sociedades de estudos esotéricos", "A Grande Fraternidade Branca"] },
+      { titulo: "Tema IX: O Neoplatonismo", topicos: ["A Sociedade Eclética de Alexandria", "Giordano Bruno, Rosacrucismo, Maçonaria, Espiritismo", "Sociedade Teosófica"] },
+      { titulo: "Tema X: O Uno sem Segundo, o Uno Ilusório", topicos: ["Aritmética e geometria", "Gênese das formas"] },
+      { titulo: "Tema XI: Fenômenos Físicos, Químicos e Alquímicos", topicos: ["Alquimia", "Átomo, molécula e valência", "Astrologia", "Yoga"] },
+      { titulo: "Tema XII: Biologia", topicos: ["Histologia", "Anatomia esotérica e sistemas orgânicos", "Os éteres"] },
+      { titulo: "Tema XIII: Zoologia", topicos: ["Linha dévica e linha humana", "Alma grupal"] },
+      { titulo: "Tema XIV: Botânica" },
+      { titulo: "Tema XV: O Futuro" },
     ],
   },
   PSI: {
