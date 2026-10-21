@@ -10,7 +10,7 @@
       @media (prefers-color-scheme: dark) { :root { --fundo: #030712; --texto: #f3f4f6; --suave: #9ca3af; --verde: #34d399; --no-verde: #022c22; } }
       body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--fundo); color: var(--texto); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
       main { max-width: 320px; padding: 24px; text-align: center; }
-      .marca { width: 56px; height: 56px; margin: 0 auto 20px; border-radius: 14px; background: #086357; color: #ffca00; display: grid; place-items: center; font-weight: 700; font-size: 22px; }
+      .marca { display: block; width: 96px; height: 96px; margin: 0 auto 12px; border-radius: 20px; }
       h1 { font-size: 18px; margin: 0 0 8px; }
       p { font-size: 14px; line-height: 1.5; color: var(--suave); margin: 0 0 20px; }
       button { border: 0; border-radius: 12px; padding: 12px 20px; background: var(--verde); color: var(--no-verde); font-weight: 600; font-size: 14px; }
@@ -18,7 +18,7 @@
   </head>
   <body>
     <main>
-      <div class="marca" aria-hidden="true">NA</div>
+      <img class="marca" src="/pwa-icon-192.png" alt="Nova Acrópole" />
       <h1>Sem conexão com a internet</h1>
       <p>O Portal precisa de internet para mostrar seus dados atualizados. Confira a conexão e tente de novo.</p>
       <button onclick="location.reload()">Tentar de novo</button>

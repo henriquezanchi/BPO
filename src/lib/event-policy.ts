@@ -67,6 +67,16 @@ export function eventScopeWhere(school: { id: string; uf: string | null }): Pris
   };
 }
 
+/** Mesma regra de eventScopeWhere, para um evento já carregado (usado no aviso push de evento novo). */
+export function eventoAlcancaFilial(evento: { schoolId: string | null; abertoA: string | null; abertoValores: string[] }, school: { id: string; uf: string | null }) {
+  if (evento.schoolId === school.id || evento.abertoA === "todas") return true;
+  const regional = regionalDaUf(school.uf);
+  if (evento.abertoA === "filiais") return evento.abertoValores.includes(school.id);
+  if (evento.abertoA === "regionais") return !!regional && evento.abertoValores.includes(regional);
+  if (evento.abertoA === "estados") return !!school.uf && evento.abertoValores.includes(school.uf);
+  return false;
+}
+
 function validarAbertura(abertoA: string | undefined, valores: string[] | undefined) {
   const a = (abertoA ?? "filial") as Abertura;
   if (!Object.hasOwn(ABERTURAS, a)) throw Error("Escolha para quem as inscrições ficam abertas.");

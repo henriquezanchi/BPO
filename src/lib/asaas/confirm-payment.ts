@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { notificarErroSuporte } from "@/lib/error-notify";
 import { fortunaCreditarSaldo, fortunaGetClient } from "@/lib/fortuna/client";
 import { enqueueMercurioContributionLaunch } from "@/lib/mercurio/sync-queue";
+import { avisarSemEsperar } from "@/lib/push";
 
 /**
  * Marca uma cobrança como paga e dispara o resto (status mensal + fila de
@@ -32,6 +33,15 @@ export async function confirmarPagamento(chargeId: string): Promise<void> {
   // tanto pelo polling do aluno quanto pelo webhook do Asaas; nenhum dos
   // dois deveria esperar uma sessão de navegador inteira pra responder.
   await enqueueMercurioContributionLaunch(charge.memberId, charge.id);
+
+  // Aviso push (2026-10-21): confirmação também quando o pagamento cai depois, pelo webhook.
+  const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  await avisarSemEsperar([charge.memberId], {
+    titulo: "Pagamento confirmado",
+    corpo: `Recebemos sua contribuição de ${MESES[charge.referenceMonth - 1]}/${charge.referenceYear}. Obrigado!`,
+    url: "/portal",
+    etiqueta: `pagamento-${charge.id}`,
+  });
 
   // Recarga Fortuna combinada na mesma cobrança (ver payment-actions.ts) —
   // mesmo padrão best-effort do fluxo dedicado em fortuna-topup-actions.ts:

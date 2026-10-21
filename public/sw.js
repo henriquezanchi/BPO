@@ -5,11 +5,11 @@
  * contribuição e cadastro, que precisam vir sempre atualizados do servidor.
  * Sem conexão, a navegação cai numa página simples de "sem internet".
  */
-const CACHE = "portal-na-offline-v1";
+const CACHE = "portal-na-offline-v2";
 const OFFLINE = "/offline.html";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.add(OFFLINE)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE, "/pwa-icon-192.png"])).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
@@ -22,8 +22,12 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.mode !== "navigate") return;
-  event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE)));
+  if (event.request.mode === "navigate") {
+    event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE)));
+  } else if (new URL(event.request.url).pathname === "/pwa-icon-192.png") {
+    // Símbolo da página offline.
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+  }
 });
 
 self.addEventListener("push", (event) => {
@@ -37,8 +41,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(titulo, {
       body: dados.body || "",
-      icon: "/pwa-icon-192",
-      badge: "/pwa-badge",
+      icon: "/pwa-icon-192.png",
+      badge: "/pwa-badge.png",
       tag: dados.tag || undefined,
       renotify: !!dados.tag,
       data: { url: dados.url || "/portal" },

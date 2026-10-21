@@ -16,17 +16,18 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f4f6f8",
+    background_color: "#ffffff",
     theme_color: "#086357",
     icons: [
-      { src: "/pwa-icon-192", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/pwa-icon-512", sizes: "512x512", type: "image/png", purpose: "any" },
-      // O ícone já é um quadrado cheio com a sigla no centro: serve também como "maskable" (Android recorta em círculo/gota).
-      { src: "/pwa-icon-512", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      // Símbolo oficial (logomarca sem o texto) sobre fundo branco — pedido do usuário 2026-10-21.
+      { src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      // Versão com mais margem: o Android recorta o ícone em círculo/gota.
+      { src: "/pwa-icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
-      { name: "Meus eventos", url: "/eventos", icons: [{ src: "/pwa-icon-192", sizes: "192x192" }] },
-      { name: "Área do Voluntário", url: "/voluntario", icons: [{ src: "/pwa-icon-192", sizes: "192x192" }] },
+      { name: "Meus eventos", url: "/eventos", icons: [{ src: "/pwa-icon-192.png", sizes: "192x192" }] },
+      { name: "Área do Voluntário", url: "/voluntario", icons: [{ src: "/pwa-icon-192.png", sizes: "192x192" }] },
     ],
   };
 }

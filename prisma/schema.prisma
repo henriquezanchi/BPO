@@ -1709,3 +1709,11 @@ model PushSubscription {
   ultimoEnvioEm DateTime?
   @@index([memberId])
 }
+
+// Avisos agendados já enviados (2026-10-21): evita repetir o mesmo aviso
+// push quando a rotina de 5 em 5 minutos roda de novo. A chave descreve o
+// aviso, ex.: "evento:<id>", "pedido-cadastro:<id>", "vencimento:<memberId>:2026-10:d3".
+model PushEnviado {
+  chave    String   @id
+  criadoEm DateTime @default(now())
+}

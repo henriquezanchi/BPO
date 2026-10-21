@@ -9,7 +9,7 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/lembretes-grupos",
+      "path": "/api/cron/notificacoes",
       "schedule": "*/5 * * * *"
     }
   ],
