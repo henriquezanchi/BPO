@@ -55,6 +55,9 @@ export async function GET(req: Request) {
         : "Não foi possível concluir o login da Nova Acrópole.",
     );
   }
+  if (pessoa.email && !pessoa.emailVerificado) {
+    return erro(url.origin, "Confirme o seu e-mail na conta Nova Acrópole (veja a mensagem que eles enviaram) e tente de novo.");
+  }
   if (!pessoa.email) {
     console.error(
       "Login Nova Acrópole sem e-mail; campos recebidos:",
@@ -62,7 +65,7 @@ export async function GET(req: Request) {
     );
     return erro(
       url.origin,
-      "Sua conta Nova Acrópole não informou o e-mail. Entre com e-mail e senha do Portal.",
+      "Sua conta Nova Acrópole não informou o e-mail. Fale com a secretaria da sua escola.",
     );
   }
 
@@ -84,8 +87,8 @@ export async function GET(req: Request) {
       return erro(
         url.origin,
         membros.length
-          ? "Mais de um cadastro usa este e-mail. Entre com e-mail e senha do Portal ou fale com a secretaria."
-          : `Não encontramos um cadastro do Portal com o e-mail ${pessoa.email}. Entre com e-mail e senha do Portal ou fale com a secretaria.`,
+          ? "Mais de um cadastro da escola usa este e-mail. Fale com a secretaria para separar os cadastros."
+          : `Não encontramos um cadastro ativo na escola com o e-mail ${pessoa.email}. Entre com o e-mail cadastrado na sua escola ou fale com a secretaria.`,
       );
     }
     const criado = await supabaseAdmin.auth.admin.createUser({

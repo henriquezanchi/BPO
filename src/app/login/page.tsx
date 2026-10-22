@@ -8,5 +8,8 @@ export default async function LoginPage(props: PageProps<"/login">) {
 
   const erro = typeof searchParams.erro === "string" ? searchParams.erro : null;
 
-  return <LoginClient next={next} erroInicial={erro} />;
+  // Só o login unificado (pedido do usuário 2026-10-22). E-mail e senha ficam escondidos em ?modo=senha, só para emergência.
+  const comSenha = searchParams.modo === "senha";
+
+  return <LoginClient next={next} erroInicial={erro} comSenha={comSenha} />;
 }

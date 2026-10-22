@@ -129,7 +129,8 @@ export async function trocarCodigo(
   return {
     sub: String(id.sub),
     email,
-    emailVerificado: info.email_verified !== false,
+    // Só e-mail confirmado no Keycloak: o "Cadastre-se" de lá não pode servir para entrar como outra pessoa.
+    emailVerificado: info.email_verified === true,
     nome: typeof info.name === "string" ? info.name : null,
     // Só os nomes dos campos (sem valores), para saber o que o Keycloak manda se o e-mail não bastar.
     claims: Object.keys(info),

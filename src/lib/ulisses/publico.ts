@@ -21,6 +21,12 @@ const UM_DIA = 24 * 60 * 60 * 1000;
 
 type ItemCatalogo = { eventoId: number };
 
+/** "[CÓPIA] ...", "Cópia de ...", "(copia)": evento duplicado no Ulisses e não renomeado. */
+export function ehCopia(titulo: string) {
+  const t = titulo.normalize("NFC").trim();
+  return /^[[(]?\s*c[oó]pia(?=[\s\]):\-–]|$)/i.test(t) || /[[(]\s*c[oó]pia\s*[\])]/i.test(t) || /[-–]\s*c[oó]pia\s*$/i.test(t);
+}
+
 async function pedir<T>(caminho: string): Promise<T> {
   // Passa pela ponte na Cloudflare quando configurada (o Cloudflare deles desafia a Vercel — ver lib/ponte.ts).
   const chamar = () =>
@@ -79,8 +85,15 @@ export async function sincronizarEventosUlisses(): Promise<ResultadoUlisses> {
           }
           detalhes.set(id, detalhe);
         }
+        const ocorrencias = ulissesOccurrences(detalhe, filialId, escola.id);
+        // Evento duplicado no Ulisses e esquecido com "[CÓPIA]" no título não entra (pedido do usuário 2026-10-22);
+        // fora de "vistos", os que já tinham sido importados são arquivados logo abaixo.
+        if (ocorrencias.some((o) => ehCopia(o.title))) {
+          linha.ignorados++;
+          continue;
+        }
         linha.eventos++;
-        for (const ocorrencia of ulissesOccurrences(detalhe, filialId, escola.id)) {
+        for (const ocorrencia of ocorrencias) {
           if (ocorrencia.startsAt.getTime() < Date.now() - UM_DIA) continue;
           const { externalUid, ...dados } = ocorrencia;
           vistos.add(externalUid);

@@ -80,7 +80,7 @@ export interface Dictionary {
 const pt: Dictionary = {
   login: {
     titulo: "Entrar no Portal do Aluno",
-    subtitulo: "Use o e-mail cadastrado no Mercúrio.",
+    subtitulo: "Entre com a sua conta Nova Acrópole, usando o e-mail cadastrado na sua escola.",
     email: "E-mail",
     senha: "Senha",
     senhaDica: "Senha inicial: os 6 primeiros números do seu CPF.",
@@ -148,7 +148,7 @@ const pt: Dictionary = {
 const en: Dictionary = {
   login: {
     titulo: "Log in to the Student Portal",
-    subtitulo: "Use the email on file with your branch.",
+    subtitulo: "Sign in with your Nova Acrópole account, using the email on file with your branch.",
     email: "Email",
     senha: "Password",
     // Dica genérica (não cita CPF) — de propósito: o toggle de idioma do
