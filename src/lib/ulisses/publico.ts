@@ -30,9 +30,9 @@ async function pedir<T>(caminho: string): Promise<T> {
       signal: AbortSignal.timeout(20_000),
       cache: "no-store",
     });
-  // O desafio é intermitente (22/10): mais duas tentativas espaçadas antes de desistir.
+  // O desafio é intermitente (22/10): mais uma tentativa antes de desistir (a ponte já tenta 3 vezes).
   let r = await chamar();
-  for (let t = 1; t <= 2 && r.status === 403 && r.headers.get("cf-mitigated"); t++) {
+  for (let t = 1; t <= 1 && r.status === 403 && r.headers.get("cf-mitigated"); t++) {
     await new Promise((ok) => setTimeout(ok, 1500 * t));
     r = await chamar();
   }
