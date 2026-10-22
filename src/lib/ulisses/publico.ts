@@ -23,15 +23,22 @@ type ItemCatalogo = { eventoId: number };
 
 async function pedir<T>(caminho: string): Promise<T> {
   // Passa pela ponte na Cloudflare quando configurada (o Cloudflare deles desafia a Vercel — ver lib/ponte.ts).
-  const r = await fetchAcropole(`${API}${caminho}`, {
-    // Cabeçalho combinado com o Célio para a exceção no Cloudflare (mantido para o acesso direto).
-    headers: { accept: "application/json", "user-agent": "PortalNovaAcropole/1.0 (eventos publicos)", "x-portal-na": "bypass" },
-    signal: AbortSignal.timeout(20_000),
-    cache: "no-store",
-  });
+  const chamar = () =>
+    fetchAcropole(`${API}${caminho}`, {
+      // Cabeçalho combinado com o Célio para a exceção no Cloudflare (mantido para o acesso direto).
+      headers: { accept: "application/json", "user-agent": "PortalNovaAcropole/1.0 (eventos publicos)", "x-portal-na": "bypass" },
+      signal: AbortSignal.timeout(20_000),
+      cache: "no-store",
+    });
+  // O desafio é intermitente (22/10): mais duas tentativas espaçadas antes de desistir.
+  let r = await chamar();
+  for (let t = 1; t <= 2 && r.status === 403 && r.headers.get("cf-mitigated"); t++) {
+    await new Promise((ok) => setTimeout(ok, 1500 * t));
+    r = await chamar();
+  }
   if (!r.ok) {
     // Ray ID e tipo de mitigação ajudam a Acrópole Brasil a achar a regra do Cloudflare que bloqueou.
-    const ray = r.headers.get("cf-ray");
+    const ray = r.headers.get("x-origem-cf-ray") ?? r.headers.get("cf-ray");
     const mitigado = r.headers.get("cf-mitigated");
     const detalhe = [ray && `Ray ID ${ray}`, mitigado && `cf-mitigated: ${mitigado}`, r.headers.get("server") && `server: ${r.headers.get("server")}`].filter(Boolean).join(", ");
     throw Object.assign(new Error(`GET ${caminho} -> ${r.status}${detalhe ? ` (${detalhe})` : ""}`), { status: r.status, detalhe });

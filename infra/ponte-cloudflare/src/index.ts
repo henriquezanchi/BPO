@@ -65,13 +65,17 @@ export default {
       if (v) cabecalhos.set(h, v);
     }
     cabecalhos.set("user-agent", UA);
-    const r = await fetch(alvo.toString(), {
-      method: req.method,
-      headers: cabecalhos,
-      body: ["GET", "HEAD"].includes(req.method) ? undefined : await req.arrayBuffer(),
-      redirect: "manual",
-    });
+    // O desafio do Cloudflare deles é intermitente (22/10: em GRU ~metade das chamadas): GET tenta até 3 vezes.
+    const corpo = ["GET", "HEAD"].includes(req.method) ? undefined : await req.arrayBuffer();
+    let r = await fetch(alvo.toString(), { method: req.method, headers: cabecalhos, body: corpo, redirect: "manual" });
+    for (let tentativa = 1; tentativa < 3 && req.method === "GET" && r.status === 403 && r.headers.get("cf-mitigated"); tentativa++) {
+      await new Promise((ok) => setTimeout(ok, 400 * tentativa));
+      r = await fetch(alvo.toString(), { method: req.method, headers: cabecalhos, redirect: "manual" });
+    }
     const resposta = new Headers();
+    // Ray ID da resposta do sistema de origem (o cf-ray desta resposta é o da própria ponte).
+    const rayOrigem = r.headers.get("cf-ray");
+    if (rayOrigem) resposta.set("x-origem-cf-ray", rayOrigem);
     for (const h of ["content-type", "set-cookie", "location", "cf-mitigated"]) {
       const v = r.headers.get(h);
       if (v) resposta.set(h, v);
