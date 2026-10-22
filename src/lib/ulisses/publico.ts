@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { ulissesOccurrences, type UlissesEvent } from "@/lib/ulisses/events";
+import { fetchAcropole } from "@/lib/ponte";
 
 /**
  * Importação dos eventos PÚBLICOS do Ulisses (pedido do usuário 2026-10-19:
@@ -21,9 +22,9 @@ const UM_DIA = 24 * 60 * 60 * 1000;
 type ItemCatalogo = { eventoId: number };
 
 async function pedir<T>(caminho: string): Promise<T> {
-  const r = await fetch(`${API}${caminho}`, {
-    // Cabeçalho combinado com o Célio para a exceção no Cloudflare. Testado em 19/10/2026 com
-    // repetições: maiúsculas ou minúsculas não mudam o resultado (bloqueio intermitente do lado deles).
+  // Passa pela ponte na Cloudflare quando configurada (o Cloudflare deles desafia a Vercel — ver lib/ponte.ts).
+  const r = await fetchAcropole(`${API}${caminho}`, {
+    // Cabeçalho combinado com o Célio para a exceção no Cloudflare (mantido para o acesso direto).
     headers: { accept: "application/json", "user-agent": "PortalNovaAcropole/1.0 (eventos publicos)", "x-portal-na": "bypass" },
     signal: AbortSignal.timeout(20_000),
     cache: "no-store",

@@ -54,3 +54,8 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Ponte Cloudflare (Wrangler)
+infra/ponte-cloudflare/node_modules
+infra/ponte-cloudflare/.wrangler
+infra/ponte-cloudflare/.dev.vars

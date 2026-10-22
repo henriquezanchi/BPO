@@ -3,5 +3,5 @@
 # Segredo:  npx wrangler secret put PONTE_CHAVE
 name = "ponte-portal-na"
 main = "src/index.ts"
-compatibility_date = "2026-10-01"
+compatibility_date = "2026-10-22"
 workers_dev = true
