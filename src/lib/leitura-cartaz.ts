@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 
 /**
@@ -16,7 +16,8 @@ export const LeituraCartaz = z.object({
   data: z.boolean().describe("O dia do evento aparece no cartaz (ex.: 9 de novembro, 09/11, sábado 25)."),
   horario: z.boolean().describe("O horário de início aparece (ex.: 20h, 19:30)."),
   local: z.boolean().describe("O local aparece (endereço, nome da sede ou bairro, ou 'online')."),
-  inscricao: z.boolean().describe("Há como se inscrever: link, site, QR code, telefone ou WhatsApp para inscrição."),
+  // Telefone ou WhatsApp "para informações" não conta: quem recebe o post precisa do link de inscrição (22/10).
+  inscricao: z.boolean().describe("Há um link, endereço de site ou QR code para a inscrição. Telefone ou WhatsApp não contam."),
 });
 export type LeituraCartaz = z.infer<typeof LeituraCartaz>;
 
@@ -27,13 +28,11 @@ export function leituraConfigurada() {
 }
 
 async function lerUmCartaz(cliente: Anthropic, url: string, titulo: string): Promise<LeituraCartaz | null> {
-  const resposta = await cliente.beta.messages.parse({
-    model: "claude-opus-5-5",
+  // Modelo mais barato a pedido do usuário (2026-10-22): Claude Haiku 5.5, esforço baixo (leitura simples).
+  const resposta = await cliente.messages.parse({
+    model: "claude-haiku-5-5",
     max_tokens: 4000,
-    // Leitura simples: esforço baixo. Fallback do servidor caso a leitura seja recusada.
-    output_config: { effort: "low", format: betaZodOutputFormat(LeituraCartaz) },
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    output_config: { effort: "low", format: zodOutputFormat(LeituraCartaz) },
     messages: [
       {
         role: "user",
@@ -41,7 +40,7 @@ async function lerUmCartaz(cliente: Anthropic, url: string, titulo: string): Pro
           { type: "image", source: { type: "url", url } },
           {
             type: "text",
-            text: `Este é o cartaz de divulgação do evento "${titulo}". Diga apenas o que está escrito ou visível no cartaz: se mostra a data, o horário, o local e alguma forma de inscrição. Responda false quando a informação não estiver no cartaz.`,
+            text: `Este é o cartaz de divulgação do evento "${titulo}". Diga apenas o que está escrito ou visível no cartaz: se mostra a data, o horário, o local e um link, site ou QR code de inscrição (telefone ou WhatsApp não contam). Responda false quando a informação não estiver no cartaz.`,
           },
         ],
       },
