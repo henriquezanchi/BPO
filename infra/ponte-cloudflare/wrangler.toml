@@ -1,0 +1,7 @@
+# Ponte do Portal para *.acropolebrasil.com.br (ver src/index.ts).
+# Publicar: npx wrangler deploy (dentro desta pasta)
+# Segredo:  npx wrangler secret put PONTE_CHAVE
+name = "ponte-portal-na"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
