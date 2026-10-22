@@ -77,7 +77,7 @@ Verificações: testes automatizados de capacidade, prazo, equipe, arquivo e aut
 
 ## Compartilhar eventos públicos
 
-Só eventos do Ulisses (`source="ulisses"`), publicados, com link de inscrição e ainda por acontecer. Eventos internos da filial não aparecem para compartilhar: o público é restrito e a inscrição exige login no Portal.
+O painel de canais e artes atende aos eventos do Ulisses (`source="ulisses"`), publicados, com link de inscrição e ainda por acontecer. O atalho do WhatsApp nos cartões também permite compartilhar eventos internos: leva descrição completa, data, local, valor/gratuidade e orientações disponíveis. O endereço `/portal?evento=<id>` abre a Agenda com o evento em destaque, preserva o destino após o login e respeita o público permitido na agenda do membro. Um evento indisponível exibe aviso, sem buscar dados fora dessa agenda.
 
 - WhatsApp, Telegram, Facebook e e-mail abrem o aplicativo (ou a versão web no computador) com o texto já montado no formato de cada canal, terminando no link oficial de inscrição.
 - Instagram não aceita postagem por link. No celular, o botão abre a folha de compartilhamento já com a arte no tamanho certo (story 1080×1920 ou feed 1080×1350), e a pessoa escolhe o Instagram. A legenda (feed) ou o link (story, para o adesivo "Link") vai copiado. No computador, a arte é baixada e o site do Instagram abre.

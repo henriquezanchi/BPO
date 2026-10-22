@@ -1,10 +1,9 @@
 /**
  * Compartilhamento de eventos públicos (pedido do usuário 2026-10-19).
  *
- * Só eventos do Ulisses: são os eventos abertos ao público, com página de
- * inscrição própria no site da Nova Acrópole. Eventos internos da filial
- * (source "manual") têm público restrito e inscrição dentro do Portal, que
- * exige login — não faz sentido divulgá-los fora.
+ * Eventos do Ulisses usam a página pública de inscrição da Nova Acrópole.
+ * Eventos internos da filial têm convite com descrição e link direto para
+ * a Agenda do Portal; continuam restritos à conta e ao público do evento.
  *
  * Funções puras (sem DOM): o texto de cada canal e os links de abertura.
  */
@@ -27,6 +26,7 @@ export type EventoCompartilhavel = {
 export type Canal = "whatsapp" | "instagram" | "facebook" | "telegram" | "email" | "link";
 
 type ItemDeAgenda = {
+  id: string;
   title: string;
   date: Date;
   allDay: boolean;
@@ -38,6 +38,9 @@ type ItemDeAgenda = {
   posterUrl?: string | null;
   postagemOficial?: string | null;
   cartazLeitura?: EventoCompartilhavel["cartazLeitura"];
+  price?: number;
+  participantInstructions?: string | null;
+  lancheCompartilhado?: boolean;
 };
 
 /** Evento público do Ulisses, publicado, com link de inscrição e ainda por acontecer. */
@@ -119,17 +122,31 @@ export function horaCurta(data: Date): string {
  * do Ulisses usa o texto completo com o link de inscrição; evento interno manda os dados
  * e o endereço do Portal, onde a inscrição é feita (exige login).
  */
+export function urlDoEventoNoPortal(id: string, urlPortal: string): string {
+  const url = new URL(urlPortal);
+  url.searchParams.set("evento", id);
+  return url.toString();
+}
+
 export function linkWhatsAppDoEvento(item: ItemDeAgenda, urlPortal: string): string {
   const publico = eventoCompartilhavel(item);
   if (publico) return linkDoCanal(publico, "whatsapp");
   const linhas = [
-    "Saiu evento novo no Portal da Nova Acrópole:",
+    "Vamos participar juntos? Compartilhando este encontro da Nova Acrópole:",
     "",
-    `*${item.title}*`,
+    `*${semEmoji(item.title).replace(/\*/g, "").trim()}*`,
     quandoTexto(item),
     item.location ?? null,
     "",
-    `Dá uma olhada e se inscreve por lá: ${urlPortal}`,
+    item.description?.trim() || null,
+    "",
+    item.price === 0 ? "Entrada gratuita." : item.price !== undefined && item.price > 0
+      ? `Valor: ${item.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.` : null,
+    item.lancheCompartilhado ? "Lanche compartilhado: leve algo para partilhar." : null,
+    item.participantInstructions?.trim() ? `Orientações: ${item.participantInstructions.trim()}` : null,
+    "",
+    "Veja os detalhes e confirme sua participação no Portal (entre com sua conta Nova Acrópole):",
+    urlDoEventoNoPortal(item.id, urlPortal),
   ];
   return `https://wa.me/?text=${encodeURIComponent(semEmoji(linhas.filter((l) => l !== null).join("\n")))}`;
 }

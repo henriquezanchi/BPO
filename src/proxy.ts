@@ -36,7 +36,7 @@ export async function proxy(request: NextRequest) {
   const isRotaProtegida = ROTAS_PROTEGIDAS.some((rota) => request.nextUrl.pathname.startsWith(rota));
   if (isRotaProtegida && !user) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
 

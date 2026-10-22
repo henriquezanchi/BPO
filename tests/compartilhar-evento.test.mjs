@@ -1,7 +1,7 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {eventoCompartilhavel,linkDoCanal,textoParaCanal,horaCurta,nomeDoArquivo} from '../src/lib/compartilhar-evento.ts';
 const agora=new Date('2026-10-19T12:00:00Z');
-const base={title:'Palestra: Filosofia para viver',date:new Date('2026-10-25T22:00:00Z'),allDay:false,location:'Nova Acrópole Barra',description:'Uma noite sobre os clássicos.',source:'ulisses',status:'publicado',registrationUrl:'https://inscricao.acropolebrasil.com.br/?eventoId=9'};
+const base={id:'evento-9',title:'Palestra: Filosofia para viver',date:new Date('2026-10-25T22:00:00Z'),allDay:false,location:'Nova Acrópole Barra',description:'Uma noite sobre os clássicos.',source:'ulisses',status:'publicado',registrationUrl:'https://inscricao.acropolebrasil.com.br/?eventoId=9'};
 test('só compartilha evento público do Ulisses, publicado, com link e ainda por acontecer',()=>{
  assert.ok(eventoCompartilhavel(base,agora));
  assert.equal(eventoCompartilhavel({...base,source:'manual'},agora),null);

@@ -84,14 +84,14 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
   return { vencimento, diasRestantes, jaResolvidoEsseMes };
 }
 
-export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }) {
+export function MemberPortalClient({ dashboard, eventoId }: { dashboard: MemberDashboard; eventoId?: string }) {
   const { member, availableToAdd } = dashboard;
   // Eventos públicos do Ulisses lidos pelo navegador (ver lib/ulisses/navegador.ts).
   const agendaItems = useAgendaComUlisses(dashboard.agendaItems, member.school.ulissesFilialId, member.schoolId);
-  const [modal, setModal] = useState<ModalKey | null>(null);
+  const [modal, setModal] = useState<ModalKey | null>(eventoId ? "agenda" : null);
   const [fortunaBalances, setFortunaBalances] = useState(dashboard.fortunaBalances);
   const [fortunaCarregando, setFortunaCarregando] = useState(true);
-  const [tourVisivel, setTourVisivel] = useState(!member.tourCompletedAt);
+  const [tourVisivel, setTourVisivel] = useState(!eventoId && !member.tourCompletedAt);
 
   function carregarSaldoFortuna() {
     getFortunaBalancesForMember(member.id)
@@ -371,7 +371,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
             />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
-          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} emBreve={emBreve} />}
+          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} emBreve={emBreve} eventoId={eventoId} />}
           {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} mostrarBiblioteca={dashboard.bibliotecaLiberada} />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}

@@ -566,7 +566,11 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
   );
 }
 
-export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean }) {
+export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoId }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string }) {
+  const eventoCompartilhado = items.find((item) => item.kind === "evento" && item.id === eventoId);
+  const avisoEvento = eventoId && !eventoCompartilhado
+    ? <p role="status" className="text-sm text-gray-600 dark:text-gray-300">Este evento não está disponível na sua agenda. Ele pode ter encerrado ou ser destinado a outra escola.</p>
+    : null;
   const porDia = useMemo(() => {
     const mapa = new Map<string, AgendaItem[]>();
     for (const item of items) {
@@ -583,7 +587,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
   // Abre direto no 1º dia com algo agendado (hoje, se tiver; senão o próximo
   // item futuro) — evita abrir a agenda numa data vazia sem o membro saber
   // pra onde navegar. O mês exibido acompanha esse mesmo dia.
-  const [diaSelecionado, setDiaSelecionado] = useState(() => (items.length > 0 ? items[0].date : hoje));
+  const [diaSelecionado, setDiaSelecionado] = useState(() => (eventoCompartilhado?.date ?? items[0]?.date ?? hoje));
   const [mesExibido, setMesExibido] = useState(() => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1));
   const [limiteProximos, setLimiteProximos] = useState(POR_PAGINA);
   const topo = useRef<HTMLDivElement>(null);
@@ -592,6 +596,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
     return (
       <div className="flex flex-col gap-4">
         <LinkMeusEventos />
+        {avisoEvento}
         <p className="py-8 text-center text-[13px] text-gray-500 dark:text-gray-400">Nenhum evento ou atividade agendada no momento.</p>
       </div>
     );
@@ -625,6 +630,11 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
   return (
     <div ref={topo} className="flex flex-col gap-4">
       <LinkMeusEventos />
+      {avisoEvento}
+      {eventoCompartilhado && <section aria-label="Evento compartilhado" className="space-y-2">
+        <h3 className="text-xs font-semibold text-na-green-dark dark:text-emerald-400">Evento compartilhado</h3>
+        <ItemCard key={itemKey(eventoCompartilhado)} memberId={memberId} item={eventoCompartilhado} somenteConsulta={somenteConsulta} emBreve={emBreve} />
+      </section>}
       <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-2 flex items-center justify-between">
           <button
@@ -691,7 +701,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
             Nada agendado para {formatDateBR(diaSelecionado)}.
           </p>
         ) : (
-          itensDoDiaSelecionado.map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} somenteConsulta={somenteConsulta} emBreve={emBreve} />)
+          itensDoDiaSelecionado.filter((item) => item !== eventoCompartilhado).map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} somenteConsulta={somenteConsulta} emBreve={emBreve} />)
         )}
       </div>
 
