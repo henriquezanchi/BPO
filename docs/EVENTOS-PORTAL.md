@@ -133,3 +133,20 @@ O nome no PIX é o da conta emissora. Para aparecer a filial, novas cobranças p
 - **Públicos (marque um ou mais):** Todos os ativos, Membros, FV, Provacionistas, HD, Dirigentes. "Membros" = 2º nível em diante e inclui FV, HD, dirigentes e provacionistas; quem é do 1º nível só entra em "Todos os ativos". Quem não está no público não vê o evento nem consegue se inscrever (conferido no servidor).
 - **Abertura:** só a filial, todas, filiais escolhidas, regionais (Centro-Oeste: GO/MT/MS; DF; Nordeste: MA/PI/CE/RN/PB/PE/AL/SE/BA; Norte: AC/AM/AP/PA/RO/RR/TO) ou estados. O público vale também para as outras filiais; o pagamento vai para a filial dona. Na Agenda, o evento aparece como "EVENTO DE <filial>".
 - Nível, HD (cad_machado HDA/HDR), dirigente (cad_dirigente) e FV (cad_situacao_fv BRG) vêm do Mercúrio na sincronização diária.
+
+
+## Visibilidade do Ulisses e categorias — conferência em 22/10/2026
+
+A importação grava `publicos=["todos_ativos"]`, além do campo legado `audience`. A migração `20261022210000_ulisses_public_audience` corrige somente eventos Ulisses publicados, recentes/futuros, com público vazio e audience todos_ativos. Aplicada via Management API: os 11 eventos futuros publicados ficaram com público explícito. A consulta da Agenda exige a escola correspondente para source ulisses mesmo se algum registro estiver com escopo global/abertura externa. O normalizador só cria ocorrências das filiais participantes indicadas pelo Ulisses; catálogo/browser compartilham a exclusão de cópias e não exibem ocorrências canceladas.
+
+O endpoint oficial `GET https://api.acropolebrasil.com.br/tiposEvento` respondeu 200 com: ABERTURA_DE_TURMA, CURSO_LIVRE, LISTA_DE_ESPERA, LIVE, PALESTRA_CULTURAL, CHAT_WHATSAPP, OUTRO. Não confundir com o catálogo customizado tipos_evento do CRM.
+
+Proposta para o cadastro interno: Aula inaugural/abertura de turma; Curso; Palestra; Oficina/workshop; Live/encontro online; Integração/confraternização; Serviço/voluntariado; Celebração/comemoração; Outro. Lista de espera e chat não são propostos como categorias internas. Este catálogo é uma proposta, ainda não um novo campo no cadastro.
+
+## Documentação oficial do Ágora — evidência atual
+
+O endereço fornecido é `https://eventos.acropolebrasil.com.br/#/swagger`. A aplicação Angular respondeu 200 e aponta para `/swagger-ui/index.html`; a rota verifica login. O Swagger UI e `/v3/api-docs` responderam 403 do backend com sessão JSESSIONID. A documentação OpenAPI completa não pôde ser lida sem acesso autorizado. Os caminhos com prefixo `/api` para a documentação receberam bloqueio Cloudflare Error 1010.
+
+O JavaScript público oficial confirma base `/api`, consulta `/eventos` (idSede, ini, fim, situacao, parteNome), `/eventos/periodo`, `/eventos/{id}`, `/eventos/slug/{slug}`, `/eventos/by-ids` e `/sedes`; o destino de inscrição é `/e/{slug}`. O frontend usa sessão e SSO (`/csrf`, `/usuarios/usuario-logado`, `/sso-url`, `/login-sso`), não foi encontrada credencial de serviço disponível neste ambiente. Essas observações de frontend não substituem o contrato OpenAPI nem provam as permissões da API de consulta.
+
+O importador do Ágora continua pendente do contrato autenticado e do mapeamento oficial de sede/público. A fonte permanece bloqueada por padrão na Agenda; não se deve inferir elegibilidade nem reutilizar o ID de filial Ulisses como ID de sede Ágora sem confirmação. Não criar um importador de produção com campos ou acesso presumidos.

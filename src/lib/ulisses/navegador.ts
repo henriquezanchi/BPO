@@ -48,7 +48,7 @@ async function catalogoDaFilial(filialId: number): Promise<UlissesEvent[]> {
 
 type EventoAgenda = Extract<AgendaItem, { kind: "evento" }>;
 
-function paraAgenda(eventos: UlissesEvent[], filialId: number, schoolId: string): EventoAgenda[] {
+export function paraAgenda(eventos: UlissesEvent[], filialId: number, schoolId: string): EventoAgenda[] {
   const limite = Date.now() - UM_DIA;
   return eventos.flatMap((e) => {
     try {

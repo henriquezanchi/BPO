@@ -42,6 +42,14 @@ export function eventAudienceWhere(member: PessoaPublico, _volunteer?: boolean):
   return { publicos: { hasSome: publicosDaPessoa(member) }, source: { notIn: ["agora", "google_calendar_nacional"] } };
 }
 
+/**
+ * Ulisses occurrences belong to the Portal school mapped to their source filial.
+ * Keep them branch-local even if an imported row has a global scope/opening value.
+ */
+export function agendaUlissesBranchWhere(schoolId: string): Prisma.EventWhereInput {
+  return { OR: [{ source: { not: "ulisses" } }, { source: "ulisses", schoolId }] };
+}
+
 /** Regionais para abrir inscrições a outras filiais (pedido do usuário 2026-10-19). */
 export const REGIONAIS: Record<string, { nome: string; ufs: string[] }> = {
   centro_oeste: { nome: "Centro-Oeste", ufs: ["GO", "MT", "MS"] },

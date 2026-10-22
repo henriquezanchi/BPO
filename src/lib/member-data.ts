@@ -1,7 +1,7 @@
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
 import {portalLabel} from "@/lib/display-labels";
-import {eventAudienceWhere,safeEventRegistrationUrl, eventScopeWhere, publicosDaPessoa } from "@/lib/event-policy";
+import {agendaUlissesBranchWhere,eventAudienceWhere,safeEventRegistrationUrl, eventScopeWhere, publicosDaPessoa } from "@/lib/event-policy";
 import {ensureGroupMeetingWindow} from "@/lib/meeting-series";
 import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from "@/lib/badges";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
@@ -192,7 +192,7 @@ export async function getMemberDashboard(memberId: string) {
       where: {
         // Filial da pessoa, eventos de outras filiais abertos a ela (abertoA) e nacionais/regionais.
         OR: [...(eventScopeWhere(member.school).OR ?? []), { scope: { in: ["nacional", "regional"] } }],
-        AND: [eventAudienceWhere(member,acessoVoluntario),{OR:[{status:"publicado"},{status:"cancelado",registrations:{some:{memberId}}}]}],
+        AND: [eventAudienceWhere(member,acessoVoluntario),agendaUlissesBranchWhere(member.schoolId),{OR:[{status:"publicado"},{status:"cancelado",registrations:{some:{memberId}}}]}],
         startsAt: { gte: new Date(Date.now()-86400000) },
       },
       orderBy: { startsAt: "asc" },

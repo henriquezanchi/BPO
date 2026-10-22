@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { ulissesOccurrences, type UlissesEvent } from "@/lib/ulisses/events";
+import { ehCopia, ulissesOccurrences, type UlissesEvent } from "@/lib/ulisses/events";
 import { fetchAcropole } from "@/lib/ponte";
 
 /**
@@ -20,12 +20,6 @@ const API = "https://api.acropolebrasil.com.br";
 const UM_DIA = 24 * 60 * 60 * 1000;
 
 type ItemCatalogo = { eventoId: number };
-
-/** "[CÓPIA] ...", "Cópia de ...", "(copia)": evento duplicado no Ulisses e não renomeado. */
-export function ehCopia(titulo: string) {
-  const t = titulo.normalize("NFC").trim();
-  return /^[[(]?\s*c[oó]pia(?=[\s\]):\-–]|$)/i.test(t) || /[[(]\s*c[oó]pia\s*[\])]/i.test(t) || /[-–]\s*c[oó]pia\s*$/i.test(t);
-}
 
 async function pedir<T>(caminho: string): Promise<T> {
   // Passa pela ponte na Cloudflare quando configurada (o Cloudflare deles desafia a Vercel — ver lib/ponte.ts).
@@ -88,7 +82,7 @@ export async function sincronizarEventosUlisses(): Promise<ResultadoUlisses> {
         const ocorrencias = ulissesOccurrences(detalhe, filialId, escola.id);
         // Evento duplicado no Ulisses e esquecido com "[CÓPIA]" no título não entra (pedido do usuário 2026-10-22);
         // fora de "vistos", os que já tinham sido importados são arquivados logo abaixo.
-        if (ocorrencias.some((o) => ehCopia(o.title))) {
+        if (ehCopia(detalhe.nome)) {
           linha.ignorados++;
           continue;
         }
