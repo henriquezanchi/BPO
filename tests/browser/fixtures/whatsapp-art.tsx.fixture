@@ -1,0 +1,19 @@
+"use client";
+import { CompartilharWhatsApp } from "@/components/member/compartilhar-evento";
+import { linkWhatsAppDoEvento } from "@/lib/compartilhar-evento";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+
+const evento = {
+  id: "integracao-teste", title: "Sábado de Integração", date: new Date("2099-11-07T11:00:00Z"),
+  allDay: false, location: "Sede", description: "Café compartilhado, leitura e cuidado com a nossa escola. � ☕",
+  source: "manual", price: 0,
+};
+export default function Page() {
+  return <BottomSheet open onOpenChange={() => {}} title="Agenda de teste"><main className="mx-auto max-w-md space-y-4 p-6">
+    <h1>Compartilhamento de teste</h1>
+    {[null, "/poster-fixture.svg", "/poster-ausente.png"].map((imagem, index) => <section key={index} aria-label={["Sem cartaz", "Com cartaz", "Cartaz indisponível"][index]}>
+      <h2>{["Sem cartaz", "Com cartaz", "Cartaz indisponível"][index]}</h2>
+      <CompartilharWhatsApp evento={{ ...evento, imagem, interno: true, registrationUrl: "https://portal-na-one.vercel.app/portal?evento=integracao-teste" }} linkTexto={linkWhatsAppDoEvento(evento, "https://portal-na-one.vercel.app/portal")} />
+    </section>)}
+  </main></BottomSheet>;
+}

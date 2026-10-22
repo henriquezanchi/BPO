@@ -4,6 +4,7 @@ import { gerarArteEvento, type FormatoArte } from "@/lib/arte-evento";
 import { linkDoCanal, nomeDoArquivo, semEmoji, textoParaCanal, type EventoCompartilhavel } from "@/lib/compartilhar-evento";
 import { Check, Download, Link2, Loader2, Mail, Send, Share2, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 
 /** Ícones de marca desenhados à mão (o lucide não traz logos de empresas). */
 export function IconeWhatsApp({ tamanho = 16 }: { tamanho?: number }) {
@@ -72,6 +73,83 @@ function baixar(arquivo: File, url: string) {
   a.href = url;
   a.download = arquivo.name;
   a.click();
+}
+
+/** Prepara o arquivo antes do toque em compartilhar, preservando a ativação do navegador. */
+export function CompartilharWhatsApp({ evento, linkTexto, compacto = false }: {
+  evento: EventoCompartilhavel;
+  linkTexto: string;
+  compacto?: boolean;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [arte, setArte] = useState<{ arquivo: File; url: string } | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [erro, setErro] = useState(false);
+  const texto = new URL(linkTexto).searchParams.get("text") ?? "";
+
+  useEffect(() => {
+    if (!aberto) return;
+    let cancelado = false;
+    let url: string | undefined;
+    gerarArteEvento(evento, "feed").then((blob) => {
+      if (cancelado) return;
+      const arquivo = new File([blob], nomeDoArquivo(evento, "feed"), { type: "image/png" });
+      url = URL.createObjectURL(arquivo);
+      setArte({ arquivo, url });
+    }).catch(() => { if (!cancelado) setErro(true); });
+    return () => { cancelado = true; if (url) URL.revokeObjectURL(url); };
+  }, [aberto, evento]);
+
+  function abrir() {
+    setArte(null);
+    setErro(false);
+    setAviso(null);
+    setAberto(true);
+  }
+
+  function compartilhar() {
+    if (!arte) return;
+    if (navigator.share && navigator.canShare?.({ files: [arte.arquivo] })) {
+      // O link segue no texto para que o destinatário abra o evento exato.
+      void navigator.share({ files: [arte.arquivo], title: evento.title, text: texto }).catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setAviso("Não foi possível compartilhar. Baixe a arte e anexe no WhatsApp, ou envie somente o convite.");
+      });
+    } else {
+      baixar(arte.arquivo, arte.url);
+      window.open(linkTexto, "_blank", "noopener,noreferrer");
+      setAviso("Arte baixada. No WhatsApp, anexe a imagem ao convite que já está pronto na conversa.");
+    }
+  }
+
+  return <Dialog.Root open={aberto} onOpenChange={setAberto}>
+    <Dialog.Trigger asChild>
+    <button type="button" onClick={abrir}
+      aria-label={`Compartilhar "${evento.title}" no WhatsApp`} title="Compartilhar no WhatsApp"
+      className={compacto ? "-mt-1 -mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-gray-100 dark:hover:bg-gray-800" : BOTAO}>
+      <IconeWhatsApp tamanho={compacto ? 20 : 16} />{!compacto && "WhatsApp"}
+    </button>
+    </Dialog.Trigger>
+    <Dialog.Portal>
+      <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/60" />
+      <Dialog.Content aria-describedby={undefined} className="fixed top-1/2 left-1/2 z-[101] max-h-[90dvh] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-white p-4 text-gray-900 shadow-xl dark:bg-gray-900 dark:text-gray-100">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <Dialog.Title className="text-base font-bold text-na-green-dark dark:text-emerald-400">Compartilhar no WhatsApp</Dialog.Title>
+          <Dialog.Close aria-label="Fechar compartilhamento" className="rounded-lg p-2"><X size={20} /></Dialog.Close>
+        </div>
+        {arte ? <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- arquivo PNG gerado no próprio navegador */}
+          <img src={arte.url} alt={`Arte de ${evento.title}`} className="mx-auto max-h-[45dvh] rounded-lg object-contain" />
+          <p className="mt-3 text-sm">Compartilhe a arte com o convite e o link do evento. No celular, escolha o WhatsApp na lista de aplicativos.</p>
+          <button type="button" onClick={compartilhar} className={`${BOTAO} mt-3 w-full justify-center`}><IconeWhatsApp /> Compartilhar arte e convite</button>
+          <button type="button" onClick={() => baixar(arte.arquivo, arte.url)} className={`${BOTAO} mt-2 w-full justify-center`}><Download size={16} /> Baixar arte</button>
+        </> : erro ? <p role="alert" className="text-sm">Não foi possível gerar a arte. Você ainda pode enviar o convite abaixo.</p>
+          : <p role="status" className="flex items-center gap-2 py-6 text-sm"><Loader2 className="animate-spin" size={18} /> Preparando arte…</p>}
+        <a href={linkTexto} target="_blank" rel="noopener noreferrer" className={`${BOTAO} mt-2 justify-center`}>Enviar somente o convite</a>
+        {aviso && <p role="status" className="mt-3 text-sm">{aviso}</p>}
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>;
 }
 
 /**
@@ -204,7 +282,7 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
           <p className="mb-2 text-[11px] text-gray-600 dark:text-gray-400">Evento aberto ao público. Escolha onde quer compartilhar.</p>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <Canal href={linkDoCanal(evento, "whatsapp")} icone={<IconeWhatsApp />} rotulo="WhatsApp" />
+            <CompartilharWhatsApp evento={evento} linkTexto={linkDoCanal(evento, "whatsapp")} />
             {evento.postagemOficial ? (
               // Post oficial cadastrado pela filial: abre o post no Instagram (no celular, no aplicativo) para repostar.
               <Canal

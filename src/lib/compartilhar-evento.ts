@@ -9,6 +9,8 @@
  */
 
 export type EventoCompartilhavel = {
+  interno?: boolean;
+  price?: number;
   title: string;
   date: Date;
   allDay: boolean;
@@ -67,7 +69,7 @@ export function eventoCompartilhavel(item: ItemDeAgenda, agora = new Date()): Ev
  */
 export function semEmoji(texto: string): string {
   return texto
-    .replace(/[\u{10000}-\u{10FFFF}]|\uFE0F|\u200D/gu, "")
+    .replace(/[\u{10000}-\u{10FFFF}]|\p{Extended_Pictographic}|[\uD800-\uDFFF\uFFFD\uFE0E\uFE0F\u200D\u20E3]/gu, "")
     .split("\n")
     .map((l) => l.replace(/^[ \t]+/, "").replace(/[ \t]{2,}/g, " "))
     .join("\n");

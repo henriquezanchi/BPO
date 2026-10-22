@@ -54,6 +54,8 @@ Não mexer nesses blocos sem combinar. Os demais pendentes de `CONTINUIDADE-VOLU
 
 Compartilhamento de eventos internos (Codex, 22/10/2026): convite do WhatsApp com descrição completa, preço/gratuidade e orientações, título sem asteriscos duplicados e link `/portal?evento=<id>`. A página do Portal abre a Agenda no evento disponível ao membro; proxy e redirecionamento de sessão preservam o parâmetro após o login. Arquivos: `compartilhar-evento.ts`, `agenda-panel.tsx`, `member-portal-client.tsx`, `app/(member)/portal/page.tsx`, `proxy.ts`. Sem migração.
 
+Complemento: prévia e compartilhamento de PNG no WhatsApp (`CompartilharWhatsApp` em `components/member/compartilhar-evento.tsx`). Sem cartaz, o canvas existente (`lib/arte-evento.ts`) gera o modelo com marca, título, data, local e resumo/valor quando couber; eventos internos não são rotulados como abertos ao público. Sem API paga ou gravação no servidor. Limpeza do convite também elimina `�`, emojis BMP e substitutos isolados. Teste de navegador: `tests/browser/whatsapp-art.mjs`.
+
 ## Regra de segurança: toda tabela nova com RLS
 
 Em 19/10/2026, 44 das 55 tabelas do schema `public` estavam sem RLS. A chave pública do Supabase, que vai no navegador, lia `Member`, `PaymentCharge`, `ContactChangeLog` etc. pela API REST. A falha foi corrigida pela migração `20261019130000_rls_todas_tabelas`.

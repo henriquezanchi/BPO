@@ -2,10 +2,10 @@
 import {REFUND_LABELS} from "@/lib/event-refund-policy";
 
 import {usePaymentPolling} from "@/hooks/use-payment-polling";
-import { CompartilharEvento, IconeWhatsApp } from "@/components/member/compartilhar-evento";
+import { CompartilharEvento, CompartilharWhatsApp } from "@/components/member/compartilhar-evento";
 import Link from "next/link";
 import { MeetingResponse } from "@/components/member/groups/meeting-response";
-import { eventoCompartilhavel, linkWhatsAppDoEvento } from "@/lib/compartilhar-evento";
+import { eventoCompartilhavel, linkWhatsAppDoEvento, urlDoEventoNoPortal } from "@/lib/compartilhar-evento";
 import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/event-actions";
 import { cancelarMinhaInscricao, entrarNaListaDeEspera, sairDaListaDeEspera } from "@/lib/actions/event-self-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
@@ -408,16 +408,13 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
           )}
         </div>
         {item.status !== "cancelado" && (
-          <a
-            href={linkWhatsAppDoEvento(item, URL_PORTAL)}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Compartilhar "${item.title}" no WhatsApp`}
-            title="Compartilhar no WhatsApp"
-            className="-mt-1 -mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <IconeWhatsApp tamanho={20} />
-          </a>
+          <CompartilharWhatsApp compacto linkTexto={linkWhatsAppDoEvento(item, URL_PORTAL)} evento={{
+            ...item,
+            title: item.title.replace(/\*/g, "").trim(),
+            registrationUrl: eventoCompartilhavel(item)?.registrationUrl ?? urlDoEventoNoPortal(item.id, URL_PORTAL),
+            imagem: item.posterUrl,
+            interno: item.source !== "ulisses",
+          }} />
         )}
         </div>
         {item.posterUrl&&<a href={item.posterUrl} target="_blank" rel="noopener noreferrer" className="mb-3 block">

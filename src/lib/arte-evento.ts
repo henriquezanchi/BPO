@@ -1,4 +1,4 @@
-import { diaPorExtenso, horaCurta, resumo, type EventoCompartilhavel } from "@/lib/compartilhar-evento";
+import { diaPorExtenso, horaCurta, resumo, semEmoji, type EventoCompartilhavel } from "@/lib/compartilhar-evento";
 
 /**
  * Arte do evento para o Instagram, desenhada no navegador (canvas), nas
@@ -226,8 +226,11 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   const linhasLocal = e.location ? quebrarLinhas(ctx, e.location, larguraUtil, 2) : [];
   const passoData = Math.round(m.data * 1.35);
   const passoLocal = Math.round(m.local * 1.45);
+  const valor = e.interno && e.price !== undefined
+    ? e.price === 0 ? "Entrada gratuita" : e.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    : null;
   const espacoAntesData = foto ? (story ? 88 : 72) : story ? 110 : 90;
-  const alturaInfo = m.data + (e.allDay ? 0 : passoData) + linhasLocal.length * passoLocal;
+  const alturaInfo = m.data + (e.allDay ? 0 : passoData) + (linhasLocal.length + (valor ? 1 : 0)) * passoLocal;
   const folgaFaixa = story ? 90 : 70;
   // Imagem do evento (pedido do usuário 2026-10-22) logo abaixo da chamada, inteira (sem cortar o cartaz).
   // Ocupa só o espaço que sobra depois de reservar duas linhas de título, a data e o local.
@@ -269,7 +272,7 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   ctx.fillStyle = COR.heliosEscuro;
   ctx.font = fonte(700, story ? 34 : 30);
   espacar(4);
-  ctx.fillText("EVENTO ABERTO AO PÚBLICO", MARGEM, yChamada);
+  ctx.fillText(e.interno ? "ENCONTRO DA ESCOLA" : "EVENTO ABERTO AO PÚBLICO", MARGEM, yChamada);
   espacar(0);
 
   if (usarFoto && foto) {
@@ -308,14 +311,22 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
     ctx.fillText(linha, MARGEM, y);
   }
 
-  // Descrição curta só no story, no espaço que sobrar antes da faixa.
-  if (story && e.description) {
-    const entrelinha = 52;
-    const cabem = Math.min(6, Math.floor((yFaixa - folgaFaixa - (y + 60)) / entrelinha));
+  if (valor) {
+    y += passoLocal;
+    ctx.font = fonte(700, m.local);
+    ctx.fillStyle = COR.heket;
+    ctx.fillText(valor, MARGEM, y);
+  }
+
+  // Descrição curta no espaço que sobrar antes da faixa, inclusive na arte do WhatsApp.
+  if (e.description) {
+    const entrelinha = story ? 52 : 44;
+    const cabem = Math.min(story ? 6 : 4, Math.floor((yFaixa - folgaFaixa - (y + 60)) / entrelinha));
     if (cabem >= 2) {
-      ctx.font = fonte(400, 36);
+      ctx.font = fonte(400, story ? 36 : 32);
+      ctx.fillStyle = COR.textoSuave;
       y += 60;
-      for (const linha of quebrarLinhas(ctx, resumo(e.description, 400), larguraUtil, cabem)) {
+      for (const linha of quebrarLinhas(ctx, resumo(semEmoji(e.description), story ? 400 : 280), larguraUtil, cabem)) {
         y += entrelinha;
         ctx.fillText(linha, MARGEM, y);
       }
@@ -328,7 +339,7 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   ctx.fillStyle = COR.helios;
   ctx.font = fonte(700, story ? 34 : 30);
   espacar(4);
-  ctx.fillText("INSCRIÇÕES", MARGEM, yFaixa + (story ? 90 : 86));
+  ctx.fillText(e.interno ? "CONFIRME NO PORTAL" : "INSCRIÇÕES", MARGEM, yFaixa + (story ? 90 : 86));
   espacar(0);
   ctx.fillStyle = "#ffffff";
   ctx.font = fonte(700, story ? 44 : 40);

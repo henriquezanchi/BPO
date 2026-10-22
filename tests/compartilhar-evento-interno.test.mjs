@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { linkWhatsAppDoEvento, urlDoEventoNoPortal } from '../src/lib/compartilhar-evento.ts';
+import { linkWhatsAppDoEvento, urlDoEventoNoPortal, semEmoji } from '../src/lib/compartilhar-evento.ts';
 
 const portal = 'https://portal-na-one.vercel.app/portal';
 const evento = {
@@ -49,4 +49,12 @@ test('eventos públicos continuam usando o link de inscrição externo', () => {
   const t = texto({ ...evento, source: 'ulisses', registrationUrl: url, date: new Date('2099-11-07T11:00:00Z') });
   assert.ok(t.endsWith(`Inscrições: ${url}`));
   assert.ok(!t.includes('?evento=integracao-7'));
+});
+
+test('WhatsApp remove símbolos corrompidos, emojis BMP, sequências e substitutos isolados', () => {
+  const description = 'Programação: � ✨\n- ☕ 8h: Café da manhã\nServiço 🫶 ❤️ cuidado na escola �\nBeleza 🌸\nReflexão \uD83D e filosofia \uDC00. Valor: R$ 35,00.';
+  const t = texto({ ...evento, description });
+  assert.ok(!/[\uFFFD\uD800-\uDFFF]|\p{Extended_Pictographic}|\uFE0F|\u200D/u.test(t));
+  for (const trecho of ['8h: Café da manhã', 'cuidado na escola', 'Beleza', 'Reflexão', 'filosofia', 'R$ 35,00']) assert.ok(t.includes(trecho));
+  assert.equal(semEmoji('🧑‍🤝‍🧑 ☀️ ☕ ✨ ❤️ 1️⃣ Ação'), '1 Ação');
 });
