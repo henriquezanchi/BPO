@@ -6,9 +6,9 @@ import { Check, Download, Link2, Loader2, Mail, Send, Share2, X } from "lucide-r
 import { useEffect, useState, type ReactNode } from "react";
 
 /** Ícones de marca desenhados à mão (o lucide não traz logos de empresas). */
-function IconeWhatsApp() {
+export function IconeWhatsApp({ tamanho = 16 }: { tamanho?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden fill="none" stroke="#1faa59" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={tamanho} height={tamanho} aria-hidden fill="none" stroke="#1faa59" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.3z" />
       <path
         d="M9 8.6c.2-.4.5-.5.8-.5h.4l1 2.1-.6.8c.5 1 1.4 1.9 2.4 2.4l.8-.6 2.1 1v.4c0 .3-.1.6-.5.8-.7.4-1.6.5-2.7-.1a8 8 0 0 1-3.6-3.6c-.6-1.1-.5-2 -.1-2.7z"

@@ -119,7 +119,7 @@ export function FortunaTopUpPanel({ balances, memberId }: { balances: FortunaBal
         {balances.map((b) => (
           <option key={b.branchId} value={b.branchId}>
             {b.branchTitle}
-            {b.isHome ? " (sua unidade)" : ""} — saldo atual {formatBRL(b.amount)}
+             — saldo atual {formatBRL(b.amount)}
           </option>
         ))}
       </select>

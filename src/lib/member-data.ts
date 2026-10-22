@@ -363,6 +363,7 @@ export async function getMemberDashboard(memberId: string) {
     fortunaBalances,
     agendaItems,
     avisosGrupos,
+    // Também decide o rótulo "Portal do Membro" x "Portal do Aluno" no topo do Portal.
     // Biblioteca (bastião) só para membros — 2º nível em diante, mesma regra do público "Membros" dos eventos;
     // N1 e programa complementar não veem (pedido do usuário 2026-10-21).
     bibliotecaLiberada: publicosDaPessoa(member).includes("membros"),

@@ -1,18 +1,158 @@
-import {getAuthenticatedMember} from '@/lib/auth';
-import {db} from '@/lib/db';
-import {EventAttendanceReply} from '@/components/member/event-attendance-reply';
-import {REFUND_LABELS} from '@/lib/event-refund-policy';
-import Link from 'next/link';
-import {redirect} from 'next/navigation';
-export const dynamic='force-dynamic';
-export default async function Page(){
- const member=await getAuthenticatedMember();if(!member)redirect('/login?next=/eventos');if(!member.mercurioAtivo)redirect('/portal');
- const [registrations,reception]=await Promise.all([
-  db.eventRegistration.findMany({where:{memberId:member.id},include:{event:true},orderBy:{event:{startsAt:'desc'}}}),
-  db.eventReception.findMany({where:{memberId:member.id},include:{event:true},orderBy:{event:{startsAt:'desc'}}}),
- ]);
- return <main className="mx-auto max-w-2xl space-y-6 p-4"><Link href="/portal" className="text-sm text-na-green dark:text-emerald-400">← Portal do Aluno</Link><h1 className="text-xl font-bold">Meus eventos</h1><p className="text-sm text-gray-500">Ative as notificações no Portal para receber os lembretes dos seus eventos no celular. Aqui ficam suas inscrições e os horários.</p>
- {!!reception.length&&<section className="space-y-3"><h2 className="font-bold">Minha equipe de recepção</h2>{reception.map(r=><Link key={r.id} href={`/eventos/${r.eventId}/recepcao`} className="block rounded-xl border p-4 text-sm">{r.event.title} → Abrir recepção</Link>)}</section>}
- <section className="space-y-3"><h2 className="font-bold">Inscrições e participação</h2>{!registrations.length&&<p className="text-sm text-gray-500">Você ainda não tem inscrições pelo Portal. Os próximos eventos ficam na Agenda.</p>}{registrations.map(r=><article key={r.id} className="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700"><h3 className="font-semibold">{r.event.title}</h3><p className="text-sm">{r.event.startsAt.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'})}</p><p className="text-sm">{r.desistenciaEm?`Você desistiu desta inscrição. Devolução: ${REFUND_LABELS[r.refundState]??'em acompanhamento'}.`:r.event.status==='cancelado'?'Evento cancelado. Consulte a Economia sobre pagamentos e eventual estorno.':r.paid?(Number(r.event.price)?'Inscrição paga':'Inscrição gratuita confirmada'):r.paymentState==='revisao'?'Cobrança em conferência. Procure a Economia antes de tentar outro pagamento.':'Inscrição aguardando pagamento'}</p><p className="text-sm">{r.checkedIn?'Presença conferida pela recepção':'Presença ainda não conferida'}{r.selfReportedAttendance?` · Sua resposta: ${r.selfReportedAttendance==='sim'?'participei':'não participei'}`:''}</p>{r.checkedIn&&<p className="text-xs text-gray-500">Salvo no histórico do Portal. Registro no Mercúrio: aguardando integração.</p>}{r.paid&&!r.desistenciaEm&&r.event.status==='publicado'&&(r.event.endsAt??r.event.startsAt)<new Date()&&!member.isJanos&&<EventAttendanceReply memberId={member.id} registrationId={r.id}/>}</article>)}</section>
- </main>;
+import {
+  CartaoEvento,
+  partes,
+  type Registro,
+} from "@/components/member/meus-eventos";
+import { getAuthenticatedMember } from "@/lib/auth";
+import { db } from "@/lib/db";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronRight,
+  ShieldCheck,
+} from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Meus eventos (pedido do usuário 2026-10-22: "a página está meio sem graça,
+ * preto e branco, sem destacar a categoria, nome ou data"). Mesmo visual da
+ * Agenda: data em destaque, categoria, etiqueta colorida com a situação da
+ * inscrição; próximos primeiro, depois os anteriores.
+ */
+async function carregar(memberId: string) {
+  const [registrations, reception] = await Promise.all([
+    db.eventRegistration.findMany({
+      where: { memberId },
+      include: { event: { include: { school: { select: { name: true } } } } },
+      orderBy: { event: { startsAt: "asc" } },
+    }),
+    db.eventReception.findMany({
+      where: { memberId },
+      include: { event: true },
+      orderBy: { event: { startsAt: "asc" } },
+    }),
+  ]);
+  return { registrations, reception };
+}
+
+export default async function Page() {
+  const member = await getAuthenticatedMember();
+  if (!member) redirect("/login?next=/eventos");
+  if (!member.mercurioAtivo) redirect("/portal");
+  const { registrations, reception } = await carregar(member.id);
+  const agora = new Date();
+  const fim = (r: Registro) => r.event.endsAt ?? r.event.startsAt;
+  const proximos = registrations.filter((r) => fim(r) >= agora);
+  const anteriores = registrations.filter((r) => fim(r) < agora).reverse();
+  const recepcaoProxima = reception.filter(
+    (r) => (r.event.endsAt ?? r.event.startsAt) >= agora,
+  );
+
+  return (
+    <main className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col gap-5 bg-na-bg p-5 pb-16 dark:bg-gray-950">
+      <Link
+        href="/portal"
+        className="flex w-fit items-center gap-1.5 text-[13px] font-semibold text-na-green dark:text-emerald-400"
+      >
+        <ArrowLeft size={15} /> Portal do Aluno
+      </Link>
+
+      <header className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-white">
+        <p className="text-[10px] font-semibold tracking-wide text-na-gold uppercase">
+          Agenda & Eventos
+        </p>
+        <h1 className="mt-1 text-xl font-black">Meus eventos</h1>
+        <p className="mt-1 text-[12px] text-green-100">
+          Suas inscrições, a participação nos eventos e as equipes de recepção.
+        </p>
+      </header>
+
+      {recepcaoProxima.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
+            <ShieldCheck size={14} /> Minha equipe de recepção
+          </h2>
+          {recepcaoProxima.map((r) => {
+            const d = partes(r.event.startsAt);
+            return (
+              <Link
+                key={r.id}
+                href={`/eventos/${r.eventId}/recepcao`}
+                className="flex items-center gap-3 rounded-2xl border border-na-gold/40 bg-na-gold/10 p-3.5 transition hover:border-na-gold dark:border-amber-900 dark:bg-amber-950/20"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-na-gold/25 text-na-gold-dark dark:text-amber-300">
+                  <ShieldCheck size={18} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-bold text-gray-900 dark:text-gray-100">
+                    {r.event.title}
+                  </span>
+                  <span className="block text-[12px] text-gray-600 dark:text-gray-400">
+                    {d.semana}, {d.dia} {d.mes} · {d.hora} · Abrir a recepção
+                  </span>
+                </span>
+                <ChevronRight size={16} className="shrink-0 text-gray-400" />
+              </Link>
+            );
+          })}
+        </section>
+      )}
+
+      <section className="flex flex-col gap-2">
+        <h2 className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
+          <CalendarDays size={14} /> Próximos
+        </h2>
+        {proximos.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-300 p-5 text-center dark:border-gray-700">
+            <p className="text-[13px] text-gray-600 dark:text-gray-400">
+              Nenhuma inscrição para os próximos dias.
+            </p>
+            <Link
+              href="/portal"
+              className="mt-2 inline-block text-[13px] font-semibold text-na-green dark:text-emerald-400"
+            >
+              Ver eventos na Agenda →
+            </Link>
+          </div>
+        ) : (
+          proximos.map((r) => (
+            <CartaoEvento
+              key={r.id}
+              r={r}
+              minhaEscola={member.schoolId}
+              passado={false}
+              memberId={member.id}
+              podeResponder={!member.isJanos}
+            />
+          ))
+        )}
+      </section>
+
+      {anteriores.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+            Anteriores
+          </h2>
+          {anteriores.map((r) => (
+            <CartaoEvento
+              key={r.id}
+              r={r}
+              minhaEscola={member.schoolId}
+              passado
+              memberId={member.id}
+              podeResponder={!member.isJanos}
+            />
+          ))}
+        </section>
+      )}
+
+      <p className="text-center text-[11px] text-gray-500 dark:text-gray-400">
+        Ative as notificações no Portal para receber os lembretes dos seus
+        eventos no celular.
+      </p>
+    </main>
+  );
 }

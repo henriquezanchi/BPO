@@ -64,7 +64,6 @@ export function FortunaWalletCard({
             {balances.map((b) => (
               <option key={b.branchId} value={b.branchId}>
                 {b.branchTitle}
-                {b.isHome ? " (sua unidade)" : ""}
               </option>
             ))}
           </select>

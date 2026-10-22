@@ -2,16 +2,17 @@
 import {REFUND_LABELS} from "@/lib/event-refund-policy";
 
 import {usePaymentPolling} from "@/hooks/use-payment-polling";
-import { CompartilharEvento } from "@/components/member/compartilhar-evento";
+import { CompartilharEvento, IconeWhatsApp } from "@/components/member/compartilhar-evento";
+import Link from "next/link";
 import { MeetingResponse } from "@/components/member/groups/meeting-response";
-import { eventoCompartilhavel } from "@/lib/compartilhar-evento";
+import { eventoCompartilhavel, linkWhatsAppDoEvento } from "@/lib/compartilhar-evento";
 import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/event-actions";
 import { cancelarMinhaInscricao, entrarNaListaDeEspera, sairDaListaDeEspera } from "@/lib/actions/event-self-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
-import { CalendarClock, Check, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper, Users, UtensilsCrossed } from "lucide-react";
+import { CalendarClock, Check, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper, Ticket, Users, UtensilsCrossed } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -394,7 +395,8 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
   if (item.kind === "evento") {
     return (
       <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-        <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
+        <div className="mb-1 flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
           {item.scope === "filial" ? (
             <>
               <PartyPopper size={14} /> {item.filialOrigem ? `EVENTO DE ${item.filialOrigem.replace(/^Nova Acrópole\s*-\s*/i, "").toUpperCase()}` : "EVENTO DA ESCOLA"}
@@ -404,6 +406,19 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
               <Globe size={14} /> EVENTO {item.scope === "nacional" ? "NACIONAL" : "REGIONAL"}
             </>
           )}
+        </div>
+        {item.status !== "cancelado" && (
+          <a
+            href={linkWhatsAppDoEvento(item, URL_PORTAL)}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Compartilhar "${item.title}" no WhatsApp`}
+            title="Compartilhar no WhatsApp"
+            className="-mt-1 -mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            <IconeWhatsApp tamanho={20} />
+          </a>
+        )}
         </div>
         {item.posterUrl&&<a href={item.posterUrl} target="_blank" rel="noopener noreferrer" className="mb-3 block">
           {/* eslint-disable-next-line @next/next/no-img-element -- cartaz privado com URL assinada */}
@@ -485,6 +500,26 @@ function itemKey(item: AgendaItem) {
 const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const DIAS_CURTOS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const POR_PAGINA = 6;
+const URL_PORTAL = "https://portal-na-one.vercel.app/portal";
+
+/** Atalho para "Meus eventos" dentro da Agenda (pedido do usuário 2026-10-22). */
+function LinkMeusEventos() {
+  return (
+    <Link
+      href="/eventos"
+      className="flex items-center gap-3 rounded-xl border border-na-gold/40 bg-na-gold/10 px-3 py-2.5 transition hover:border-na-gold dark:border-amber-900 dark:bg-amber-950/20"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-na-gold/25 text-na-gold-dark dark:text-amber-300">
+        <Ticket size={16} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">Meus eventos</span>
+        <span className="block text-[11px] text-gray-600 dark:text-gray-400">Inscrições, participação e recepção</span>
+      </span>
+      <ChevronRight size={16} className="shrink-0 text-gray-400" />
+    </Link>
+  );
+}
 
 /** Linha compacta da lista "Próximos eventos": data em destaque, título e tipo; tocar abre o dia. */
 function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "enquete" }>; onAbrir: () => void }) {
@@ -555,9 +590,10 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
 
   if (items.length === 0) {
     return (
-      <p className="py-8 text-center text-[13px] text-gray-500 dark:text-gray-400">
-        Nenhum evento ou atividade agendada no momento.
-      </p>
+      <div className="flex flex-col gap-4">
+        <LinkMeusEventos />
+        <p className="py-8 text-center text-[13px] text-gray-500 dark:text-gray-400">Nenhum evento ou atividade agendada no momento.</p>
+      </div>
     );
   }
 
@@ -588,6 +624,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve }: { mem
 
   return (
     <div ref={topo} className="flex flex-col gap-4">
+      <LinkMeusEventos />
       <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-2 flex items-center justify-between">
           <button

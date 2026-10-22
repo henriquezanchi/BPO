@@ -42,6 +42,7 @@ export interface Dictionary {
   };
   home: {
     portalDoMembro: string;
+    portalDoAluno: string;
     portalDoVoluntario: string;
     editarDados: string;
     matricula: string;
@@ -102,6 +103,7 @@ const pt: Dictionary = {
   },
   home: {
     portalDoMembro: "PORTAL DO MEMBRO",
+    portalDoAluno: "PORTAL DO ALUNO",
     portalDoVoluntario: "Área do Voluntário",
     editarDados: "Editar Dados",
     matricula: "Matrícula",
@@ -173,6 +175,7 @@ const en: Dictionary = {
   },
   home: {
     portalDoMembro: "MEMBER PORTAL",
+    portalDoAluno: "STUDENT PORTAL",
     portalDoVoluntario: "Volunteer Area",
     editarDados: "Edit Profile",
     matricula: "Member ID",

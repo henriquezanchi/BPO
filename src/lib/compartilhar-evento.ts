@@ -70,6 +70,18 @@ export function horaCurta(data: Date): string {
   return m === "00" ? `${Number(h)}h` : `${Number(h)}h${m}`;
 }
 
+/**
+ * Botão do WhatsApp nos cartões da Agenda (pedido do usuário 2026-10-22): evento público
+ * do Ulisses usa o texto completo com o link de inscrição; evento interno manda os dados
+ * e o endereço do Portal, onde a inscrição é feita (exige login).
+ */
+export function linkWhatsAppDoEvento(item: ItemDeAgenda, urlPortal: string): string {
+  const publico = eventoCompartilhavel(item);
+  if (publico) return linkDoCanal(publico, "whatsapp");
+  const linhas = [`*${item.title}*`, `🗓️ ${quandoTexto(item)}`, item.location ? `📍 ${item.location}` : null, "", `Veja e inscreva-se no Portal do Aluno: ${urlPortal}`];
+  return `https://wa.me/?text=${encodeURIComponent(linhas.filter((l) => l !== null).join("\n"))}`;
+}
+
 export function quandoTexto(e: Pick<EventoCompartilhavel, "date" | "allDay">): string {
   return e.allDay ? diaPorExtenso(e.date) : `${diaPorExtenso(e.date)}, às ${horaCurta(e.date)}`;
 }

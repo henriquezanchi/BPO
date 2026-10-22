@@ -148,7 +148,7 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
 
         <div data-tour-id="welcome" className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-left text-white">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-semibold tracking-wide text-na-gold uppercase">{t.home.portalDoMembro}</span>
+            <span className="text-[10px] font-semibold tracking-wide text-na-gold uppercase">{/* "Membro" só para membros (2º nível em diante); N1 e programa complementar veem "Aluno" — pedido do usuário 2026-10-22. */}{dashboard.bibliotecaLiberada ? t.home.portalDoMembro : t.home.portalDoAluno}</span>
             <button
               onClick={() => setModal("cadastro")}
               className="flex shrink-0 items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[10px] font-semibold whitespace-nowrap transition hover:bg-white/25"
@@ -273,7 +273,6 @@ export function MemberPortalClient({ dashboard }: { dashboard: MemberDashboard }
           />
         </div>
 
-        <Link href="/eventos" className="block rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold dark:border-gray-700">Meus eventos · inscrições, participação e recepção →</Link>
 
         {/* Grid de funcionalidades */}
         <section className="grid grid-cols-2 gap-2.5">
