@@ -12,10 +12,10 @@ import { useState, useTransition } from "react";
 const INPUT_CLASS =
   "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100";
 
-export function LoginClient({ next }: { next: string }) {
+export function LoginClient({ next, erroInicial = null }: { next: string; erroInicial?: string | null }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(erroInicial);
   // Controlado (não usa o prop `action` do <form>) de propósito: React 19
   // reseta os campos de um form action automaticamente após o submit,
   // mesmo em erro — o que apagava o e-mail já digitado numa tentativa com
@@ -109,6 +109,19 @@ export function LoginClient({ next }: { next: string }) {
             {isPending ? t.login.entrando : t.login.entrar}
           </button>
         </form>
+
+        {/* Login unificado da Nova Acrópole (Keycloak), pedido do usuário 2026-10-22: sem senha própria do Portal. */}
+        <div className="my-4 flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
+          <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" /> ou <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+        </div>
+        <a
+          href={`/auth/acropole/login?next=${encodeURIComponent(next)}`}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-na-green/50 px-4 py-3 text-sm font-semibold text-na-green-dark transition hover:bg-na-green-light dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- símbolo pequeno do próprio site */}
+          <img src="/icon.png" alt="" className="h-5 w-5" />
+          Entrar com a conta Nova Acrópole
+        </a>
       </div>
     </div>
   );

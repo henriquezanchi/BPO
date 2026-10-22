@@ -44,6 +44,8 @@ Pedido do responsável pelo Portal, em 19/10:
 
 19. **Ponte na Cloudflare para *.acropolebrasil.com.br** (22/10). O Cloudflare da Nova Acrópole desafia (403, cf-mitigated: challenge) toda chamada vinda da Vercel para Ulisses, Ágora e o login unificado; de dentro da Cloudflare passa. Worker em `infra/ponte-cloudflare` (conta de testes; migrar para a conta da escola), só aceita esses domínios e exige o cabeçalho `x-ponte-chave`. A ponte roda fixa em `placement.region = "aws:us-east-1"`: rodando em São Paulo (GRU, onde cai quem chama da Vercel) também é desafiada; fixa nos EUA passa (importação do Ulisses ok nas 7 filiais em 22/10). No Portal, use `fetchAcropole` (`lib/ponte.ts`) para qualquer chamada a esses sistemas; com `PONTE_URL`/`PONTE_CHAVE` passa pela ponte, sem eles vai direto.
 
+20. **Login unificado da Nova Acrópole** (22/10). Keycloak realm `oinabnb`, client público `portal-aluno` com PKCE (sem segredo), retorno em `/auth/acropole/callback` (produção e localhost:3000 cadastrados pelo Heitor). Rotas `/auth/acropole/login` e `/auth/acropole/callback`, lógica em `lib/login-acropole.ts`; a troca do código passa pela ponte. Acha o cadastro pelo e-mail e abre a sessão Supabase por magic link gerado no servidor (`generateLink` + `verifyOtp`); quem não tinha login ganha um (senha aleatória), logins existentes nunca são recriados.
+
 Situação dos blocos 1 a 3 em 19/10: concluídos (avaliação, administração da filial e cadastro por solicitação). O bloco 4 (verificação por código) aguarda a escolha do provedor de envio.
 
 Não mexer nesses blocos sem combinar. Os demais pendentes de `CONTINUIDADE-VOLUNTARIADO-DIARIOS.md` (escalas, ED/Pré-ED, diário, informe mensal) seguem livres.
