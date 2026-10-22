@@ -87,6 +87,7 @@ export type AgendaItem =
       allDay: boolean;
       lancheCompartilhado?: boolean;
       postagemOficial?: string | null;
+      cartazLeitura?: { data: boolean; horario: boolean; local: boolean; inscricao: boolean } | null;
     }
   | {
       kind: "atividade";
@@ -307,6 +308,8 @@ export async function getMemberDashboard(memberId: string) {
         allDay: e.allDay,
         lancheCompartilhado: e.lancheCompartilhado,
         postagemOficial: e.linkPostagemOficial,
+        // Leitura vale só para a imagem que foi lida.
+        cartazLeitura: e.cartazLidoUrl && e.cartazLidoUrl === e.imageUrl ? (e.cartazLeitura as { data: boolean; horario: boolean; local: boolean; inscricao: boolean } | null) : null,
       }),
     ),
     ...classActivities.map(

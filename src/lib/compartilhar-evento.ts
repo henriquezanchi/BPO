@@ -20,6 +20,8 @@ export type EventoCompartilhavel = {
   imagem?: string | null;
   /** Post oficial no Instagram, quando a filial cadastrou (compartilha esse em vez de criar outro). */
   postagemOficial?: string | null;
+  /** O que já está escrito no cartaz (leitura por IA); null = não lido, a faixa leva tudo. */
+  cartazLeitura?: { data: boolean; horario: boolean; local: boolean; inscricao: boolean } | null;
 };
 
 export type Canal = "whatsapp" | "instagram" | "facebook" | "telegram" | "email" | "link";
@@ -35,6 +37,7 @@ type ItemDeAgenda = {
   registrationUrl?: string | null;
   posterUrl?: string | null;
   postagemOficial?: string | null;
+  cartazLeitura?: EventoCompartilhavel["cartazLeitura"];
 };
 
 /** Evento público do Ulisses, publicado, com link de inscrição e ainda por acontecer. */
@@ -50,6 +53,7 @@ export function eventoCompartilhavel(item: ItemDeAgenda, agora = new Date()): Ev
     registrationUrl: item.registrationUrl,
     imagem: item.posterUrl ?? null,
     postagemOficial: item.postagemOficial ?? null,
+    cartazLeitura: item.cartazLeitura ?? null,
   };
 }
 

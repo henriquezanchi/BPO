@@ -1,3 +1,4 @@
+import { lerCartazesPendentes } from "@/lib/leitura-cartaz";
 import { sincronizarEventosUlisses } from "@/lib/ulisses/publico";
 import crypto from "node:crypto";
 
@@ -20,6 +21,8 @@ export async function GET(req: Request) {
   if (!autorizado(req)) return Response.json({ erro: "Não autorizado." }, { status: 401 });
   const resultado = await sincronizarEventosUlisses();
   const falhas = resultado.escolas.filter((e) => e.erro).length;
-  console.log(JSON.stringify({ ulisses: resultado }));
-  return Response.json(resultado, { status: falhas && falhas === resultado.escolas.length ? 502 : 200 });
+  // Lê os cartazes novos (uma vez por imagem) para o compartilhamento só acrescentar o que falta.
+  const cartazes = await lerCartazesPendentes().catch((e) => ({ erro: String(e) }));
+  console.log(JSON.stringify({ ulisses: resultado, cartazes }));
+  return Response.json({ ...resultado, cartazes }, { status: falhas && falhas === resultado.escolas.length ? 502 : 200 });
 }

@@ -82,7 +82,59 @@ function paraBlob(canvas: HTMLCanvasElement): Promise<Blob> {
  * fundo). Story 9:16: o cartaz centralizado, dentro das faixas que o
  * Instagram cobre, sobre a própria imagem ampliada e desfocada.
  */
-function cartazComoPostagem(foto: HTMLImageElement, formato: FormatoArte): Promise<Blob> {
+type LinhaFaixa = { texto: string; destaque?: boolean };
+
+/**
+ * O que falta no cartaz (pela leitura salva) vira linhas da faixa verde; sem
+ * leitura, a faixa leva tudo. Cartaz completo = sem faixa.
+ */
+function linhasQueFaltam(e: EventoCompartilhavel): LinhaFaixa[] {
+  const lido = e.cartazLeitura;
+  const linhas: LinhaFaixa[] = [];
+  const faltaData = !lido?.data;
+  const faltaHora = !e.allDay && !lido?.horario;
+  if (faltaData || faltaHora) {
+    const partes = [faltaData ? primeiraMaiuscula(diaPorExtenso(e.date)) : null, faltaHora ? `às ${horaCurta(e.date)}` : null].filter(Boolean);
+    linhas.push({ texto: partes.join(", "), destaque: true });
+  }
+  if (e.location && !lido?.local) linhas.push({ texto: e.location });
+  if (!lido?.inscricao) linhas.push({ texto: `Inscrições: ${new URL(e.registrationUrl).host.replace(/^www\./, "")}` });
+  return linhas;
+}
+
+/** Faixa verde Heket com texto branco (Noto Sans), como a faixa de inscrição da arte da marca. */
+function desenharFaixa(ctx: CanvasRenderingContext2D, linhas: LinhaFaixa[], x: number, y: number, largura: number, escala: number) {
+  const familia = getComputedStyle(document.body).fontFamily || "Arial, sans-serif";
+  const pad = Math.round(36 * escala);
+  const tamDestaque = Math.round(46 * escala);
+  const tam = Math.round(36 * escala);
+  const passo = (l: LinhaFaixa) => Math.round((l.destaque ? tamDestaque : tam) * 1.35);
+  const altura = pad * 2 + linhas.reduce((s, l) => s + passo(l), 0) - Math.round(tam * 0.35);
+  ctx.fillStyle = COR.heket;
+  ctx.fillRect(x, y, largura, altura);
+  ctx.fillStyle = COR.helios;
+  ctx.fillRect(x, y, largura, Math.max(4, Math.round(8 * escala)));
+  let cursor = y + pad;
+  for (const l of linhas) {
+    const px = l.destaque ? tamDestaque : tam;
+    cursor += px;
+    ctx.font = `${l.destaque ? 700 : 400} ${px}px ${familia}`;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(quebrarLinhas(ctx, l.texto, largura - pad * 2, 1)[0], x + pad, cursor);
+    cursor += passo(l) - px;
+  }
+  return altura;
+}
+
+function alturaDaFaixa(linhas: LinhaFaixa[], escala: number) {
+  if (!linhas.length) return 0;
+  const pad = Math.round(36 * escala);
+  const tamDestaque = Math.round(46 * escala);
+  const tam = Math.round(36 * escala);
+  return pad * 2 + linhas.reduce((s, l) => s + Math.round((l.destaque ? tamDestaque : tam) * 1.35), 0) - Math.round(tam * 0.35);
+}
+
+function cartazComoPostagem(foto: HTMLImageElement, formato: FormatoArte, e: EventoCompartilhavel): Promise<Blob> {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Navegador sem suporte a desenho (canvas).");
@@ -103,12 +155,14 @@ function cartazComoPostagem(foto: HTMLImageElement, formato: FormatoArte): Promi
   ctx.filter = "none";
   ctx.fillStyle = "rgba(5, 32, 28, 0.45)";
   ctx.fillRect(0, 0, W, H);
-  // Cartaz inteiro por cima; no story, fora das faixas de cima e de baixo.
+  // Cartaz inteiro por cima; no story, fora das faixas de cima e de baixo, com a faixa verde logo abaixo.
+  const linhas = linhasQueFaltam(e);
   const topo = formato === "story" ? MEDIDAS.story.topo : 0;
   const base = formato === "story" ? MEDIDAS.story.base : 0;
   const margem = formato === "story" ? 48 : 0;
+  const faixaStory = formato === "story" ? alturaDaFaixa(linhas, 1) : 0;
   const caixaW = W - margem * 2;
-  const caixaH = H - topo - base;
+  const caixaH = H - topo - base - faixaStory;
   const escala = Math.min(caixaW / foto.width, caixaH / foto.height);
   const w = Math.round(foto.width * escala);
   const h = Math.round(foto.height * escala);
@@ -121,6 +175,14 @@ function cartazComoPostagem(foto: HTMLImageElement, formato: FormatoArte): Promi
   }
   ctx.drawImage(foto, x, y, w, h);
   ctx.restore();
+  // O que falta no cartaz: no story, logo abaixo dele; no feed, por cima da parte de baixo.
+  if (linhas.length) {
+    if (formato === "story") desenharFaixa(ctx, linhas, x, y + h, w, Math.min(1, w / 1000));
+    else {
+      const escala = W / 1080;
+      desenharFaixa(ctx, linhas, 0, H - alturaDaFaixa(linhas, escala), W, escala);
+    }
+  }
   return paraBlob(canvas);
 }
 
@@ -128,7 +190,7 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   // Com cartaz do evento, ele é a postagem; sem cartaz (ou se não carregar), a arte montada abaixo.
   if (e.imagem) {
     const cartaz = await carregarImagem(enderecoDaImagem(e.imagem)).catch(() => null);
-    if (cartaz) return cartazComoPostagem(cartaz, formato);
+    if (cartaz) return cartazComoPostagem(cartaz, formato, e);
   }
   const m = MEDIDAS[formato];
   const canvas = document.createElement("canvas");

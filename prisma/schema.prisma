@@ -918,6 +918,11 @@ model Event {
   // Post oficial do evento no Instagram (pedido do usuário 2026-10-22): compartilhar o post
   // oficial em vez de criar outro. Preenchido na administração; a importação do Ulisses não mexe.
   linkPostagemOficial String?
+  // Leitura do cartaz por IA (pedido do usuário 2026-10-22): o que já está escrito nele
+  // ({data, horario, local, inscricao}: boolean). Feita uma vez por imagem, guardada aqui e
+  // usada por todos que compartilharem; cartazLidoUrl diz qual imagem foi lida.
+  cartazLeitura Json?
+  cartazLidoUrl String?
   // Desistência paga com devolução até N dias antes do evento (pedido do usuário
   // 2026-10-22: padrão 3; opções 1, 3 ou 7; null = sem devolução).
   prazoDesistenciaDias Int? @default(3)
