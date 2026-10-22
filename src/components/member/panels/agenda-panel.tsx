@@ -6,6 +6,7 @@ import { CompartilharEvento } from "@/components/member/compartilhar-evento";
 import { MeetingResponse } from "@/components/member/groups/meeting-response";
 import { eventoCompartilhavel } from "@/lib/compartilhar-evento";
 import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/event-actions";
+import { cancelarMinhaInscricao, entrarNaListaDeEspera, sairDaListaDeEspera } from "@/lib/actions/event-self-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
@@ -122,6 +123,7 @@ function InscricaoEvento({
   const [mostrarCpf, setMostrarCpf] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const polling = usePaymentPolling(inscricao&&!inscricao.pago?inscricao.registrationId:null,
@@ -171,8 +173,23 @@ function InscricaoEvento({
     });
   }
 
+  function aoCancelar(mensagem: string) {
+    setInscricao(null);
+    setMostrarCpf(false);
+    setAviso(mensagem);
+  }
+
   if (inscricao?.pago) {
-    return <p className="mt-2 text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">✓ Você está inscrito</p>;
+    return (
+      <div className="mt-2 flex flex-col gap-1.5">
+        <p className="text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">✓ Você está inscrito</p>
+        {price > 0 ? (
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">Para desistir de uma inscrição paga e pedir a devolução, fale com a Economia.</p>
+        ) : (
+          <CancelarInscricao memberId={memberId} registrationId={inscricao.registrationId} onCancelada={aoCancelar} />
+        )}
+      </div>
+    );
   }
 
   if (inscricao?.pixQrCodeBase64) {
@@ -190,6 +207,7 @@ function InscricaoEvento({
         <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
           <Loader2 size={12} className="animate-spin" /> Aguardando confirmação...
         </p>
+        <CancelarInscricao memberId={memberId} registrationId={inscricao.registrationId} onCancelada={aoCancelar} rotulo="Desistir e cancelar o PIX" />
       </div>
     );
   }
@@ -228,6 +246,90 @@ function InscricaoEvento({
         {isPending ? <Loader2 size={12} className="animate-spin" /> : "Inscrever-se"}
       </button>
       {erro && <p className="mt-1 text-[11px] text-na-danger-dark dark:text-red-400">{erro}</p>}
+      {aviso && <p role="status" className="mt-1 text-[11px] text-gray-600 dark:text-gray-300">{aviso}</p>}
+    </div>
+  );
+}
+
+/** Desistência pelo próprio aluno, com confirmação (pedido do usuário 2026-10-22). */
+function CancelarInscricao({
+  memberId,
+  registrationId,
+  onCancelada,
+  rotulo = "Cancelar inscrição",
+}: {
+  memberId: string;
+  registrationId: string;
+  onCancelada: (mensagem: string) => void;
+  rotulo?: string;
+}) {
+  const [confirmando, setConfirmando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+  function confirmar() {
+    setErro(null);
+    iniciar(async () => {
+      try {
+        const r = await cancelarMinhaInscricao(memberId, registrationId);
+        if (r.ok) onCancelada(r.mensagem);
+        else setErro(r.erro);
+      } catch (e) {
+        setErro(mensagemErroAmigavel(e));
+      }
+    });
+  }
+  if (!confirmando)
+    return (
+      <button type="button" onClick={() => setConfirmando(true)} className="w-fit text-[11px] font-semibold text-gray-500 underline underline-offset-2 hover:text-gray-700 dark:text-gray-400">
+        {rotulo}
+      </button>
+    );
+  return (
+    <div className="flex flex-col gap-1.5 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+      <p className="text-[11px] text-gray-700 dark:text-gray-300">Confirma a desistência? Sua vaga vai para outra pessoa.</p>
+      <div className="flex gap-2">
+        <button type="button" onClick={confirmar} disabled={pendente} className="rounded-lg bg-na-danger px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60">
+          {pendente ? "Cancelando..." : "Sim, desistir"}
+        </button>
+        <button type="button" onClick={() => setConfirmando(false)} disabled={pendente} className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+          Manter inscrição
+        </button>
+      </div>
+      {erro && <p className="text-[11px] text-na-danger-dark dark:text-red-400">{erro}</p>}
+    </div>
+  );
+}
+
+/** Evento lotado: entrar ou sair da lista de espera (pedido do usuário 2026-10-22). */
+function ListaDeEspera({ memberId, eventId, espera }: { memberId: string; eventId: string; espera: { posicao: number; vagaReservada: boolean } | null | undefined }) {
+  const [naFila, setNaFila] = useState(!!espera);
+  const [mensagem, setMensagem] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+  function alternar() {
+    setMensagem(null);
+    iniciar(async () => {
+      try {
+        const r = naFila ? await sairDaListaDeEspera(memberId, eventId) : await entrarNaListaDeEspera(memberId, eventId);
+        if (r.ok) setNaFila(!naFila);
+        setMensagem(r.ok ? r.mensagem : r.erro);
+      } catch (e) {
+        setMensagem(mensagemErroAmigavel(e));
+      }
+    });
+  }
+  return (
+    <div className="mt-2 flex flex-col gap-1.5">
+      <p className="text-xs font-semibold">Vagas esgotadas</p>
+      {naFila && espera && !mensagem && <p className="text-[11px] text-gray-600 dark:text-gray-300">Você está na lista de espera ({espera.posicao}º da fila). Avisaremos no celular se abrir uma vaga.</p>}
+      <button
+        type="button"
+        onClick={alternar}
+        disabled={pendente}
+        className={`w-fit rounded-lg px-3 py-1.5 text-[11px] font-semibold disabled:opacity-60 ${naFila ? "text-gray-600 underline underline-offset-2 dark:text-gray-300" : "border border-na-green text-na-green-dark dark:border-emerald-700 dark:text-emerald-400"}`}
+      >
+        {pendente ? <Loader2 size={12} className="animate-spin" /> : naFila ? "Sair da lista de espera" : "Entrar na lista de espera"}
+      </button>
+      {mensagem && <p role="status" className="text-[11px] text-gray-600 dark:text-gray-300">{mensagem}</p>}
     </div>
   );
 }
@@ -269,7 +371,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
         {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block text-sm font-semibold text-na-green dark:text-emerald-400">Inscrever-se no site do organizador ↗</a>}
         {(() => { const publico = eventoCompartilhavel(item); return publico && <CompartilharEvento evento={publico} />; })()}
         {item.description && <p className="mt-1.5 text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
-        {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{item.availableSpots??0} vagas disponíveis de {item.capacity}</p>}
+        {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{(item.availableSpots??0)===1?'1 vaga disponível':`${item.availableSpots??0} vagas disponíveis`} de {item.capacity}</p>}
         {item.participantInstructions&&<p className="mt-2 whitespace-pre-wrap text-xs"><strong>Orientações: </strong>{item.participantInstructions}</p>}
         {item.contactInfo&&<p className="mt-2 break-words text-xs"><strong>Dúvidas: </strong>{item.contactInfo}</p>}
         {item.status === "cancelado" && <p className="mt-2 text-sm font-semibold text-red-700 dark:text-red-300">Evento cancelado. {item.minhaInscricao?.refundState&&item.minhaInscricao.refundState!=="nao_solicitado"?`Reembolso: ${REFUND_LABELS[item.minhaInscricao.refundState]??"em acompanhamento"}${item.minhaInscricao.refundedAmount?` · ${formatBRL(item.minhaInscricao.refundedAmount)}`:""}.`:"Consulte a Economia se houver pagamento."}</p>}
@@ -283,7 +385,10 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
                 <UtensilsCrossed size={13} className="shrink-0" /> Lanche compartilhado: leve algo para partilhar
               </div>
             )}
-            {!item.minhaInscricao&&(item.registrationClosed||item.availableSpots===0)?<p className="mt-2 text-xs font-semibold">{item.registrationClosed?'Inscrições encerradas':'Vagas esgotadas'}</p>:somenteConsulta ? (
+            {item.minhaEspera?.vagaReservada && !item.minhaInscricao && (
+              <p className="mt-2 rounded-lg bg-na-success-light px-2.5 py-1.5 text-xs font-semibold text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300">Abriu uma vaga e ela está reservada para você por 12 horas. Inscreva-se abaixo.</p>
+            )}
+            {!item.minhaInscricao&&item.registrationClosed?<p className="mt-2 text-xs font-semibold">Inscrições encerradas</p>:!item.minhaInscricao&&item.availableSpots===0?(somenteConsulta?<p className="mt-2 text-xs font-semibold">Vagas esgotadas</p>:<ListaDeEspera memberId={memberId} eventId={item.id} espera={item.minhaEspera} />):somenteConsulta ? (
               <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">{emBreve ? "Inscrição paga pelo Portal: em breve na sua filial. Fale com a secretaria." : "Online payment isn't available for your branch yet — please contact your branch."}</p>
             ) : (
               <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} unavailableReason={item.paymentUnavailableReason} />

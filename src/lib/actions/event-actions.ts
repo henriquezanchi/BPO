@@ -10,6 +10,7 @@ import {requireEventReception} from '@/lib/event-data';
 import {EventEnrollmentError,eventPaymentFailure} from '@/lib/event-payment-errors';
 import {confirmEventPayment} from '@/lib/event-payments';
 import {processEventRefundQueue} from '@/lib/event-refunds';
+import {reservasAtivasWhere} from '@/lib/event-waitlist';
 import {revalidatePath} from 'next/cache';
 
 export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null;lancheCompartilhado?:boolean}
@@ -103,7 +104,8 @@ async function enrollEvent(memberId:string,eventId:string,cpf?:string){
    const existing=await tx.eventRegistration.findUnique({where:{eventId_memberId:{eventId,memberId}},select:{id:true}});
    if(!existing){
     if(event.registrationClosesAt&&event.registrationClosesAt<=new Date())throw new EventEnrollmentError('As inscrições deste evento foram encerradas.');
-    if(event.capacity!==null&&event.capacity!==undefined&&await tx.eventRegistration.count({where:{eventId}})>=event.capacity)throw new EventEnrollmentError('Todas as vagas deste evento já foram reservadas.');
+    // Vagas reservadas a quem foi avisado pela lista de espera (2026-10-22) contam como ocupadas para os demais.
+    if(event.capacity!==null&&event.capacity!==undefined&&(await tx.eventRegistration.count({where:{eventId}}))+(await tx.eventWaitlist.count({where:reservasAtivasWhere(eventId,memberId)}))>=event.capacity)throw new EventEnrollmentError('Todas as vagas deste evento já foram reservadas.');
    }
   }
   return tx.eventRegistration.upsert({where:{eventId_memberId:{eventId,memberId}},create:{eventId,memberId,amount:price,paid:price===0,paymentState:price===0?'gratuito':'novo'},update:{}});

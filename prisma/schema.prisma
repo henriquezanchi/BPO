@@ -1724,3 +1724,16 @@ model PushEnviado {
   chave    String   @id
   criadoEm DateTime @default(now())
 }
+
+// Lista de espera de evento lotado (pedido do usuário 2026-10-22). Quando
+// abre vaga, o primeiro da fila é avisado (push) e a vaga fica reservada a
+// ele por 12 h (avisadoEm); depois disso a vez passa ao próximo.
+model EventWaitlist {
+  id        String    @id @default(cuid())
+  eventId   String
+  memberId  String
+  createdAt DateTime  @default(now())
+  avisadoEm DateTime?
+  @@unique([eventId, memberId])
+  @@index([eventId, createdAt])
+}

@@ -209,3 +209,81 @@ export async function avisosDeVencimento() {
   }
   return total;
 }
+
+// ───────────────────────── Avisos de quem se inscreveu em evento ─────────────────────────
+// O Portal já planejava esses avisos por inscrição (EventNotice, eventNoticePlan em
+// event-policy.ts) com status "aguardando_canal"; desde 2026-10-22 o canal é o push.
+// Cada aviso tem uma janela de validade: fora dela vira "expirado" (não manda lembrete velho).
+// Quem não ativou as notificações fica "sem_canal".
+
+const JANELA_MS: Record<string, number> = {
+  inscricao: 24 * 60 * MIN,
+  vespera: 12 * 60 * MIN,
+  uma_hora: 50 * MIN,
+  avaliar_presenca: 2 * 24 * 60 * MIN,
+  cancelamento: 2 * 24 * 60 * MIN,
+};
+
+export async function avisosDeEventosInscritos() {
+  const agora = new Date();
+  const pendentes = await db.eventNotice.findMany({
+    where: { status: "aguardando_canal", dueAt: { lte: agora } },
+    take: 300,
+    orderBy: { dueAt: "asc" },
+    include: {
+      registration: {
+        select: {
+          memberId: true,
+          paid: true,
+          amount: true,
+          event: { select: { id: true, title: true, startsAt: true, location: true, status: true, lancheCompartilhado: true, refundOnCancellation: true, price: true } },
+        },
+      },
+    },
+  });
+  let enviados = 0;
+  for (const n of pendentes) {
+    const { event: e, memberId } = n.registration;
+    const vencido = agora.getTime() - n.dueAt.getTime() > (JANELA_MS[n.kind] ?? 24 * 60 * MIN);
+    const jaComecou = e.startsAt <= agora;
+    const foraDeHora = vencido || ((n.kind === "vespera" || n.kind === "uma_hora") && (jaComecou || e.status !== "publicado"));
+    if (foraDeHora) {
+      await db.eventNotice.updateMany({ where: { id: n.id, status: "aguardando_canal" }, data: { status: "expirado" } });
+      continue;
+    }
+    // Reserva o aviso antes de enviar: duas rodadas simultâneas não mandam em dobro.
+    const marcado = await db.eventNotice.updateMany({ where: { id: n.id, status: "aguardando_canal" }, data: { status: "processando" } });
+    if (!marcado.count) continue;
+
+    // Inscrição paga: a confirmação já saiu na hora do pagamento (confirmEventPayment).
+    if (n.kind === "inscricao" && Number(n.registration.amount ?? 0) > 0) {
+      await db.eventNotice.update({ where: { id: n.id }, data: { status: "enviado", sentAt: agora } });
+      continue;
+    }
+
+    const dia = e.startsAt.toLocaleDateString("pt-BR", { timeZone: TZ, day: "2-digit", month: "2-digit" });
+    const hora = e.startsAt.toLocaleTimeString("pt-BR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
+    const onde = e.location ? ` · ${e.location}` : "";
+    const lanche = e.lancheCompartilhado ? " Lanche compartilhado: leve algo para partilhar." : "";
+    const textos: Record<string, { titulo: string; corpo: string; url: string }> = {
+      inscricao: { titulo: "Inscrição confirmada", corpo: `Você está inscrito em "${e.title}" (${dia} às ${hora}).`, url: "/eventos" },
+      vespera: { titulo: `Amanhã: ${e.title}`, corpo: `Às ${hora}${onde}.${lanche}`, url: "/eventos" },
+      uma_hora: { titulo: `Começa em 1 hora: ${e.title}`, corpo: `Às ${hora}${onde}.`, url: "/eventos" },
+      avaliar_presenca: { titulo: `Você foi a "${e.title}"?`, corpo: "Conte se participou. Leva um toque.", url: "/eventos" },
+      cancelamento: {
+        titulo: `Evento cancelado: ${e.title}`,
+        corpo: e.refundOnCancellation && n.registration.paid && Number(e.price) > 0 ? "O valor pago será devolvido automaticamente." : "Em caso de dúvida, fale com a secretaria.",
+        url: "/eventos",
+      },
+    };
+    const t = textos[n.kind];
+    if (!t) {
+      await db.eventNotice.update({ where: { id: n.id }, data: { status: "aguardando_canal" } });
+      continue;
+    }
+    const r = await enviarPush([memberId], { ...t, etiqueta: `evento-${n.kind}-${e.id}` }).catch(() => ({ pessoas: 0, aparelhos: 0 }));
+    await db.eventNotice.update({ where: { id: n.id }, data: r.aparelhos ? { status: "enviado", sentAt: agora } : { status: "sem_canal" } });
+    if (r.aparelhos) enviados++;
+  }
+  return enviados;
+}

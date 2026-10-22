@@ -1,3 +1,4 @@
+import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
 import {portalLabel} from "@/lib/display-labels";
 import {eventAudienceWhere,safeEventRegistrationUrl, eventScopeWhere, publicosDaPessoa } from "@/lib/event-policy";
@@ -64,6 +65,8 @@ export type AgendaItem =
       // não se inscreveu. Sempre null pra scope "nacional"/"regional" (não
       // têm fluxo de inscrição/pagamento ainda).
       minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null; refundState?: string; refundedAmount?: number } | null;
+      // Lista de espera (2026-10-22): posição na fila e se a vaga já está reservada para a pessoa.
+      minhaEspera?: { posicao: number; vagaReservada: boolean } | null;
       posterUrl?: string | null;
       capacity?: number | null;
       availableSpots?: number | null;
@@ -234,6 +237,23 @@ export async function getMemberDashboard(memberId: string) {
   const minhasInscricoes = await db.eventRegistration.findMany({
     where: { memberId, eventId: { in: schoolEvents.map((e) => e.id) } },
   });
+  // Lista de espera dos eventos com limite de vagas: posição da pessoa e reservas em vigor.
+  const filas = await db.eventWaitlist.findMany({
+    where: { eventId: { in: schoolEvents.filter((e) => e.capacity !== null).map((e) => e.id) } },
+    orderBy: { createdAt: "asc" },
+  });
+  const limiteReserva = Date.now() - RESERVA_MS;
+  function esperaDoEvento(eventId: string) {
+    const fila = filas.filter((f) => f.eventId === eventId);
+    const i = fila.findIndex((f) => f.memberId === memberId);
+    if (i < 0) return null;
+    const avisado = fila[i].avisadoEm;
+    return { posicao: i + 1, vagaReservada: !!avisado && avisado.getTime() >= limiteReserva };
+  }
+  function reservasDeOutros(eventId: string) {
+    return filas.filter((f) => f.eventId === eventId && f.memberId !== memberId && f.avisadoEm && f.avisadoEm.getTime() >= limiteReserva).length;
+  }
+
   function inscricaoDoEvento(eventId: string): Extract<AgendaItem, { kind: "evento" }>["minhaInscricao"] {
     const r = minhasInscricoes.find((i) => i.eventId === eventId);
     if (!r) return null;
@@ -270,7 +290,8 @@ export async function getMemberDashboard(memberId: string) {
         filialOrigem: e.schoolId && e.schoolId !== member.schoolId ? (e.school?.name ?? null) : null,
         posterUrl:eventPosters.get(e.id)??e.imageUrl??null,
         capacity:e.capacity,
-        availableSpots:e.capacity===null?null:Math.max(0,e.capacity-e._count.registrations),
+        availableSpots:e.capacity===null?null:Math.max(0,e.capacity-e._count.registrations-reservasDeOutros(e.id)),
+        minhaEspera:esperaDoEvento(e.id),
         registrationClosed:Boolean(e.registrationClosesAt&&e.registrationClosesAt<=new Date()),
         participantInstructions:e.participantInstructions,
         contactInfo:e.contactInfo,

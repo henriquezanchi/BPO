@@ -1,11 +1,12 @@
-import { avisosDeEncontros, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento } from "@/lib/notificacoes-agendadas";
+import { processarListaDeEspera } from "@/lib/event-waitlist";
+import { avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento } from "@/lib/notificacoes-agendadas";
 import { pushConfigurado } from "@/lib/push";
 import crypto from "node:crypto";
 
 /**
  * Avisos push agendados (vercel.json, a cada 5 minutos): encontros dos
- * grupos, pedidos novos para a Escolástica e a Economia, evento novo e
- * vencimento da contribuição. Cada tipo roda isolado: uma falha num não
+ * grupos, pedidos novos para a Escolástica e a Economia, evento novo,
+ * vencimento da contribuição, avisos de quem se inscreveu em evento e lista de espera. Cada tipo roda isolado: uma falha num não
  * impede os outros. A Vercel chama com "Authorization: Bearer $CRON_SECRET".
  */
 export const maxDuration = 120;
@@ -36,6 +37,8 @@ export async function GET(req: Request) {
     pedidos: await rodar("pedidos", avisosDePedidosNovos),
     eventos: await rodar("eventos", avisosDeEventosNovos),
     vencimento: await rodar("vencimento", avisosDeVencimento),
+    inscritos: await rodar("inscritos", avisosDeEventosInscritos),
+    listaDeEspera: await rodar("lista de espera", () => processarListaDeEspera()),
   };
   console.log(JSON.stringify({ notificacoes: resultado }));
   return Response.json({ ok: true, ...resultado });
