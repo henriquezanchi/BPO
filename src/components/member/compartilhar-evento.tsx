@@ -2,7 +2,7 @@
 
 import { gerarArteEvento, type FormatoArte } from "@/lib/arte-evento";
 import { linkDoCanal, nomeDoArquivo, semEmoji, textoParaCanal, type EventoCompartilhavel } from "@/lib/compartilhar-evento";
-import { Check, Download, Link2, Loader2, Mail, Send, Share2, X } from "lucide-react";
+import { Check, Copy, Download, Link2, Loader2, Mail, Send, Share2, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 
@@ -85,6 +85,7 @@ export function CompartilharWhatsApp({ evento, linkTexto, compacto = false }: {
   const [arte, setArte] = useState<{ arquivo: File; url: string } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [erro, setErro] = useState(false);
+  const [textoCopiado, setTextoCopiado] = useState(false);
   const texto = new URL(linkTexto).searchParams.get("text") ?? "";
 
   useEffect(() => {
@@ -104,11 +105,26 @@ export function CompartilharWhatsApp({ evento, linkTexto, compacto = false }: {
     setArte(null);
     setErro(false);
     setAviso(null);
+    setTextoCopiado(false);
     setAberto(true);
+  }
+
+  function copiarConvite() {
+    if (!navigator.clipboard?.writeText) {
+      setAviso("Selecione e copie o texto do convite abaixo para colar no WhatsApp.");
+      return;
+    }
+    void navigator.clipboard.writeText(texto).then(() => setTextoCopiado(true), () => {
+      setTextoCopiado(false);
+      setAviso("Não foi possível copiar automaticamente. Selecione e copie o texto do convite abaixo.");
+    });
   }
 
   function compartilhar() {
     if (!arte) return;
+    // Alguns aparelhos encaminham só o arquivo ao WhatsApp. Mantém o convite
+    // completo disponível para colar sem aguardar e perder a ativação do toque.
+    copiarConvite();
     if (navigator.share && navigator.canShare?.({ files: [arte.arquivo] })) {
       // O link segue no texto para que o destinatário abra o evento exato.
       void navigator.share({ files: [arte.arquivo], title: evento.title, text: texto }).catch((e: unknown) => {
@@ -145,6 +161,14 @@ export function CompartilharWhatsApp({ evento, linkTexto, compacto = false }: {
           <button type="button" onClick={() => baixar(arte.arquivo, arte.url)} className={`${BOTAO} mt-2 w-full justify-center`}><Download size={16} /> Baixar arte</button>
         </> : erro ? <p role="alert" className="text-sm">Não foi possível gerar a arte. Você ainda pode enviar o convite abaixo.</p>
           : <p role="status" className="flex items-center gap-2 py-6 text-sm"><Loader2 className="animate-spin" size={18} /> Preparando arte…</p>}
+        <label className="mt-3 block text-sm font-semibold">
+          Texto do convite
+          <textarea readOnly value={texto} rows={6} className="mt-1 w-full resize-y rounded-lg border border-gray-300 bg-gray-50 p-3 text-xs font-normal dark:border-gray-700 dark:bg-gray-800" />
+        </label>
+        <button type="button" onClick={copiarConvite} className={`${BOTAO} mt-2 w-full justify-center`}>
+          {textoCopiado ? <Check size={16} /> : <Copy size={16} />}{textoCopiado ? "Convite copiado" : "Copiar texto do convite"}
+        </button>
+        <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">Se o WhatsApp mostrar só a imagem, cole este convite no campo de legenda antes de enviar.</p>
         <a href={linkTexto} target="_blank" rel="noopener noreferrer" className={`${BOTAO} mt-2 justify-center`}>Enviar somente o convite</a>
         {aviso && <p role="status" className="mt-3 text-sm">{aviso}</p>}
       </Dialog.Content>

@@ -25,6 +25,7 @@ try {
   for (const width of [414, 1365]) {
     const page = await browser.newPage({ viewport: { width, height: 896 }, timezoneId: 'America/Sao_Paulo' });
     const errors = [];
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     page.on('pageerror', (e) => errors.push(e.message));
     await page.addInitScript(({ mobile }) => {
       window.opened = []; window.shares = []; window.drawnText = [];
@@ -55,14 +56,22 @@ try {
     assert.ok(!drawn.includes('EVENTO ABERTO AO PÚBLICO'));
     assert.ok(drawn.includes('CONFIRME NO PORTAL'));
     assert.ok(drawn.includes('Entrada gratuita'));
-    assert.ok(drawn.some((line) => line.includes('Café compartilhado')));
+    assert.ok(!drawn.some((line) => line.includes('Café compartilhado')));
     const textUrl = new URL(await dialog.getByRole('link', { name: 'Enviar somente o convite' }).getAttribute('href'));
+    const convite = textUrl.searchParams.get('text');
+    assert.ok(convite.includes('Café compartilhado, leitura e cuidado com a nossa escola.'));
+    assert.equal(await dialog.getByRole('textbox', { name: 'Texto do convite' }).inputValue(), convite);
+    await dialog.getByRole('button', { name: 'Copiar texto do convite', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Convite copiado', exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), convite);
     assert.ok(!textUrl.searchParams.get('text').includes('�'));
     if (width === 414) {
       await dialog.getByRole('button', { name: 'Compartilhar arte e convite', exact: true }).click();
       const shares = await page.evaluate(() => window.shares);
       assert.equal(shares.length, 1); assert.equal(shares[0].type, 'image/png'); assert.ok(shares[0].size > 1000);
       assert.match(shares[0].text, /evento=integracao-teste/);
+      assert.equal(shares[0].text, convite);
+      assert.equal(await page.evaluate(() => navigator.clipboard.readText()), convite);
       await page.evaluate(() => { window.abortShare = true; });
       await dialog.getByRole('button', { name: 'Compartilhar arte e convite', exact: true }).click();
       assert.equal(await dialog.getByRole('status').count(), 0);
@@ -72,6 +81,7 @@ try {
       const png = await readFile(await (await download).path());
       assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
       assert.ok((await page.evaluate(() => window.opened[0])).startsWith('https://wa.me/?text='));
+      assert.equal(new URL(await page.evaluate(() => window.opened[0])).searchParams.get('text'), convite);
       await dialog.getByText(/Arte baixada/).waitFor();
     }
     await page.screenshot({ path: `/tmp/bpo-whatsapp-arte-${width}.png` });

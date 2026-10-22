@@ -318,15 +318,16 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
     ctx.fillText(valor, MARGEM, y);
   }
 
-  // Descrição curta no espaço que sobrar antes da faixa, inclusive na arte do WhatsApp.
-  if (e.description) {
-    const entrelinha = story ? 52 : 44;
-    const cabem = Math.min(story ? 6 : 4, Math.floor((yFaixa - folgaFaixa - (y + 60)) / entrelinha));
+  // A arte do WhatsApp (feed) leva só os dados visuais. O convite completo
+  // acompanha o arquivo como texto; a descrição desenhada fica só no story.
+  if (story && e.description) {
+    const entrelinha = 52;
+    const cabem = Math.min(6, Math.floor((yFaixa - folgaFaixa - (y + 60)) / entrelinha));
     if (cabem >= 2) {
-      ctx.font = fonte(400, story ? 36 : 32);
+      ctx.font = fonte(400, 36);
       ctx.fillStyle = COR.textoSuave;
       y += 60;
-      for (const linha of quebrarLinhas(ctx, resumo(semEmoji(e.description), story ? 400 : 280), larguraUtil, cabem)) {
+      for (const linha of quebrarLinhas(ctx, resumo(semEmoji(e.description), 400), larguraUtil, cabem)) {
         y += entrelinha;
         ctx.fillText(linha, MARGEM, y);
       }
