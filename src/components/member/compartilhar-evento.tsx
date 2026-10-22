@@ -156,13 +156,13 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
       formato === "story"
         ? 'Link copiado. No story, toque no ícone de adesivos, escolha "Link" e cole.'
         : "Legenda copiada. No Instagram, cole no campo de legenda.";
-    if (celular && navigator.canShare?.({ files: [arquivo] })) {
+    if (navigator.canShare?.({ files: [arquivo] })) {
       navigator.share({ files: [arquivo] }).catch((e: unknown) => {
         if (e instanceof DOMException && e.name === "AbortError") return;
         baixar(arquivo, url);
         setAviso(`Não deu para abrir o compartilhamento: a arte foi baixada. ${dica}`);
       });
-      setAviso(`Escolha o Instagram (${formato === "story" ? "Story" : "Feed"}) na lista. ${dica}`);
+      setAviso(`Na lista, toque em Instagram e depois em "${formato === "story" ? "Story" : "Feed"}". ${dica}`);
       return;
     }
     // Computador: o Instagram no navegador só publica no feed (story é só pelo celular).
@@ -201,7 +201,7 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
 
       {aberto && (
         <div className="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/40">
-          <p className="mb-2 text-[11px] text-gray-600 dark:text-gray-400">Evento aberto ao público. Cada opção abre o aplicativo com a postagem pronta.</p>
+          <p className="mb-2 text-[11px] text-gray-600 dark:text-gray-400">Evento aberto ao público. Escolha onde quer compartilhar.</p>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Canal href={linkDoCanal(evento, "whatsapp")} icone={<IconeWhatsApp />} rotulo="WhatsApp" />
@@ -215,7 +215,8 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
                 icone={<IconeInstagram />}
                 rotulo="Instagram (post oficial)"
               />
-            ) : (
+            ) : celular ? (
+              // O Instagram não deixa sites abrirem o story/feed direto: um toque abre a lista do celular com a imagem pronta.
               <>
                 <Canal
                   onClick={() => compartilharInstagram("story")}
@@ -230,8 +231,17 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
                   rotulo="Instagram Feed"
                 />
               </>
-            )}
-            <Canal href={linkDoCanal(evento, "facebook")} icone={<IconeFacebook />} rotulo="Facebook" />
+            ) : null}
+            <Canal
+              onClick={() => {
+                // O Facebook não aceita texto pronto: copia a mensagem para a pessoa colar na publicação.
+                void copiar(textoParaCanal(evento, "facebook"));
+                window.open(linkDoCanal(evento, "facebook"), "_blank", "noopener,noreferrer");
+                setAviso("Mensagem copiada. No Facebook, toque no campo de texto e cole antes de publicar.");
+              }}
+              icone={<IconeFacebook />}
+              rotulo="Facebook"
+            />
             <Canal href={linkDoCanal(evento, "telegram")} icone={<Send size={16} className="text-[#229ed9]" />} rotulo="Telegram" />
             <Canal href={linkDoCanal(evento, "email")} icone={<Mail size={16} className="text-gray-500" />} rotulo="E-mail" />
             <Canal
@@ -248,6 +258,12 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
               className="mt-2 rounded-lg bg-na-green-light px-2.5 py-2 text-[11px] text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-300"
             >
               {aviso}
+            </p>
+          )}
+
+          {!celular && !evento.postagemOficial && (
+            <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+              Instagram: o aplicativo só aceita postagens vindas do celular. Abra o Portal no celular para compartilhar no story ou no feed. Se quiser, baixe a arte abaixo.
             </p>
           )}
 

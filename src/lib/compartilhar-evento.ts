@@ -72,14 +72,16 @@ export function semEmoji(texto: string): string {
 
 /**
  * Abertura em tom de conversa (pedido do usuário 2026-10-22): quem compartilha
- * é aluno ou membro, para amigos e grupos de família; não pode parecer
- * mensagem automática. Varia por evento (escolha fixa pelo título, sem sorteio).
+ * é aluno ou membro, para amigos e grupos de família ou de conhecidos que
+ * talvez nem conheçam a Nova Acrópole — tom intermediário, que apresenta a
+ * escola em poucas palavras sem parecer propaganda nem mensagem automática.
+ * Varia por evento (escolha fixa pelo título, sem sorteio).
  */
 const ABERTURAS = [
-  "Oi! Vai ter esse evento na Nova Acrópole e lembrei de você. Acho que vale muito a pena:",
-  "Olha que legal: a Nova Acrópole, a escola de filosofia onde eu estudo, está com esse evento aberto ao público. Se der, vai!",
-  "Gente, compartilhando um evento aberto da Nova Acrópole, onde eu estudo filosofia. Recomendo demais!",
-  "Achei que você ia gostar desse evento da Nova Acrópole. É aberto a todos:",
+  "Oi, pessoal! Estudo filosofia na Nova Acrópole e vai ter este evento aberto ao público. Achei que podia interessar a vocês:",
+  "Compartilhando um evento aberto da Nova Acrópole, a escola de filosofia onde eu estudo. Costumam ser encontros muito bons, vale a pena conferir:",
+  "Pra quem gosta de filosofia ou de boas conversas sobre a vida: a Nova Acrópole, escola onde eu estudo, vai ter este evento aberto a todos.",
+  "Oi! Quero dividir um evento da Nova Acrópole, a escola de filosofia que eu frequento. É aberto ao público, quem quiser é bem-vindo:",
 ];
 export function aberturaDoEvento(titulo: string): string {
   let h = 0;
@@ -175,6 +177,9 @@ export function textoParaCanal(e: EventoCompartilhavel, canal: Canal): string {
       return [e.title, quandoEOnde, resumo(e.description, 1200) || null, `Inscrições: ${e.registrationUrl}`, "#NovaAcrópole #filosofia #EscolaDeFilosofia"]
         .filter(Boolean)
         .join("\n\n");
+    case "facebook":
+      // O Facebook não aceita texto pronto no link (só o endereço): este texto vai copiado para colar.
+      return semEmoji([aberturaDoEvento(e.title), `${e.title}\n${quandoTexto(e)}${e.location ? `\n${e.location}` : ""}`].join("\n\n"));
     case "telegram":
     case "email":
       return [e.title, `${quando}${e.location ? ` · ${e.location}` : ""}`, resumo(e.description, 600) || null, `Inscrições: ${e.registrationUrl}`]
