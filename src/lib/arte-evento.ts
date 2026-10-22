@@ -3,6 +3,7 @@ import { diaPorExtenso, horaCurta, resumo, type EventoCompartilhavel } from "@/l
 /**
  * Arte do evento para o Instagram, desenhada no navegador (canvas), nas
  * medidas de cada formato: story 1080×1920 (9:16) e feed 1080×1350 (4:5).
+ * Usada quando o evento não tem cartaz (com cartaz, ver cartazComoPostagem).
  * Cores e fonte da marca (Heket, Helios, Noto Sans — globals.css). No story,
  * o conteúdo fica fora das faixas de cima e de baixo que o Instagram cobre
  * com a barra de perfil e a de resposta.
@@ -70,7 +71,65 @@ function primeiraMaiuscula(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+function paraBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((ok, falha) => canvas.toBlob((b) => (b ? ok(b) : falha(new Error("Falha ao gerar a imagem."))), "image/png"));
+}
+
+/**
+ * O próprio cartaz do evento como postagem (pedido do usuário 2026-10-22:
+ * "pq não usar a própria imagem do evento?"). Feed: o cartaz inteiro, na
+ * proporção dele (o Instagram aceita de 4:5 a 1,91:1; fora disso completa com
+ * fundo). Story 9:16: o cartaz centralizado, dentro das faixas que o
+ * Instagram cobre, sobre a própria imagem ampliada e desfocada.
+ */
+function cartazComoPostagem(foto: HTMLImageElement, formato: FormatoArte): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Navegador sem suporte a desenho (canvas).");
+  const proporcao = foto.width / foto.height;
+  if (formato === "feed") {
+    const p = Math.min(1.91, Math.max(0.8, proporcao));
+    canvas.width = 1080;
+    canvas.height = Math.round(1080 / p);
+  } else {
+    canvas.width = 1080;
+    canvas.height = 1920;
+  }
+  const { width: W, height: H } = canvas;
+  // Fundo: a própria imagem cobrindo tudo, desfocada e escurecida (sem filtro no navegador, só escurece).
+  const cobre = Math.max(W / foto.width, H / foto.height);
+  ctx.filter = "blur(48px)";
+  ctx.drawImage(foto, (W - foto.width * cobre) / 2, (H - foto.height * cobre) / 2, foto.width * cobre, foto.height * cobre);
+  ctx.filter = "none";
+  ctx.fillStyle = "rgba(5, 32, 28, 0.45)";
+  ctx.fillRect(0, 0, W, H);
+  // Cartaz inteiro por cima; no story, fora das faixas de cima e de baixo.
+  const topo = formato === "story" ? MEDIDAS.story.topo : 0;
+  const base = formato === "story" ? MEDIDAS.story.base : 0;
+  const margem = formato === "story" ? 48 : 0;
+  const caixaW = W - margem * 2;
+  const caixaH = H - topo - base;
+  const escala = Math.min(caixaW / foto.width, caixaH / foto.height);
+  const w = Math.round(foto.width * escala);
+  const h = Math.round(foto.height * escala);
+  const x = Math.round((W - w) / 2);
+  const y = Math.round(topo + (caixaH - h) / 2);
+  ctx.save();
+  if (formato === "story") {
+    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    ctx.shadowBlur = 40;
+  }
+  ctx.drawImage(foto, x, y, w, h);
+  ctx.restore();
+  return paraBlob(canvas);
+}
+
 export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoArte): Promise<Blob> {
+  // Com cartaz do evento, ele é a postagem; sem cartaz (ou se não carregar), a arte montada abaixo.
+  if (e.imagem) {
+    const cartaz = await carregarImagem(enderecoDaImagem(e.imagem)).catch(() => null);
+    if (cartaz) return cartazComoPostagem(cartaz, formato);
+  }
   const m = MEDIDAS[formato];
   const canvas = document.createElement("canvas");
   canvas.width = m.w;
@@ -214,5 +273,5 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   const site = new URL(e.registrationUrl).host.replace(/^www\./, "");
   ctx.fillText(quebrarLinhas(ctx, site, larguraUtil, 1)[0], MARGEM, yFaixa + (story ? 154 : 146));
 
-  return new Promise((ok, falha) => canvas.toBlob((b) => (b ? ok(b) : falha(new Error("Falha ao gerar a imagem."))), "image/png"));
+  return paraBlob(canvas);
 }
