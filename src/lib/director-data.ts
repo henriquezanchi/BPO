@@ -101,7 +101,7 @@ export async function getDirectorDashboard(schoolId: string) {
 
   const eventosMes = await db.event.findMany({
     where: { schoolId, status: "publicado", startsAt: { gte: inicioMes, lt: fimMes } },
-    include: { registrations: true },
+    include: { registrations: { where: { desistenciaEm: null } } },
   });
   const receitaEventosMes = eventosMes.reduce((soma, e) => soma + Number(e.price) * e.registrations.length, 0);
   const receitaPrevistaMes = receitaPrevista + receitaEventosMes;
@@ -180,7 +180,7 @@ export async function getDirectorDashboard(schoolId: string) {
   const receptionCandidates=activeMembers.filter(m=>volunteerAccess.has(m.id)||(m.mercurioId&&nationalIds.has(m.mercurioId))).map(m=>({id:m.id,name:m.name}));
   const eventos = await db.event.findMany({
     where: { schoolId },
-    include: { registrations: { include: { member: true } }, staff: true },
+    include: { registrations: { where: { desistenciaEm: null }, include: { member: true } }, staff: true },
     orderBy: { startsAt: "desc" },
     take: 10,
   });
@@ -276,6 +276,7 @@ export async function getDirectorDashboard(schoolId: string) {
       abertoA: e.abertoA,
       abertoValores: e.abertoValores,
       lancheCompartilhado: e.lancheCompartilhado,
+      prazoDesistenciaDias: e.prazoDesistenciaDias,
       posterPath:e.posterPath,
       posterUrl:eventPosters.get(e.id)??null,
       capacity:e.capacity,

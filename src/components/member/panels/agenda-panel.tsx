@@ -111,10 +111,14 @@ function InscricaoEvento({
   price,
   inscricaoInicial,
   unavailableReason,
+  inicio,
+  prazoDesistenciaDias,
 }: {
   memberId: string;
   eventId: string;
   price: number;
+  inicio: Date;
+  prazoDesistenciaDias?: number | null;
   unavailableReason?: string | null;
   inscricaoInicial: Extract<AgendaItem, { kind: "evento" }>["minhaInscricao"];
 }) {
@@ -173,10 +177,22 @@ function InscricaoEvento({
     });
   }
 
-  function aoCancelar(mensagem: string) {
-    setInscricao(null);
+  function aoCancelar(mensagem: string, desistenciaPaga?: boolean) {
+    // Desistência paga fica registrada (histórico da devolução); a gratuita some.
+    if (desistenciaPaga) setInscricao((atual) => (atual ? { ...atual, desistiu: true, refundState: "pendente" } : atual));
+    else setInscricao(null);
     setMostrarCpf(false);
     setAviso(mensagem);
+  }
+
+  if (inscricao?.desistiu) {
+    return (
+      <div className="mt-2 flex flex-col gap-1">
+        <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Você desistiu desta inscrição.</p>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400">Devolução: {REFUND_LABELS[inscricao.refundState ?? "pendente"] ?? "em acompanhamento"}.</p>
+        {aviso && <p role="status" className="text-[11px] text-gray-600 dark:text-gray-300">{aviso}</p>}
+      </div>
+    );
   }
 
   if (inscricao?.pago) {
@@ -184,7 +200,7 @@ function InscricaoEvento({
       <div className="mt-2 flex flex-col gap-1.5">
         <p className="text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">✓ Você está inscrito</p>
         {price > 0 ? (
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">Para desistir de uma inscrição paga e pedir a devolução, fale com a Economia.</p>
+          <DesistenciaPaga memberId={memberId} registrationId={inscricao.registrationId} inicio={inicio} prazoDias={prazoDesistenciaDias ?? null} onCancelada={aoCancelar} />
         ) : (
           <CancelarInscricao memberId={memberId} registrationId={inscricao.registrationId} onCancelada={aoCancelar} />
         )}
@@ -251,17 +267,51 @@ function InscricaoEvento({
   );
 }
 
+const dataCurta = (d: Date) => d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+/** Inscrição paga: desistir com devolução até o prazo do evento (padrão 3 dias antes). */
+function DesistenciaPaga({
+  memberId,
+  registrationId,
+  inicio,
+  prazoDias,
+  onCancelada,
+}: {
+  memberId: string;
+  registrationId: string;
+  inicio: Date;
+  prazoDias: number | null;
+  onCancelada: (mensagem: string, desistenciaPaga?: boolean) => void;
+}) {
+  const limite = prazoDias === null ? null : new Date(inicio.getTime() - prazoDias * 86_400_000);
+  const [agora] = useState(() => Date.now());
+  if (!limite) return <p className="text-[11px] text-gray-500 dark:text-gray-400">Este evento não prevê devolução em caso de desistência.</p>;
+  if (agora > limite.getTime())
+    return <p className="text-[11px] text-gray-500 dark:text-gray-400">O prazo para desistir com devolução terminou em {dataCurta(limite)}. Fale com a Economia.</p>;
+  return (
+    <CancelarInscricao
+      memberId={memberId}
+      registrationId={registrationId}
+      onCancelada={onCancelada}
+      rotulo={`Desistir com devolução (até ${dataCurta(limite)})`}
+      confirmacao="Confirma a desistência? O valor pago será devolvido no mesmo PIX e sua vaga vai para outra pessoa."
+    />
+  );
+}
+
 /** Desistência pelo próprio aluno, com confirmação (pedido do usuário 2026-10-22). */
 function CancelarInscricao({
   memberId,
   registrationId,
   onCancelada,
   rotulo = "Cancelar inscrição",
+  confirmacao = "Confirma a desistência? Sua vaga vai para outra pessoa.",
 }: {
   memberId: string;
   registrationId: string;
-  onCancelada: (mensagem: string) => void;
+  onCancelada: (mensagem: string, desistenciaPaga?: boolean) => void;
   rotulo?: string;
+  confirmacao?: string;
 }) {
   const [confirmando, setConfirmando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -271,7 +321,7 @@ function CancelarInscricao({
     iniciar(async () => {
       try {
         const r = await cancelarMinhaInscricao(memberId, registrationId);
-        if (r.ok) onCancelada(r.mensagem);
+        if (r.ok) onCancelada(r.mensagem, r.desistenciaPaga);
         else setErro(r.erro);
       } catch (e) {
         setErro(mensagemErroAmigavel(e));
@@ -286,7 +336,7 @@ function CancelarInscricao({
     );
   return (
     <div className="flex flex-col gap-1.5 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
-      <p className="text-[11px] text-gray-700 dark:text-gray-300">Confirma a desistência? Sua vaga vai para outra pessoa.</p>
+      <p className="text-[11px] text-gray-700 dark:text-gray-300">{confirmacao}</p>
       <div className="flex gap-2">
         <button type="button" onClick={confirmar} disabled={pendente} className="rounded-lg bg-na-danger px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60">
           {pendente ? "Cancelando..." : "Sim, desistir"}
@@ -391,7 +441,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
             {!item.minhaInscricao&&item.registrationClosed?<p className="mt-2 text-xs font-semibold">Inscrições encerradas</p>:!item.minhaInscricao&&item.availableSpots===0?(somenteConsulta?<p className="mt-2 text-xs font-semibold">Vagas esgotadas</p>:<ListaDeEspera memberId={memberId} eventId={item.id} espera={item.minhaEspera} />):somenteConsulta ? (
               <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">{emBreve ? "Inscrição paga pelo Portal: em breve na sua filial. Fale com a secretaria." : "Online payment isn't available for your branch yet — please contact your branch."}</p>
             ) : (
-              <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} unavailableReason={item.paymentUnavailableReason} />
+              <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} unavailableReason={item.paymentUnavailableReason} inicio={item.date} prazoDesistenciaDias={item.prazoDesistenciaDias} />
             )}
           </>
         )}

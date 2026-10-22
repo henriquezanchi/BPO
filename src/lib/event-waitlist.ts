@@ -38,7 +38,7 @@ export async function processarListaDeEspera(eventId?: string) {
     const restantes = fila.filter((f) => !sair.includes(f.id));
     if (e.registrationClosesAt && e.registrationClosesAt <= agora) continue;
 
-    const ocupadas = (await db.eventRegistration.count({ where: { eventId: e.id } })) + restantes.filter((f) => f.avisadoEm).length;
+    const ocupadas = (await db.eventRegistration.count({ where: { eventId: e.id, desistenciaEm: null } })) + restantes.filter((f) => f.avisadoEm).length;
     const livres = Math.max(0, (e.capacity ?? 0) - ocupadas);
     for (const f of restantes.filter((x) => !x.avisadoEm).slice(0, livres)) {
       const marcado = await db.eventWaitlist.updateMany({ where: { id: f.id, avisadoEm: null }, data: { avisadoEm: agora } });

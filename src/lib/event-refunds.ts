@@ -3,10 +3,13 @@ import { db } from "@/lib/db";
 import { asaasGetPaymentStatus,asaasRefundEventPayment,asaasDeleteEventPayment } from "@/lib/asaas/client";
 import { refundErrorMessage,refundPosition } from "@/lib/event-refund-policy";
 
+/** Reembolsa quando a filial cancelou o evento com devolução ou quando o próprio aluno desistiu no prazo (2026-10-22). */
+const ELEGIVEL={OR:[{event:{source:'manual',status:'cancelado',refundOnCancellation:true}},{desistenciaEm:{not:null},event:{source:'manual'}}]};
+
 /** Fila persistida na inscrição. Nunca repete um POST de resultado incerto. */
 export async function processEventRefund(registrationId:string) {
  const now=new Date(),token=randomUUID();
- const claimed=await db.eventRegistration.updateMany({where:{id:registrationId,event:{source:'manual',status:'cancelado',refundOnCancellation:true},OR:[{refundLeaseUntil:null},{refundLeaseUntil:{lte:now}}]},data:{refundLockId:token,refundLeaseUntil:new Date(now.getTime()+600_000),refundAttempts:{increment:1}}});
+ const claimed=await db.eventRegistration.updateMany({where:{id:registrationId,AND:[ELEGIVEL,{OR:[{refundLeaseUntil:null},{refundLeaseUntil:{lte:now}}]}]},data:{refundLockId:token,refundLeaseUntil:new Date(now.getTime()+600_000),refundAttempts:{increment:1}}});
  if(!claimed.count)return;
  const save=(data:Parameters<typeof db.eventRegistration.updateMany>[0]['data'])=>db.eventRegistration.updateMany({where:{id:registrationId,refundLockId:token},data});
  let postAttempted=false;
@@ -41,7 +44,7 @@ export async function processEventRefund(registrationId:string) {
   const sending=await save({refundSubmittedAt:now,refundState:'processando',refundError:null});
   if(!sending.count)return;
   postAttempted=true;
-  try {await asaasRefundEventPayment(r.asaasPaymentId,position.done>0?position.remaining:undefined);}
+  try {await asaasRefundEventPayment(r.asaasPaymentId,position.done>0?position.remaining:undefined,r.desistenciaEm?'Desistencia da inscricao: reembolso':undefined);}
   catch(error){
    const status=(error as {status?:number})?.status;
    // Uma rejeição inequívoca permite nova tentativa, sempre com consulta anterior.
@@ -61,7 +64,7 @@ export async function processEventRefund(registrationId:string) {
 
 export async function processEventRefundQueue(eventId?:string,limit=20) {
  const now=new Date();
- const rows=await db.eventRegistration.findMany({where:{...(eventId?{eventId}:{}),event:{source:'manual',status:'cancelado',refundOnCancellation:true},AND:[{OR:[{refundNextAttemptAt:{lte:now}},{refundState:'pendente'},{refundState:'sem_pagamento',asaasPaymentId:{not:null}}]},{OR:[{refundLeaseUntil:null},{refundLeaseUntil:{lte:now}}]}]},select:{id:true},orderBy:[{refundNextAttemptAt:'asc'},{id:'asc'}],take:Math.min(Math.max(limit,1),50)});
+ const rows=await db.eventRegistration.findMany({where:{...(eventId?{eventId}:{}),AND:[ELEGIVEL,{OR:[{refundNextAttemptAt:{lte:now}},{refundState:'pendente'},{refundState:'sem_pagamento',asaasPaymentId:{not:null}}]},{OR:[{refundLeaseUntil:null},{refundLeaseUntil:{lte:now}}]}]},select:{id:true},orderBy:[{refundNextAttemptAt:'asc'},{id:'asc'}],take:Math.min(Math.max(limit,1),50)});
  let consulted=0;const deadline=Date.now()+180_000;
  for(const r of rows){if(Date.now()>deadline)break;await processEventRefund(r.id);consulted++;}
  return {consultadas:consulted};

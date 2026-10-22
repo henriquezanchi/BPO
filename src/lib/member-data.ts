@@ -64,7 +64,8 @@ export type AgendaItem =
       // Inscrição do próprio membro (ver event-actions.ts) — null = ainda
       // não se inscreveu. Sempre null pra scope "nacional"/"regional" (não
       // têm fluxo de inscrição/pagamento ainda).
-      minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null; refundState?: string; refundedAmount?: number } | null;
+      minhaInscricao: { registrationId: string; pago: boolean; pixPayload: string | null; pixQrCodeBase64: string | null; refundState?: string; refundedAmount?: number; desistiu?: boolean } | null;
+      prazoDesistenciaDias?: number | null;
       // Lista de espera (2026-10-22): posição na fila e se a vaga já está reservada para a pessoa.
       minhaEspera?: { posicao: number; vagaReservada: boolean } | null;
       posterUrl?: string | null;
@@ -193,7 +194,7 @@ export async function getMemberDashboard(memberId: string) {
         startsAt: { gte: new Date(Date.now()-86400000) },
       },
       orderBy: { startsAt: "asc" },
-      include:{_count:{select:{registrations:true}},school:{select:{name:true}}},
+      include:{_count:{select:{registrations:{where:{desistenciaEm:null}}}},school:{select:{name:true}}},
     }),
     studentClassGroupIds.length
       ? db.activity.findMany({
@@ -257,7 +258,7 @@ export async function getMemberDashboard(memberId: string) {
   function inscricaoDoEvento(eventId: string): Extract<AgendaItem, { kind: "evento" }>["minhaInscricao"] {
     const r = minhasInscricoes.find((i) => i.eventId === eventId);
     if (!r) return null;
-    return { registrationId: r.id, pago: r.paid, pixPayload: r.pixPayload, pixQrCodeBase64: r.pixQrCodeBase64, refundState:r.refundState, refundedAmount:Number(r.refundedAmount) };
+    return { registrationId: r.id, pago: r.paid, pixPayload: r.pixPayload, pixQrCodeBase64: r.pixQrCodeBase64, refundState:r.refundState, refundedAmount:Number(r.refundedAmount), desistiu:!!r.desistenciaEm };
   }
 
   function resumoReacoes(itemId: string): AgendaReactionSummary[] {
@@ -292,6 +293,7 @@ export async function getMemberDashboard(memberId: string) {
         capacity:e.capacity,
         availableSpots:e.capacity===null?null:Math.max(0,e.capacity-e._count.registrations-reservasDeOutros(e.id)),
         minhaEspera:esperaDoEvento(e.id),
+        prazoDesistenciaDias:e.prazoDesistenciaDias,
         registrationClosed:Boolean(e.registrationClosesAt&&e.registrationClosesAt<=new Date()),
         participantInstructions:e.participantInstructions,
         contactInfo:e.contactInfo,

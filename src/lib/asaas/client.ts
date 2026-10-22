@@ -362,10 +362,10 @@ export interface AsaasRefund {
   transactionReceiptUrl?: string | null;
   refundedSplits?: { id: string; value: number; done: boolean }[];
 }
-export async function asaasRefundEventPayment(paymentId: string, remaining?: number): Promise<AsaasPayment> {
+export async function asaasRefundEventPayment(paymentId: string, remaining?: number, descricao = "Cancelamento do evento: reembolso das inscricoes"): Promise<AsaasPayment> {
   return chamarApi<AsaasPayment>(`/payments/${encodeURIComponent(paymentId)}/refund`, {
     method: "POST",
-    body: JSON.stringify({ description: "Cancelamento do evento: reembolso das inscricoes", ...(remaining !== undefined ? { value: remaining } : {}) }),
+    body: JSON.stringify({ description: descricao, ...(remaining !== undefined ? { value: remaining } : {}) }),
   });
 }
 /** Diferente do cancelamento best-effort legado, o evento exige confirmação da exclusão. */

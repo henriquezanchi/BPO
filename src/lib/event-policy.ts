@@ -88,7 +88,24 @@ function validarAbertura(abertoA: string | undefined, valores: string[] | undefi
   return { abertoA: a, abertoValores: v.slice(0, 200) };
 }
 
-export function validateInternalEvent(input: {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null;lancheCompartilhado?:boolean}) {
+/** Prazos de desistência com devolução oferecidos no cadastro (pedido do usuário 2026-10-22; padrão 3 dias). */
+export const PRAZOS_DESISTENCIA: { valor: number | null; rotulo: string }[] = [
+  { valor: 7, rotulo: "Até 7 dias antes do evento" },
+  { valor: 3, rotulo: "Até 3 dias antes do evento (padrão)" },
+  { valor: 1, rotulo: "Até 1 dia antes do evento" },
+  { valor: null, rotulo: "Sem devolução em caso de desistência" },
+];
+function prazoDesistencia(valor: number | null | undefined) {
+  if (valor === undefined) return 3;
+  if (!PRAZOS_DESISTENCIA.some((p) => p.valor === valor)) throw Error("Escolha um prazo de desistência válido.");
+  return valor;
+}
+/** Último momento para desistir com devolução, ou null se o evento não devolve. */
+export function limiteDesistencia(startsAt: Date, prazoDias: number | null) {
+  return prazoDias === null ? null : new Date(startsAt.getTime() - prazoDias * 86_400_000);
+}
+
+export function validateInternalEvent(input: {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null;lancheCompartilhado?:boolean;prazoDesistenciaDias?:number|null}) {
  const start=new Date(input.startsAt),end=new Date(input.endsAt);
  if(!input.title.trim()||input.title.length>160||input.description.length>5000||input.location.length>300)throw Error('Confira o título, a descrição e o local.');
  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||start<=new Date()||end<=start)throw Error('Informe início futuro e término depois do início.');
@@ -101,7 +118,7 @@ export function validateInternalEvent(input: {title:string;startsAt:string;endsA
  const closes=input.registrationClosesAt?new Date(input.registrationClosesAt):null;
  if(closes&&(!Number.isFinite(closes.getTime())||closes>start))throw Error('O prazo de inscrição deve terminar até o início do evento.');
  if((input.participantInstructions?.length??0)>5000||(input.contactInfo?.length??0)>300)throw Error('Reduza as orientações ou o contato do evento.');
- return {capacity,registrationClosesAt:closes,participantInstructions:input.participantInstructions?.trim()||null,contactInfo:input.contactInfo?.trim()||null,posterPath:input.posterPath||null,title:input.title.trim(),startsAt:start,endsAt:end,price:input.price,audience:publicos[0],publicos,...abertura,description:input.description.trim(),location:input.location.trim(),lancheCompartilhado:!!input.lancheCompartilhado};
+ return {capacity,registrationClosesAt:closes,participantInstructions:input.participantInstructions?.trim()||null,contactInfo:input.contactInfo?.trim()||null,posterPath:input.posterPath||null,title:input.title.trim(),startsAt:start,endsAt:end,price:input.price,audience:publicos[0],publicos,...abertura,description:input.description.trim(),location:input.location.trim(),lancheCompartilhado:!!input.lancheCompartilhado,prazoDesistenciaDias:prazoDesistencia(input.prazoDesistenciaDias)};
 }
 export function eventNoticePlan(startsAt:Date,endsAt:Date,now=new Date()) {
  return [{kind:'inscricao',dueAt:now},{kind:'vespera',dueAt:new Date(startsAt.getTime()-86400000)},{kind:'uma_hora',dueAt:new Date(startsAt.getTime()-3600000)},{kind:'avaliar_presenca',dueAt:new Date(endsAt.getTime()+3600000)}].filter(n=>n.dueAt>=now);

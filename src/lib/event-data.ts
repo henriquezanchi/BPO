@@ -13,6 +13,6 @@ export async function requireEventReception(eventId:string) {
 }
 export async function getEventReception(eventId:string) {
  const {event}=await requireEventReception(eventId);
- const registrations=await db.eventRegistration.findMany({where:{eventId},select:{id:true,paid:true,paymentState:true,checkedIn:true,checkedInAt:true,selfReportedAttendance:true,member:{select:{name:true,registrationNo:true}},mercurioStatus:true},orderBy:{member:{name:'asc'}}});
+ const registrations=await db.eventRegistration.findMany({where:{eventId,desistenciaEm:null},select:{id:true,paid:true,paymentState:true,checkedIn:true,checkedInAt:true,selfReportedAttendance:true,member:{select:{name:true,registrationNo:true}},mercurioStatus:true},orderBy:{member:{name:'asc'}}});
  return {id:event.id,title:event.title,startsAt:event.startsAt,status:event.status,price:Number(event.price),registrations};
 }

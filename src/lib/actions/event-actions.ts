@@ -13,7 +13,7 @@ import {processEventRefundQueue} from '@/lib/event-refunds';
 import {reservasAtivasWhere} from '@/lib/event-waitlist';
 import {revalidatePath} from 'next/cache';
 
-export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null;lancheCompartilhado?:boolean}
+export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null;lancheCompartilhado?:boolean;prazoDesistenciaDias?:number|null}
 function refresh(eventId?:string){revalidatePath('/','layout');revalidatePath('/portal');if(eventId)revalidatePath(`/eventos/${eventId}/recepcao`);}
 export async function salvarEvento(schoolId:string,input:InternalEventInput,id?:string,revision?:number) {
  try {
@@ -26,12 +26,12 @@ export async function salvarEvento(schoolId:string,input:InternalEventInput,id?:
     if(!Number.isSafeInteger(revision)||revision!<0)throw Error('Atualize o evento antes de editar.');
     const current=await tx.event.findFirstOrThrow({where:{id,schoolId,source:'manual',status:'publicado'}});
     if(current.startsAt<=new Date())throw Error('Eventos já iniciados preservam seu histórico e não podem ser editados.');
-    if(data.capacity!==null&&data.capacity<await tx.eventRegistration.count({where:{eventId:id}}))throw Error("O limite não pode ser menor que o número de inscrições já reservadas.");
+    if(data.capacity!==null&&data.capacity<await tx.eventRegistration.count({where:{eventId:id,desistenciaEm:null}}))throw Error("O limite não pode ser menor que o número de inscrições já reservadas.");
     if(Number(current.price)!==data.price&&await tx.eventRegistration.count({where:{eventId:id}}))throw Error('O valor não pode mudar depois da primeira inscrição.');
     const changed=await tx.event.updateMany({where:{id,schoolId,source:'manual',revision,status:'publicado'},data:{...data,revision:{increment:1}}});
     if(!changed.count)throw Error('O evento mudou em outra sessão. Atualize antes de editar.');
     await tx.eventNotice.updateMany({where:{registration:{eventId:id},status:'aguardando_canal'},data:{status:'cancelado'}});
-    const registrations=await tx.eventRegistration.findMany({where:{eventId:id,paid:true},select:{id:true}});
+    const registrations=await tx.eventRegistration.findMany({where:{eventId:id,paid:true,desistenciaEm:null},select:{id:true}});
     for(const r of registrations)for(const n of eventNoticePlan(data.startsAt,data.endsAt).filter(n=>n.kind!=='inscricao'))await tx.eventNotice.upsert({where:{registrationId_kind:{registrationId:r.id,kind:n.kind}},create:{...n,registrationId:r.id},update:{dueAt:n.dueAt,status:'aguardando_canal'}});
    }else eventId=(await tx.event.create({data:{schoolId,...data}})).id;
    await tx.eventAudit.create({data:{eventId:eventId!,actorId:actor.id,action:id?'editado':'criado',changes:JSON.parse(JSON.stringify(data))}});
@@ -47,7 +47,7 @@ export async function excluirEvento(schoolId:string,eventId:string,reembolsar=fa
   const changed=await tx.event.updateMany({where:{id:eventId,schoolId,source:'manual',OR:[{status:'publicado'},...(reembolsar?[{status:'cancelado',refundOnCancellation:false}]:[])]},data:{status:'cancelado',...(reembolsar?{refundOnCancellation:true}:{}),revision:{increment:1}}});
   if(!changed.count)throw Error('Evento indisponível para cancelamento.');
   await tx.eventNotice.updateMany({where:{registration:{eventId},status:'aguardando_canal'},data:{status:'cancelado'}});
-  const registrations=await tx.eventRegistration.findMany({where:{eventId},select:{id:true}});
+  const registrations=await tx.eventRegistration.findMany({where:{eventId,desistenciaEm:null},select:{id:true}});
   for(const r of registrations)await tx.eventNotice.upsert({where:{registrationId_kind:{registrationId:r.id,kind:'cancelamento'}},create:{registrationId:r.id,kind:'cancelamento',dueAt:new Date()},update:{status:'aguardando_canal',dueAt:new Date()}});
   await tx.eventAudit.create({data:{eventId,actorId:actor.id,action:'cancelado',changes:{reembolsarInscricoes:reembolsar}}});
   if(reembolsar)await tx.eventRegistration.updateMany({where:{eventId,refundState:'nao_solicitado'},data:{refundState:'pendente',refundNextAttemptAt:new Date()}});
@@ -100,12 +100,14 @@ async function enrollEvent(memberId:string,eventId:string,cpf?:string){
  const registration=await db.$transaction(async tx=>{
   const lock=await tx.event.updateMany({where:{...eligible,revision:event.revision},data:{revision:{increment:1}}});
   if(!lock.count)throw new EventEnrollmentError('O evento mudou. Atualize a Agenda antes de se inscrever.');
+  // Quem desistiu (2026-10-22) não volta sozinho: a inscrição antiga guarda o histórico do reembolso.
+  if((await tx.eventRegistration.findUnique({where:{eventId_memberId:{eventId,memberId}},select:{desistenciaEm:true}}))?.desistenciaEm)throw new EventEnrollmentError('Você desistiu desta inscrição. Para voltar, fale com a secretaria.');
   if(event.capacity!==null&&event.capacity!==undefined||event.registrationClosesAt){
    const existing=await tx.eventRegistration.findUnique({where:{eventId_memberId:{eventId,memberId}},select:{id:true}});
    if(!existing){
     if(event.registrationClosesAt&&event.registrationClosesAt<=new Date())throw new EventEnrollmentError('As inscrições deste evento foram encerradas.');
     // Vagas reservadas a quem foi avisado pela lista de espera (2026-10-22) contam como ocupadas para os demais.
-    if(event.capacity!==null&&event.capacity!==undefined&&(await tx.eventRegistration.count({where:{eventId}}))+(await tx.eventWaitlist.count({where:reservasAtivasWhere(eventId,memberId)}))>=event.capacity)throw new EventEnrollmentError('Todas as vagas deste evento já foram reservadas.');
+    if(event.capacity!==null&&event.capacity!==undefined&&(await tx.eventRegistration.count({where:{eventId,desistenciaEm:null}}))+(await tx.eventWaitlist.count({where:reservasAtivasWhere(eventId,memberId)}))>=event.capacity)throw new EventEnrollmentError('Todas as vagas deste evento já foram reservadas.');
    }
   }
   return tx.eventRegistration.upsert({where:{eventId_memberId:{eventId,memberId}},create:{eventId,memberId,amount:price,paid:price===0,paymentState:price===0?'gratuito':'novo'},update:{}});
