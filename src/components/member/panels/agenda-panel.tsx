@@ -260,7 +260,7 @@ function InscricaoEvento({
         disabled={isPending}
         className="rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
       >
-        {isPending ? <Loader2 size={12} className="animate-spin" /> : "Inscrever-se"}
+        {isPending ? <Loader2 size={12} className="animate-spin" /> : "Inscreva-se"}
       </button>
       {erro && <p className="mt-1 text-[11px] text-na-danger-dark dark:text-red-400">{erro}</p>}
       {aviso && <p role="status" className="mt-1 text-[11px] text-gray-600 dark:text-gray-300">{aviso}</p>}
@@ -433,7 +433,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
             <MapPin size={11} className="shrink-0" /> {item.location}
           </div>
         )}
-        {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block text-sm font-semibold text-na-green dark:text-emerald-400">Inscrever-se no site do organizador ↗</a>}
+        {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark">Inscreva-se</a>}
         {(() => { const publico = eventoCompartilhavel(item); return publico && <CompartilharEvento evento={publico} />; })()}
         {item.description && <p className="mt-1.5 text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
         {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{(item.availableSpots??0)===1?'1 vaga disponível':`${item.availableSpots??0} vagas disponíveis`} de {item.capacity}</p>}

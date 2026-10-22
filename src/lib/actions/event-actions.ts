@@ -40,6 +40,18 @@ export async function salvarEvento(schoolId:string,input:InternalEventInput,id?:
 }
 // Compatibilidade com a tela anterior; novas telas exigem também término e público.
 export async function criarEvento(schoolId:string,title:string,startsAt:string,price:number){return salvarEvento(schoolId,{title,startsAt,endsAt:new Date(new Date(startsAt).getTime()+7200000).toISOString(),price,audience:'todos_ativos',description:'',location:''});}
+/**
+ * Link do post oficial do evento no Instagram (pedido do usuário 2026-10-22), também para eventos
+ * importados do Ulisses: quem compartilha reposta o post oficial em vez de criar outro.
+ */
+export async function definirPostagemOficial(schoolId:string,eventId:string,link:string){
+ const actor=await requireArea(schoolId,"eventos");if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
+ const valor=link.trim();
+ if(valor&&!/^https:\/\/(www\.)?instagram\.com\/(p|reel|reels|tv)\/[A-Za-z0-9_-]+\/?(\?.*)?$/.test(valor))throw Error('Cole o link de um post do Instagram (instagram.com/p/... ou /reel/...).');
+ const ok=await db.event.updateMany({where:{id:eventId,schoolId},data:{linkPostagemOficial:valor||null}});
+ if(!ok.count)throw Error('Evento não encontrado nesta filial.');
+ refresh(eventId);
+}
 export async function excluirEvento(schoolId:string,eventId:string,reembolsar=false){
  if(typeof reembolsar!=='boolean')throw Error('Opção de reembolso inválida.');
  const actor=await requireArea(schoolId, "eventos");if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');

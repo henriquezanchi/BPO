@@ -276,6 +276,7 @@ export async function getDirectorDashboard(schoolId: string) {
       abertoA: e.abertoA,
       abertoValores: e.abertoValores,
       lancheCompartilhado: e.lancheCompartilhado,
+      linkPostagemOficial: e.linkPostagemOficial,
       prazoDesistenciaDias: e.prazoDesistenciaDias,
       posterPath:e.posterPath,
       posterUrl:eventPosters.get(e.id)??null,

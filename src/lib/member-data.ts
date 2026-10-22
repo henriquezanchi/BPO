@@ -86,6 +86,7 @@ export type AgendaItem =
       endsAt: Date | null;
       allDay: boolean;
       lancheCompartilhado?: boolean;
+      postagemOficial?: string | null;
     }
   | {
       kind: "atividade";
@@ -305,6 +306,7 @@ export async function getMemberDashboard(memberId: string) {
         endsAt: e.endsAt,
         allDay: e.allDay,
         lancheCompartilhado: e.lancheCompartilhado,
+        postagemOficial: e.linkPostagemOficial,
       }),
     ),
     ...classActivities.map(

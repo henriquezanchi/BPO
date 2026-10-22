@@ -156,7 +156,7 @@ const FAQ: { pergunta: string; resposta: string }[] = [
   },
   {
     pergunta: "Como me inscrevo em um evento da escola?",
-    resposta: 'Na Agenda, encontre o evento e toque em "Inscrever-se". Eventos pagos geram um PIX na hora; gratuitos confirmam na hora.',
+    resposta: 'Na Agenda, encontre o evento e toque em "Inscreva-se". Eventos pagos geram um PIX na hora; gratuitos confirmam na hora.',
   },
   {
     pergunta: "O que é o GAF?",

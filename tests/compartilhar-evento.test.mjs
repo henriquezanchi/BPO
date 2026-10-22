@@ -13,10 +13,12 @@ test('texto de cada canal no formato dele, com horário de Brasília',()=>{
  const e=eventoCompartilhavel(base,agora);
  assert.equal(horaCurta(e.date),'19h');
  const wa=textoParaCanal(e,'whatsapp');
- assert.match(wa,/^\*Palestra: Filosofia para viver\*\n\n📅 domingo, 25 de outubro, às 19h\n📍 Nova Acrópole Barra/);
+ // Abertura em tom de conversa e sem emoji (o WhatsApp do computador troca emoji por "?") — 22/10/2026.
+ assert.match(wa,/^[^\n*]+\n\n\*Palestra: Filosofia para viver\*\ndomingo, 25 de outubro, às 19h\nNova Acrópole Barra/);
+ assert.equal(/[\u{10000}-\u{10FFFF}]/u.test(wa),false);
  assert.ok(wa.endsWith('Inscrições: https://inscricao.acropolebrasil.com.br/?eventoId=9'));
  assert.match(textoParaCanal(e,'instagram'),/#NovaAcrópole/);
- assert.ok(linkDoCanal(e,'whatsapp').startsWith('https://wa.me/?text=*Palestra%3A'));
+ assert.ok(linkDoCanal(e,'whatsapp').startsWith('https://wa.me/?text='));assert.ok(decodeURIComponent(linkDoCanal(e,'whatsapp')).includes('*Palestra: Filosofia para viver*'));
  const tg=new URL(linkDoCanal(e,'telegram'));assert.equal(tg.searchParams.get('url'),e.registrationUrl);assert.equal(tg.searchParams.get('text').includes('Inscrições:'),false);
  assert.equal(new URL(linkDoCanal(e,'facebook')).searchParams.get('u'),e.registrationUrl);
  assert.equal(nomeDoArquivo(e,'story'),'palestra-filosofia-para-viver-story.png');

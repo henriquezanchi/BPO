@@ -28,9 +28,15 @@ const COR = {
 const MARGEM = 96;
 const TITULO_MINIMO = 56;
 
+/** Imagem do evento passa pelo Portal (o bucket do Ulisses não libera o canvas — ver /api/imagem-evento). */
+function enderecoDaImagem(src: string) {
+  return /^https:\/\/s3-sa-east-1\.amazonaws\.com\//i.test(src) ? `/api/imagem-evento?url=${encodeURIComponent(src)}` : src;
+}
+
 function carregarImagem(src: string): Promise<HTMLImageElement> {
   return new Promise((ok, falha) => {
     const img = new Image();
+    if (/^https?:/i.test(src)) img.crossOrigin = "anonymous";
     img.onload = () => ok(img);
     img.onerror = () => falha(new Error(`Não carregou ${src}`));
     img.src = src;
@@ -83,19 +89,36 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   const story = formato === "story";
 
   // --- Medir antes de desenhar: o título encolhe até tudo caber acima da faixa.
-  const logo = await carregarImagem("/na-logo.png").catch(() => null);
-  const alturaLogo = logo ? (logo.height / logo.width) * m.logo : 0;
+  const [logo, foto] = await Promise.all([
+    carregarImagem("/na-logo.png").catch(() => null),
+    e.imagem ? carregarImagem(enderecoDaImagem(e.imagem)).catch(() => null) : Promise.resolve(null),
+  ]);
+  // Com imagem do evento, o logo encolhe para sobrar espaço para ela.
+  const larguraLogo = foto ? Math.round(m.logo * 0.72) : m.logo;
+  const alturaLogo = logo ? (logo.height / logo.width) * larguraLogo : 0;
   const yFaixa = m.h - m.base - m.faixa;
   const yChamada = m.topo + alturaLogo + (story ? 80 : 56) + 10 + (story ? 56 : 44);
-  const yInicioTitulo = yChamada + (story ? 40 : 30);
+  const yFoto = yChamada + (story ? 44 : 32);
+
 
   ctx.font = fonte(400, m.local);
   const linhasLocal = e.location ? quebrarLinhas(ctx, e.location, larguraUtil, 2) : [];
   const passoData = Math.round(m.data * 1.35);
   const passoLocal = Math.round(m.local * 1.45);
-  const espacoAntesData = story ? 110 : 90;
+  const espacoAntesData = foto ? (story ? 88 : 72) : story ? 110 : 90;
   const alturaInfo = m.data + (e.allDay ? 0 : passoData) + linhasLocal.length * passoLocal;
   const folgaFaixa = story ? 90 : 70;
+  // Imagem do evento (pedido do usuário 2026-10-22) logo abaixo da chamada, inteira (sem cortar o cartaz).
+  // Ocupa só o espaço que sobra depois de reservar duas linhas de título, a data e o local.
+  const reservaTitulo = 2 * Math.round((story ? 84 : 72) * 1.12);
+  const gapFoto = story ? 40 : 30;
+  const sobraParaFoto = yFaixa - folgaFaixa - alturaInfo - espacoAntesData - reservaTitulo - gapFoto - yFoto;
+  const alturaMaxFoto = Math.min(story ? 620 : 340, sobraParaFoto);
+  const usarFoto = foto && alturaMaxFoto >= 160;
+  const escalaFoto = usarFoto ? Math.min(larguraUtil / foto.width, alturaMaxFoto / foto.height) : 0;
+  const fotoW = usarFoto ? Math.round(foto.width * escalaFoto) : 0;
+  const fotoH = usarFoto ? Math.round(foto.height * escalaFoto) : 0;
+  const yInicioTitulo = (usarFoto ? yFoto + fotoH : yChamada) + gapFoto;
   const alturaParaTitulo = yFaixa - folgaFaixa - alturaInfo - espacoAntesData - yInicioTitulo;
 
   let tamTitulo: number = m.titulo;
@@ -116,7 +139,7 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   ctx.fillRect(0, 0, m.w, m.h);
   ctx.textBaseline = "alphabetic";
 
-  if (logo) ctx.drawImage(logo, MARGEM, m.topo, m.logo, alturaLogo);
+  if (logo) ctx.drawImage(logo, MARGEM, m.topo, larguraLogo, alturaLogo);
 
   // Filete Helios + chamada.
   const yFilete = m.topo + alturaLogo + (story ? 80 : 56);
@@ -127,6 +150,17 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   espacar(4);
   ctx.fillText("EVENTO ABERTO AO PÚBLICO", MARGEM, yChamada);
   espacar(0);
+
+  if (usarFoto && foto) {
+    const x = MARGEM + Math.round((larguraUtil - fotoW) / 2);
+    ctx.save();
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") ctx.roundRect(x, yFoto, fotoW, fotoH, 24);
+    else ctx.rect(x, yFoto, fotoW, fotoH);
+    ctx.clip();
+    ctx.drawImage(foto, x, yFoto, fotoW, fotoH);
+    ctx.restore();
+  }
 
   let y = yInicioTitulo;
   ctx.fillStyle = COR.heketEscuro;

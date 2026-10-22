@@ -2,7 +2,7 @@
 import { PRAZOS_DESISTENCIA } from '@/lib/event-policy';
 import {EventPosterInput} from "./event-poster-input";
 import {EventReceptionSelector} from "./event-reception-selector";
-import {salvarEvento,excluirEvento,definirRecepcaoEvento} from '@/lib/actions/event-actions';
+import {salvarEvento,excluirEvento,definirRecepcaoEvento,definirPostagemOficial} from '@/lib/actions/event-actions';
 import {ABERTURAS,EVENT_AUDIENCES} from '@/lib/event-policy';
 import {AberturaEvento,PublicosEvento} from './publicos-abertura-evento';
 import type {DirectorDashboard} from '@/lib/director-data';
@@ -70,11 +70,22 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
    <p className="text-xs text-gray-500">{(e.publicos?.length?e.publicos:[e.audience]).map(p=>EVENT_AUDIENCES[p as keyof typeof EVENT_AUDIENCES]??'Público restrito').join(', ')}{e.abertoA&&e.abertoA!=='filial'?` · aberto a ${ABERTURAS[e.abertoA as keyof typeof ABERTURAS]?.toLowerCase()??'outras filiais'}`:''} · {e.inscritos} inscrições{e.capacity!==null&&e.capacity!==undefined?` / ${e.capacity} vagas`:''} · {e.presentes} presenças</p>
    {e.location&&<p className="text-sm">{e.location}</p>}{e.description&&<p className="whitespace-pre-wrap text-sm">{e.description}</p>}
    <div className="flex flex-wrap gap-3 text-sm"><Link className="font-semibold text-na-green dark:text-emerald-400" href={`/eventos/${e.id}/recepcao`}>Abrir lista e recepção</Link>{e.source==='manual'&&e.status==='publicado'&&<><button disabled={pending} onClick={()=>{setEditing(e);window.scrollTo({top:0,behavior:'smooth'});}}>Editar</button><button disabled={pending} className="text-na-danger-dark dark:text-na-danger-light" onClick={()=>{setCancelling(e);setRefund(false);}}>Cancelar evento</button></>}</div>
+   {e.status==='publicado'&&<PostagemOficial key={e.linkPostagemOficial??''} inicial={e.linkPostagemOficial??''} pending={pending} salvar={link=>mutate(()=>definirPostagemOficial(schoolId,e.id,link),link?'Post oficial salvo: o compartilhamento vai usar esse post.':'Post oficial removido.')}/>}
    <details><summary className="cursor-pointer py-2 text-sm font-semibold">Equipe de recepção</summary><p className="mb-2 text-xs text-gray-500">O link exige login e só abre para as pessoas designadas e para a Direção. Não dá acesso ao painel financeiro.</p>
     {e.staff.map(id=><div key={id} className="flex items-center justify-between gap-2 py-2 text-sm"><span>{data.membros.find(m=>m.id===id)?.name??'Voluntário designado'}</span><button disabled={pending} className="text-red-700 dark:text-red-300" onClick={()=>mutate(()=>definirRecepcaoEvento(schoolId,e.id,id,false),'Acesso de recepção removido.')}>Remover</button></div>)}
     {e.status==='publicado'&&<EventReceptionSelector key={e.staff.join('|')} schoolId={schoolId} eventId={e.id} members={(data.receptionCandidates??data.membros.filter(m=>m.mercurioAtivo)).filter(m=>!e.staff.includes(m.id))}/>}
 
    </details>
   </section>)}
+ </div>;
+}
+
+/** Post oficial do evento no Instagram: quem compartilha pelo Portal reposta esse post (pedido do usuário 2026-10-22). */
+function PostagemOficial({inicial,pending,salvar}:{inicial:string;pending:boolean;salvar:(link:string)=>void}){
+ const [link,setLink]=useState(inicial);
+ return <div className="flex flex-col gap-1 text-xs">
+  <label htmlFor="postagem-oficial" className="font-semibold">Post oficial no Instagram</label>
+  <div className="flex gap-2"><input id="postagem-oficial" value={link} onChange={ev=>setLink(ev.target.value)} placeholder="https://www.instagram.com/p/..." className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-transparent p-2 text-sm dark:border-gray-700"/><button type="button" disabled={pending||link===inicial} onClick={()=>salvar(link)} className="rounded-lg bg-na-green px-3 text-sm font-semibold text-white disabled:opacity-50">Salvar</button></div>
+  <span className="text-gray-500">Com o link, o botão do Instagram no compartilhamento abre esse post para repostar, em vez de criar uma arte nova.</span>
  </div>;
 }

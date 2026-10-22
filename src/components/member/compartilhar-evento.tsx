@@ -1,7 +1,7 @@
 "use client";
 
 import { gerarArteEvento, type FormatoArte } from "@/lib/arte-evento";
-import { linkDoCanal, nomeDoArquivo, textoParaCanal, type EventoCompartilhavel } from "@/lib/compartilhar-evento";
+import { linkDoCanal, nomeDoArquivo, semEmoji, textoParaCanal, type EventoCompartilhavel } from "@/lib/compartilhar-evento";
 import { Check, Download, Link2, Loader2, Mail, Send, Share2, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -93,6 +93,7 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
   const [aviso, setAviso] = useState<string | null>(null);
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [temShareNativo, setTemShareNativo] = useState(false);
+  const [celular, setCelular] = useState(false);
 
   useEffect(() => {
     if (!aberto || artes) return;
@@ -132,6 +133,8 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
     setAberto((v) => !v);
     setAviso(null);
     setTemShareNativo(typeof navigator !== "undefined" && typeof navigator.share === "function");
+    // Folha de compartilhamento com arquivo só faz sentido no celular; no computador ela abre uma janela genérica (22/10).
+    setCelular(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
   }
 
   function copiar(texto: string) {
@@ -153,7 +156,7 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
       formato === "story"
         ? 'Link copiado. No story, toque no ícone de adesivos, escolha "Link" e cole.'
         : "Legenda copiada. No Instagram, cole no campo de legenda.";
-    if (navigator.canShare?.({ files: [arquivo] })) {
+    if (celular && navigator.canShare?.({ files: [arquivo] })) {
       navigator.share({ files: [arquivo] }).catch((e: unknown) => {
         if (e instanceof DOMException && e.name === "AbortError") return;
         baixar(arquivo, url);
@@ -162,12 +165,14 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
       setAviso(`Escolha o Instagram (${formato === "story" ? "Story" : "Feed"}) na lista. ${dica}`);
       return;
     }
-    // Computador: sem compartilhamento de arquivos.
+    // Computador: o Instagram no navegador só publica no feed (story é só pelo celular).
     baixar(arquivo, url);
+    if (formato === "story") {
+      setAviso("Arte baixada. O story só pode ser publicado pelo celular: abra o Portal no celular e toque em Instagram Story.");
+      return;
+    }
     window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
-    setAviso(
-      `Arte baixada e ${formato === "story" ? "link" : "legenda"} copiado${formato === "story" ? "" : "a"}. No Instagram, crie a publicação com a imagem baixada. Pelo celular, este botão abre o Instagram direto.`,
-    );
+    setAviso('Arte baixada e legenda copiada. No Instagram, clique em "Criar", escolha a imagem baixada e cole a legenda.');
   }
 
   function copiarLink() {
@@ -179,7 +184,7 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
   }
 
   function outrosApps() {
-    const texto = textoParaCanal(evento, "whatsapp").replace(/\*/g, "").replace(`\n\nInscrições: ${evento.registrationUrl}`, "");
+    const texto = semEmoji(textoParaCanal(evento, "whatsapp").replace(/\*/g, "").replace(`\n\nInscrições: ${evento.registrationUrl}`, ""));
     navigator.share({ title: evento.title, text: texto, url: evento.registrationUrl }).catch(() => {});
   }
 
@@ -200,18 +205,32 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Canal href={linkDoCanal(evento, "whatsapp")} icone={<IconeWhatsApp />} rotulo="WhatsApp" />
-            <Canal
-              onClick={() => compartilharInstagram("story")}
-              desabilitado={!artes}
-              icone={artes ? <IconeInstagram /> : <Loader2 size={16} className="animate-spin" />}
-              rotulo="Instagram Story"
-            />
-            <Canal
-              onClick={() => compartilharInstagram("feed")}
-              desabilitado={!artes}
-              icone={artes ? <IconeInstagram /> : <Loader2 size={16} className="animate-spin" />}
-              rotulo="Instagram Feed"
-            />
+            {evento.postagemOficial ? (
+              // Post oficial cadastrado pela filial: abre o post no Instagram (no celular, no aplicativo) para repostar.
+              <Canal
+                onClick={() => {
+                  window.open(evento.postagemOficial!, "_blank", "noopener,noreferrer");
+                  setAviso('No post, toque no avião de papel e em "Adicionar ao story", ou envie para alguém.');
+                }}
+                icone={<IconeInstagram />}
+                rotulo="Instagram (post oficial)"
+              />
+            ) : (
+              <>
+                <Canal
+                  onClick={() => compartilharInstagram("story")}
+                  desabilitado={!artes}
+                  icone={artes ? <IconeInstagram /> : <Loader2 size={16} className="animate-spin" />}
+                  rotulo="Instagram Story"
+                />
+                <Canal
+                  onClick={() => compartilharInstagram("feed")}
+                  desabilitado={!artes}
+                  icone={artes ? <IconeInstagram /> : <Loader2 size={16} className="animate-spin" />}
+                  rotulo="Instagram Feed"
+                />
+              </>
+            )}
             <Canal href={linkDoCanal(evento, "facebook")} icone={<IconeFacebook />} rotulo="Facebook" />
             <Canal href={linkDoCanal(evento, "telegram")} icone={<Send size={16} className="text-[#229ed9]" />} rotulo="Telegram" />
             <Canal href={linkDoCanal(evento, "email")} icone={<Mail size={16} className="text-gray-500" />} rotulo="E-mail" />

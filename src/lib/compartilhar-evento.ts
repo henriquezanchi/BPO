@@ -16,6 +16,10 @@ export type EventoCompartilhavel = {
   location: string | null;
   description: string | null;
   registrationUrl: string;
+  /** Imagem do evento (Ulisses), desenhada na arte. */
+  imagem?: string | null;
+  /** Post oficial no Instagram, quando a filial cadastrou (compartilha esse em vez de criar outro). */
+  postagemOficial?: string | null;
 };
 
 export type Canal = "whatsapp" | "instagram" | "facebook" | "telegram" | "email" | "link";
@@ -29,6 +33,8 @@ type ItemDeAgenda = {
   source?: string;
   status?: string;
   registrationUrl?: string | null;
+  posterUrl?: string | null;
+  postagemOficial?: string | null;
 };
 
 /** Evento público do Ulisses, publicado, com link de inscrição e ainda por acontecer. */
@@ -42,7 +48,39 @@ export function eventoCompartilhavel(item: ItemDeAgenda, agora = new Date()): Ev
     location: item.location,
     description: item.description,
     registrationUrl: item.registrationUrl,
+    imagem: item.posterUrl ?? null,
+    postagemOficial: item.postagemOficial ?? null,
   };
+}
+
+/**
+ * O WhatsApp no computador (Windows) troca por "?" os emojis que vêm num
+ * link wa.me (22/10/2026: 📅 e 📍 chegaram como "�"). Tira os emojis fora do
+ * plano básico, inclusive os que vêm na descrição do Ulisses.
+ */
+export function semEmoji(texto: string): string {
+  return texto
+    .replace(/[\u{10000}-\u{10FFFF}]|\uFE0F|\u200D/gu, "")
+    .split("\n")
+    .map((l) => l.replace(/^[ \t]+/, "").replace(/[ \t]{2,}/g, " "))
+    .join("\n");
+}
+
+/**
+ * Abertura em tom de conversa (pedido do usuário 2026-10-22): quem compartilha
+ * é aluno ou membro, para amigos e grupos de família; não pode parecer
+ * mensagem automática. Varia por evento (escolha fixa pelo título, sem sorteio).
+ */
+const ABERTURAS = [
+  "Oi! Vai ter esse evento na Nova Acrópole e lembrei de você. Acho que vale muito a pena:",
+  "Olha que legal: a Nova Acrópole, a escola de filosofia onde eu estudo, está com esse evento aberto ao público. Se der, vai!",
+  "Gente, compartilhando um evento aberto da Nova Acrópole, onde eu estudo filosofia. Recomendo demais!",
+  "Achei que você ia gostar desse evento da Nova Acrópole. É aberto a todos:",
+];
+export function aberturaDoEvento(titulo: string): string {
+  let h = 0;
+  for (const c of titulo) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return ABERTURAS[h % ABERTURAS.length];
 }
 
 const FUSO = "America/Sao_Paulo";
@@ -78,8 +116,16 @@ export function horaCurta(data: Date): string {
 export function linkWhatsAppDoEvento(item: ItemDeAgenda, urlPortal: string): string {
   const publico = eventoCompartilhavel(item);
   if (publico) return linkDoCanal(publico, "whatsapp");
-  const linhas = [`*${item.title}*`, `🗓️ ${quandoTexto(item)}`, item.location ? `📍 ${item.location}` : null, "", `Veja e inscreva-se no Portal do Aluno: ${urlPortal}`];
-  return `https://wa.me/?text=${encodeURIComponent(linhas.filter((l) => l !== null).join("\n"))}`;
+  const linhas = [
+    "Saiu evento novo no Portal da Nova Acrópole:",
+    "",
+    `*${item.title}*`,
+    quandoTexto(item),
+    item.location ?? null,
+    "",
+    `Dá uma olhada e se inscreve por lá: ${urlPortal}`,
+  ];
+  return `https://wa.me/?text=${encodeURIComponent(semEmoji(linhas.filter((l) => l !== null).join("\n")))}`;
 }
 
 export function quandoTexto(e: Pick<EventoCompartilhavel, "date" | "allDay">): string {
@@ -110,7 +156,17 @@ export function textoParaCanal(e: EventoCompartilhavel, canal: Canal): string {
   const quandoEOnde = [`📅 ${quando}`, e.location ? `📍 ${e.location}` : null].filter(Boolean).join("\n");
   switch (canal) {
     case "whatsapp":
-      return [`*${e.title}*`, quandoEOnde, resumo(e.description, 280) || null, `Inscrições: ${e.registrationUrl}`].filter(Boolean).join("\n\n");
+      // Sem emoji (o WhatsApp do computador os troca por "?") e com uma abertura em tom de conversa.
+      return semEmoji(
+        [
+          aberturaDoEvento(e.title),
+          `*${e.title}*\n${quando}${e.location ? `\n${e.location}` : ""}`,
+          resumo(e.description ? semEmoji(e.description) : null, 280) || null,
+          `Inscrições: ${e.registrationUrl}`,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      );
     case "instagram":
       return [e.title, quandoEOnde, resumo(e.description, 1200) || null, `Inscrições: ${e.registrationUrl}`, "#NovaAcrópole #filosofia #EscolaDeFilosofia"]
         .filter(Boolean)

@@ -915,6 +915,9 @@ model Event {
   abertoValores String[] @default([])
   // Lanche compartilhado (pedido do usuário 2026-10-21): cada um leva algo; aparece em destaque no evento.
   lancheCompartilhado Boolean @default(false)
+  // Post oficial do evento no Instagram (pedido do usuário 2026-10-22): compartilhar o post
+  // oficial em vez de criar outro. Preenchido na administração; a importação do Ulisses não mexe.
+  linkPostagemOficial String?
   // Desistência paga com devolução até N dias antes do evento (pedido do usuário
   // 2026-10-22: padrão 3; opções 1, 3 ou 7; null = sem devolução).
   prazoDesistenciaDias Int? @default(3)
