@@ -2,6 +2,7 @@ import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-volun
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { escolasAberturas } from "@/lib/aberturas/permissoes";
 import { ehFV } from "@/lib/grupos-portal";
 import { filiaisAdministradas } from "@/lib/recursos-filial";
 import type { Member } from "@prisma/client";
@@ -31,7 +32,9 @@ export type IconeDestino =
   | "acessos"
   | "nacional"
   | "termo"
-  | "calendario";
+  | "calendario"
+  | "aberturas"
+  | "secretarias";
 
 export type Destino = { href: string; rotulo: string; descricao: string; icone: IconeDestino; secao: "Meu trabalho" | "Secretarias" | "Gestão da filial" | "Nacional"; pendentes?: number };
 
@@ -41,7 +44,7 @@ type Pessoa = Pick<
 >;
 
 export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
-  const [acesso, fv, nacional, administra, lideraFV, temGrupo, areas] = await Promise.all([
+  const [acesso, fv, nacional, administra, lideraFV, temGrupo, areas, aberturas, mandatos] = await Promise.all([
     temAcessoVoluntario(m),
     ehFV(m.id),
     ehAdministradorNacional(m),
@@ -50,6 +53,8 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     // GAF não faz de ninguém voluntário (alunos participam).
     db.classMembership.count({ where: { memberId: m.id, classGroup: { tipo: { in: ["GDVE", "SEC", "BF", "BM", "CS"] }, arquivadoEm: null } } }),
     areasNaFilial(m, m.schoolId),
+    escolasAberturas(m as Member),
+    db.secretariaMandato.count({where:{memberId:m.id,ativo:true}}),
   ]);
   const chefe = m.isDiretor || m.filiaisChefiadas.length > 0 || nacional;
   const tem = (a: AreaFilial) => areas.includes(a);
@@ -93,6 +98,8 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       pendentes: pedidosComposicao,
     },
     tem("eventos") && { href: "/voluntario/eventos", rotulo: "Eventos", descricao: "Gestão de eventos e calendário", icone: "eventos", secao: "Secretarias" },
+    aberturas.length > 0 && { href: "/voluntario/aberturas", rotulo: "Abertura de turmas", descricao: "Planejamento, equipe, interessados e resultados", icone: "aberturas", secao: "Secretarias" },
+    (chefe || temGrupo > 0 || mandatos > 0) && { href: "/voluntario/secretarias", rotulo: "Rede de secretarias", descricao: "Materiais, avisos, reuniões e planos", icone: "secretarias", secao: "Secretarias" },
     tem("cafe") && { href: "/voluntario/cafe", rotulo: "Café", descricao: "Caixa Fortuna", icone: "cafe", secao: "Secretarias" },
     tem("direcao") && { href: "/voluntario/filial", rotulo: "Visão da filial", descricao: "Resumo da filial e de cada área", icone: "direcao", secao: "Gestão da filial" },
     administra.length > 0 && { href: "/admin", rotulo: "Administração", descricao: "Secretarias, GAF, recursos e senhas", icone: "admin", secao: "Gestão da filial" },

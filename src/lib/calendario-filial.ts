@@ -1,3 +1,4 @@
+import { eventScopeWhere } from "@/lib/event-policy";
 import { db } from "@/lib/db";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import type { ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
@@ -68,14 +69,26 @@ export async function itensDoCalendario(schoolId: string, de: Date, ate: Date): 
   // Mesma geração preguiçosa das rotinas semanais usada no resto do Portal.
   await ensureGroupMeetingWindow(grupos.map((g) => g.id)).catch(() => null);
 
-  const [resumo, reunioes, eventosFilial, eventosExternos] = await Promise.all([
+  const escola = await db.school.findUniqueOrThrow({where:{id:schoolId},select:{id:true,uf:true}});
+  const [resumo, reunioes, eventosFilial, eventosExternos, aberturas] = await Promise.all([
     db.resumoFilial.findUnique({ where: { schoolId } }),
     db.groupMeeting.findMany({ where: { classGroupId: { in: grupos.map((g) => g.id) }, startsAt: { gte: de, lte: ate }, status: { not: "cancelada" } } }),
     db.event.findMany({ where: { schoolId, startsAt: { gte: de, lte: ate }, status: { not: "cancelado" } } }),
-    db.event.findMany({ where: { scope: { in: ["nacional", "regional"] }, startsAt: { gte: de, lte: ate }, status: "publicado" } }),
+    db.event.findMany({ where: { AND: [eventScopeWhere(escola), {schoolId:{not:schoolId}, startsAt: { gte: de, lte: ate }, status: "publicado"}] } }),
+    db.aberturaTurma.findMany({where:{schoolId,status:{in:["planejada","em_curso"]}},include:{registros:{where:{tipo:"palestra"}}}}),
   ]);
 
   const itens: ItemCalendario[] = [];
+  for(const abertura of aberturas){
+    for(let dia=new Date(de);dia<=ate;dia=new Date(dia.getTime()+86400000)){
+      const dataBR=dia.toLocaleDateString("en-CA",{timeZone:"America/Sao_Paulo"});
+      if(new Date(dataBR+"T12:00:00Z").getUTCDay()!==abertura.diaSemana)continue;
+      const inicio=new Date(dataBR+"T00:00:00-03:00");inicio.setTime(inicio.getTime()+abertura.inicioMinuto*60000);
+      if(inicio<abertura.primeiraAula)continue;
+      itens.push({id:`abertura-${abertura.id}-${dataBR}`,camada:"aula",titulo:`Turma planejada · ${abertura.titulo}`,inicio:inicio.toISOString(),fim:new Date(inicio.getTime()+7200000).toISOString(),diaInteiro:false,detalhe:`Planejamento · ${abertura.sala}`,publicos:["todos"],pessoas:null});
+    }
+    for(const registro of abertura.registros){const p=registro.dados as {inicio?:string;fim?:string;titulo?:string;eventoId?:string};if(p.eventoId||!p.inicio||new Date(p.inicio)<de||new Date(p.inicio)>ate)continue;itens.push({id:`ciclo-${registro.id}`,camada:"evento_filial",titulo:`Ciclo cultural · ${p.titulo||abertura.titulo}`,inicio:p.inicio,fim:p.fim||null,diaInteiro:false,detalhe:abertura.titulo,publicos:["todos"],pessoas:null});}
+  }
 
   // Aulas fixas: cada turma, toda semana, no dia e horário do Mercúrio.
   const turmas = ((resumo?.dados as unknown as ResumoFilialDados | undefined)?.turmas.lista ?? []).filter((t) => semAcento(t.dia) in DIAS && /^\d{2}:\d{2}$/.test(t.horario));

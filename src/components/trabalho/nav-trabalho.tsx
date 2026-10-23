@@ -22,6 +22,8 @@ const ICONES: Record<IconeDestino, typeof Home> = {
   nacional: Globe2,
   termo: FileSignature,
   calendario: CalendarDays,
+  aberturas: GraduationCap,
+  secretarias: Users,
 };
 const SECOES: Destino["secao"][] = ["Meu trabalho", "Secretarias", "Gestão da filial", "Nacional"];
 

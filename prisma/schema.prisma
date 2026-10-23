@@ -1781,3 +1781,119 @@ model AcropolePlayStudent {
   @@index([emailHash])
   @@index([mercurioId])
 }
+
+// Planejamento por filial. Registros e avaliações são históricos append-only.
+model AberturaTurma {
+  mercurioTurmaId String?
+  id String @id @default(cuid())
+  schoolId String
+  autorId String
+  titulo String
+  primeiraAula DateTime
+  diaSemana Int
+  inicioMinuto Int
+  duracaoMinutos Int @default(120)
+  capacidade Int
+  metaMatriculas Int
+  orcamentoCentavos Int @default(0)
+  sala String
+  status String @default("rascunho")
+  professorIds String[] @default([])
+  revisao Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  registros AberturaRegistro[]
+  @@index([schoolId, primeiraAula])
+}
+model AberturaRegistro {
+  id String @id @default(cuid())
+  aberturaId String
+  abertura AberturaTurma @relation(fields:[aberturaId],references:[id],onDelete:Cascade)
+  autorId String
+  tipo String
+  dados Json
+  createdAt DateTime @default(now())
+  @@index([aberturaId,tipo,createdAt])
+}
+model ProfessorDisponibilidade {
+  id String @id @default(cuid())
+  schoolId String
+  professorId String
+  diaSemana Int
+  inicioMinuto Int
+  fimMinuto Int
+  validaDe String
+  validaAte String
+  impedimentos Json @default("[]")
+  habilitado Boolean @default(false)
+  autorId String
+  createdAt DateTime @default(now())
+  @@index([schoolId,professorId])
+}
+model SecretariaEscala {
+  id String @id @default(cuid())
+  schoolId String
+  secretaria String
+  memberId String
+  funcao String
+  diaSemana Int
+  inicioMinuto Int
+  fimMinuto Int
+  validaDe String
+  validaAte String
+  confirmado Boolean @default(false)
+  autorId String
+  createdAt DateTime @default(now())
+  @@index([schoolId,diaSemana])
+}
+model AberturaConfig {
+  schoolId String @id
+  capacidadeEscola Int?
+  funcoesNecessarias String[] @default([])
+  compartilharAprendizados Boolean @default(false)
+  revisao Int @default(0)
+  updatedAt DateTime @updatedAt
+}
+model AberturaCrmCache {
+  schoolId String @id
+  dados Json
+  sincronizadoEm DateTime @default(now())
+}
+model SecretariaMandato {
+  id String @id @default(cuid())
+  memberId String
+  secretaria String
+  escopo String
+  schoolIds String[] @default([])
+  ufs String[] @default([])
+  ativo Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@index([memberId,ativo])
+}
+model SecretariaPublicacao {
+  id String @id @default(cuid())
+  secretaria String
+  autorId String
+  titulo String
+  tipo String
+  conteudo String
+  url String?
+  schoolIds String[] @default([])
+  ufs String[] @default([])
+  inicio DateTime?
+  fim DateTime?
+  versao Int @default(1)
+  exigeLeitura Boolean @default(false)
+  publicado Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([secretaria,publicado])
+}
+model SecretariaLeitura {
+  id String @id @default(cuid())
+  publicacaoId String
+  memberId String
+  versao Int
+  lidoEm DateTime @default(now())
+  @@unique([publicacaoId,memberId,versao])
+}

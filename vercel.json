@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/notificacoes",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/aberturas",
+      "schedule": "15 9 * * *"
     }
   ],
   "regions": [
