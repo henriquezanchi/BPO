@@ -46,6 +46,15 @@ Pedido do responsável pelo Portal, em 19/10:
 
 20. **Login unificado da Nova Acrópole** (22/10). Keycloak realm `oinabnb`, client público `portal-aluno` com PKCE (sem segredo), retorno em `/auth/acropole/callback` (produção e localhost:3000 cadastrados pelo Heitor). Rotas `/auth/acropole/login` e `/auth/acropole/callback`, lógica em `lib/login-acropole.ts`; a troca do código passa pela ponte. Acha o cadastro pelo e-mail e abre a sessão Supabase por magic link gerado no servidor (`generateLink` + `verifyOtp`); quem não tinha login ganha um (senha aleatória), logins existentes nunca são recriados.
 
+21. **Compartilhamento, cartaz e ajustes de 22-23/10** (Claude). Detalhes, pendências e passo a passo para retomar em `docs/HANDOFF-CLAUDE.md`.
+    - **Compartilhar:** abertura em tom intermediário (`ABERTURAS` em `lib/compartilhar-evento.ts`), sem emoji fora do plano básico (`semEmoji`; o WhatsApp do Windows troca por "?"); Facebook copia a mensagem para colar (não aceita texto pronto); Instagram só no celular (no computador explica e oferece a arte); post oficial do Instagram por evento (`Event.linkPostagemOficial`, campo na lista de eventos da administração).
+    - **Cartaz como postagem:** com imagem do evento, a postagem é o próprio cartaz (`cartazComoPostagem` em `lib/arte-evento.ts`) com faixa verde só com o que falta. A imagem do S3 do Ulisses passa por `/api/imagem-evento` (sem CORS no bucket).
+    - **Leitura do cartaz por IA:** `lib/leitura-cartaz.ts` (Claude Haiku 5.5, saída estruturada), chamada no fim de `/api/cron/ulisses`; resultado em `Event.cartazLeitura` + `cartazLidoUrl` (relê só se a imagem mudar). Inscrição só conta com link, site ou QR code.
+    - **Ulisses:** `ehCopia()` em `lib/ulisses/publico.ts` ignora "[CÓPIA] …", "Cópia de …", "(cópia)", "… - Cópia" (os já importados são arquivados).
+    - **Login:** só "Entrar com a conta Nova Acrópole" na tela; e-mail e senha só em `/login?modo=senha` até o teste ponta a ponta; exige e-mail confirmado no Keycloak.
+    - **Outros:** Biblioteca → `bastiao.oinabn.com.br`, só para membros; "Portal do Membro"/"Portal do Aluno" pelo nível; "Meus eventos" dentro da Agenda e redesenhado; ícone do WhatsApp em cada evento; "Inscreva-se" em todos os botões; carteira Fortuna sem "(sua unidade)"; ícones do PWA e favicon a partir do símbolo oficial.
+    - **Codex:** o compartilhamento foi mexido pelos dois agentes em 22/10 (convite interno, arte do WhatsApp, `versao-compartilhamento.json`). Antes de alterar `compartilhar-evento.ts`, `compartilhar-evento.tsx` ou `arte-evento.ts`, ler o histórico recente desses arquivos.
+
 Situação dos blocos 1 a 3 em 19/10: concluídos (avaliação, administração da filial e cadastro por solicitação). O bloco 4 (verificação por código) aguarda a escolha do provedor de envio.
 
 Não mexer nesses blocos sem combinar. Os demais pendentes de `CONTINUIDADE-VOLUNTARIADO-DIARIOS.md` (escalas, ED/Pré-ED, diário, informe mensal) seguem livres.
