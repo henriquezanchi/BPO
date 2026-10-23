@@ -118,32 +118,31 @@ Estoque de apostilas por matéria e tema, na Escolástica:
 
 **O banco de consulta do Mercúrio não guarda presenças.** São 26 tabelas: cadastro, turmas, `turmas_materias`, `sig_materias`, fichas, recibos e afins; nada de frequência, diário, aula ou estoque. As presenças ficam só no **Diário de Classe** (`pedagogia.acropolebrasil.com.br`), que é da Acrópole Brasil e fica atrás do mesmo Cloudflare (usar a ponte).
 
-### Recomendação
+### Mapeamento do Diário de Classe (23/10, só código público, sem login)
 
-Não tornar o Diário obsoleto nem pedir digitação dupla. Ordem de preferência:
+- Front Angular em `pedagogia.acropolebrasil.com.br`, API Spring em `/api`, atrás do mesmo Cloudflare (usar a ponte; `auth`/`eventos`/`api` já estão liberados nela, **`pedagogia` ainda não está em `ALLOWED`** de `infra/ponte-cloudflare/src/index.ts`).
+- Login igual ao do Ágora: `/api/sso-url` + `/api/login-sso` (Keycloak), sessão por cookie + CSRF (`/api/csrf` devolve `X-XSRF-TOKEN`). Há também login com credencial do Mercúrio (rota de tela `auth/login-mercurio`). Dados exigem login (403). Versão `/api/versao` = 26.10.4 (Ágora 26.10.5): mesma base de código, provavelmente da mesma equipe do Ágora (Marcos) — **confirmar quem é o responsável**.
+- **O Diário já tem estoque de apostilas**, só sem automação:
+  - Estoque: telas `material/estoque` ("Estoque de Impressão de Material", com **estoque mínimo** `minEstoque`), API `GET/POST/DELETE /api/estoque-materiais`.
+  - Solicitações de impressão: tela `material/impressao` (matéria, tema, turma, quantidade, detalhe, data de impressão, data de entrega; "Registrar que foi Impresso", "Registrar que foi entregue ao solicitante"; filtros "só não impressos/não entregues"), API `GET/POST /api/impressoes-materiais`, `PUT /api/impressoes-materiais/{id}/impressao`, `PUT .../{id}/entrega`.
+  - Entrega de material didático aos alunos: tela `material/entregar` e `material/relatorio`, API `GET/POST /api/entregas-tema`, `GET /api/entregas-tema/last`, `GET /api/entregas-tema/relatorio`.
+  - Planejamento: tela `planejamento/edit`, API `GET/PUT/DELETE /api/materias/{id}/planejamentos`, `/api/planejamentos/{id}`, `/api/planejamentos/ultimo`, `/api/planejamentos/{id}/capitulos/{cap}`, `GET /api/materias/{id}/temas`, `GET /api/capitulos`.
+  - Aulas e presença: tela `aulas/registrar`, API `GET/POST /api/aulas`, `/api/aulas/{id}`, `/api/aulas/registro-quick`, relatórios `/api/aulas/relatorios/*` (resumo de presenças, faltas consecutivas, sem registro…); turmas `GET /api/turmas/{id}/alunos`, `/api/turmas/{id}/materias-turma`.
 
-1. **Ler as presenças direto do Diário de Classe pela API dele** (mesmo padrão do Ágora: provavelmente Spring + Keycloak). Pedir ao responsável pelo Diário uma chave de leitura, ou um client de serviço no Keycloak. Com a ponte e o login unificado já prontos, é o caminho mais firme e funciona no celular do professor.
-2. **Pergunta ao professor pelo Portal, por push, depois da aula**: "Hoje teve Ética tema 3 na turma X. Entregou apostilas?" (Sim / Não). Um toque. Combinado com a lista de presentes do item 1, dá baixa sozinho. Sem o item 1, o professor confirma quantas entregou.
-3. **Extensão do Chrome** só como último recurso: precisa ser instalada em cada computador, não funciona no celular e quebra quando o Diário muda de tela.
+### Recomendação (revisada após o mapeamento)
 
-### Peças já existentes que servem
+**Não criar um estoque paralelo no Portal.** O estoque, as solicitações de impressão e as entregas continuam no Diário (fonte única). O Portal entra como **camada de automação** em cima dos dados do Diário, lendo e gravando pela API dele:
 
-- `TurmaMateria` (matéria em curso por turma, vinda do Mercúrio).
-- `lib/temas-curriculo.ts` (temas por matéria; a apostila pode ser identificada por matéria + tema).
-- Notificações push e a rotina de 5 em 5 minutos (`lib/notificacoes-agendadas.ts`) para a pergunta pós-aula e o aviso de impressão.
-- Áreas da filial (`areas-filial.ts`): a tela fica na área **Escolástica**.
+1. **Baixa automática:** quando o professor registra a aula no Diário, o Portal (rotina de 5 em 5 minutos) vê a aula nova, pergunta ao professor por push "Entregou as apostilas de <matéria> tema <n>?" e, no "Sim", grava no Diário a entrega (`/api/entregas-tema`) para os alunos presentes, o que baixa o estoque.
+2. **Previsão:** cruza o planejamento (aulas futuras por turma, matéria e tema) com o número de alunos da turma e o estoque; projeta o saldo de cada apostila por data.
+3. **Pedido de impressão:** no dia de impressão da filial (semanal, quinzenal ou mensal, configurado no Portal), cria no Diário as solicitações (`/api/impressoes-materiais`) de tudo o que faltará até o próximo dia de impressão, e manda à Escolástica um relatório único do que imprimir.
+4. **Faltosos (o usuário disse que em geral recebem depois):** a lista "quem ainda não recebeu" vem de presentes × entregas registradas; entra no relatório e na pergunta ao professor da aula seguinte.
 
-### Modelo de dados proposto (ainda não criado)
+**Pré-requisito:** acesso de serviço à API do Diário (chave de leitura e escrita, ou client de serviço no Keycloak), pedido ao responsável técnico. Extensão do Chrome continua sendo último recurso.
 
-- `Apostila` (filial, matéria, tema, título).
-- `EstoqueApostila` (apostila, quantidade, atualizado em).
-- `MovimentoApostila` (entrada por impressão, saída por entrega, ajuste; quem; quando).
-- `EntregaApostila` (apostila, membro, aula, data): quem já recebeu.
-- `AulaPlanejada` (turma, matéria, tema, data, alunos previstos): vem do planejamento. Falta definir a fonte: Diário de Classe ou cadastro no Portal.
-- Configuração por filial: dia e frequência de impressão.
+### Respostas do usuário (23/10) e o que ainda falta
 
-### Perguntas em aberto para o usuário
-
-- Onde está o planejamento das aulas (data + tema por turma)? No Diário de Classe ou em outro lugar?
-- Quem é o responsável técnico pelo Diário de Classe (para pedir a chave de leitura)?
-- Aluno que faltou recebe a apostila depois (entrega avulsa)?
+- Planejamento das aulas: **no Diário de Classe**.
+- Responsável técnico pelo Diário: **o usuário ainda não sabe** (hipótese: equipe do Ágora/Marcos, pela base de código igual).
+- Faltosos: **em geral recebem depois**.
+- Pedido ao usuário: prints das telas `material/estoque`, `material/impressao`, `material/entregar`, `material/relatorio`, `planejamento/edit` e `aulas/registrar`, para mapear os campos antes do acesso à API.
