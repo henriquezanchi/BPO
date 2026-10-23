@@ -40,6 +40,7 @@ Regra de ouro: **antes de cada commit, `git pull --rebase --autostash`**. Os doi
 | `PONTE_URL`, `PONTE_CHAVE` | Ponte na Cloudflare para *.acropolebrasil.com.br | `.env` + Vercel + segredo `PONTE_CHAVE` no Worker |
 | `ANTHROPIC_API_KEY` | Leitura dos cartazes | `.env` + Vercel |
 | `CRON_SECRET` | Autoriza as rotinas da Vercel | `.env` + Vercel |
+| `KEYCLOAK_CLIENT_SECRET` | Segredo do client `portal-aluno` quando o Marcos o tornar confidencial (ainda não existe em 23/10) | `.env` + Vercel (Production) |
 
 Nunca usar `NEXT_PUBLIC_` para segredo. A chave pública VAPID chega ao navegador por `chavePublicaPush()` (server action).
 
@@ -85,7 +86,8 @@ Não há conta de teste no banco. O Claude criava uma página temporária `src/a
 
 ### Login unificado (Keycloak)
 
-- Realm `oinabnb`, base `https://auth.acropolebrasil.com.br/as/`, client público `portal-aluno`, **PKCE sem segredo** (orientação do Heitor).
+- Realm `oinabnb`, base `https://auth.acropolebrasil.com.br/as/`, client `portal-aluno` com PKCE. Nasceu público (orientação do Heitor); em 23/10 o usuário decidiu **torná-lo confidencial** para o token exchange com o Ágora. `lib/login-acropole.ts` manda `client_secret` (client_secret_post) quando `KEYCLOAK_CLIENT_SECRET` existe; sem a variável, segue como público.
+- **Ordem da virada (senão o login para):** Marcos liga "Client authentication" no `portal-aluno` e passa o segredo → no mesmo momento gravar `KEYCLOAK_CLIENT_SECRET` na Vercel (Production) e no `.env` → redeploy na Vercel → testar o login. Enquanto a variável não estiver na Vercel, ninguém entra pelo login unificado.
 - Endereços de retorno cadastrados pelo Heitor: `https://portal-na-one.vercel.app/auth/acropole/callback` e `http://localhost:3000/auth/acropole/callback` (por isso testar local na **porta 3000**).
 - O Portal acha o cadastro pelo **e-mail confirmado** (`email_verified === true`), abre a sessão Supabase por magic link gerado no servidor e, se o cadastro ativo ainda não tinha login, cria um. **Nunca recriar login existente** (trocaria a senha).
 
@@ -99,7 +101,8 @@ Não há conta de teste no banco. O Claude criava uma página temporária `src/a
    - **Nova direção (Heitor, 23/10): sem papéis nem cópia no Portal.** O Portal vira um túnel: chama a API do Ágora com o token do próprio aluno (login unificado), sem pedir senha de novo. Prioridade é o Ágora; o Diário de Classe ficou para depois (pedido do usuário).
    - Sondagem de 23/10: o Ágora usa o client `eventos` no realm `oinabnb` (login: `/api/sso` → Keycloak → `/api/login-sso?code=` → cookie `JSESSIONID`). Com `Authorization: Bearer <lixo>` a API responde 500 (com `Basic`/`Token`, 403): **há filtro de Bearer no backend**.
    - Teste com token real do usuário (`node scripts/testar-token-agora.mjs`, abre o login no navegador, retorno em `localhost:3000`, porta precisa estar livre): token do `portal-aluno` tem `aud: "account"`, `azp: portal-aluno`, escopos `openid email profile`, validade 120 min; refresh 720 min. **O Ágora recusou (403)** em `/usuarios/usuario-logado`, `/eventos/periodo`, `/eventos/inscricoes/minha` e `/sedes`. Causa provável: o token não traz `eventos` no `aud`.
-   - Pedido ao Marcos/Heitor (um dos dois): (a) mapper **Audience** `eventos` num client scope padrão do `portal-aluno`; ou (b) **Standard token exchange** — exige `portal-aluno` **confidencial** (a documentação do Keycloak não permite troca por client público; o segredo iria só para a Vercel) e o token do aluno com `portal-aluno` no `aud`. E confirmar se a API aceita Bearer ou só sessão (se só sessão, como abrir sessão com o token). Depois de mudarem, rodar o script de novo: 200 em `/usuarios/usuario-logado` = túnel liberado.
+   - **Decisão do usuário (23/10): `portal-aluno` confidencial + Standard token exchange** (a documentação do Keycloak não permite troca por client público). Pedido ao Marcos: ligar "Client authentication" e "Standard token exchange" no `portal-aluno`; permitir que o token trocado tenha `eventos` no `aud` (as audiências vêm dos client scopes/papéis do client que pede a troca — ex.: client scope opcional com mapper Audience `eventos`); confirmar se a API do Ágora aceita Bearer ou só sessão. Ordem da virada na seção 3 ("Login unificado").
+   - Reteste: `node --env-file=.env scripts/testar-token-agora.mjs` (com `KEYCLOAK_CLIENT_SECRET` no `.env`). O script testa o token do login e depois troca por um token com `audience=eventos`. 200 em `/usuarios/usuario-logado` com o token trocado = túnel liberado.
    - Do lado do Portal, quando liberar: guardar o token/refresh do aluno criptografado ligado à sessão (hoje é descartado no callback, `app/auth/acropole/callback/route.ts`), renovar pelo refresh, chamar o Ágora pela ponte. Avisos push de evento novo continuam pela importação pública do Ulisses (sem aluno logado não há token).
 4. **Migrar a ponte para a conta Cloudflare da escola**: `npx wrangler login` na conta da escola → `npx wrangler deploy` → `npx wrangler secret put PONTE_CHAVE` (pode gerar chave nova) → trocar `PONTE_URL`/`PONTE_CHAVE` no `.env` e na Vercel → rodar `/api/cron/ulisses` e conferir 7 de 7 filiais.
 5. **Catálogo de temas**: faltam as listas das demais matérias (só N1/NET-NSC-NFH, PSI 1-13 e ISO/IS1 estão em `lib/temas-curriculo.ts`). Base também para o currículo dos instrutores e para as apostilas (seção 5).

@@ -3,10 +3,15 @@ import crypto from "node:crypto";
 
 /**
  * Login unificado da Nova Acrópole (Keycloak do Marcos, realm oinabnb) —
- * pedido do usuário 2026-10-22. Client público `portal-aluno` com PKCE (sem
- * segredo, como os outros sistemas — orientação do Heitor). A ida ao login é
- * pelo navegador da pessoa; a troca do código pelo token passa pela ponte na
+ * pedido do usuário 2026-10-22. Client `portal-aluno` com PKCE. A ida ao login
+ * é pelo navegador da pessoa; a troca do código pelo token passa pela ponte na
  * Cloudflare (o Cloudflare deles desafia a Vercel — lib/ponte.ts).
+ *
+ * O client nasceu público; em 23/10 o usuário decidiu torná-lo confidencial
+ * para usar o token exchange do Keycloak (chamar o Ágora com o token do
+ * próprio aluno — o Keycloak não deixa client público trocar token). Com
+ * KEYCLOAK_CLIENT_SECRET definido, o segredo vai junto em toda chamada ao
+ * endpoint de token; sem ele, segue como client público.
  */
 export const KEYCLOAK = {
   base: "https://auth.acropolebrasil.com.br/as/realms/oinabnb",
@@ -50,6 +55,14 @@ export function destinoSeguro(next: string | null | undefined) {
     : "/portal";
 }
 
+/** Identificação do client no endpoint de token (client_secret_post quando confidencial). */
+function credenciaisCliente(): Record<string, string> {
+  const segredo = process.env.KEYCLOAK_CLIENT_SECRET;
+  return segredo
+    ? { client_id: KEYCLOAK.clientId, client_secret: segredo }
+    : { client_id: KEYCLOAK.clientId };
+}
+
 type Token = { access_token: string; id_token?: string };
 export type PessoaAcropole = {
   sub: string;
@@ -81,7 +94,7 @@ export async function trocarCodigo(
     grant_type: "authorization_code",
     code,
     redirect_uri: enderecoRetorno(origem),
-    client_id: KEYCLOAK.clientId,
+    ...credenciaisCliente(),
     code_verifier: verifier,
   });
   const r = await fetchAcropole(KEYCLOAK.token, {

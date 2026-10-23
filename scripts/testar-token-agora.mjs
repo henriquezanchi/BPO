@@ -1,7 +1,10 @@
 // Teste local: o token do aluno emitido para o client `portal-aluno` abre a API do Ágora?
 // Faz o login unificado (PKCE) com retorno em localhost:3000, troca o código e chama o Ágora
-// com Authorization: Bearer. Não imprime tokens nem dados pessoais: só status, aud/azp/scope
-// e os NOMES dos campos devolvidos.
+// com Authorization: Bearer — primeiro com o token do login, depois (se o client for
+// confidencial) com o token trocado para o Ágora (token exchange, audience `eventos`).
+// Não imprime tokens nem dados pessoais: só status, aud/azp/scope e os NOMES dos campos.
+// Uso, na raiz do projeto: node --env-file=.env scripts/testar-token-agora.mjs
+// (KEYCLOAK_CLIENT_SECRET no .env quando o portal-aluno for confidencial).
 import crypto from "node:crypto";
 import http from "node:http";
 import { exec } from "node:child_process";
@@ -10,6 +13,8 @@ const BASE = "https://auth.acropolebrasil.com.br/as/realms/oinabnb/protocol/open
 const CLIENT = "portal-aluno";
 const RETORNO = "http://localhost:3000/auth/acropole/callback";
 const AGORA = "https://eventos.acropolebrasil.com.br/api";
+const SEGREDO = process.env.KEYCLOAK_CLIENT_SECRET;
+const cliente = SEGREDO ? { client_id: CLIENT, client_secret: SEGREDO } : { client_id: CLIENT };
 
 const b64 = (b) => b.toString("base64url");
 const verifier = b64(crypto.randomBytes(32));
@@ -34,9 +39,9 @@ const chaves = (v) =>
   Array.isArray(v) ? `lista com ${v.length} itens${v[0] && typeof v[0] === "object" ? `; campos: ${Object.keys(v[0]).join(",")}` : ""}`
   : v && typeof v === "object" ? `campos: ${Object.keys(v).join(",")}` : typeof v;
 
-async function testar(token) {
+async function testar(token, rotulo) {
   const p = jwt(token);
-  console.log("\n== Token de acesso do portal-aluno");
+  console.log(`\n== ${rotulo}`);
   console.log("iss:", p.iss);
   console.log("aud:", JSON.stringify(p.aud ?? null), "| azp:", p.azp, "| scope:", p.scope);
   console.log("validade (min):", Math.round((p.exp - p.iat) / 60));
@@ -81,14 +86,32 @@ const srv = http.createServer(async (req, res) => {
         grant_type: "authorization_code",
         code: u.searchParams.get("code"),
         redirect_uri: RETORNO,
-        client_id: CLIENT,
+        ...cliente,
         code_verifier: verifier,
       }),
     });
     if (!r.ok) throw new Error(`troca do código falhou: ${r.status} ${(await r.text()).slice(0, 200)}`);
     const t = await r.json();
     console.log("refresh_token recebido:", Boolean(t.refresh_token), "| validade refresh (min):", Math.round((t.refresh_expires_in ?? 0) / 60));
-    await testar(t.access_token);
+    await testar(t.access_token, "Token do login (portal-aluno)");
+    if (!SEGREDO) {
+      console.log("\nSem KEYCLOAK_CLIENT_SECRET: troca de token não testada (client público não pode).");
+    } else {
+      const x = await fetch(`${BASE}/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "Mozilla/5.0" },
+        body: new URLSearchParams({
+          grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+          subject_token: t.access_token,
+          subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+          requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
+          audience: "eventos",
+          ...cliente,
+        }),
+      });
+      if (!x.ok) console.log(`\nTroca de token recusada: ${x.status} ${(await x.text()).slice(0, 300)}`);
+      else await testar((await x.json()).access_token, "Token trocado para o Ágora (audience eventos)");
+    }
   } catch (e) {
     console.error("ERRO:", e.message);
   } finally {
