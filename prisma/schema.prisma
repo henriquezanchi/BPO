@@ -185,6 +185,7 @@ model School {
 }
 
 model Member {
+  acropolePlayAccess AcropolePlayAccess?
   meetingSeriesCreated GroupMeetingSeries[]
   groupMeetingsCreated GroupMeeting[] @relation("MeetingCreator")
   meetingResponses GroupMeetingResponse[]
@@ -1750,4 +1751,33 @@ model EventWaitlist {
   avisadoEm DateTime?
   @@unique([eventId, memberId])
   @@index([eventId, createdAt])
+}
+
+// Credencial de terceiro isolada: nunca incluir na serialização genérica de Member.
+model AcropolePlayAccess {
+  memberId        String   @id
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sourceStudentId String   @unique
+  source          AcropolePlayStudent @relation(fields: [sourceStudentId], references: [sourceStudentId], onDelete: Cascade)
+  emailHash       String
+  loginCiphertext String
+  importedAt      DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Catálogo privado também atende alunos ativos que ainda não criaram login.
+model AcropolePlayStudent {
+  sourceStudentId       String @id
+  emailHash             String
+  nameHash              String
+  loginCiphertext       String
+  mercurioId            String?
+  mercurioUnit          String?
+  reconciliationStatus  String
+  mercurioSnapshotAt    DateTime?
+  importedAt            DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  access                AcropolePlayAccess?
+  @@index([emailHash])
+  @@index([mercurioId])
 }

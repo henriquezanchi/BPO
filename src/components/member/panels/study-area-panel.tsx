@@ -27,7 +27,7 @@ export function StudyAreaPanel({
       <div className="flex w-full flex-col gap-2.5">
         {mostrarAcropolePlay && (
         <a
-          href="https://membros.acropoleplay.com/auth/login"
+          href="/api/portal/acropole-play/entrar"
           target="_blank"
           rel="noreferrer"
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green-dark px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
