@@ -5,7 +5,7 @@ import { CalendarPlus, X } from "lucide-react";
 import { useState } from "react";
 import { CAMPO_CLASS, Campo, Feedback, SubmitButton, hiddenAberturaFields, useFormAction } from "./form-action";
 import type { Abertura, Pessoa } from "./types";
-import { hora, isoDate } from "./utils";
+import { hora } from "./utils";
 
 const STATUS = [
   ["rascunho", "Rascunho"],
@@ -15,8 +15,19 @@ const STATUS = [
   ["cancelada", "Cancelada"],
 ];
 
-export function FormAbertura({ schoolId, professores, codigosTurma, abertura, onFechar }: { schoolId: string; professores: Pessoa[]; codigosTurma: string[]; abertura?: Abertura | null; onFechar: (id?: string) => void }) {
+function dataSaoPaulo(value: unknown) {
+  if (typeof value !== "string" && !(value instanceof Date)) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const parte = (type: Intl.DateTimeFormatPartTypes) => partes.find((item) => item.type === type)?.value ?? "";
+  return `${parte("year")}-${parte("month")}-${parte("day")}`;
+}
+
+export function FormAbertura({ schoolId, professores, abertura, onFechar }: { schoolId: string; professores: Pessoa[]; abertura?: Abertura | null; onFechar: (id?: string) => void }) {
   const [professorIds, setProfessorIds] = useState<string[]>(abertura?.professorIds ?? []);
+  const [primeiraAula, setPrimeiraAula] = useState(dataSaoPaulo(abertura?.primeiraAula));
   const action = useFormAction(salvarAbertura);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -30,22 +41,18 @@ export function FormAbertura({ schoolId, professores, codigosTurma, abertura, on
           <div>
             <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400"><CalendarPlus size={14} /> Planejamento pedagógico</p>
             <h2 id="form-abertura-titulo" className="mt-1 text-xl font-black text-gray-950 dark:text-white">{abertura ? "Editar abertura" : "Nova abertura"}</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Registre a turma e os parâmetros que orientam o planejamento.</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Registre o calendário e os parâmetros que orientam o planejamento.</p>
           </div>
           <button type="button" aria-label="Fechar" onClick={() => onFechar()} className="rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"><X size={18} /></button>
         </header>
         <form onSubmit={submit} className="space-y-5">
           {hiddenAberturaFields(schoolId, abertura?.id, abertura?.revisao)}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Campo label="Nome do curso" className="sm:col-span-2">
-              <input required name="titulo" maxLength={120} defaultValue={abertura?.titulo ?? ""} placeholder="Ex.: Introdução à filosofia" className={CAMPO_CLASS} />
-            </Campo>
-            <Campo label="Código da turma no Mercúrio" className="sm:col-span-2" hint="Vincule somente o código exato da turma. Matrículas entram nos relatórios apenas quando o Mercúrio confirma esse vínculo.">
-              <input name="mercurioTurmaId" list="codigos-turma-mercurio" maxLength={100} defaultValue={abertura?.mercurioTurmaId ?? ""} placeholder="Código exato da turma" className={CAMPO_CLASS} />
-              <datalist id="codigos-turma-mercurio">{codigosTurma.map((codigo) => <option key={codigo} value={codigo} />)}</datalist>
-            </Campo>
             <Campo label="Primeira aula">
-              <input required type="date" name="primeiraAula" defaultValue={isoDate(abertura?.primeiraAula)} className={CAMPO_CLASS} />
+              <input required type="date" name="primeiraAula" value={primeiraAula} onChange={(event) => setPrimeiraAula(event.target.value)} className={CAMPO_CLASS} />
+            </Campo>
+            <Campo label="Inscrições até" hint="Opcional. Se aceitar inscrições tardias, informe a data final; ela deve ser igual ou posterior à primeira aula. Sem preencher, a conciliação considera até 30 dias após a primeira aula.">
+              <input type="date" name="inscricoesAte" min={primeiraAula || undefined} defaultValue={dataSaoPaulo(abertura?.inscricoesAte)} className={CAMPO_CLASS} />
             </Campo>
             <Campo label="Dia da semana" hint="Precisa coincidir com a data da primeira aula.">
               <select required name="diaSemana" defaultValue={String(abertura?.diaSemana ?? 1)} className={CAMPO_CLASS}>

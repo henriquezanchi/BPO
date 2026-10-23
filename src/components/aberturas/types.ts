@@ -12,6 +12,7 @@ export type RegistroAbertura = {
 export type Abertura = {
   id: string;
   mercurioTurmaId?: string | null;
+  inscricoesAte?: string | null;
   titulo: string;
   primeiraAula: string;
   diaSemana: number;
@@ -71,6 +72,7 @@ export type PainelAberturas = {
   escolas: { id: string; name: string }[];
   schoolId: string;
   aberturas: Abertura[];
+  pessoas: Pessoa[];
   professores: Pessoa[];
   disponibilidades: Disponibilidade[];
   eventos: CalendarioItem[];

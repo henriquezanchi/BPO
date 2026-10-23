@@ -20,3 +20,8 @@ export const registroSchemas={
  resultado:z.object({mercurioId:z.string().min(1).max(100),data:dataLocal,status:z.enum(['matriculado','presenca30','presenca60','presenca90']),leadId:z.string().max(100).optional(),presente:z.boolean().optional()}),
  aprendizado:z.object({titulo:texto,descricao:z.string().min(1).max(10000),compartilhar:z.boolean().default(false)}),
 } as const;
+
+/** Prazo de admissão não restringe observações posteriores de presença. */
+export function validarPrazoMatricula(status:unknown,data:unknown,limite:Date|null){
+ if(status==='matriculado'&&limite&&String(data)>limite.toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'}))throw Error('A matrícula está após o prazo de inscrições desta turma.');
+}

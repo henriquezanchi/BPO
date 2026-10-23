@@ -37,3 +37,10 @@ As tags antigas derivadas são retiradas com backup privado. Novas tags refletem
 ## Ajuste de organização — 23/10/2026
 
 Cada secretaria tem seu próprio espaço e administradores nacional, regional e local. Um mandato nacional de Economia não autoriza Abertura de Turma, e vice-versa. O território limita o administrador regional; o mandato não concede automaticamente acesso a dados financeiros locais. Economia, Escolástica, Eventos, Café e Abertura oferecem Orientações e gestão na própria página; demais secretarias usam sua página própria/grupo. O endereço central antigo só redireciona por compatibilidade. Conteúdos e mandatos existentes foram preservados, com filtragem por secretaria no servidor antes de montar o payload.
+
+
+### Ajustes para o primeiro teste de abertura (23/10)
+
+Cartão Interessados abre a lista e explica que o total representa contatos importados, não matrículas previstas. Formulário sem nome do curso ou código acadêmico; título gerado pela data/horário, associação posterior explícita ao Mercúrio sem criar turmas. Edições preservam associação e título existentes. Docentes usam Member.isPedagogo do importador Mercúrio, com filial/ativo também validados no servidor; pessoas gerais continuam em tarefas/escalas.
+
+Novo campo opcional inscricoesAte (fim do dia de São Paulo) limita incorporação de matrículas e fechamento das coortes, sem bloquear presenças posteriores. Sem prazo mantém janela anterior de 30 dias. Migration 20261023030000_abertura_inscricoes_ate aplicada e registrada via Management API. Base docente disponível de Barra do Garças: 6 professores/32 ativos; sincronização Mercúrio continua com ressalva de fonte 17/10.

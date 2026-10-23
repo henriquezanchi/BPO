@@ -1785,6 +1785,7 @@ model AcropolePlayStudent {
 // Planejamento por filial. Registros e avaliações são históricos append-only.
 model AberturaTurma {
   mercurioTurmaId String?
+  inscricoesAte DateTime?
   id String @id @default(cuid())
   schoolId String
   autorId String

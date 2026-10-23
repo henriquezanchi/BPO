@@ -93,7 +93,7 @@ export async function getPainelAberturas(requestedSchoolId?: string) {
       include: { registros: { orderBy: { createdAt: "asc" } } },
       orderBy: [{ primeiraAula: "asc" }, { createdAt: "asc" }],
     }),
-    db.member.findMany({ where: { schoolId, mercurioAtivo: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.member.findMany({ where: { schoolId, mercurioAtivo: true }, select: { id: true, name: true, isPedagogo: true }, orderBy: { name: "asc" } }),
     db.professorDisponibilidade.findMany({ where: { schoolId }, orderBy: [{ professorId: "asc" }, { diaSemana: "asc" }, { inicioMinuto: "asc" }] }),
     db.event.findMany({
       where: {
@@ -116,6 +116,7 @@ export async function getPainelAberturas(requestedSchoolId?: string) {
   const aberturas = aberturasDb.map((abertura) => ({
     id: abertura.id,
     mercurioTurmaId: abertura.mercurioTurmaId,
+    inscricoesAte: abertura.inscricoesAte?.toISOString() ?? null,
     titulo: abertura.titulo,
     primeiraAula: abertura.primeiraAula.toISOString(),
     diaSemana: abertura.diaSemana,
@@ -191,7 +192,8 @@ export async function getPainelAberturas(requestedSchoolId?: string) {
     escolas: escolas.map((escola) => ({ id: escola.id, name: escola.name })),
     schoolId,
     aberturas,
-    professores: professoresDb.map(({ id, name }) => ({ id, name })),
+    pessoas: professoresDb.map(({ id, name }) => ({ id, name })),
+    professores: professoresDb.filter(p=>p.isPedagogo).map(({ id, name }) => ({ id, name })),
     disponibilidades: disponibilidadesDb.map((disponibilidade) => ({
       id: disponibilidade.id,
       professorId: disponibilidade.professorId,

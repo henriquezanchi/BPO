@@ -51,7 +51,7 @@ function dataSugestao(primeiraAula: string, diasAntes: number) {
   return date.toISOString().slice(0, 10);
 }
 
-export function FormRegistro({ schoolId, abertura, leads, matriculas, eventos, professores, tipoInicial = "tarefa", tiposPermitidos, compartilhamentoPermitido = false, leadInicialId, leadFixo = false }: { schoolId: string; abertura: Abertura; leads: LeadCRM[]; matriculas: JsonRecord[]; eventos: CalendarioItem[]; professores: Pessoa[]; tipoInicial?: TipoRegistro; tiposPermitidos?: TipoRegistro[]; compartilhamentoPermitido?: boolean; leadInicialId?: string; leadFixo?: boolean }) {
+export function FormRegistro({ schoolId, abertura, leads, matriculas, eventos, pessoas, tipoInicial = "tarefa", tiposPermitidos, compartilhamentoPermitido = false, leadInicialId, leadFixo = false }: { schoolId: string; abertura: Abertura; leads: LeadCRM[]; matriculas: JsonRecord[]; eventos: CalendarioItem[]; pessoas: Pessoa[]; tipoInicial?: TipoRegistro; tiposPermitidos?: TipoRegistro[]; compartilhamentoPermitido?: boolean; leadInicialId?: string; leadFixo?: boolean }) {
   const action = useFormAction(registrarAbertura);
   const [tipo, setTipo] = useState<TipoRegistro>(tipoInicial);
   const matriculasDaTurma = matriculas.filter((matricula) => abertura.mercurioTurmaId && String(matricula.turmaId ?? "") === abertura.mercurioTurmaId);
@@ -119,7 +119,7 @@ export function FormRegistro({ schoolId, abertura, leads, matriculas, eventos, p
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <Campo label="O que precisa ser feito" className="sm:col-span-2"><input required name="titulo" value={draft.titulo ?? ""} onChange={(e) => atualizar("titulo", e.target.value)} maxLength={160} placeholder="Ex.: Confirmar sala e recursos" className={CAMPO_CLASS} /></Campo>
-            <Campo label="Responsável"><select name="responsavelId" value={draft.responsavelId ?? ""} onChange={(e) => atualizar("responsavelId", e.target.value)} className={CAMPO_CLASS}><option value="">A definir</option>{professores.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Campo>
+            <Campo label="Responsável"><select name="responsavelId" value={draft.responsavelId ?? ""} onChange={(e) => atualizar("responsavelId", e.target.value)} className={CAMPO_CLASS}><option value="">A definir</option>{pessoas.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Campo>
             <Campo label="Prazo"><input required type="date" name="prazo" value={draft.prazo ?? ""} onChange={(e) => atualizar("prazo", e.target.value)} className={CAMPO_CLASS} /></Campo>
             <Campo label="Situação"><select name="status" value={draft.status ?? "pendente"} onChange={(e) => atualizar("status", e.target.value)} className={CAMPO_CLASS}><option value="pendente">Pendente</option><option value="em_andamento">Em andamento</option><option value="concluida">Concluída</option></select></Campo>
           </div>

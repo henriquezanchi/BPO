@@ -128,3 +128,22 @@ test('validação das avaliações não transforma base incompleta em não matr�
  const atualizada=medirAvaliacoes(a,{baseAtualizadaEm:'2026-02-10',matriculas:[{leadId:'p',turmaId:'T',data:'2026-01-01'}]},'2026-02-20T00:00:00Z');
  assert.equal(atualizada.grupos[0].matriculados,1);assert.equal(atualizada.grupos[0].taxaObservada,1);
 });
+
+
+test('prazo de inscrições inclui o último dia e encerra a coorte no prazo configurado', async()=>{
+ const {medirAvaliacoes}=await import('../src/lib/aberturas/relatorios');
+ const abertura={id:'prazo',primeiraAula:'2026-01-01T22:00:00Z',inscricoesAte:'2026-01-08T02:59:59.999Z',mercurioTurmaId:'T',status:'concluida',registros:[{tipo:'avaliacao',dados:{leadId:'p',avaliadoEm:'2025-12-01T00:00:00Z'}}]};
+ const cache={baseAtualizadaEm:'2026-01-09',matriculas:[{leadId:'p',turmaId:'T',data:'2026-01-07'}]};
+ const dentro=medirAvaliacoes(abertura,cache,'2026-01-10');
+ assert.equal(dentro.ate,abertura.inscricoesAte);assert.equal(dentro.coorteConcluida,true);assert.equal(dentro.grupos[0].matriculados,1);
+ const fora=medirAvaliacoes(abertura,{...cache,matriculas:[{leadId:'p',turmaId:'T',data:'2026-01-08'}]},'2026-01-10');
+ assert.equal(fora.grupos[0].matriculados,0);assert.equal(fora.grupos[0].semMatriculaNoPeriodo,1);
+});
+
+test('prazo de admissão não bloqueia acompanhamento posterior de presença',async()=>{
+ const {validarPrazoMatricula}=await import('../src/lib/aberturas/validacao');
+ const limite=new Date('2026-01-08T02:59:59.999Z');
+ assert.doesNotThrow(()=>validarPrazoMatricula('matriculado','2026-01-07',limite));
+ assert.throws(()=>validarPrazoMatricula('matriculado','2026-01-08',limite));
+ for(const status of ['presenca30','presenca60','presenca90'])assert.doesNotThrow(()=>validarPrazoMatricula(status,'2026-04-01',limite));
+});

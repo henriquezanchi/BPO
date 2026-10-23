@@ -4,6 +4,7 @@ export type AberturaRelatorioInput = {
   id: string;
   titulo?: string;
   primeiraAula: Date | string;
+  inscricoesAte?: Date | string | null;
   diaSemana?: number;
   registros?: Registro[];
 };
@@ -139,7 +140,7 @@ function coorte(registros: Registro[], status: string) {
 function dataResultado(dados: JsonObject): number | null {
   const data = texto(dados.data);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return null;
-  const timestamp = Date.parse(`${data}T00:00:00.000Z`);
+  const timestamp = Date.parse(`${data}T03:00:00.000Z`);
   return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === data ? timestamp : null;
 }
 
@@ -375,7 +376,7 @@ export function agregarAprendizadosRede(fontes: FonteAprendizado[]) {
 export function medirAvaliacoes(abertura: AberturaRelatorioInput & {status?:string;mercurioTurmaId?:string|null}, crm?:unknown, agora=new Date().toISOString()) {
  const cache=objeto(crm),registros=abertura.registros??[];
  const primeira=dataIso(abertura.primeiraAula);
- const limite=primeira?new Date(Date.parse(primeira)+30*86400000).toISOString():null;
+ const limite=dataIso(abertura.inscricoesAte)??(primeira?new Date(Date.parse(primeira)+30*86400000).toISOString():null);
  const corte=dataIso(cache.baseAtualizadaEm);
  const fechada=!!(abertura.status==='concluida'&&abertura.mercurioTurmaId&&limite&&corte&&Date.parse(corte)>=Date.parse(limite)&&Date.parse(agora)>=Date.parse(limite));
  const matriculas=new Map<string,number>();
@@ -388,5 +389,5 @@ export function medirAvaliacoes(abertura: AberturaRelatorioInput & {status?:stri
  const data=matriculas.get(id);if(data!==undefined&&limite&&data<=Date.parse(limite))g.matriculados++;else if(fechada)g.semMatriculaNoPeriodo++;else g.pendentes++;
  g.acoesRegistradas+=registros.filter(r=>{const s=objeto(r.dados);return r.tipo==='sinal'&&s.tipo==='acao_realizada'&&String(s.leadId)===id;}).length;
  g.taxaObservada=g.matriculados+g.semMatriculaNoPeriodo?g.matriculados/(g.matriculados+g.semMatriculaNoPeriodo):null;grupos.set(key,g);}
- return {janelaDias:30,ate:limite,baseAtualizadaEm:corte,coorteConcluida:fechada,grupos:[...grupos.values()],aviso:'Taxas observadas não são probabilidades individuais. Compare também o atendimento recebido; bases incompletas permanecem pendentes.'};
+ return {janelaDias:primeira&&limite?Math.ceil((Date.parse(limite)-Date.parse(primeira))/86400000):30,ate:limite,baseAtualizadaEm:corte,coorteConcluida:fechada,grupos:[...grupos.values()],aviso:'Taxas observadas não são probabilidades individuais. Compare também o atendimento recebido; bases incompletas permanecem pendentes.'};
 }

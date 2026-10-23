@@ -17,8 +17,8 @@ export async function sincronizarAberturasEscola(schoolId:string){
  let incorporadas=0;
  const matriculas=Array.isArray(dados.matriculas)?dados.matriculas as Record<string,unknown>[]:[];
  for(const a of aberturas.filter(a=>a.mercurioTurmaId&&a.status!=='cancelada')){
-  const de=a.primeiraAula.getTime()-90*86400000,ate=a.primeiraAula.getTime()+30*86400000;
-  const rows=matriculas.filter(m=>String(m.turmaId)===a.mercurioTurmaId&&typeof m.data==='string'&&Date.parse(m.data)>=de&&Date.parse(m.data)<=ate&&m.mercurioId).map(m=>({id:`crm-${a.id}-${m.mercurioId}-${String(m.data).slice(0,10)}`,aberturaId:a.id,autorId:'sistema:crm',tipo:'resultado',dados:{mercurioId:String(m.mercurioId),...(m.leadId?{leadId:String(m.leadId)}:{}),turmaId:a.mercurioTurmaId,data:String(m.data).slice(0,10),status:'matriculado',fonte:'mercurio',confirmadoEm:new Date().toISOString()} as Prisma.InputJsonValue}));
+  const de=a.primeiraAula.getTime()-90*86400000,ate=a.inscricoesAte?.getTime()??a.primeiraAula.getTime()+30*86400000;
+  const rows=matriculas.filter(m=>String(m.turmaId)===a.mercurioTurmaId&&typeof m.data==='string'&&Date.parse(m.data.slice(0,10)+'T00:00:00-03:00')>=de&&Date.parse(m.data.slice(0,10)+'T00:00:00-03:00')<=ate&&m.mercurioId).map(m=>({id:`crm-${a.id}-${m.mercurioId}-${String(m.data).slice(0,10)}`,aberturaId:a.id,autorId:'sistema:crm',tipo:'resultado',dados:{mercurioId:String(m.mercurioId),...(m.leadId?{leadId:String(m.leadId)}:{}),turmaId:a.mercurioTurmaId,data:String(m.data).slice(0,10),status:'matriculado',fonte:'mercurio',confirmadoEm:new Date().toISOString()} as Prisma.InputJsonValue}));
   if(rows.length){const result=await db.$transaction(async tx=>{const inserted=await tx.aberturaRegistro.createMany({data:rows,skipDuplicates:true});if(inserted.count)await tx.aberturaTurma.update({where:{id:a.id},data:{revisao:{increment:1}}});return inserted;});incorporadas+=result.count;}
  }
  return {incorporadas};

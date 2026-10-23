@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, BookOpenCheck, CalendarDays, CalendarPlus, CheckCircle2, ClipboardCheck, Clock3, GraduationCap, UsersRound } from "lucide-react";
+import { vincularTurmaAbertura } from "@/lib/actions/aberturas-actions";
 import { FormAbertura } from "./form-abertura";
 import { FormRegistro } from "./form-registro";
 import { InteressadosTab, InvestimentosTab } from "./crm-investimentos";
@@ -11,6 +12,7 @@ import { AprendizadosTab } from "./aprendizados-tab";
 import type { Abertura, PainelAberturas, RegistroAbertura } from "./types";
 import { DIAS, dataCalendario, despesasDaAbertura, formatarCentavos, formatarData, formatarReais, hora, numero, objeto, primeiraChave, texto, tituloCalendario } from "./utils";
 import { GraficoCustoConversao } from "./graficos";
+import { CAMPO_CLASS, Campo, Feedback, SubmitButton, hiddenAberturaFields, useFormAction } from "./form-action";
 
 type Aba = "resumo" | "planejamento" | "cultura" | "interessados" | "investimentos" | "equipe" | "aprendizados";
 const ABAS: { id: Aba; titulo: string }[] = [
@@ -32,7 +34,6 @@ export function PainelAberturas({ data }: { data: PainelAberturas }) {
   const [formAberto, setFormAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Abertura | null>(null);
   const abertura = data.aberturas.find((item) => item.id === aberturaId) ?? data.aberturas.find((item) => item.status !== "cancelada") ?? data.aberturas[0] ?? null;
-  const codigosTurma = useMemo(() => [...new Set(data.crm.matriculas.map((matricula) => texto(primeiraChave(matricula, ["turmaId", "mercurioTurmaId"]), "")).filter(Boolean))], [data.crm.matriculas]);
 
   function abrirNova() {
     setEmEdicao(null);
@@ -71,7 +72,7 @@ export function PainelAberturas({ data }: { data: PainelAberturas }) {
     <nav aria-label="Seções de aberturas" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1" role="tablist">{ABAS.map(({ id, titulo }) => <button key={id} type="button" role="tab" id={`aba-aberturas-${id}`} aria-selected={aba === id} aria-controls="painel-aberturas-conteudo" onClick={() => setAba(id)} className={`min-h-10 shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 sm:text-sm ${aba === id ? "bg-na-green-dark text-white shadow-sm dark:bg-emerald-800" : "bg-white text-gray-600 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"}`}>{titulo}</button>)}</nav>
 
     <div role="tabpanel" id="painel-aberturas-conteudo" aria-labelledby={`aba-aberturas-${aba}`} className="min-w-0">{mostrarAba()}</div>
-    {formAberto && <FormAbertura key={emEdicao?.id ?? "nova-abertura"} schoolId={data.schoolId} professores={data.professores} codigosTurma={codigosTurma} abertura={emEdicao} onFechar={fecharFormulario} />}
+    {formAberto && <FormAbertura key={emEdicao?.id ?? "nova-abertura"} schoolId={data.schoolId} professores={data.professores} abertura={emEdicao} onFechar={fecharFormulario} />}
   </div>;
 }
 
@@ -85,7 +86,7 @@ function ResumoTab({ data, onIr }: { data: PainelAberturas; onIr: (id?: string, 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <IndicadorResumo icone={<CalendarDays size={17} />} titulo="Aberturas" valor={String(data.aberturas.filter((item) => item.status !== "cancelada").length)} detalhe={`${data.aberturas.filter((item) => item.status === "planejada" || item.status === "rascunho").length} em planejamento`} />
       <IndicadorResumo icone={<UsersRound size={17} />} titulo="Capacidade somada" valor={String(capacidade)} detalhe={`Meta de ${meta} matrículas`} />
-      <IndicadorResumo icone={<GraduationCap size={17} />} titulo="Interessados no CRM" valor={String(data.crm.leads.length)} detalhe={data.crm.status || "Sem status da integração"} />
+      <IndicadorResumo icone={<GraduationCap size={17} />} titulo="Interessados" valor={String(data.crm.leads.length)} detalhe="Contatos importados da filial; não são matrículas previstas" onClick={() => onIr(undefined, "interessados")} />
       <IndicadorResumo icone={<ClipboardCheck size={17} />} titulo="Orçamento planejado" valor={formatarCentavos(orcamento)} detalhe="Soma das aberturas não canceladas" />
     </section>
 
@@ -101,8 +102,11 @@ function ResumoTab({ data, onIr }: { data: PainelAberturas; onIr: (id?: string, 
   </div>;
 }
 
-function IndicadorResumo({ icone, titulo, valor, detalhe }: { icone: React.ReactNode; titulo: string; valor: string; detalhe: string }) {
-  return <article className={CARD}><div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{titulo}</span><span className="text-na-green-dark dark:text-emerald-400">{icone}</span></div><p className="mt-2 text-2xl font-black text-gray-950 dark:text-white">{valor}</p><p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{detalhe}</p></article>;
+function IndicadorResumo({ icone, titulo, valor, detalhe, onClick }: { icone: React.ReactNode; titulo: string; valor: string; detalhe: string; onClick?: () => void }) {
+  const conteudo = <><div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{titulo}</span><span className="text-na-green-dark dark:text-emerald-400">{icone}</span></div><p className="mt-2 text-2xl font-black text-gray-950 dark:text-white">{valor}</p><p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{detalhe}</p></>;
+  return onClick
+    ? <button type="button" onClick={onClick} className={`${CARD} w-full text-left transition hover:border-na-green/50 hover:bg-na-green-light/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-na-green dark:hover:bg-emerald-950/20`}>{conteudo}</button>
+    : <article className={CARD}>{conteudo}</article>;
 }
 
 function agendaProxima(data: PainelAberturas) {
@@ -135,13 +139,32 @@ function PlanejamentoTab({ data, abertura, selecionar, nova, editar }: { data: P
 function DetalheAbertura({ abertura, data, editar }: { abertura: Abertura; data: PainelAberturas; editar: () => void }) {
   const despesas = despesasDaAbertura(abertura);
   const gastos = despesas.filter((item) => !item.previsto).reduce((total, item) => total + item.valor, 0);
-  return <section className={CARD}><div className="flex flex-col gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-gray-800"><div><p className="text-xs font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Abertura selecionada</p><h2 className="mt-1 text-xl font-black text-gray-950 dark:text-white">{abertura.titulo}</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{formatarData(abertura.primeiraAula)} · {hora(abertura.inicioMinuto)} · {abertura.sala || "Sala não informada"} · {rotuloStatus(abertura.status)}</p></div><button type="button" onClick={editar} className="min-h-9 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-700 dark:border-gray-700 dark:text-gray-200">Editar parâmetros</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><MiniResumo label="Professores envolvidos" value={abertura.professorIds.map((id) => data.professores.find((item) => item.id === id)?.name ?? "Pessoa da equipe").join(", ") || "Sem equipe definida"} /><MiniResumo label="Mercúrio · código da turma" value={abertura.mercurioTurmaId || "Sem vínculo confirmado"} /><MiniResumo label="Orçamento" value={formatarCentavos(abertura.orcamentoCentavos)} /><MiniResumo label="Despesas lançadas" value={`${formatarReais(gastos)} · ${despesas.length} registro(s)`} /></div><div className="mt-5"><div className="mb-3 flex items-center justify-between gap-2"><h3 className="font-bold text-gray-900 dark:text-gray-100">Linha do ciclo</h3><span className="text-xs text-gray-500 dark:text-gray-400">{abertura.registros.length} registros</span></div>{abertura.registros.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Ainda não há registros neste ciclo.</p> : <div className="space-y-2">{[...abertura.registros].reverse().map((registro) => <RegistroLinha key={registro.id} registro={registro} />)}</div>}</div></section>;
+  return <section className={CARD}><div className="flex flex-col gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-gray-800"><div><p className="text-xs font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Abertura selecionada</p><h2 className="mt-1 text-xl font-black text-gray-950 dark:text-white">{abertura.titulo}</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{formatarData(abertura.primeiraAula)} · {hora(abertura.inicioMinuto)} · {abertura.sala || "Sala não informada"} · {rotuloStatus(abertura.status)}</p></div><button type="button" onClick={editar} className="min-h-9 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-700 dark:border-gray-700 dark:text-gray-200">Editar parâmetros</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><MiniResumo label="Professores envolvidos" value={abertura.professorIds.map((id) => data.professores.find((item) => item.id === id)?.name ?? "Pessoa da equipe").join(", ") || "Sem equipe definida"} /><MiniResumo label="Mercúrio · código da turma" value={abertura.mercurioTurmaId || "Sem vínculo confirmado"} /><MiniResumo label="Orçamento" value={formatarCentavos(abertura.orcamentoCentavos)} /><MiniResumo label="Despesas lançadas" value={`${formatarReais(gastos)} · ${despesas.length} registro(s)`} /></div><div className="mt-3"><FormVinculoTurma data={data} abertura={abertura} /></div><div className="mt-5"><div className="mb-3 flex items-center justify-between gap-2"><h3 className="font-bold text-gray-900 dark:text-gray-100">Linha do ciclo</h3><span className="text-xs text-gray-500 dark:text-gray-400">{abertura.registros.length} registros</span></div>{abertura.registros.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Ainda não há registros neste ciclo.</p> : <div className="space-y-2">{[...abertura.registros].reverse().map((registro) => <RegistroLinha key={registro.id} registro={registro} />)}</div>}</div></section>;
+}
+
+function FormVinculoTurma({ data, abertura }: { data: PainelAberturas; abertura: Abertura }) {
+  const action = useFormAction(vincularTurmaAbertura);
+  const codigosTurma = [...new Set(data.crm.matriculas.map((matricula) => texto(primeiraChave(matricula, ["turmaId", "mercurioTurmaId"]), "")).filter(Boolean))];
+  const listaId = `codigos-turma-${abertura.id}`;
+
+  return <details className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-950/30">
+    <summary className="cursor-pointer text-xs font-bold text-na-green-dark dark:text-emerald-400">{abertura.mercurioTurmaId ? "Alterar associação da turma do Mercúrio" : "Associar turma do Mercúrio"}</summary>
+    <form onSubmit={action.submit} className="mt-3 space-y-3 border-t border-gray-200 pt-3 dark:border-gray-800">
+      {hiddenAberturaFields(data.schoolId, abertura.id, abertura.revisao)}
+      <Campo label="Código exato da turma" hint="A turma precisa estar cadastrada no Mercúrio antes desta associação. Este vínculo não cria turma nem matrícula.">
+        <input required name="mercurioTurmaId" list={listaId} maxLength={100} defaultValue={abertura.mercurioTurmaId ?? ""} placeholder="Informe o código exato" className={CAMPO_CLASS} />
+        <datalist id={listaId}>{codigosTurma.map((codigo) => <option key={codigo} value={codigo} />)}</datalist>
+      </Campo>
+      <Feedback error={action.error} success={action.success} aviso={action.aviso} />
+      <div className="flex justify-end"><SubmitButton pending={action.pending}>Salvar associação</SubmitButton></div>
+    </form>
+  </details>;
 }
 
 function CicloCultural({ data, abertura }: { data: PainelAberturas; abertura: Abertura | null }) {
   return <div className="space-y-5">
     <section className={CARD}><div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"><BookOpenCheck size={18} /></span><div><h2 className="font-black text-gray-950 dark:text-white">Ciclo cultural e acompanhamento</h2><p className="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">Organize tarefas, palestras e contatos como fatos datados do percurso de abertura.</p></div></div>{!abertura && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Selecione ou crie uma abertura em Planejamento para registrar atividades.</p>}</section>
-    {abertura && <><section className={CARD}><div className="mb-3 flex items-center justify-between gap-2"><div><h3 className="font-black text-gray-950 dark:text-white">Registrar atividade</h3><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Modelos de tarefa sugerem prazos relativos à primeira aula; ajuste-os ao contexto local.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{abertura.titulo}</span></div><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={data.crm.leads} matriculas={data.crm.matriculas} eventos={data.eventos} professores={data.professores} tiposPermitidos={["tarefa", "palestra", "sinal", "avaliacao"]} /></section><section className={CARD}><div className="mb-3 flex items-center gap-2"><CalendarDays size={17} className="text-gray-500" /><h3 className="font-black text-gray-950 dark:text-white">Atividades registradas</h3></div>{abertura.registros.filter((item) => ["tarefa", "palestra", "sinal", "avaliacao"].includes(item.tipo)).length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Nenhuma tarefa, palestra ou sinal registrado ainda.</p> : <div className="space-y-2">{[...abertura.registros].filter((item) => ["tarefa", "palestra", "sinal", "avaliacao"].includes(item.tipo)).reverse().map((registro) => <RegistroLinha key={registro.id} registro={registro} />)}</div>}</section></>}
+    {abertura && <><section className={CARD}><div className="mb-3 flex items-center justify-between gap-2"><div><h3 className="font-black text-gray-950 dark:text-white">Registrar atividade</h3><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Modelos de tarefa sugerem prazos relativos à primeira aula; ajuste-os ao contexto local.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{abertura.titulo}</span></div><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={data.crm.leads} matriculas={data.crm.matriculas} eventos={data.eventos} pessoas={data.pessoas} tiposPermitidos={["tarefa", "palestra", "sinal", "avaliacao"]} /></section><section className={CARD}><div className="mb-3 flex items-center gap-2"><CalendarDays size={17} className="text-gray-500" /><h3 className="font-black text-gray-950 dark:text-white">Atividades registradas</h3></div>{abertura.registros.filter((item) => ["tarefa", "palestra", "sinal", "avaliacao"].includes(item.tipo)).length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Nenhuma tarefa, palestra ou sinal registrado ainda.</p> : <div className="space-y-2">{[...abertura.registros].filter((item) => ["tarefa", "palestra", "sinal", "avaliacao"].includes(item.tipo)).reverse().map((registro) => <RegistroLinha key={registro.id} registro={registro} />)}</div>}</section></>}
   </div>;
 }
 

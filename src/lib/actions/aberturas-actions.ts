@@ -4,7 +4,7 @@ import {db} from '@/lib/db';
 import {getAuthenticatedMember} from '@/lib/auth';
 import {carregarContextoSecretaria,podeGerirEscalaSecretaria} from '@/lib/secretarias-rede/acesso';
 import {exigirAberturas} from '@/lib/aberturas/permissoes';
-import {dataLocal,minuto,centavos,registroSchemas} from '@/lib/aberturas/validacao';
+import {dataLocal,minuto,centavos,registroSchemas,validarPrazoMatricula} from '@/lib/aberturas/validacao';
 import {consultarCrmAberturas} from '@/lib/aberturas/crm';
 import {sincronizarAberturasEscola} from '@/lib/aberturas/sincronizacao';
 import {revalidatePath} from 'next/cache';
@@ -18,6 +18,7 @@ const revisao=(f:FormData)=>inteiro(field(f,'revisao'),0,2147483646);
 function falha(e:unknown){return {ok:false,error:e instanceof z.ZodError?'Confira os campos: '+e.issues.map(i=>i.path.join('.')||i.message).slice(0,3).join(', '):e instanceof Error&& !('code' in e)?e.message:'Não foi possível salvar. Atualize a página e tente novamente.'};}
 const atualizar=()=>revalidatePath('/voluntario/aberturas');
 async function pessoaLocal(id:string,schoolId:string){const p=await db.member.findFirst({where:{id,schoolId,mercurioAtivo:true},select:{id:true}});if(!p)throw Error('Pessoa não está ativa nesta filial.');}
+async function professorLocal(id:string,schoolId:string){if(!await db.member.findFirst({where:{id,schoolId,mercurioAtivo:true,isPedagogo:true},select:{id:true}}))throw Error('Professor não identificado no Mercúrio desta filial.');}
 async function abrir(f:FormData){const scope=await exigirAberturas(field(f,'schoolId'));const abertura=await db.aberturaTurma.findFirst({where:{id:field(f,'aberturaId'),schoolId:scope.schoolId},include:{registros:{orderBy:{createdAt:'asc'}}}});if(!abertura)throw Error('Abertura não encontrada nesta filial.');return {...scope,abertura};}
 
 export async function salvarAbertura(f:FormData){try{
@@ -26,14 +27,14 @@ export async function salvarAbertura(f:FormData){try{
  if(new Date(primeira+'T12:00:00Z').getUTCDay()!==diaSemana)throw Error('O primeiro dia de aula deve coincidir com o dia semanal escolhido.');
  if(inicioMinuto>1320)throw Error('A aula de duas horas deve terminar até meia-noite.');
  const professorIds=[...new Set(f.getAll('professorIds').map(String))];if(professorIds.length>20)throw Error('Limite de professores excedido.');
- for(const id of professorIds)await pessoaLocal(id,schoolId);
+ for(const id of professorIds)await professorLocal(id,schoolId);
  const capacidade=inteiro(field(f,'capacidade'),1,2000),metaMatriculas=inteiro(field(f,'metaMatriculas'),1,2000);
  if(metaMatriculas>capacidade)throw Error('A meta não pode exceder a capacidade da sala.');
  const status=z.enum(['rascunho','planejada','em_curso','concluida','cancelada']).parse(field(f,'status')||'rascunho');
  if(status!=='rascunho'&&status!=='cancelada'&&professorIds.length<2)throw Error('Selecione pelo menos dois professores para confirmar a abertura.');
- const mercurioTurmaId=field(f,'mercurioTurmaId')||null;
- if(mercurioTurmaId&&mercurioTurmaId.length>100)throw Error('Identificador de turma inválido.');
- const dados={mercurioTurmaId,titulo:texto(field(f,'titulo')),primeiraAula:new Date(primeira+'T'+field(f,'inicio')+':00-03:00'),diaSemana,inicioMinuto,duracaoMinutos:120,capacidade,metaMatriculas,orcamentoCentavos:centavos(field(f,'orcamento')||'0'),sala:texto(field(f,'sala')),status,professorIds};
+ const inscricoes=field(f,'inscricoesAte');
+ if(inscricoes){dataLocal.parse(inscricoes);if(inscricoes<primeira)throw Error('O prazo de inscrições deve ser igual ou posterior à primeira aula.');}
+ const dados={inscricoesAte:inscricoes?new Date(inscricoes+'T23:59:59.999-03:00'):null,primeiraAula:new Date(primeira+'T'+field(f,'inicio')+':00-03:00'),diaSemana,inicioMinuto,duracaoMinutos:120,capacidade,metaMatriculas,orcamentoCentavos:centavos(field(f,'orcamento')||'0'),sala:texto(field(f,'sala')),status,professorIds};
  const id=field(f,'aberturaId');
  const salvo=await db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "School" WHERE id=${schoolId} FOR UPDATE`;
@@ -41,10 +42,24 @@ export async function salvarAbertura(f:FormData){try{
    const conflito=await tx.aberturaTurma.findFirst({where:{schoolId,...(id?{id:{not:id}}:{}),status:{in:['planejada','em_curso']},diaSemana,inicioMinuto:{lt:inicioMinuto+120,gt:inicioMinuto-120},OR:[{sala:{equals:dados.sala,mode:'insensitive'}},{professorIds:{hasSome:professorIds}}]},select:{titulo:true}});
    if(conflito)throw Error('Há outra turma planejada com a mesma sala ou professores nesse horário: '+conflito.titulo);
   }
-  if(id){const changed=await tx.aberturaTurma.updateMany({where:{id,schoolId,revisao:revisao(f)},data:{...dados,revisao:{increment:1}}});if(changed.count!==1)throw Error('A abertura foi alterada por outra pessoa. Atualize a página.');await tx.aberturaRegistro.create({data:{aberturaId:id,autorId:member.id,tipo:'alteracao',dados:{...dados,primeiraAula:dados.primeiraAula.toISOString()}}});return id;}
-  const created=await tx.aberturaTurma.create({data:{...dados,schoolId,autorId:member.id,registros:{create:[{autorId:member.id,tipo:'tarefa',dados:{titulo:'Confirmar equipe docente e substituições',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Planejar palestras culturais e divulgação',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Organizar acolhimento e conferir matrículas no Mercúrio',status:'pendente',prazo:primeira}}]}}});return created.id;
+  if(id){const changed=await tx.aberturaTurma.updateMany({where:{id,schoolId,revisao:revisao(f)},data:{...dados,revisao:{increment:1}}});if(changed.count!==1)throw Error('A abertura foi alterada por outra pessoa. Atualize a página.');await tx.aberturaRegistro.create({data:{aberturaId:id,autorId:member.id,tipo:'alteracao',dados:{...dados,inscricoesAte:dados.inscricoesAte?.toISOString()??null,primeiraAula:dados.primeiraAula.toISOString()}}});return id;}
+  const created=await tx.aberturaTurma.create({data:{...dados,titulo:'Turma · '+primeira.split('-').reverse().join('/')+' · '+field(f,'inicio'),schoolId,autorId:member.id,registros:{create:[{autorId:member.id,tipo:'tarefa',dados:{titulo:'Confirmar equipe docente e substituições',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Planejar palestras culturais e divulgação',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Organizar acolhimento e conferir matrículas no Mercúrio',status:'pendente',prazo:primeira}}]}}});return created.id;
  });atualizar();return {ok:true,id:salvo};
  }catch(e){return falha(e);}}
+
+/** Associação posterior ao planejamento; nunca cria turmas acadêmicas. */
+export async function vincularTurmaAbertura(f:FormData){try{
+ const {member,schoolId,abertura}=await abrir(f);
+ const codigo=texto(field(f,'mercurioTurmaId'),100);
+ const cache=await db.aberturaCrmCache.findUnique({where:{schoolId}});
+ const dados=cache?.dados as {matriculas?:{turmaId?:string}[]}|undefined;
+ if(!dados?.matriculas?.some(m=>String(m.turmaId)===codigo))throw Error('Turma não localizada nos dados acadêmicos desta filial. Atualize os dados e tente novamente.');
+ await db.$transaction(async tx=>{
+  const mudou=await tx.aberturaTurma.updateMany({where:{id:abertura.id,schoolId,revisao:revisao(f)},data:{mercurioTurmaId:codigo,revisao:{increment:1}}});
+  if(mudou.count!==1)throw Error('A abertura foi alterada. Atualize a página.');
+  await tx.aberturaRegistro.create({data:{aberturaId:abertura.id,autorId:member.id,tipo:'alteracao',dados:{mercurioTurmaId:codigo}}});
+ });atualizar();return {ok:true};
+}catch(e){return falha(e);}}
 
 export async function registrarAbertura(f:FormData){try{
  const {member,schoolId,abertura}=await abrir(f);const tipo=field(f,'tipo');
@@ -70,6 +85,7 @@ export async function registrarAbertura(f:FormData){try{
   Object.assign(dados,await avaliarLeadAbertura(abertura,String(dados.leadId)));
  }
  if(tipo==='resultado'){
+  validarPrazoMatricula(dados.status,dados.data,abertura.inscricoesAte);
   const cache=await db.aberturaCrmCache.findUnique({where:{schoolId}});const crm=cache?.dados as {matriculas?:{mercurioId:string;data?:string;leadId?:string;turmaId?:string}[]}|undefined;
   if(!abertura.mercurioTurmaId)throw Error('Vincule a abertura ao código exato da turma no Mercúrio antes de confirmar matrículas.');
   const match=crm?.matriculas?.filter(m=>String(m.mercurioId)===String(dados.mercurioId)&&String(m.turmaId)===abertura.mercurioTurmaId);
@@ -94,7 +110,7 @@ export async function registrarAbertura(f:FormData){try{
  }catch(e){return falha(e);}}
 
 export async function salvarDisponibilidade(f:FormData){try{
- const {member,schoolId}=await exigirAberturas(field(f,'schoolId'));const professorId=field(f,'professorId');await pessoaLocal(professorId,schoolId);
+ const {member,schoolId}=await exigirAberturas(field(f,'schoolId'));const professorId=field(f,'professorId');await professorLocal(professorId,schoolId);
  const diaSemana=inteiro(field(f,'diaSemana'),0,6),inicioMinuto=minuto(field(f,'inicio')),fimMinuto=minuto(field(f,'fim'));
  const validaDe=dataLocal.parse(field(f,'validaDe')),validaAte=dataLocal.parse(field(f,'validaAte'));
  if(fimMinuto<=inicioMinuto||validaAte<validaDe)throw Error('Intervalo de disponibilidade inválido.');
