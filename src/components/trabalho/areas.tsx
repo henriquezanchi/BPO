@@ -11,9 +11,10 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { AbaEscolastica } from "@/lib/abas-escolastica";
 
 /** Abas de uma área da filial (links com ?aba=, funcionam no computador e no celular). */
-export function AbasArea({ base, abas, atual }: { base: string; abas: ([string, string] | [string, string, string])[]; atual: string }) {
+export function AbasArea({ base, abas, atual }: { base: string; abas: readonly AbaEscolastica[]; atual: string }) {
   return (
     <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-gray-200 px-4 lg:mx-0 lg:px-0 dark:border-gray-800" aria-label="Seções">
       {abas.map(([id, rotulo, href]) => (
@@ -120,10 +121,3 @@ export function MembrosEscolastica({ schoolId, data }: { schoolId: string; data:
     </div>
   );
 }
-
-/** Abas da Escolástica — a Avaliação dos instrutores fica dentro dela (pedido do usuário 2026-10-19). */
-export const ABAS_ESCOLASTICA: ([string, string] | [string, string, string])[] = [
-  ["pendencias", "Pendências e solicitações"],
-  ["membros", "Membros"],
-  ["avaliacao", "Avaliação dos instrutores", "/escolastica/avaliacao"],
-];

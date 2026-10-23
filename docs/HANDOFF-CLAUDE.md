@@ -156,3 +156,8 @@ Estoque de apostilas por matéria e tema, na Escolástica:
 - Responsável técnico pelo Diário: **o usuário ainda não sabe** (hipótese: equipe do Ágora/Marcos, pela base de código igual).
 - Faltosos: **em geral recebem depois**.
 - Pedido ao usuário: prints das telas `material/estoque`, `material/impressao`, `material/entregar`, `material/relatorio`, `planejamento/edit` e `aulas/registrar`, para mapear os campos antes do acesso à API.
+
+
+## Correção da Escolástica — 23/10/2026
+
+Erro reproduzido: `/escolastica` falhava com `ABAS_ESCOLASTICA is not iterable`. A página Server Component tentava espalhar uma constante exportada por `components/trabalho/areas.tsx` (`use client`). Configuração movida para `lib/abas-escolastica.ts`, módulo neutro, e imports das páginas principal/avaliação corrigidos. Permissões e dados preservados. Não reexportar configuração compartilhada por módulos client para uso no servidor. Reprodução local antes: HTTP 500; depois: HTTP 200, quatro links corretos e nenhum erro JavaScript em desktop/mobile. Rota temporária de verificação removida antes da publicação.

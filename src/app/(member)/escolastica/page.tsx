@@ -1,8 +1,9 @@
 import { AreaSecretaria } from "@/components/secretarias-rede/area-secretaria";
 import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
-import { ABAS_ESCOLASTICA, AbasArea, MembrosEscolastica } from "@/components/trabalho/areas";
+import { AbasArea, MembrosEscolastica } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { exigirArea } from "@/lib/area-trabalho";
+import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
 import { getDirectorDashboard } from "@/lib/director-data";
 
 export const dynamic = "force-dynamic";

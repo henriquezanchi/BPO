@@ -1,8 +1,9 @@
-import { ABAS_ESCOLASTICA, AbasArea } from "@/components/trabalho/areas";
+import { AbasArea } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { CampanhasPanel } from "@/components/avaliacao/campanhas-panel";
 import { QuestionarioEditor } from "@/components/avaliacao/questionario-editor";
 import { getAuthenticatedMember } from "@/lib/auth";
+import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
 import { escolasQueGereAvaliacao, questionarioDaFilial } from "@/lib/avaliacao";
 import { db } from "@/lib/db";
 import Link from "next/link";
