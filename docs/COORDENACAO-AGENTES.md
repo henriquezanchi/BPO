@@ -77,3 +77,8 @@ WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT c.relrowsecurity;
 ```
 
 A consulta deve voltar vazia.
+
+
+## 22. Codex — Aberturas, rede de secretarias e substituição do Lead Forte (23/10/2026)
+
+Implementados `/voluntario/aberturas` e `/voluntario/secretarias`, com planejamento, docentes/escalas, orçamento/resultados, ponte privada CRM, snapshots versionados e aprendizado agregado. Consulte `docs/CONTINUIDADE-ABERTURAS-CRM-2026-10-23.md` e `docs/ABERTURAS-TURMAS.md` antes de alterar. Migração `20261023020000_aberturas_secretarias` já aplicada e registrada, tabelas com RLS. Lead Forte/Jornada/Retorno por contagem foram descontinuados por instrução expressa do usuário; não restaurar. Motor factual UMD compartilhado com CRM, versão 1.0.2; cópias devem ser idênticas. Segredos ficam no Vault, nunca no cliente. Não há novos disparos de WhatsApp. A base acadêmica segue identificada como 17/10; sincronização recente não altera essa data.

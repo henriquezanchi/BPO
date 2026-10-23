@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { sincronizarCrmAberturas } from "@/lib/actions/aberturas-actions";
 import { ArrowUpRight, CircleDollarSign, RefreshCw, UserRound, UsersRound } from "lucide-react";
 import { Feedback, useFormAction } from "./form-action";
@@ -12,6 +13,10 @@ const CARD = "rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 dark:border
 
 export function InteressadosTab({ data, abertura }: { data: PainelAberturas; abertura: Abertura | null }) {
   const action = useFormAction(sincronizarCrmAberturas);
+  const [busca,setBusca]=useState(''),[pagina,setPagina]=useState(0);
+  const filtrados=data.crm.leads.filter(l=>`${l.nome||l.name||''} ${l.id||''}`.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR')));
+  const atual=Math.min(pagina,Math.max(0,Math.ceil(filtrados.length/50)-1));
+
   return (
     <div className="space-y-5">
       <section className={CARD}>
@@ -31,7 +36,9 @@ export function InteressadosTab({ data, abertura }: { data: PainelAberturas; abe
       <section className={CARD}>
         <div className="mb-3 flex items-center justify-between gap-3"><div><h2 className="font-black text-gray-950 dark:text-white">Fila de interessados</h2><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">A avaliação considera somente sinais e registros desta abertura selecionada.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{data.crm.leads.length}</span></div>
         {!abertura && <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Selecione uma abertura em Planejamento para consultar adequação e próxima ação específicas do ciclo e registrar uma avaliação.</p>}
-        {data.crm.leads.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Não há interessados na base sincronizada da filial.</p> : <div className="space-y-2">{data.crm.leads.map((lead, index) => <LeadCard key={String(lead.id ?? index)} lead={lead} data={data} abertura={abertura} />)}</div>}
+        <label className="mb-3 block text-sm">Buscar por nome ou identificador<input value={busca} onChange={e=>{setBusca(e.target.value);setPagina(0);}} className="mt-1 w-full rounded-xl border p-2 dark:bg-gray-950" /></label>
+        {data.crm.leads.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Não há interessados na base sincronizada da filial.</p> : <div className="space-y-2">{filtrados.slice(atual*50,atual*50+50).map((lead, index) => <LeadCard key={String(lead.id ?? index)} lead={lead} data={data} abertura={abertura} />)}</div>}
+        <div className="mt-4 flex items-center justify-between gap-2 text-xs"><button type="button" disabled={atual===0} onClick={()=>setPagina(atual-1)} className="rounded border px-3 py-2 disabled:opacity-40">Anterior</button><span>{filtrados.length} encontrados · página {atual+1} de {Math.max(1,Math.ceil(filtrados.length/50))}</span><button type="button" disabled={(atual+1)*50>=filtrados.length} onClick={()=>setPagina(atual+1)} className="rounded border px-3 py-2 disabled:opacity-40">Próxima</button></div>
       </section>
 
       <section className={CARD}>
