@@ -1,3 +1,5 @@
+import {carregarContextoSecretaria,podeAcessarSecretaria} from "@/lib/secretarias-rede/acesso";
+import { AreaSecretaria } from "@/components/secretarias-rede/area-secretaria";
 import { GrupoPainel } from "@/components/grupos/grupo-painel";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -22,6 +24,7 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
   if (!member) redirect(`/login?next=/grupos/${id}`);
   const [dados, destinos] = await Promise.all([detalheDoGrupo(member, id), destinosDaPessoa(member)]);
   if (!dados) notFound();
+  const orientacoes=dados.grupo.tipo==='SEC'&&member.mercurioAtivo&&podeAcessarSecretaria(await carregarContextoSecretaria(member),dados.grupo.name);
 
   if (!destinos.length) {
     return (
@@ -39,6 +42,7 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
   return (
     <ShellTrabalho ativo={de === "admin" ? "/admin" : "/voluntario"}>
       <GrupoPainel dados={dados} />
+      {orientacoes&&<AreaSecretaria secretaria={dados.grupo.name}/>}
     </ShellTrabalho>
   );
 }

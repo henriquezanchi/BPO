@@ -1,4 +1,5 @@
 'use server';
+import {caminhoSecretaria} from '@/lib/secretarias-rede/destinos';
 import {db} from '@/lib/db';
 import {getAuthenticatedMember} from '@/lib/auth';
 import {carregarContextoSecretaria,podeGerirEscalaSecretaria} from '@/lib/secretarias-rede/acesso';
@@ -132,5 +133,5 @@ export async function removerDisponibilidade(f:FormData){try{
  }catch(e){return falha(e);}}
 export async function removerEscalaSecretaria(f:FormData){try{
  const member=await getAuthenticatedMember();if(!member?.mercurioAtivo)throw Error('Entre com uma conta ativa.');const schoolId=field(f,'schoolId');const old=await db.secretariaEscala.findFirst({where:{id:field(f,'id'),schoolId}});const ctx=await carregarContextoSecretaria(member);
- if(!old||!podeGerirEscalaSecretaria(ctx,old.secretaria,schoolId))throw Error('Sem permissão para esta escala.');await db.secretariaEscala.delete({where:{id:old.id}});atualizar();revalidatePath('/voluntario/secretarias');return {ok:true};
+ if(!old||!podeGerirEscalaSecretaria(ctx,old.secretaria,schoolId))throw Error('Sem permissão para esta escala.');await db.secretariaEscala.delete({where:{id:old.id}});atualizar();revalidatePath(caminhoSecretaria(old.secretaria).split('?')[0]);return {ok:true};
  }catch(e){return falha(e);}}

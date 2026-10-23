@@ -64,7 +64,7 @@ export function EquipeHorarios({ data, abertura }: { data: PainelAberturas; aber
           <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">Turnos registrados</h3>
           {data.escalas.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Ainda não há turnos de secretaria registrados.</p> : <div className="grid gap-2 sm:grid-cols-2">{data.escalas.map((escala) => <EscalaCard key={escala.id} escala={escala} schoolId={data.schoolId} aoEditar={() => setEscalaEmEdicao(escala)} />)}</div>}
         </div>
-        <Link href="/voluntario/secretarias" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-na-green-dark hover:underline dark:text-emerald-400">Abrir área das secretarias <ArrowUpRight size={14} /></Link>
+        <Link href="/voluntario/aberturas?aba=orientacoes" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-na-green-dark hover:underline dark:text-emerald-400">Orientações da Secretaria de Abertura de Turma <ArrowUpRight size={14} /></Link>
       </section>
 
       <section className={CARD}>

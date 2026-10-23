@@ -1,6 +1,9 @@
 import { db } from "@/lib/db";
 import {
   carregarContextoSecretaria,
+  contextoDaSecretaria,
+  podeAcessarSecretaria,
+  chaveSecretaria,
   podeGerirMandatoExistente,
   podePublicarNoTerritorio,
   podeVerPublicacao,
@@ -19,21 +22,26 @@ import type { Member } from "@prisma/client";
 
 type PessoaAtiva = Pick<Member, "id" | "schoolId" | "mercurioId" | "mercurioAtivo" | "isDiretor" | "isSubChefe" | "isSecretarioEscolastica" | "isSecretarioEconomia" | "filiaisChefiadas">;
 
-export async function carregarBibliotecaSecretarias(member: PessoaAtiva) {
-  const ctx = await carregarContextoSecretaria(member);
+export async function carregarBibliotecaSecretarias(member: PessoaAtiva, secretariaAtual: string) {
+  const completo = await carregarContextoSecretaria(member);
+  if(!secretariaAtual.trim()||!podeAcessarSecretaria(completo,secretariaAtual))throw Error('Sem acesso a esta secretaria.');
+  const ctx=contextoDaSecretaria(completo,secretariaAtual);
+  const corresponde=(nome:string)=>chaveSecretaria(nome)===chaveSecretaria(secretariaAtual);
   const idsEscolasEscala = escolasAutorizadasParaEscala(ctx);
-  const [publicacoes, mandatos, escalasRaw] = await Promise.all([
+  const [publicacoesRaw, mandatosRaw, escalasRaw] = await Promise.all([
     db.secretariaPublicacao.findMany({ where: { publicado: true }, orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }] }),
     db.secretariaMandato.findMany({ orderBy: [{ secretaria: "asc" }, { escopo: "asc" }] }),
     idsEscolasEscala.length
       ? db.secretariaEscala.findMany({ where: { schoolId: { in: idsEscolasEscala } }, orderBy: [{ secretaria: "asc" }, { diaSemana: "asc" }, { inicioMinuto: "asc" }] })
       : Promise.resolve([]),
   ]);
+  const publicacoes=publicacoesRaw.filter(p=>corresponde(p.secretaria));
+  const mandatos=mandatosRaw.filter(m=>corresponde(m.secretaria));
   const visiveis = publicacoes.filter((publicacao) =>
     podeVerPublicacao(ctx, publicacao.secretaria, { schoolIds: publicacao.schoolIds, ufs: publicacao.ufs }),
   );
   const idsPublicacoes = visiveis.map((publicacao) => publicacao.id);
-  const escalas = escalasRaw.filter((escala) => podeVerEscalaSecretaria(ctx, escala.secretaria, escala.schoolId));
+  const escalas = escalasRaw.filter((escala) => corresponde(escala.secretaria)&&podeVerEscalaSecretaria(ctx, escala.secretaria, escala.schoolId));
   const [leituras, autores, membrosMandato] = await Promise.all([
     idsPublicacoes.length
       ? db.secretariaLeitura.findMany({ where: { memberId: member.id, publicacaoId: { in: idsPublicacoes } }, select: { publicacaoId: true, versao: true } })
@@ -118,21 +126,24 @@ export async function carregarBibliotecaSecretarias(member: PessoaAtiva) {
     : ctx.escolas.filter((escola) => idsEscolasEscala.includes(escola.id) || escolasMandatoLocal.includes(escola.id) || visiveis.some((pub) => pub.schoolIds.includes(escola.id)));
   const ufsPayload = [...new Set(escolasPayload.flatMap((escola) => escola.uf ? [escola.uf.toUpperCase()] : []))].sort();
   const secretariasEscala = [...new Set([...secretariasParaPublicar(ctx), ...escalasProntas.map((escala) => escala.secretaria)])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const territoriosPublicacao=territoriosDePublicacao(ctx).map(t=>({...t,nome:secretariaAtual}));
+  if(!territoriosPublicacao.some(t=>corresponde(t.nome))&&(ctx.administradorNacional||ctx.escolasDirecionadas.length))territoriosPublicacao.push({nome:secretariaAtual,livre:ctx.administradorNacional,territorios:ctx.administradorNacional?[]:[{schoolIds:ctx.escolasDirecionadas,ufs:[]}]});
   const hoje = new Date();
   const validadeEscalaAte = new Date(hoje);
   validadeEscalaAte.setUTCDate(validadeEscalaAte.getUTCDate() + 60);
   return {
+    secretariaAtual,
     membroId: member.id,
     publicacoes: publicacoesProntas,
     secretariasBiblioteca,
-    secretariasPublicaveis: secretariasParaPublicar(ctx),
-    territoriosPublicacao: territoriosDePublicacao(ctx),
+    secretariasPublicaveis: ctx.administradorNacional||ctx.escolasDirecionadas.length||secretariasParaPublicar(ctx).length?[secretariaAtual]:[],
+    territoriosPublicacao,
     podePublicarLivre: ctx.administradorNacional,
     escolas: escolasPayload,
     ufs: ctx.administradorNacional ? ufs : ufsPayload,
     escolaIdUsuario: member.schoolId,
     escoposMandatoPermitidos,
-    secretariasNacionais: secretariasNacionaisAtivas(ctx),
+    secretariasNacionais: secretariasNacionaisAtivas(ctx).length?[secretariaAtual]:[],
     escolasMandatoLocal,
     podeGerirMandatos,
     mandatos: mandatosGerenciaveis,

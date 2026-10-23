@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   escolasDoTerritorio,
+  podeAcessarSecretaria,
+  contextoDaSecretaria,
   escoposDeMandatoPermitidos,
   leituraConfirmadaNaVersao,
   podeAtribuirMandato,
@@ -109,4 +111,18 @@ test("leitura antiga não confirma nova versão da publicação", () => {
   assert.equal(leituraConfirmadaNaVersao(leituras, "pub-1", 2), false);
   assert.equal(versaoSolicitadaEstaAtual(2, 1), false);
   assert.equal(versaoSolicitadaEstaAtual(2, 2), true);
+});
+
+
+test('administração nacional de Economia não autoriza outra secretaria',()=>{
+ const ctx=contexto({mandatos:[mandato({secretaria:'Economia',escopo:'nacional',ufs:[],schoolIds:[]})]});
+ assert.equal(podeAcessarSecretaria(ctx,'Economia'),true);
+ assert.equal(podeAcessarSecretaria(ctx,'Abertura de Turma'),false);
+ assert.equal(podePublicarNoTerritorio(ctx,'Abertura de Turma',{schoolIds:[],ufs:[]}),false);
+ assert.equal(podeAtribuirMandato(ctx,'Abertura de Turma','regional',{schoolIds:[],ufs:['AA']}),false);
+});
+test('contexto de uma secretaria não carrega mandatos nem responsabilidades das demais',()=>{
+ const ctx=contexto({mandatos:[mandato({secretaria:'Economia'}),mandato({secretaria:'Abertura de Turma'})],responsabilidades:[{secretaria:'Escolástica',schoolId:'escola-a1',uf:'AA',papel:'responsavel'}]});
+ const limitado=contextoDaSecretaria(ctx,'Secretaria de Economia');
+ assert.equal(limitado.mandatos.length,1);assert.equal(limitado.mandatos[0].secretaria,'Economia');assert.equal(limitado.responsabilidades.length,0);
 });

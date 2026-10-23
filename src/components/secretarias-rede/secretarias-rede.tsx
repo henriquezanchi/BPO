@@ -25,6 +25,11 @@ const ROTULO_TIPO: Record<TipoPublicacao, string> = {
   ideia: "Ideia",
   plano: "Plano",
 };
+const GRUPOS_MANDATO = [
+  { escopo: "nacional", titulo: "Administração nacional", descricao: "Mandatos nacionais desta secretaria." },
+  { escopo: "regional", titulo: "Administração regional", descricao: "Mandatos regionais desta secretaria." },
+  { escopo: "local", titulo: "Administração local", descricao: "Mandatos locais desta secretaria." },
+] as const;
 
 type Publicacao = PaginaSecretariasRede["publicacoes"][number];
 type Escala = PaginaSecretariasRede["escalas"][number];
@@ -91,8 +96,8 @@ function CompositorPublicacao({
   aoCancelar: () => void;
 }) {
   const [state, formAction, pending] = useActionState(salvarPublicacaoSecretaria, INICIAL);
-  const [secretaria, setSecretaria] = useState(publicacao?.secretaria ?? data.secretariasPublicaveis[0] ?? "");
-  const territorioInicial = data.territoriosPublicacao.find((item) => item.nome === (publicacao?.secretaria ?? data.secretariasPublicaveis[0]))?.territorios[0];
+  const secretaria = data.secretariaAtual;
+  const territorioInicial = data.territoriosPublicacao.find((item) => item.nome === secretaria)?.territorios[0];
   const [schoolIds, setSchoolIds] = useState<string[]>(publicacao?.schoolIds ?? territorioInicial?.schoolIds ?? []);
   const [ufs, setUfs] = useState<string[]>(publicacao?.ufs ?? territorioInicial?.ufs ?? []);
   const [tipo, setTipo] = useState<TipoPublicacao>((publicacao?.tipo as TipoPublicacao) ?? "material");
@@ -102,37 +107,16 @@ function CompositorPublicacao({
     if (state.ok) aoSalvar();
   }, [state.ok, aoSalvar]);
 
-  const secretariaConhecida = data.secretariasPublicaveis;
   return (
     <form action={formAction} className="flex flex-col gap-3 rounded-2xl border border-na-green/30 bg-na-green-light/30 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
       <input type="hidden" name="publicacaoId" value={publicacao?.id ?? ""} />
+      <input type="hidden" name="secretaria" value={secretaria} />
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{publicacao ? "Editar publicação" : "Nova publicação"}</h3>
         <button type="button" onClick={aoCancelar} aria-label="Fechar" className="rounded-lg p-1 text-gray-500 hover:bg-white/70 dark:hover:bg-gray-800"><X size={17} /></button>
       </div>
+      <p className="text-xs font-semibold text-na-green-dark dark:text-emerald-400">Secretaria: {secretaria}</p>
       <div className="grid gap-3 sm:grid-cols-2">
-        {data.podePublicarLivre ? (
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
-            Secretaria
-            <input list="secretarias-rede-editor" name="secretaria" value={secretaria} onChange={(e) => setSecretaria(e.target.value)} required maxLength={100} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950" />
-            <datalist id="secretarias-rede-editor">{secretariaConhecida.map((nome) => <option key={nome} value={nome} />)}</datalist>
-          </label>
-        ) : (
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
-            Secretaria
-            <select name="secretaria" value={secretaria} onChange={(e) => {
-              const nome = e.target.value;
-              setSecretaria(nome);
-              if (!publicacao) {
-                const territorio = data.territoriosPublicacao.find((item) => item.nome === nome)?.territorios[0];
-                setSchoolIds(territorio?.schoolIds ?? []);
-                setUfs(territorio?.ufs ?? []);
-              }
-            }} required className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950">
-              {secretariaConhecida.map((nome) => <option key={nome} value={nome}>{nome}</option>)}
-            </select>
-          </label>
-        )}
         <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
           Tipo
           <select name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value as TipoPublicacao)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950">
@@ -310,33 +294,18 @@ function SeletorMembro({
 function CompositorMandato({ data }: { data: PaginaSecretariasRede }) {
   const [state, formAction, pending] = useActionState(salvarMandatoSecretaria, INICIAL);
   const [escopo, setEscopo] = useState(data.escoposMandatoPermitidos[0] ?? "local");
-  const [secretaria, setSecretaria] = useState(data.secretariasNacionais[0] ?? "");
   const escolaLocalInicial = data.escolasMandatoLocal.includes(data.escolaIdUsuario) ? data.escolaIdUsuario : data.escolasMandatoLocal[0];
   const [schoolIds, setSchoolIds] = useState<string[]>(escopo === "local" && escolaLocalInicial ? [escolaLocalInicial] : []);
   const [ufs, setUfs] = useState<string[]>([]);
 
-  const somenteNacional = data.escoposMandatoPermitidos.length === 1 && data.escoposMandatoPermitidos[0] === "regional";
   const escolaOptions = escopo === "local" ? data.escolas.filter((escola) => data.escolasMandatoLocal.includes(escola.id)) : data.escolas;
-  const secretariaField = somenteNacional ? (
-    <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
-      Secretaria
-      <select name="secretaria" value={secretaria} onChange={(event) => setSecretaria(event.target.value)} required className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950">
-        {data.secretariasNacionais.map((nome) => <option key={nome} value={nome}>{nome}</option>)}
-      </select>
-    </label>
-  ) : (
-    <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
-      Secretaria
-      <input list="secretarias-rede-mandato" name="secretaria" value={secretaria} onChange={(event) => setSecretaria(event.target.value)} required maxLength={100} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950" />
-      <datalist id="secretarias-rede-mandato">{[...new Set([...data.secretariasNacionais, ...data.secretariasPublicaveis])].map((nome) => <option key={nome} value={nome} />)}</datalist>
-    </label>
-  );
 
   return (
     <form action={formAction} className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+      <input type="hidden" name="secretaria" value={data.secretariaAtual} />
       <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Atribuir ou atualizar mandato</h3>
+      <p className="text-xs font-semibold text-na-green-dark dark:text-emerald-400">Secretaria: {data.secretariaAtual}</p>
       <div className="grid gap-3 sm:grid-cols-2">
-        {secretariaField}
         <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
           Escopo
           <select name="escopo" value={escopo} onChange={(event) => {
@@ -357,7 +326,7 @@ function CompositorMandato({ data }: { data: PaginaSecretariasRede }) {
           ) : <p className="self-center text-[11px] text-gray-500 dark:text-gray-400">Mandato local vale somente para escolas chefiadas pelo diretor.</p>}
         </div>
       )}
-      <SeletorMembro key={`${secretaria}|${escopo}|${schoolIds.join(",")}|${ufs.join(",")}`} secretaria={secretaria} escopo={escopo} schoolIds={schoolIds} ufs={ufs} />
+      <SeletorMembro key={`${data.secretariaAtual}|${escopo}|${schoolIds.join(",")}|${ufs.join(",")}`} secretaria={data.secretariaAtual} escopo={escopo} schoolIds={schoolIds} ufs={ufs} />
       {state.mensagem && <p role="status" className={`text-xs ${state.ok ? "text-na-green-dark dark:text-emerald-300" : "text-na-danger-dark dark:text-red-300"}`}>{state.mensagem}</p>}
       <button disabled={pending} className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-na-green px-4 py-2 text-xs font-bold text-white disabled:opacity-60">
         {pending ? <LoaderCircle size={14} className="animate-spin" /> : <Plus size={14} />}
@@ -389,21 +358,33 @@ function PainelMandatos({ data }: { data: PaginaSecretariasRede }) {
         <span className="flex items-center justify-between gap-3">Administrar mandatos <span className="text-[11px] font-normal text-gray-500">{data.mandatos.length} cadastrados</span></span>
       </summary>
       <div className="flex flex-col gap-4 border-t border-gray-200 p-4 dark:border-gray-800">
-        <p className="text-[11px] leading-5 text-gray-500 dark:text-gray-400">Administração nacional atribui qualquer escopo; diretores locais atribuem mandatos locais da própria escola; titulares nacionais da secretaria atribuem mandatos regionais dela. Estados e escolas são conferidos no servidor.</p>
+        <p className="text-[11px] leading-5 text-gray-500 dark:text-gray-400">Os escopos disponíveis dependem da sua função. Estados e escolas são conferidos no servidor.</p>
         <CompositorMandato data={data} />
-        {data.mandatos.length > 0 ? (
-          <ul className="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white px-3 dark:divide-gray-800 dark:border-gray-700 dark:bg-gray-950">
-            {data.mandatos.map((mandato) => (
-              <li key={mandato.id} className="flex items-center justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold text-gray-900 dark:text-gray-100">{mandato.nomeMembro} · {mandato.secretaria}</p>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">{mandato.escopo}{mandato.schoolIds.length ? ` · ${data.escolas.filter((e) => mandato.schoolIds.includes(e.id)).map((e) => e.name).join(", ")}` : ""}{mandato.ufs.length ? ` · ${mandato.ufs.join(", ")}` : ""}{mandato.ativo ? " · ativo" : " · inativo"}</p>
-                </div>
-                {mandato.ativo ? <BotaoDesativarMandato mandatoId={mandato.id} /> : <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">Inativo · salve de novo no formulário para reativar</span>}
-              </li>
-            ))}
-          </ul>
-        ) : <p className="text-xs text-gray-500 dark:text-gray-400">Nenhum mandato neste escopo ainda.</p>}
+        {GRUPOS_MANDATO.map((grupo) => {
+          const mandatos = data.mandatos.filter((mandato) => mandato.escopo === grupo.escopo);
+          if (!data.escoposMandatoPermitidos.includes(grupo.escopo) && !mandatos.length) return null;
+          return (
+            <section key={grupo.escopo} className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-950">
+              <div>
+                <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100">{grupo.titulo}</h3>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">{grupo.descricao}</p>
+              </div>
+              {mandatos.length > 0 ? (
+                <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+                  {mandatos.map((mandato) => (
+                    <li key={mandato.id} className="flex items-center justify-between gap-3 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-gray-900 dark:text-gray-100">{mandato.nomeMembro}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">{[...data.escolas.filter((e) => mandato.schoolIds.includes(e.id)).map((e) => e.name), ...mandato.ufs.map((uf) => `UF ${uf}`)].join(" · ") || "Nacional"}{mandato.ativo ? " · ativo" : " · inativo"}</p>
+                      </div>
+                      {mandato.ativo ? <BotaoDesativarMandato mandatoId={mandato.id} /> : <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">Inativo · salve de novo no formulário para reativar</span>}
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-[11px] text-gray-500 dark:text-gray-400">Nenhum mandato cadastrado neste escopo.</p>}
+            </section>
+          );
+        })}
       </div>
     </details>
   );
@@ -473,17 +454,18 @@ function SeletorPessoaEscala({
 
 function FormularioEscala({ data }: { data: PaginaSecretariasRede }) {
   const router = useRouter();
-  const [secretaria, setSecretaria] = useState(data.secretariasEscala[0] ?? "");
+  const secretaria = data.secretariaAtual;
   const [schoolId, setSchoolId] = useState(data.escolasEscala[0]?.id ?? "");
   const [state, formAction, pending] = useActionState(async (_previous: typeof INICIAL, formData: FormData) => {
     const result = await salvarEscalaSecretaria(formData);
     if (result.ok) router.refresh();
     return { ok: result.ok, mensagem: result.ok ? "Turno registrado." : ("error" in result ? result.error : "Não foi possível registrar o turno.") };
   }, INICIAL);
-  const podeExibir = data.escolasEscala.length > 0 && (data.podeGerirEscalaLivre || data.secretariasEscala.length > 0);
+  const podeExibir = data.escolasEscala.length > 0 && (data.podeGerirEscalaLivre || data.secretariasEscala.includes(secretaria));
   if (!podeExibir) return null;
   return (
     <form action={formAction} className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 sm:grid-cols-2">
+      <input type="hidden" name="secretaria" value={secretaria} />
       <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 sm:col-span-2">Cadastrar escala da secretaria</h3>
       <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
         Escola
@@ -491,20 +473,6 @@ function FormularioEscala({ data }: { data: PaginaSecretariasRede }) {
           {data.escolasEscala.map((escola) => <option key={escola.id} value={escola.id}>{escola.name}{escola.uf ? ` · ${escola.uf}` : ""}</option>)}
         </select>
       </label>
-      {data.podeGerirEscalaLivre ? (
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
-          Secretaria
-          <input list="secretarias-rede-escala" name="secretaria" value={secretaria} onChange={(event) => setSecretaria(event.target.value)} required maxLength={100} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950" />
-          <datalist id="secretarias-rede-escala">{data.secretariasEscala.map((nome) => <option key={nome} value={nome} />)}</datalist>
-        </label>
-      ) : (
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
-          Secretaria
-          <select name="secretaria" value={secretaria} onChange={(event) => setSecretaria(event.target.value)} required className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950">
-            {data.secretariasEscala.map((nome) => <option key={nome} value={nome}>{nome}</option>)}
-          </select>
-        </label>
-      )}
       <SeletorPessoaEscala key={`${secretaria}|${schoolId}`} secretaria={secretaria} schoolId={schoolId} />
       <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
         Função
@@ -569,18 +537,16 @@ function PainelEscalas({ data }: { data: PaginaSecretariasRede }) {
 }
 
 export function SecretariasRede({ data }: { data: PaginaSecretariasRede }) {
-  const [secretaria, setSecretaria] = useState("todas");
   const [tipo, setTipo] = useState("todos");
   const [compositor, setCompositor] = useState<Publicacao | null | undefined>(undefined);
-  const secretarias = data.secretariasBiblioteca;
-  const publicacoes = useMemo(() => data.publicacoes.filter((publicacao) => (secretaria === "todas" || publicacao.secretaria === secretaria) && (tipo === "todos" || publicacao.tipo === tipo)), [data.publicacoes, secretaria, tipo]);
-  const podeCriar = data.podePublicarLivre || data.secretariasPublicaveis.length > 0;
+  const publicacoes = useMemo(() => data.publicacoes.filter((publicacao) => tipo === "todos" || publicacao.tipo === tipo), [data.publicacoes, tipo]);
+  const podeCriar = data.podePublicarLivre || data.secretariasPublicaveis.includes(data.secretariaAtual);
 
   return (
     <div className="flex flex-col gap-5">
       <header>
-        <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Rede de Secretarias</h1>
-        <p className="mt-1 max-w-3xl text-xs leading-5 text-gray-500 dark:text-gray-400">Biblioteca privada para materiais, avisos, reuniões, ideias e planos. O conteúdo aparece apenas para pessoas autorizadas na secretaria e no território correspondente.</p>
+        <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">{data.secretariaAtual}</h1>
+        <p className="mt-1 max-w-3xl text-xs leading-5 text-gray-500 dark:text-gray-400"><span className="font-semibold">Orientações e gestão.</span> Materiais, avisos, reuniões, ideias e planos desta secretaria, com visibilidade conforme a autorização e o território de cada pessoa.</p>
       </header>
 
       {data.podeGerirMandatos && <PainelMandatos data={data} />}
@@ -593,14 +559,7 @@ export function SecretariasRede({ data }: { data: PaginaSecretariasRede }) {
       )}
       {compositor !== undefined && <CompositorPublicacao key={compositor?.id ?? "nova"} data={data} publicacao={compositor} aoSalvar={() => setCompositor(undefined)} aoCancelar={() => setCompositor(undefined)} />}
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
-        <label className="flex flex-col gap-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">
-          Secretaria
-          <select value={secretaria} onChange={(event) => setSecretaria(event.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
-            <option value="todas">Todas as secretarias</option>
-            {secretarias.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
+      <div className="max-w-xs">
         <label className="flex flex-col gap-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">
           Tipo
           <select value={tipo} onChange={(event) => setTipo(event.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
@@ -611,7 +570,7 @@ export function SecretariasRede({ data }: { data: PaginaSecretariasRede }) {
       </div>
       <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
         <span>{publicacoes.length} {publicacoes.length === 1 ? "publicação" : "publicações"}</span>
-        {(secretaria !== "todas" || tipo !== "todos") && <button onClick={() => { setSecretaria("todas"); setTipo("todos"); }} className="underline underline-offset-2">Limpar filtros</button>}
+        {tipo !== "todos" && <button onClick={() => setTipo("todos")} className="underline underline-offset-2">Limpar filtro</button>}
       </div>
       {publicacoes.length ? (
         <div className="grid gap-3 xl:grid-cols-2">

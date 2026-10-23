@@ -244,3 +244,15 @@ export function leituraConfirmadaNaVersao(leituras: LeituraVersao[], publicacaoI
 export function versaoSolicitadaEstaAtual(versaoPublicacao: number, versaoSolicitada: number): boolean {
   return Number.isInteger(versaoSolicitada) && versaoSolicitada > 0 && versaoPublicacao === versaoSolicitada;
 }
+
+/** Uma atribuição nacional/regional administra apenas a secretaria indicada. */
+export function podeAcessarSecretaria(ctx:ContextoSecretaria,secretaria:string){
+ const chave=chaveSecretaria(secretaria);
+ return ctx.administradorNacional||ctx.escolasDirecionadas.length>0||
+  ctx.mandatos.some(m=>mandatoValido(ctx,m)&&chaveSecretaria(m.secretaria)===chave)||
+  ctx.responsabilidades.some(r=>chaveSecretaria(r.secretaria)===chave);
+}
+export function contextoDaSecretaria(ctx:ContextoSecretaria,secretaria:string):ContextoSecretaria{
+ const chave=chaveSecretaria(secretaria);
+ return {...ctx,mandatos:ctx.mandatos.filter(m=>chaveSecretaria(m.secretaria)===chave),responsabilidades:ctx.responsabilidades.filter(r=>chaveSecretaria(r.secretaria)===chave)};
+}

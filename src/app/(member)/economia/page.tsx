@@ -1,3 +1,4 @@
+import { AreaSecretaria } from "@/components/secretarias-rede/area-secretaria";
 import { ContasConciliacoesTab } from "@/components/director/contas-conciliacoes-tab";
 import { RecuperacaoTab } from "@/components/director/recuperacao-tab";
 import { EconomiaPanel } from "@/components/economia/economia-panel";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
  * responsável pela secretaria no Portal e a direção (areas-filial.ts).
  */
 export default async function EconomiaPage(props: { searchParams: Promise<{ aba?: string; status?: string }> }) {
+  if((await props.searchParams).aba==='orientacoes')return <ShellTrabalho><AreaSecretaria secretaria="Economia"/></ShellTrabalho>;
   const member = await exigirArea("economia", "/economia");
   const { aba = "situacao", status } = await props.searchParams;
   const data = aba === "composicao" ? null : await getDirectorDashboard(member.schoolId);
@@ -26,6 +28,7 @@ export default async function EconomiaPage(props: { searchParams: Promise<{ aba?
         base="/economia"
         atual={aba}
         abas={[
+          ["orientacoes", "Orientações e gestão"],
           ["situacao", "Situação da contribuição"],
           ["recuperacao", "Recuperação de crédito"],
           ["contas", "Contas e conciliações"],

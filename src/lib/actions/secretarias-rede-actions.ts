@@ -1,5 +1,6 @@
 "use server";
 
+import { caminhoSecretaria } from "@/lib/secretarias-rede/destinos";
 import { revalidatePath } from "next/cache";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -22,6 +23,11 @@ type EstadoAcao = { ok: boolean; mensagem: string };
 const falha = (mensagem: string): EstadoAcao => ({ ok: false, mensagem });
 const sucesso = (mensagem: string): EstadoAcao => ({ ok: true, mensagem });
 const VALORES_ESCOPO: EscopoMandato[] = ["nacional", "regional", "local"];
+
+function atualizarSecretaria(nome:string){
+ revalidatePath(caminhoSecretaria(nome).split('?')[0]);
+ revalidatePath('/grupos/[id]','page');
+}
 
 function texto(fd: FormData, campo: string) {
   return String(fd.get(campo) ?? "").trim();
@@ -122,7 +128,7 @@ export async function salvarPublicacaoSecretaria(_prev: EstadoAcao, formData: Fo
         },
       });
     }
-    revalidatePath("/voluntario/secretarias");
+    atualizarSecretaria(secretaria);
     return sucesso(id ? "Publicação atualizada. As leituras anteriores continuam guardadas; esta versão precisa ser lida novamente." : "Publicação adicionada à biblioteca.");
   } catch (error) {
     return falha(mensagemErro(error));
@@ -147,7 +153,7 @@ export async function confirmarLeituraSecretaria(_prev: EstadoAcao, formData: Fo
       create: { publicacaoId: id, memberId: member.id, versao },
       update: { lidoEm: new Date() },
     });
-    revalidatePath("/voluntario/secretarias");
+    atualizarSecretaria(publicacao.secretaria);
     return sucesso("Leitura confirmada.");
   } catch (error) {
     return falha(mensagemErro(error));
@@ -181,7 +187,7 @@ export async function salvarMandatoSecretaria(_prev: EstadoAcao, formData: FormD
     ) ?? null;
     if (anterior) await db.secretariaMandato.update({ where: { id: anterior.id }, data });
     else await db.secretariaMandato.create({ data: { memberId: alvo.id, ...data } });
-    revalidatePath("/voluntario/secretarias");
+    atualizarSecretaria(secretaria);
     return sucesso(`Mandato ${escopo} salvo para a pessoa selecionada.`);
   } catch (error) {
     return falha(mensagemErro(error));
@@ -196,7 +202,7 @@ export async function desativarMandatoSecretaria(_prev: EstadoAcao, formData: Fo
     const mandato = await db.secretariaMandato.findUnique({ where: { id } });
     if (!mandato || !podeGerirMandatoExistente(ctx, mandato)) throw new Error("Você não pode alterar esse mandato.");
     await db.secretariaMandato.update({ where: { id }, data: { ativo: false } });
-    revalidatePath("/voluntario/secretarias");
+    atualizarSecretaria(mandato.secretaria);
     return sucesso("Mandato desativado.");
   } catch (error) {
     return falha(mensagemErro(error));

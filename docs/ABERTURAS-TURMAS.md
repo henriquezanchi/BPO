@@ -1,6 +1,6 @@
-# Aberturas de turma e Rede de Secretarias
+# Aberturas de turma e gestão por secretaria
 
-Entradas: Área do Voluntário → Abertura de turmas; Rede de Secretarias.
+Entradas: Área do Voluntário → Abertura de turmas. Orientações, materiais e administração nacional/regional ficam **dentro de cada secretaria**, na opção Orientações e gestão. Não existe mais menu central Rede de Secretarias.
 
 ## Operação
 
@@ -33,3 +33,7 @@ Administradores nacionais existentes atribuem mandatos por secretaria. Titulares
 Migração Prisma `20261023020000_aberturas_secretarias`; migrações CRM `migracao_propensao_crm.sql` e `migracao_propensao_tags_estado.sql`. Tabelas novas privadas/RLS, autorização por pessoa ativa/filial/secretaria em cada action, controle de revisão em alterações de abertura. Chave de serviço CRM fica no Vault BPO (`aberturas_crm_service_key`), acessada exclusivamente pelo servidor. Ponte CRM `bpo-aberturas` exige JWT de serviço verificado pelo gateway. Nunca colocar a chave no cliente.
 
 As tags antigas derivadas são retiradas com backup privado. Novas tags refletem estado documentado; não existe tag global de compatibilidade com uma turma. Não reintroduzir Lead Forte, Jornada ou Retorno por contagem de inscrições em importações, filas de contato, tarefas ou notificações.
+
+## Ajuste de organização — 23/10/2026
+
+Cada secretaria tem seu próprio espaço e administradores nacional, regional e local. Um mandato nacional de Economia não autoriza Abertura de Turma, e vice-versa. O território limita o administrador regional; o mandato não concede automaticamente acesso a dados financeiros locais. Economia, Escolástica, Eventos, Café e Abertura oferecem Orientações e gestão na própria página; demais secretarias usam sua página própria/grupo. O endereço central antigo só redireciona por compatibilidade. Conteúdos e mandatos existentes foram preservados, com filtragem por secretaria no servidor antes de montar o payload.

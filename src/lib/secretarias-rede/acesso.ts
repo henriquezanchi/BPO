@@ -13,7 +13,7 @@ export function pessoaEstaAtiva(member: Pick<Member, "mercurioAtivo"> | null): m
 }
 
 export function exigirPessoaAtiva(member: PessoaAtiva | null): asserts member is PessoaAtiva {
-  if (!member || !member.mercurioAtivo) throw new Error("Entre com uma conta ativa para acessar a Rede de Secretarias.");
+  if (!member || !member.mercurioAtivo) throw new Error("Entre com uma conta ativa para acessar esta secretaria.");
 }
 
 export async function listarEscolasRede() {
@@ -50,6 +50,9 @@ export async function carregarContextoSecretaria(member: PessoaAtiva): Promise<C
     uf: membership.classGroup.school.uf,
     papel: membership.role === "professor" ? "responsavel" : "equipe",
   }));
+  for(const [ativo,nome] of [[member.isSecretarioEconomia,'Economia'],[member.isSecretarioEscolastica,'Escolástica']] as const){
+    if(ativo&&!responsabilidades.some(r=>r.secretaria===nome&&r.schoolId===member.schoolId))responsabilidades.push({secretaria:nome,schoolId:member.schoolId,uf:escolas.find(e=>e.id===member.schoolId)?.uf??null,papel:'responsavel'});
+  }
   return {
     member,
     administradorNacional,

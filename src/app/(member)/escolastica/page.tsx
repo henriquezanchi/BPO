@@ -1,3 +1,4 @@
+import { AreaSecretaria } from "@/components/secretarias-rede/area-secretaria";
 import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
 import { ABAS_ESCOLASTICA, AbasArea, MembrosEscolastica } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
  * Portal e a direção (areas-filial.ts).
  */
 export default async function EscolasticaPage(props: { searchParams: Promise<{ aba?: string }> }) {
+  if((await props.searchParams).aba==='orientacoes')return <ShellTrabalho><AreaSecretaria secretaria="Escolástica"/></ShellTrabalho>;
   const member = await exigirArea("escolastica", "/escolastica");
   const { aba = "pendencias" } = await props.searchParams;
   return (
@@ -21,7 +23,7 @@ export default async function EscolasticaPage(props: { searchParams: Promise<{ a
       <AbasArea
         base="/escolastica"
         atual={aba}
-        abas={ABAS_ESCOLASTICA}
+        abas={[...ABAS_ESCOLASTICA,["orientacoes", "Orientações e gestão"]]}
       />
       {aba === "membros" ? (
         <MembrosEscolastica schoolId={member.schoolId} data={await getDirectorDashboard(member.schoolId)} />

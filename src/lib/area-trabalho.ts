@@ -1,3 +1,5 @@
+import { caminhoSecretaria } from "@/lib/secretarias-rede/destinos";
+import { chaveSecretaria } from "@/lib/secretarias-rede/regras";
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { getAuthenticatedMember } from "@/lib/auth";
@@ -54,7 +56,7 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     db.classMembership.count({ where: { memberId: m.id, classGroup: { tipo: { in: ["GDVE", "SEC", "BF", "BM", "CS"] }, arquivadoEm: null } } }),
     areasNaFilial(m, m.schoolId),
     escolasAberturas(m as Member),
-    db.secretariaMandato.count({where:{memberId:m.id,ativo:true}}),
+    db.secretariaMandato.findMany({where:{memberId:m.id,ativo:true},select:{secretaria:true,escopo:true}}),
   ]);
   const chefe = m.isDiretor || m.filiaisChefiadas.length > 0 || nacional;
   const tem = (a: AreaFilial) => areas.includes(a);
@@ -99,7 +101,6 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     },
     tem("eventos") && { href: "/voluntario/eventos", rotulo: "Eventos", descricao: "Gestão de eventos e calendário", icone: "eventos", secao: "Secretarias" },
     aberturas.length > 0 && { href: "/voluntario/aberturas", rotulo: "Abertura de turmas", descricao: "Planejamento, equipe, interessados e resultados", icone: "aberturas", secao: "Secretarias" },
-    (chefe || temGrupo > 0 || mandatos > 0) && { href: "/voluntario/secretarias", rotulo: "Rede de secretarias", descricao: "Materiais, avisos, reuniões e planos", icone: "secretarias", secao: "Secretarias" },
     tem("cafe") && { href: "/voluntario/cafe", rotulo: "Café", descricao: "Caixa Fortuna", icone: "cafe", secao: "Secretarias" },
     tem("direcao") && { href: "/voluntario/filial", rotulo: "Visão da filial", descricao: "Resumo da filial e de cada área", icone: "direcao", secao: "Gestão da filial" },
     administra.length > 0 && { href: "/admin", rotulo: "Administração", descricao: "Secretarias, GAF, recursos e senhas", icone: "admin", secao: "Gestão da filial" },
@@ -107,6 +108,11 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     nacional && { href: "/nacional", rotulo: "Painel Nacional", descricao: "Toda a OINAB-N", icone: "nacional", secao: "Nacional" },
   ];
   const lista = d.filter(Boolean) as Destino[];
+  const nomes=new Map(mandatos.map(m=>[chaveSecretaria(m.secretaria),m.secretaria]));
+  for(const nome of nomes.values()){const href=caminhoSecretaria(nome),base=href.split('?')[0];if(lista.some(d=>d.href.split('?')[0]===base))continue;
+    lista.push({href,rotulo:nome,descricao:'Orientações e administração da secretaria',icone:'secretarias',secao:'Secretarias'});
+  }
+
   // Só Início e Termo, sem grupos nem acesso: não é voluntário.
   const temFuncao = lista.length > 2 || temGrupo > 0 || acesso || fv || m.cargos.length > 0;
   return temFuncao ? lista : [];
