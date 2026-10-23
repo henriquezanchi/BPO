@@ -87,3 +87,8 @@ Implementados `/voluntario/aberturas` e `/voluntario/secretarias`, com planejame
 ## 23. Secretarias independentes (23/10/2026)
 
 O usuário rejeitou o menu central Rede de Secretarias. Cada secretaria contém Orientações e gestão, materiais, mandatos nacional/regional/local e escalas. Nacional de Economia não recebe acesso a Abertura nem aos dados financeiros operacionais por esse mandato. Loader e formulários são fixados na secretaria atual; namespace e território são conferidos no servidor. Sem migração nova ou perda de dados. O endereço central antigo apenas redireciona. Não restaurar painel que reúna secretarias.
+
+
+## 24. Claude — Ágora pelo token do próprio aluno (23/10/2026)
+
+Direção do Heitor: o Portal não cria papéis nem copia dados do Ágora; chama a API do Ágora com o token do login unificado do aluno. Diário de Classe fica para depois. Teste real em 23/10: token do `portal-aluno` (`aud: account`) recebe 403 no Ágora (client `eventos`); depende do Marcos incluir `eventos` no `aud` (mapper Audience) ou habilitar token exchange (exige `portal-aluno` confidencial). Script de reteste: `scripts/testar-token-agora.mjs`. Detalhes e próximos passos em `docs/HANDOFF-CLAUDE.md`, pendência 3. Sem mudança de código no app nem migração.
