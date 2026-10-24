@@ -92,3 +92,15 @@ O usuário rejeitou o menu central Rede de Secretarias. Cada secretaria contém 
 ## 24. Claude — Ágora pelo token do próprio aluno (23/10/2026)
 
 Direção do Heitor: o Portal não cria papéis nem copia dados do Ágora; chama a API do Ágora com o token do login unificado do aluno. Diário de Classe fica para depois. Teste real em 23/10: token do `portal-aluno` (`aud: account`) recebe 403 no Ágora (client `eventos`); depende do Marcos incluir `eventos` no `aud` (mapper Audience) ou habilitar token exchange (exige `portal-aluno` confidencial). Decisão do usuário: `portal-aluno` confidencial + token exchange; `lib/login-acropole.ts` já manda `client_secret` quando `KEYCLOAK_CLIENT_SECRET` existe (sem a variável, segue público). Script de reteste: `node --env-file=.env scripts/testar-token-agora.mjs`. Detalhes e próximos passos em `docs/HANDOFF-CLAUDE.md`, pendência 3. Sem migração. Atualização 23/10 14h30: `portal-aluno` já confidencial e `KEYCLOAK_CLIENT_SECRET` na Vercel (produção republicada). Token exchange indisponível na versão atual do Keycloak (501 "Feature not enabled"); Heitor vai priorizar a migração. Alternativa: mapper Audience `eventos` no token do login.
+
+
+## 25. Claude — Telas de TV da filial (24/10/2026)
+
+Pedido do usuário: link para exibir os eventos numa TV da filial, cartaz à esquerda e dados com QR de inscrição à direita, trocando a cada 5 s, com TVs diferentes por público. Decisões do usuário: fundo escuro verde Heket, próximos 30 dias, eventos de outras filiais abertos à filial entram (mesma regra da Agenda: `eventScopeWhere` + `agendaUlissesBranchWhere`).
+
+- Página pública `/tv/<token>` (sem login, `noindex`); o token (24 caracteres aleatórios) é o segredo. "Trocar link" gera outro token e derruba o antigo.
+- Públicos por tela: `aberto_publico` (eventos `source = ulisses`) e as chaves de `EVENT_AUDIENCES` (casam com `Event.publicos`; Ágora e calendário nacional ficam de fora, como na Agenda).
+- QR: Ulisses → `registrationUrl`; interno → `/portal?evento=<id>` (exige login). SVG gerado no servidor com `qrcode` (nova dependência, + `@types/qrcode`).
+- Cartaz: `posterPath` (link assinado de 1 h) ou `imageUrl` do Ulisses; sem cartaz, logo da marca em dourado. Por isso a tela faz `router.refresh()` a cada 5 min.
+- Gestão: Eventos → aba "Telas (TV)", ações em `lib/actions/telas-actions.ts` (`requireArea(schoolId, "eventos")`).
+- Migração aditiva `20261024120000_telas_eventos` aplicada e registrada; tabela com RLS. Testes: 79/50/29 (igual à linha de base). Conferido em 1920×1080, 1366×768 e 1080×1920 com eventos reais de Goiânia.

@@ -173,6 +173,7 @@ model School {
 
   members            Member[]
   events             Event[]
+  telasEventos       TelaEventos[]
   payables           Payable[]
   repasses           Repasse[]
   otherIncomes       OtherIncome[]
@@ -1897,4 +1898,21 @@ model SecretariaLeitura {
   versao Int
   lidoEm DateTime @default(now())
   @@unique([publicacaoId,memberId,versao])
+}
+
+// Telas de TV da filial (pedido do usuário 2026-10-24): link público, sem login, que mostra em
+// rotação os eventos dos públicos escolhidos. O token é o segredo do link; trocar o token
+// derruba o link antigo. publicos: "aberto_publico" (eventos do Ulisses) e as chaves de
+// EVENT_AUDIENCES (todos_ativos, membros, fv, provacionistas, hd, dirigentes).
+model TelaEventos {
+  id        String   @id @default(cuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  nome      String
+  publicos  String[] @default([])
+  token     String   @unique
+  criadoPor String?
+  createdAt DateTime @default(now())
+
+  @@index([schoolId])
 }
