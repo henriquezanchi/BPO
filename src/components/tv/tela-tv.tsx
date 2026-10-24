@@ -3,10 +3,10 @@
 import type { SlideTela } from "@/lib/telas-eventos";
 import { MapPin, Ticket, Users, UtensilsCrossed } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import s from "./tela-tv.module.css";
 
-const TROCA_MS = 5_000;
+const TROCA_MS = 10_000;
 const ATUALIZA_MS = 5 * 60_000; // dados novos e cartazes com link renovado
 const RECARREGA_MS = 6 * 60 * 60_000; // pega versões novas do Portal
 const FUSO = "America/Sao_Paulo";
@@ -36,7 +36,32 @@ function Relogio() {
   );
 }
 
+// Níveis de aperto do bloco do meio quando o evento não cabe (título longo + descrição + muitos dados):
+// 1 descrição em 2 linhas, 2 sem descrição, 3 título em 2 linhas. Assim o QR nunca desce sobre o rodapé.
+const NIVEIS_APERTO = 3;
+
+function useCaber() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ajustar = () => {
+      for (let nivel = 0; nivel <= NIVEIS_APERTO; nivel++) {
+        el.dataset.aperto = String(nivel);
+        if (el.scrollHeight <= el.clientHeight + 1) break;
+      }
+    };
+    ajustar();
+    document.fonts?.ready.then(ajustar);
+    const observador = new ResizeObserver(ajustar);
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, []);
+  return ref;
+}
+
 function Slide({ e, ativo }: { e: SlideTela; ativo: boolean }) {
+  const corpo = useCaber();
   return (
     <section className={`${s.slide} ${ativo ? s.ativo : ""}`} aria-hidden={!ativo}>
       <div className={s.cartaz}>
@@ -66,7 +91,7 @@ function Slide({ e, ativo }: { e: SlideTela; ativo: boolean }) {
           </div>
         </div>
 
-        <div className={`${s.corpo} ${s.entra}`}>
+        <div ref={corpo} className={`${s.corpo} ${s.entra}`}>
           <h1 className={`${s.titulo} ${classeTitulo(e.titulo)}`}>{e.titulo}</h1>
           {e.descricao && <p className={s.descricao}>{e.descricao}</p>}
           <ul className={s.meta}>
@@ -103,7 +128,7 @@ function Slide({ e, ativo }: { e: SlideTela; ativo: boolean }) {
   );
 }
 
-/** Tela de TV da filial: eventos em rotação a cada 5 s (pedido do usuário 2026-10-24). */
+/** Tela de TV da filial: eventos em rotação a cada 10 s (pedido do usuário 2026-10-24). */
 export function TelaTv({ slides, filial }: { slides: SlideTela[]; filial: string }) {
   const router = useRouter();
   const [atual, setAtual] = useState(0);

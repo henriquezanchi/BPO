@@ -1,4 +1,5 @@
 import { lerCartazesPendentes } from "@/lib/leitura-cartaz";
+import { gerarResumosTela } from "@/lib/resumo-tela";
 import { sincronizarEventosUlisses } from "@/lib/ulisses/publico";
 import crypto from "node:crypto";
 
@@ -23,6 +24,8 @@ export async function GET(req: Request) {
   const falhas = resultado.escolas.filter((e) => e.erro).length;
   // Lê os cartazes novos (uma vez por imagem) para o compartilhamento só acrescentar o que falta.
   const cartazes = await lerCartazesPendentes().catch((e) => ({ erro: String(e) }));
-  console.log(JSON.stringify({ ulisses: resultado, cartazes }));
-  return Response.json({ ...resultado, cartazes }, { status: falhas && falhas === resultado.escolas.length ? 502 : 200 });
+  // Resume as descrições novas para as telas de TV (uma vez por descrição).
+  const resumosTela = await gerarResumosTela().catch((e) => ({ erro: String(e) }));
+  console.log(JSON.stringify({ ulisses: resultado, cartazes, resumosTela }));
+  return Response.json({ ...resultado, cartazes, resumosTela }, { status: falhas && falhas === resultado.escolas.length ? 502 : 200 });
 }

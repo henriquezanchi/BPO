@@ -33,6 +33,8 @@
   inset: 0;
   display: grid;
   grid-template-columns: 46fr 54fr;
+  /* linha presa à altura da TV: dados longos não esticam a linha (a arte descia e o QR invadia o rodapé) */
+  grid-template-rows: minmax(0, 1fr);
   opacity: 0;
   transition: opacity 1.1s var(--saida);
 }
@@ -123,9 +125,11 @@
 
 .dados {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
-  padding: 7vh 5vw 11vh 4.4vw;
+  min-height: 0;
+  overflow: hidden;
+  padding: 5.5vh 5vw 10.5vh 4.4vw;
 }
 
 .dados > * {
@@ -192,11 +196,31 @@
 }
 
 .corpo {
-  align-self: center;
-  padding: 4vh 0;
+  /* ocupa a faixa do meio inteira; o que não couber é apertado pelo useCaber (tela-tv.tsx) */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  justify-content: safe center;
+  min-height: 0;
+  overflow: hidden;
+  padding: 2vh 0;
+}
+
+.corpo[data-aperto="1"] .descricao {
+  -webkit-line-clamp: 2;
+}
+
+.corpo[data-aperto="2"] .descricao,
+.corpo[data-aperto="3"] .descricao {
+  display: none;
+}
+
+.corpo[data-aperto="3"] .titulo {
+  -webkit-line-clamp: 2;
 }
 
 .titulo {
+  flex: none;
   margin: 0;
   font-weight: 900;
   line-height: 1.04;
@@ -221,6 +245,7 @@
 }
 
 .descricao {
+  flex: none;
   margin: 2.6vh 0 0;
   max-width: 60ch;
   font-size: 2.5vh;
@@ -234,10 +259,11 @@
 }
 
 .meta {
+  flex: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 1.6vh 2.6vw;
-  margin: 3.6vh 0 0;
+  gap: 1.4vh 2.6vw;
+  margin: 3vh 0 0;
   padding: 0;
   list-style: none;
 }
@@ -264,14 +290,14 @@
   display: flex;
   align-items: center;
   gap: 2.4vw;
-  padding: 3vh 0 1vh;
+  padding: 2.6vh 0 0.6vh;
   border-top: 1px solid var(--tinta-fraca);
 }
 
 .qr {
   flex: none;
-  width: 21vh;
-  height: 21vh;
+  width: 19vh;
+  height: 19vh;
   padding: 1.7vh;
   border-radius: 1.8vh;
   background: var(--papel);
@@ -421,7 +447,7 @@
   /* Na vertical a largura manda: medidas em vw. */
   .slide {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 40fr) minmax(0, 60fr);
+    grid-template-rows: minmax(0, 35fr) minmax(0, 65fr);
   }
 
   .cartaz::after {

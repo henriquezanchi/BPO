@@ -1,8 +1,10 @@
 import { db } from "@/lib/db";
-import { resumo, semEmoji, urlDoEventoNoPortal } from "@/lib/compartilhar-evento";
+import { semEmoji, urlDoEventoNoPortal } from "@/lib/compartilhar-evento";
 import { EVENT_AUDIENCES, agendaUlissesBranchWhere, eventScopeWhere, safeEventRegistrationUrl } from "@/lib/event-policy";
 import { eventPosterUrl } from "@/lib/event-posters";
+import { gerarResumosTela, impressaoDescricao, primeiraFrase } from "@/lib/resumo-tela";
 import type { Prisma } from "@prisma/client";
+import { after } from "next/server";
 import crypto from "node:crypto";
 import QRCode from "qrcode";
 
@@ -89,6 +91,10 @@ export async function slidesDaTela(tela: { publicos: string[]; school: { id: str
     take: 40,
   });
 
+  // Descrições longas sem resumo atual: a IA resume depois da resposta; a TV pega na próxima atualização.
+  const semResumo = eventos.filter((e) => e.description && e.description.trim().length > 160 && e.resumoTelaDe !== impressaoDescricao(e.description)).map((e) => e.id);
+  if (semResumo.length) after(() => gerarResumosTela(semResumo.slice(0, 8)).catch(() => {}));
+
   return Promise.all(
     eventos.map(async (e) => {
       const externo = e.source === "ulisses";
@@ -98,7 +104,7 @@ export async function slidesDaTela(tela: { publicos: string[]; school: { id: str
       return {
         id: e.id,
         titulo: semEmoji(e.title).replace(/\*/g, "").trim(),
-        descricao: e.description ? resumo(semEmoji(e.description), 240) : null,
+        descricao: e.description ? (e.resumoTela && e.resumoTelaDe === impressaoDescricao(e.description) ? e.resumoTela : primeiraFrase(e.description)) || null : null,
         dia: fmt(e.startsAt, { day: "2-digit" }),
         mes: fmt(e.startsAt, { month: "short" }).replace(".", ""),
         semana: fmt(e.startsAt, { weekday: "long" }),

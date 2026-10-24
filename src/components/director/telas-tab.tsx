@@ -126,7 +126,7 @@ export function TelasTab({ schoolId, telas, origem }: { schoolId: string; telas:
   return (
     <div className="space-y-5">
       <p className="text-sm text-gray-600 dark:text-gray-300">
-        Cada TV recebe um link próprio que mostra os eventos dos próximos 30 dias, trocando a cada 5 segundos. Abra o link no navegador da TV e deixe em tela cheia. A tela se atualiza sozinha.
+        Cada TV recebe um link próprio que mostra os eventos dos próximos 30 dias, trocando a cada 10 segundos. Abra o link no navegador da TV e deixe em tela cheia. A tela se atualiza sozinha.
       </p>
 
       <form

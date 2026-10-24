@@ -104,3 +104,10 @@ Pedido do usuário: link para exibir os eventos numa TV da filial, cartaz à esq
 - Cartaz: `posterPath` (link assinado de 1 h) ou `imageUrl` do Ulisses; sem cartaz, logo da marca em dourado. Por isso a tela faz `router.refresh()` a cada 5 min.
 - Gestão: Eventos → aba "Telas (TV)", ações em `lib/actions/telas-actions.ts` (`requireArea(schoolId, "eventos")`).
 - Migração aditiva `20261024120000_telas_eventos` aplicada e registrada; tabela com RLS. Testes: 79/50/29 (igual à linha de base). Conferido em 1920×1080, 1366×768 e 1080×1920 com eventos reais de Goiânia.
+
+Ajustes do mesmo dia (pedidos do usuário ao ver a TV do Universitário):
+- Troca a cada **10 s** (era 5 s).
+- Sobreposição corrigida: a linha do slide fica presa à altura da TV (`grid-template-rows: minmax(0, 1fr)`); antes, dados longos esticavam a linha, a arte descia e o QR invadia o rodapé. O bloco do meio usa `useCaber` (`tela-tv.tsx`): se não couber, `data-aperto` 1 = descrição em 2 linhas, 2 = sem descrição, 3 = título em 2 linhas. Espaçamentos reduzidos (QR 19vh); TV vertical 35/65.
+- **Resumo por IA** da descrição (`lib/resumo-tela.ts`, Claude Haiku 5.5, esforço baixo): chamada curta, uma vez por descrição, guardada em `Event.resumoTela`; `resumoTelaDe` = impressão (sha1) da descrição resumida — se a descrição mudar, resume de novo. Gerado no cron diário do Ulisses (`/api/cron/ulisses`, eventos dos próximos 45 dias, até 20 por rodada) e pela própria TV via `after()` (até 8 por carga; aparece na atualização seguinte, 5 min). Só descrições com mais de 160 caracteres; sem resumo, a TV mostra as primeiras frases completas (`primeiraFrase`), nunca cortadas com "…".
+- Migração aditiva `20261024180000_resumo_tela` aplicada e registrada (autorizada pelo usuário). 11 resumos já gerados.
+- Tela "TV de pátio" criada para Goiânia Universitário (só "Aberto ao público").
