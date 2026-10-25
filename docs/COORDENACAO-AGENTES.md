@@ -248,3 +248,8 @@ Plano aprovado pelo usuário: (1) corrigir erros, (2) tela única de grupos, (3)
 - Pedido do usuário: índice de ativos, de quem usa e de quem não usa o Portal, com lista de cada, filtrável por filial, estado e regional. **`/voluntario/filial/uso`** (link "Ver quem usa e quem não usa" no cartão Portal e comunicação da Visão geral, mantendo a seleção; mesmo `SeletorFiliais` e mesmas permissões da Visão geral).
 - `lib/uso-portal.ts`: ativos do Mercúrio das unidades escolhidas (`cadastro` ATI, paginado com `emPaginas`, exportado de `resumo-filial.ts`) cruzados pela matrícula com quem já entrou no Portal (`auth.users.last_sign_in_at`) e quem tem notificação. `components/panorama/lista-uso.tsx`: três números, listas "Não usam" / "Usam" (último acesso, sino = notificações), busca por nome ou matrícula, 100 por vez.
 - Em 25/10: OINAB-N inteira (68 unidades) 7.994 ativos, 13 usam; BGA 32 ativos, 9 usam, 3 com notificações. Todas as unidades levam ~9 s (consulta ao Mercúrio).
+
+## 45. Claude — Situação dos interessados com um toque (25/10/2026)
+
+- Pedido do usuário: "não consigo interagir nos interessados". `components/aberturas/situacao-interessado.tsx` no cartão de cada interessado (aba Interessados, com abertura escolhida): botões Quer conhecer / Quer participar / Vai se inscrever / Prefere depois / Sem interesse (sinal `interesse_declarado`, declarado) e Foi à palestra (`presenca_palestra`, observado), Pediu matrícula, Não quer contato (declarados). Cada toque grava um sinal datado com origem "Portal" por `registrarAbertura` (mesmas validações do formulário completo) e recarrega; o cartão marca a última situação e os fatos já registrados.
+- Resumos do Mercúrio: primeira geração completa concluída (68 unidades); daqui em diante, `/api/cron/resumos`.

@@ -9,6 +9,7 @@ import { FormRegistro } from "./form-registro";
 import { GraficoCustoConversao, LinhasOrcamento } from "./graficos";
 import type { Abertura, JsonRecord, PainelAberturas } from "./types";
 import { formatarData, primeiraChave, texto } from "./utils";
+import { SituacaoInteressado } from "./situacao-interessado";
 
 const CARD = "rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-gray-800 dark:bg-gray-900";
 
@@ -79,7 +80,9 @@ function LeadCard({ lead, data, abertura }: { lead: PainelAberturas["crm"]["lead
   const proximaAcao = avaliacaoDireta.proximaAcao;
   return <article className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-800 dark:bg-gray-950/30"><CollapsibleSection title={<h3 className="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{nome}</h3>}>
     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0">{status !== undefined && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Interessado · {texto(status)}</p>}</div></div>
-    {abertura ? <div className="mt-3 grid gap-2 sm:grid-cols-3"><CampoCRM rotulo="Interesse" valor={interesse} /><CampoCRM rotulo="Adequação desta abertura" valor={adequacao} /><CampoCRM rotulo="Próxima ação" valor={proximaAcao} /></div> : <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Selecione uma abertura para consultar a avaliação específica.</p>}
+    {abertura && <div className="mt-3 grid gap-2 sm:grid-cols-3"><CampoCRM rotulo="Interesse" valor={interesse} /><CampoCRM rotulo="Adequação desta abertura" valor={adequacao} /><CampoCRM rotulo="Próxima ação" valor={proximaAcao} /></div>}
+    {abertura && <SituacaoInteressado schoolId={data.schoolId} abertura={abertura} leadId={String(lead.id ?? "")} />}
+    {!abertura && <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Selecione uma abertura para consultar a avaliação específica.</p>}
     {abertura && <details className="mt-3 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"><summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-na-green-dark dark:text-emerald-400">Guardar avaliação no histórico</summary><div className="border-t border-gray-100 p-3 dark:border-gray-800"><p className="mb-3 text-xs text-gray-500 dark:text-gray-400">A avaliação atualiza com os sinais automaticamente. Use este registro opcional para guardar um recorte datado dos fatos e da próxima ação.</p><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={[lead]} matriculas={data.crm.matriculas} eventos={data.eventos} pessoas={data.pessoas} tipoInicial="avaliacao" tiposPermitidos={["avaliacao"]} leadInicialId={String(lead.id ?? "")} leadFixo /></div></details>}
   </CollapsibleSection></article>;
 }
