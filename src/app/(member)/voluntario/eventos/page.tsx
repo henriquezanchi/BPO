@@ -10,6 +10,13 @@ import { db } from "@/lib/db";
 import { getDirectorDashboard } from "@/lib/director-data";
 import { headers } from "next/headers";
 
+const ABAS_EVENTOS = [
+  ["orientacoes", "Orientações e gestão"],
+  ["eventos", "Gestão de eventos"],
+  ["telas", "Telas (TV)"],
+  ["calendario", "Calendário", "/voluntario/calendario"],
+] as const;
+
 export const dynamic = "force-dynamic";
 
 async function origemDoPortal() {
@@ -26,7 +33,8 @@ async function frasesDaFilial(schoolId: string) {
 
 /** Eventos: gestão de eventos, telas de TV e calendário da filial (antes no Painel da Direção). */
 export default async function EventosAreaPage(props: { searchParams: Promise<{ aba?: string }> }) {
-  if((await props.searchParams).aba==='orientacoes')return <ShellTrabalho><AreaSecretaria secretaria="Eventos"/></ShellTrabalho>;
+  // Orientações com o mesmo título e as mesmas abas (o menu da secretaria não some).
+  if((await props.searchParams).aba==='orientacoes')return <ShellTrabalho><h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Eventos</h1><AbasArea base="/voluntario/eventos" atual="orientacoes" abas={ABAS_EVENTOS}/><AreaSecretaria secretaria="Eventos"/></ShellTrabalho>;
   const member = await exigirArea("eventos", "/voluntario/eventos");
   const { aba = "eventos" } = await props.searchParams;
   return (
@@ -35,12 +43,7 @@ export default async function EventosAreaPage(props: { searchParams: Promise<{ a
       <AbasArea
         base="/voluntario/eventos"
         atual={aba}
-        abas={[
-          ["orientacoes", "Orientações e gestão"],
-          ["eventos", "Gestão de eventos"],
-          ["telas", "Telas (TV)"],
-          ["calendario", "Calendário", "/voluntario/calendario"],
-        ]}
+        abas={ABAS_EVENTOS}
       />
       {aba === "calendario" ? (
         <CalendarioTab schoolId={member.schoolId} />

@@ -79,8 +79,10 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
   {message&&<p role="status" className="text-sm">{message}</p>}
   <p className="text-xs text-gray-500">Lembretes de inscrição, véspera e horário ficam preparados, aguardando a conexão do WhatsApp. Nenhuma mensagem é declarada enviada sem confirmação do provedor.</p>
   {!data.eventos.length&&<p className="text-sm text-gray-500">Nenhum evento cadastrado ainda.</p>}
-  {secoes.map(sec=>sec.lista.length>0&&<section key={sec.titulo} className="flex flex-col gap-2">
-   <h2 className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">{sec.titulo}</h2>
+  {/* Próximos à vista; já aconteceram e cancelados numa gaveta fechada (pedido do usuário 2026-10-25). */}
+  {secoes.map(sec=>sec.lista.length>0&&<details key={sec.titulo} open={sec.titulo==='Próximos'} className="group/secao flex flex-col gap-2">
+   <summary className={`mb-2 text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300 ${sec.titulo==='Próximos'?'pointer-events-none list-none [&::-webkit-details-marker]:hidden':'cursor-pointer'}`}>{sec.titulo}{sec.titulo!=='Próximos'&&` (${sec.lista.length})`}</summary>
+   <div className="flex flex-col gap-2">
    {sec.lista.map(e=><details key={e.id} id={`evento-${e.id}`} className="group rounded-2xl border border-gray-200 bg-white p-3.5 dark:border-gray-800 dark:bg-gray-900">
     <ResumoEvento e={e} passado={inicio(e)<agora-12*36e5}/>
     <div className="mt-3 space-y-3 border-t border-gray-100 pt-3 dark:border-gray-800">
@@ -100,7 +102,7 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
    </details>
     </div>
    </details>)}
-  </section>)}
+  </div></details>)}
  </div>;
 }
 

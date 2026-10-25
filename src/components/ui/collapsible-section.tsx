@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 
-/** Content sections start closed; explicit exceptions can retain their initial state. */
-export function CollapsibleSection({ title, children, defaultOpen = false }: {
+/**
+ * Seção recolhível. Abre por padrão (pedido do usuário 2026-10-25: "gavetas apenas para as encerradas ou
+ * canceladas; as ativas aparecem sem gavetas"); passe defaultOpen={false} só para o que está encerrado/cancelado.
+ */
+export function CollapsibleSection({ title, children, defaultOpen = true }: {
   title: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;

@@ -153,12 +153,15 @@ export function ContributionStatusPanel({
       {!somenteConsulta && <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />}
 
       <section aria-label="Resumo das contribuições" className="my-4 space-y-2 border-y border-gray-200 py-4 text-sm dark:border-gray-700">
-        <h3 className="font-bold text-na-green-dark dark:text-na-green-light">Suas contribuições</h3>
-        <p>{overdue.length ? `${overdue.length} ${overdue.length > 1 ? "meses" : "mês"} em atraso.` : monthlyStatus.length ? "Nenhum atraso." : "Ainda não temos a situação da escola."}</p>
+        {/* Mais enxuto (pedido do usuário 2026-10-25): sem repetir "nenhum atraso" nem "sem juros"; a data fica à direita do título. */}
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="font-bold text-na-green-dark dark:text-na-green-light">Suas contribuições</h3>
+          {latestSync && <span className="shrink-0 text-[10px] text-gray-500 dark:text-gray-400">Atualizado em {latestSync.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</span>}
+        </div>
+        {overdue.length > 0 && <p>{`${overdue.length} ${overdue.length > 1 ? "meses" : "mês"} em atraso.`}</p>}
+        {!monthlyStatus.length && <p>Ainda não temos a situação da escola.</p>}
         {!!received.length && <p>{received.length} pagamento(s) feito(s) pelo Portal, ainda sendo registrado(s) na escola.</p>}
-        <p className="text-xs text-gray-600 dark:text-gray-300">
-          {latestSync ? `Atualizado em ${latestSync.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}. ` : ""}Sem juros. Já pagou na escola e não aparece? Peça a conferência antes de pagar de novo.
-        </p>
+        <p className="text-xs text-gray-600 dark:text-gray-300">Já pagou na escola e não aparece? Peça a conferência antes de pagar de novo.</p>
       </section>
 
       {/* A importação do Mercúrio traz só o ano corrente: o seletor aparece apenas se houver mais de um ano. */}
@@ -211,7 +214,7 @@ export function ContributionStatusPanel({
           Clique num mês em atraso pra pagar. Meses pagos mostram o comprovante.
         </p>
       ) : (
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">Nenhum mês em atraso este ano.</p>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500">Nenhum mês em atraso este ano. Toque num mês pago para ver o comprovante.</p>
       )}
     </div>
   );

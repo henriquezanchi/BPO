@@ -1,4 +1,3 @@
-import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { formatDateBR } from "@/lib/format";
 import { getAuthenticatedMember } from "@/lib/auth";
@@ -50,7 +49,7 @@ export default async function ProfessorPage() {
         .filter((secao) => secao.lista.length > 0)
         .map((secao) => (
           <section key={secao.titulo} className="flex flex-col gap-3">
-            <CollapsibleSection title={<h2 className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">{secao.titulo}</h2>}>
+            <h2 className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">{secao.titulo}</h2>
             {secao.lista.map((c) => (
               <Link
                 key={c.id}
@@ -76,7 +75,7 @@ export default async function ProfessorPage() {
                 )}
               </Link>
             ))}
-          </CollapsibleSection></section>
+          </section>
         ))}
     </ShellTrabalho>
   );

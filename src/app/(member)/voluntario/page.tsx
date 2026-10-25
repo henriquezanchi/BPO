@@ -1,4 +1,3 @@
-import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { CartaoGrupo } from "@/components/admin/grupos-admin";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
@@ -78,7 +77,7 @@ export default async function VoluntarioPage() {
       )}
       {secoes.map((s) => (
         <section key={s.titulo} className="flex flex-col gap-3">
-          <CollapsibleSection title={<h2 className="text-[12px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">{s.titulo}</h2>}>
+          <h2 className="text-[12px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">{s.titulo}</h2>
           {s.titulo === "GDVE" && podeCriarGdve && (
             <Link href="/grupos?aba=gdve" className="w-fit text-[13px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
               Criar GDVE em Grupos →
@@ -91,12 +90,12 @@ export default async function VoluntarioPage() {
               ))}
             </div>
           )}
-        </CollapsibleSection></section>
+        </section>
       ))}
 
       {atalhos.length > 0 && (
         <section className="flex flex-col gap-3">
-          <CollapsibleSection title={<h2 className="text-[12px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">O que você pode acessar</h2>}>
+          <h2 className="text-[12px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">O que você pode acessar</h2>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {atalhos.map((d) => (
               <Link
@@ -112,7 +111,7 @@ export default async function VoluntarioPage() {
               </Link>
             ))}
           </div>
-        </CollapsibleSection></section>
+        </section>
       )}
     </ShellTrabalho>
   );

@@ -8,6 +8,14 @@ import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { exigirArea } from "@/lib/area-trabalho";
 import { getDirectorDashboard } from "@/lib/director-data";
 
+const ABAS_ECONOMIA = [
+  ["orientacoes", "Orientações e gestão"],
+  ["situacao", "Situação da contribuição"],
+  ["recuperacao", "Recuperação de crédito"],
+  ["contas", "Contas e conciliações"],
+  ["composicao", "Composição e tesouraria"],
+] as const;
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -17,7 +25,8 @@ export const dynamic = "force-dynamic";
  * responsável pela secretaria no Portal e a direção (areas-filial.ts).
  */
 export default async function EconomiaPage(props: { searchParams: Promise<{ aba?: string; status?: string }> }) {
-  if((await props.searchParams).aba==='orientacoes')return <ShellTrabalho><AreaSecretaria secretaria="Economia"/></ShellTrabalho>;
+  // Orientações com o mesmo título e as mesmas abas (o menu da secretaria não some).
+  if((await props.searchParams).aba==='orientacoes')return <ShellTrabalho><h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Economia</h1><AbasArea base="/economia" atual="orientacoes" abas={ABAS_ECONOMIA}/><AreaSecretaria secretaria="Economia"/></ShellTrabalho>;
   const member = await exigirArea("economia", "/economia");
   const { aba = "situacao", status } = await props.searchParams;
   const data = aba === "composicao" ? null : await getDirectorDashboard(member.schoolId);
@@ -27,13 +36,7 @@ export default async function EconomiaPage(props: { searchParams: Promise<{ aba?
       <AbasArea
         base="/economia"
         atual={aba}
-        abas={[
-          ["orientacoes", "Orientações e gestão"],
-          ["situacao", "Situação da contribuição"],
-          ["recuperacao", "Recuperação de crédito"],
-          ["contas", "Contas e conciliações"],
-          ["composicao", "Composição e tesouraria"],
-        ]}
+        abas={ABAS_ECONOMIA}
       />
       {aba === "situacao" && data && <SituacaoContribuicao schoolId={member.schoolId} data={data} status={status} />}
       {aba === "recuperacao" && data && <RecuperacaoTab schoolId={member.schoolId} data={data} />}

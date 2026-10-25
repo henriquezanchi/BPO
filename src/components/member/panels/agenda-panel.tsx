@@ -600,6 +600,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
   const [diaSelecionado, setDiaSelecionado] = useState(() => hoje);
   const [mesExibido, setMesExibido] = useState(() => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1));
   const [limiteProximos, setLimiteProximos] = useState(POR_PAGINA);
+  const calendario = useRef<HTMLDivElement>(null);
   const topo = useRef<HTMLDivElement>(null);
 
   if (items.length === 0) {
@@ -639,13 +640,41 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
 
   return (
     <div ref={topo} className="flex flex-col gap-4">
-      <LinkMeusEventos />
       {avisoEvento}
       {eventoCompartilhado && <section aria-label="Evento compartilhado" className="space-y-2">
         <CollapsibleSection defaultOpen title={<h3 className="text-xs font-semibold text-na-green-dark dark:text-emerald-400">Evento compartilhado</h3>}>
         <ItemCard key={itemKey(eventoCompartilhado)} memberId={memberId} item={eventoCompartilhado} somenteConsulta={somenteConsulta} emBreve={emBreve} aberto />
       </CollapsibleSection></section>}
-      <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+      {/* Próximos eventos sempre abertos e no topo (pedido do usuário 2026-10-25); depois Meus eventos e o calendário. */}
+      {proximos.length > 0 && (
+        <section aria-labelledby="proximos-eventos" className="flex flex-col gap-2">
+          <h3 id="proximos-eventos" className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
+            Próximos eventos
+          </h3>
+          <ul className="flex flex-col gap-1.5">
+            {proximos.slice(0, limiteProximos).map((item) => (
+              <LinhaProximo
+                key={itemKey(item)}
+                item={item}
+                onAbrir={() => {
+                  selecionarDia(item.date);
+                  calendario.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              />
+            ))}
+          </ul>
+          {proximos.length > limiteProximos && (
+            <button
+              onClick={() => setLimiteProximos((n) => n + POR_PAGINA)}
+              className="mt-1 rounded-xl border border-gray-300 px-4 py-2.5 text-[12px] font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Carregar mais eventos
+            </button>
+          )}
+        </section>
+      )}
+      <LinkMeusEventos />
+      <div ref={calendario} className="scroll-mt-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-2 flex items-center justify-between">
           <button
             onClick={() => mudarMes(-1)}
@@ -715,38 +744,6 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
         )}
       </div>
 
-      {proximos.length > 0 && (
-        <section aria-labelledby="proximos-eventos" className="flex flex-col gap-2 pt-1"><CollapsibleSection title={<h3 id="proximos-eventos" className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
-              Próximos eventos
-            </h3>}>
-          <div className="flex items-center gap-3">
-            <span className="h-px flex-1 bg-gray-300 dark:bg-gray-700" />
-
-            <span className="h-px flex-1 bg-gray-300 dark:bg-gray-700" />
-          </div>
-          <p className="text-center text-[11px] text-gray-500 dark:text-gray-400">Em outras datas, não em {formatDateBR(diaSelecionado)}. Toque para ver o dia.</p>
-          <ul className="flex flex-col gap-1.5">
-            {proximos.slice(0, limiteProximos).map((item) => (
-              <LinhaProximo
-                key={itemKey(item)}
-                item={item}
-                onAbrir={() => {
-                  selecionarDia(item.date);
-                  topo.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-              />
-            ))}
-          </ul>
-          {proximos.length > limiteProximos && (
-            <button
-              onClick={() => setLimiteProximos((n) => n + POR_PAGINA)}
-              className="mt-1 rounded-xl border border-gray-300 px-4 py-2.5 text-[12px] font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-            >
-              Carregar mais eventos
-            </button>
-          )}
-        </CollapsibleSection></section>
-      )}
     </div>
   );
 }

@@ -90,10 +90,10 @@ function ResumoTab({ data, onIr, nova }: { data: PainelAberturas; onIr: (id?: st
   return <div className="space-y-5">
     <SuasAberturas data={data} onIr={onIr} nova={nova} />
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <IndicadorResumo icone={<CalendarDays size={17} />} titulo="Aberturas" valor={String(data.aberturas.filter((item) => item.status !== "cancelada").length)} detalhe={`${data.aberturas.filter((item) => item.status === "planejada" || item.status === "rascunho").length} em planejamento`} />
-      <IndicadorResumo icone={<UsersRound size={17} />} titulo="Capacidade somada" valor={String(capacidade)} detalhe={`Meta de ${meta} matrículas`} />
+      <IndicadorResumo icone={<CalendarDays size={17} onClick={() => onIr(undefined, "planejamento")} />} titulo="Aberturas" valor={String(data.aberturas.filter((item) => item.status !== "cancelada").length)} detalhe={`${data.aberturas.filter((item) => item.status === "planejada" || item.status === "rascunho").length} em planejamento`} />
+      <IndicadorResumo icone={<UsersRound size={17} onClick={() => onIr(undefined, "planejamento")} />} titulo="Capacidade somada" valor={String(capacidade)} detalhe={`Meta de ${meta} matrículas`} />
       <IndicadorResumo icone={<GraduationCap size={17} />} titulo="Interessados" valor={String(data.crm.leads.length)} detalhe="Contatos importados da filial; não são matrículas previstas" onClick={() => onIr(undefined, "interessados")} />
-      <IndicadorResumo icone={<ClipboardCheck size={17} />} titulo="Orçamento planejado" valor={formatarCentavos(orcamento)} detalhe="Soma das aberturas não canceladas" />
+      <IndicadorResumo icone={<ClipboardCheck size={17} onClick={() => onIr(undefined, "investimentos")} />} titulo="Orçamento planejado" valor={formatarCentavos(orcamento)} detalhe="Soma das aberturas não canceladas" />
     </section>
 
     <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.8fr)]"><GraficoCustoConversao data={data} />

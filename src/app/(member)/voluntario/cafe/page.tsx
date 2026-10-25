@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 
 /** Café: Caixa Fortuna (antes no Painel da Direção). */
 export default async function CafePage(props:{searchParams:Promise<{aba?:string}>}) {
-  if((await props.searchParams).aba==='orientacoes')return <ShellTrabalho><AreaSecretaria secretaria="Café"/></ShellTrabalho>;
+  // Orientações com o mesmo título e as mesmas abas (o menu da secretaria não some).
+  if((await props.searchParams).aba==='orientacoes')return <ShellTrabalho><h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Café · Caixa Fortuna</h1><AbasArea base="/voluntario/cafe" atual="orientacoes" abas={[["caixa","Caixa Fortuna"],["orientacoes","Orientações e gestão"]]}/><AreaSecretaria secretaria="Café"/></ShellTrabalho>;
   const member = await exigirArea("cafe", "/voluntario/cafe");
   return (
     <ShellTrabalho>

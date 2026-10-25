@@ -58,6 +58,46 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
     });
   }
 
+  const abertas = campanhas.filter((c) => c.status === "aberta");
+  const encerradas = campanhas.filter((c) => c.status !== "aberta");
+  const linha = (c: (typeof campanhas)[number]) => (
+            <li key={c.id} className="flex flex-col gap-2 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{c.titulo}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {c.status === "aberta" ? `Aberta desde ${data(c.abertaEm)}` : `Encerrada em ${data(c.encerradaEm ?? c.abertaEm)}`} · {c.turmas ? `${c.turmas} turma(s)` : "todas as turmas"}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    c.status === "aberta" ? "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                  }`}
+                >
+                  {c.status === "aberta" ? "Aberta" : "Encerrada"}
+                </span>
+              </div>
+              <p className="text-[12px] text-gray-700 dark:text-gray-300">
+                {c.participantes} {c.participantes === 1 ? "aluno respondeu" : "alunos responderam"} · {c.respostas} {c.respostas === 1 ? "resposta" : "respostas"}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/escolastica/avaliacao/${c.id}`}
+                  className="flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  <BarChart3 size={12} /> Relatórios
+                </Link>
+                <button
+                  onClick={() => alterar(c.id, c.status === "aberta" ? "encerrada" : "aberta")}
+                  disabled={emAndamento === c.id}
+                  className="flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  {c.status === "aberta" ? <Square size={11} /> : <Play size={11} />} {c.status === "aberta" ? "Encerrar" : "Reabrir"}
+                </button>
+              </div>
+            </li>
+  );
+
   return (
     <section className="flex flex-col gap-3">
       <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Rodadas</h2>}>
@@ -137,45 +177,14 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
       {campanhas.length === 0 ? (
         <p className="text-[12px] text-gray-500 dark:text-gray-400">Nenhuma rodada ainda.</p>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {campanhas.map((c) => (
-            <li key={c.id} className="flex flex-col gap-2 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{c.titulo}</p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    {c.status === "aberta" ? `Aberta desde ${data(c.abertaEm)}` : `Encerrada em ${data(c.encerradaEm ?? c.abertaEm)}`} · {c.turmas ? `${c.turmas} turma(s)` : "todas as turmas"}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    c.status === "aberta" ? "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                  }`}
-                >
-                  {c.status === "aberta" ? "Aberta" : "Encerrada"}
-                </span>
-              </div>
-              <p className="text-[12px] text-gray-700 dark:text-gray-300">
-                {c.participantes} {c.participantes === 1 ? "aluno respondeu" : "alunos responderam"} · {c.respostas} {c.respostas === 1 ? "resposta" : "respostas"}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href={`/escolastica/avaliacao/${c.id}`}
-                  className="flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  <BarChart3 size={12} /> Relatórios
-                </Link>
-                <button
-                  onClick={() => alterar(c.id, c.status === "aberta" ? "encerrada" : "aberta")}
-                  disabled={emAndamento === c.id}
-                  className="flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  {c.status === "aberta" ? <Square size={11} /> : <Play size={11} />} {c.status === "aberta" ? "Encerrar" : "Reabrir"}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col gap-3">
+          {abertas.length > 0 && <ul className="flex flex-col gap-2">{abertas.map(linha)}</ul>}
+          {encerradas.length > 0 && (
+            <CollapsibleSection defaultOpen={false} title={<h3 className="text-[12px] font-semibold text-gray-600 dark:text-gray-300">Encerradas ({encerradas.length})</h3>}>
+              <ul className="flex flex-col gap-2">{encerradas.map(linha)}</ul>
+            </CollapsibleSection>
+          )}
+        </div>
       )}
     </CollapsibleSection></section>
   );
