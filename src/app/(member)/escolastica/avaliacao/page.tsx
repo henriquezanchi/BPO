@@ -1,4 +1,3 @@
-import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { AbasArea } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { CampanhasPanel } from "@/components/avaliacao/campanhas-panel";
@@ -48,15 +47,13 @@ export default async function GestaoAvaliacaoPage(props: { searchParams: Promise
   const instrutoresPorTurma = vinculos.reduce((m, v) => m.set(v.classGroupId, new Set([...(m.get(v.classGroupId) ?? []), v.instrutorMatr])), new Map<string, Set<string>>());
 
   return (
-    <ShellTrabalho largura="estreita">
+    <ShellTrabalho>
       <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
       <AbasArea base="/escolastica" atual="avaliacao" abas={ABAS_ESCOLASTICA} />
-      <div className="max-w-2xl">
-        <CollapsibleSection title={<h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Avaliação dos instrutores</h2>}>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Os alunos só veem a avaliação enquanto houver uma rodada aberta. Cada aluno avalia os instrutores da própria turma, segundo o Mercúrio. As respostas não guardam quem respondeu.
-        </p>
-      </CollapsibleSection></div>
+      {/* Mesmo padrão das outras abas: texto de orientação logo abaixo das abas, sem título repetido. */}
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Os alunos só veem a avaliação enquanto houver uma rodada aberta. Cada aluno avalia os instrutores da própria turma, segundo o Mercúrio. As respostas não guardam quem respondeu.
+      </p>
       {escolas.length > 1 && (
         <nav className="-mt-4 flex flex-wrap gap-1.5">
           {escolas.map((e) => (
