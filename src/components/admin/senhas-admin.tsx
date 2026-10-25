@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { voltarSenhaInicial } from "@/lib/actions/senha-actions";
 import { KeyRound, Loader2, Search } from "lucide-react";
@@ -33,11 +34,11 @@ export function SenhasAdmin({ pessoas }: { pessoas: { id: string; name: string }
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <div>
-        <h2 className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+    <section className="flex flex-col gap-3"><CollapsibleSection title={<h2 className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
           <KeyRound size={15} /> Esqueceu a senha?
-        </h2>
+        </h2>}>
+      <div>
+
         <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">Volte a senha da pessoa para a inicial: os 6 primeiros números do CPF dela no Mercúrio.</p>
       </div>
       <label className="flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 dark:border-gray-700">
@@ -65,6 +66,6 @@ export function SenhasAdmin({ pessoas }: { pessoas: { id: string; name: string }
           {aviso.texto}
         </p>
       )}
-    </section>
+    </CollapsibleSection></section>
   );
 }

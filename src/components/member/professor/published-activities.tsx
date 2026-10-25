@@ -12,10 +12,12 @@ const labels = { aviso: "Aviso", atividade_turma: "Atividade", prova: "Prova", t
 const field = "w-full min-w-0 rounded-lg border border-gray-300 bg-transparent p-2 text-sm dark:border-gray-700";
 
 export function PublishedActivities({ activities, ehGrupo }: { activities: Activity[]; ehGrupo: boolean }) {
-  return <ul className="flex flex-col gap-2">{activities.map(activity => <PublishedActivity key={activity.id} activity={activity} ehGrupo={ehGrupo} />)}</ul>;
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const sorted = [...activities].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  return <ul className="flex flex-col gap-2">{sorted.map(activity => <PublishedActivity key={activity.id} activity={activity} ehGrupo={ehGrupo} past={new Date(activity.dueDate).toISOString().slice(0, 10) < today} />)}</ul>;
 }
 
-function PublishedActivity({ activity, ehGrupo }: { activity: Activity; ehGrupo: boolean }) {
+function PublishedActivity({ activity, ehGrupo, past }: { activity: Activity; ehGrupo: boolean; past: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -58,6 +60,7 @@ function PublishedActivity({ activity, ehGrupo }: { activity: Activity; ehGrupo:
         <span className="ml-1 inline-flex max-w-[90%] flex-wrap items-center gap-x-4 gap-y-1 align-top">
           <span className="break-words font-semibold">{activity.title}</span>
           <span className="text-gray-500 dark:text-gray-400">{formatDateBR(activity.dueDate)}</span>
+          {past && <span className="rounded-full bg-gray-200 px-2 py-1 font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">Já aconteceu</span>}
         </span>
       </summary>
       <div className="flex flex-col gap-3 border-t border-gray-200 p-3 dark:border-gray-700">

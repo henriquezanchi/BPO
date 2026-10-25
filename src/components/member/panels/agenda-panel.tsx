@@ -1,4 +1,6 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
+
 import {REFUND_LABELS} from "@/lib/event-refund-policy";
 
 import {usePaymentPolling} from "@/hooks/use-payment-polling";
@@ -386,10 +388,10 @@ function ListaDeEspera({ memberId, eventId, espera }: { memberId: string; eventI
 }
 
 function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean; emBreve?: boolean }) {
-  if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm">
-    <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><h3 className="font-bold">{item.title}</h3><p>{item.date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</p>
+  if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm"><CollapsibleSection title={<h3 className="font-bold">{item.title}</h3>}>
+    <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><p>{item.date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</p>
     {item.status==='cancelada'?<p>Reunião cancelada: {item.cancellationReason}</p>:<><p>Comparecimento obrigatório. Se não puder participar, registre uma justificativa.</p>{item.fullUniform&&<p className="font-semibold">CRM com traje completo</p>}{item.description&&<p>{item.description}</p>}<MeetingResponse key={`${item.id}:${item.version}`} memberId={memberId} id={item.id} version={item.version} initial={item.myResponse}/></>}
-  </section>;
+  </CollapsibleSection></section>;
   if (item.kind === "enquete") return <PollCard memberId={memberId} item={item} />;
 
   if (item.kind === "evento") {
@@ -629,9 +631,9 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
       <LinkMeusEventos />
       {avisoEvento}
       {eventoCompartilhado && <section aria-label="Evento compartilhado" className="space-y-2">
-        <h3 className="text-xs font-semibold text-na-green-dark dark:text-emerald-400">Evento compartilhado</h3>
+        <CollapsibleSection title={<h3 className="text-xs font-semibold text-na-green-dark dark:text-emerald-400">Evento compartilhado</h3>}>
         <ItemCard key={itemKey(eventoCompartilhado)} memberId={memberId} item={eventoCompartilhado} somenteConsulta={somenteConsulta} emBreve={emBreve} />
-      </section>}
+      </CollapsibleSection></section>}
       <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-2 flex items-center justify-between">
           <button
@@ -703,12 +705,12 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
       </div>
 
       {proximos.length > 0 && (
-        <section aria-labelledby="proximos-eventos" className="flex flex-col gap-2 pt-1">
+        <section aria-labelledby="proximos-eventos" className="flex flex-col gap-2 pt-1"><CollapsibleSection title={<h3 id="proximos-eventos" className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
+              Próximos eventos
+            </h3>}>
           <div className="flex items-center gap-3">
             <span className="h-px flex-1 bg-gray-300 dark:bg-gray-700" />
-            <h3 id="proximos-eventos" className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
-              Próximos eventos
-            </h3>
+
             <span className="h-px flex-1 bg-gray-300 dark:bg-gray-700" />
           </div>
           <p className="text-center text-[11px] text-gray-500 dark:text-gray-400">Em outras datas, não em {formatDateBR(diaSelecionado)}. Toque para ver o dia.</p>
@@ -732,7 +734,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
               Carregar mais eventos
             </button>
           )}
-        </section>
+        </CollapsibleSection></section>
       )}
     </div>
   );

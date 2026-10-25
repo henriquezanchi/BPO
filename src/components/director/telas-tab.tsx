@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { atualizarCartao, atualizarTela, conectarTv, criarCartao, criarTela, excluirCartao, excluirTela, trocarLinkTela, type DadosCartao, type DadosTela } from "@/lib/actions/telas-actions";
 import { CONTEUDOS_PADRAO, CONTEUDOS_TELA, ORIENTACOES_TELA, PUBLICOS_TELA, TIPOS_CARTAO, type ConteudoTela, type OrientacaoTela, type PublicoTela, type TipoCartao } from "@/lib/telas-publicos";
@@ -297,9 +298,9 @@ function CartoesFilial({ schoolId, cartoes }: { schoolId: string; cartoes: Carta
   const [novo, setNovo] = useState(VAZIO);
   const { erro, pendente, rodar } = useAcao();
   return (
-    <section className="space-y-3">
+    <section className="space-y-3"><CollapsibleSection title={<h2 className="font-bold">Avisos e cartões da filial</h2>}>
       <div>
-        <h2 className="font-bold">Avisos e cartões da filial</h2>
+
         <p className="text-sm text-gray-600 dark:text-gray-300">Aparecem nas TVs que mostram o conteúdo correspondente (matrículas abertas; avisos; Círculo de Amigos e doações; Instagram e Acrópole Play).</p>
       </div>
       {cartoes.length > 0 && (
@@ -333,7 +334,7 @@ function CartoesFilial({ schoolId, cartoes }: { schoolId: string; cartoes: Carta
           <Plus size={15} aria-hidden /> Novo cartão
         </button>
       )}
-    </section>
+    </CollapsibleSection></section>
   );
 }
 

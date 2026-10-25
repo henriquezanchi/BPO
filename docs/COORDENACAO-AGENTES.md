@@ -127,3 +127,7 @@ Segunda rodada do mesmo dia (pedidos do usuário: conexão pelo controle remoto,
 - **Liberar acessos** (`voluntario/acessos/page.tsx`): responsável por grupo sem acesso próprio via o link no menu e voltava ao Início; agora a página explica que o Chefe de Filial libera primeiro.
 - **Escolástica:** "Orientações e gestão" entrou em `ABAS_ESCOLASTICA` (aparece também na Avaliação dos instrutores) e ganhou título e abas; continua com o controle de acesso próprio de `AreaSecretaria` (nacional/regional entram sem a área da filial).
 
+
+## Codex — organização da interface, calendário e planejamento (25/10/2026)
+
+Blocos colapsáveis por padrão via `ui/collapsible-section.tsx`, com exceções existentes preservadas; atividades ordenadas e datas passadas identificadas. Calendário exibe três títulos e reticências, detalhes completos por dia e atalho de administração por evento. Planejador transferido para o formulário de Eventos (`event-date-suggestions.tsx`), usando o público existente e sem migração. Orpheu adicionado na área do Instrutor com o endereço confirmado pelo usuário. Decisões em `docs/ORGANIZACAO-DA-INTERFACE.md`. Base integrada: b741af8. Sem alteração no Mercúrio ou nas permissões.

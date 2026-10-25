@@ -24,6 +24,7 @@ export interface ItemCalendario {
   detalhe: string | null;
   publicos: Publico[];
   pessoas: number | null;
+  adminHref?: string;
 }
 
 const TZ = "-03:00";
@@ -117,7 +118,7 @@ export async function itensDoCalendario(schoolId: string, de: Date, ate: Date): 
     itens.push({ id: `reuniao-${r.id}`, camada: "reuniao_grupo", titulo: r.title, inicio: r.startsAt.toISOString(), fim: r.endsAt.toISOString(), diaInteiro: false, detalhe: g?.name ?? null, publicos: ["fv"], pessoas: g?._count.memberships ?? null });
   }
   for (const e of eventosFilial) {
-    itens.push({ id: `evento-${e.id}`, camada: "evento_filial", titulo: e.title, inicio: e.startsAt.toISOString(), fim: e.endsAt?.toISOString() ?? null, diaInteiro: e.allDay, detalhe: e.location, publicos: publicosDoEvento(e.publicos, e.audience), pessoas: null });
+    itens.push({ id: `evento-${e.id}`, adminHref: `/voluntario/eventos?aba=eventos#evento-${e.id}`, camada: "evento_filial", titulo: e.title, inicio: e.startsAt.toISOString(), fim: e.endsAt?.toISOString() ?? null, diaInteiro: e.allDay, detalhe: e.location, publicos: publicosDoEvento(e.publicos, e.audience), pessoas: null });
   }
   for (const e of eventosExternos) {
     // O calendário nacional ainda não diz a quem o evento se destina nem se o chefe deve estar (virá do Ágora): tratado como "todos".

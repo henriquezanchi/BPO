@@ -1,3 +1,4 @@
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { SignTermForm } from "@/components/member/volunteer/sign-term-form";
 import { formatDateBR, formatDateTimeBR } from "@/lib/format";
@@ -32,11 +33,11 @@ export default async function VolunteerTermPage() {
       </div>
 
       <section className="space-y-2 rounded-xl border border-gray-200 p-4 text-sm dark:border-gray-700">
-        <h2 className="font-bold text-na-green-dark dark:text-na-green-light">Assinatura pelo gov.br</h2>
+        <CollapsibleSection title={<h2 className="font-bold text-na-green-dark dark:text-na-green-light">Assinatura pelo gov.br</h2>}>
         <p>Para o fluxo orientado pela escola, o mesmo PDF deve receber as assinaturas do voluntário, do representante legal e das duas testemunhas, uma pessoa por vez. Após cada assinatura, confira o arquivo no validador do ITI e preserve a versão assinada.</p>
         <p>Não imprima e gere outro PDF entre as assinaturas. O aceite abaixo não conclui esse processo e o Portal ainda não recebe o arquivo assinado nem valida assinaturas gov.br.</p>
         <a href="https://validar.iti.gov.br/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center font-semibold text-na-green-dark dark:text-na-green-light">Abrir validador do ITI</a>
-      </section>
+      </CollapsibleSection></section>
       {signature ? (
         <div className="flex items-center gap-2 rounded-xl border border-na-success/40 bg-na-success-light p-4 text-sm text-na-success-dark dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
           <CheckCircle2 size={18} className="shrink-0" />

@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { alterarRecursoFilial, designarAdministrador, removerAdministrador } from "@/lib/actions/admin-filial-actions";
 import type { ChaveRecurso } from "@/lib/recursos-filial";
@@ -66,7 +67,7 @@ export function AdminFilialPanel({
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Recursos do Portal do Aluno</h2>
+        <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Recursos do Portal do Aluno</h2>}>
         <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-200 dark:divide-gray-800 dark:border-gray-700">
           {recursos.map((r) => {
             const ligado = estado[r.chave];
@@ -90,10 +91,10 @@ export function AdminFilialPanel({
             );
           })}
         </ul>
-      </section>
+      </CollapsibleSection></section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Administradores da filial</h2>
+        <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Administradores da filial</h2>}>
         <p className="-mt-1 text-[11px] text-gray-500 dark:text-gray-400">
           O Chefe e o Sub-Chefe já administram. {podeEscolherAdmins ? "Você pode incluir outras pessoas." : "Só eles incluem ou removem outras pessoas."}
         </p>
@@ -141,7 +142,7 @@ export function AdminFilialPanel({
             )}
           </div>
         )}
-      </section>
+      </CollapsibleSection></section>
       {erro && <p className="text-[12px] text-na-danger-dark dark:text-red-300">{erro}</p>}
     </div>
   );

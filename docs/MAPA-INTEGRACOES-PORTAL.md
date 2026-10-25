@@ -4,7 +4,7 @@ Informações fornecidas por Henrique em 23/10/2026. Este documento descreve des
 
 | Sistema | Finalidade | Público / área proposta |
 |---|---|---|
-| Orpheu | Apoio aos professores: videoaulas com docentes experientes, apostilas comentadas, slides-modelo, materiais de palestras. | Área do instrutor. Confirmar quais professores têm autorização; não presumir todos. |
+| Orpheu | Apoio aos professores: videoaulas com docentes experientes, apostilas comentadas, slides-modelo, materiais de palestras. | Atalho na área do instrutor: https://www.oinabn.com.br/orpheu (endereço confirmado em 25/10/2026). A autenticação e a autorização continuam no Orpheu. |
 | Perseu | Difusão: identidade visual, logomarcas, materiais gráficos e apoio à divulgação. | Área de voluntários / Difusão. Um acesso por escola, compartilhado com pessoas autorizadas pelo diretor, como no Ulisses. Não expor credenciais coletivas ao navegador. |
 | Bastiões | Artigos mensais históricos do diretor internacional e livros em PDF; futura biblioteca digital. | Área de estudos, apenas membros. Substituir destino da biblioteca digital quando confirmada URL. Acesso direto via SSO Keycloak, preservando autorização do destino. |
 | Arjuna | Cadastro e acompanhamento de provacionistas de FV. | Chefia e pessoas explicitamente autorizadas pelo chefe da filial. Ser FV não concede acesso por si só. |

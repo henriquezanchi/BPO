@@ -1,3 +1,4 @@
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { podeGerirAvaliacao, relatorioCampanha, type RelatorioCampanha } from "@/lib/avaliacao";
@@ -72,9 +73,9 @@ function Resumo({ p, r }: { p: Pergunta; r: Bloco["perguntas"][number]["resumo"]
 function SecaoBloco({ titulo, bloco, perguntasPorId, verIndividuais }: { titulo: string; bloco: Bloco; perguntasPorId: Map<string, Pergunta>; verIndividuais: boolean }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+      <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
         {titulo} <span className="font-normal text-gray-500 dark:text-gray-400">· {bloco.total} {bloco.total === 1 ? "resposta" : "respostas"}</span>
-      </h2>
+      </h2>}>
       {!bloco.suficiente ? (
         <p className="flex items-start gap-1.5 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
           <Lock size={13} className="mt-0.5 shrink-0" /> Resultados aparecem a partir de {MINIMO_RESPOSTAS} respostas neste recorte, para ninguém ser identificado.
@@ -100,7 +101,7 @@ function SecaoBloco({ titulo, bloco, perguntasPorId, verIndividuais }: { titulo:
       ) : (
         bloco.perguntas.map((x) => <Resumo key={x.pergunta.id} p={x.pergunta} r={x.resumo} />)
       )}
-    </section>
+    </CollapsibleSection></section>
   );
 }
 
@@ -139,7 +140,7 @@ export default async function RelatorioAvaliacaoPage(props: { params: Promise<{ 
           { titulo: "Por turma", lista: rel.porTurma, param: "turma", atual: sp.turma },
         ].map((g) => (
           <div key={g.titulo} className="flex flex-col gap-2 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
-            <h2 className="text-[13px] font-semibold text-gray-800 dark:text-gray-200">{g.titulo}</h2>
+            <CollapsibleSection title={<h2 className="text-[13px] font-semibold text-gray-800 dark:text-gray-200">{g.titulo}</h2>}>
             {g.lista.length === 0 ? (
               <p className="text-[12px] text-gray-500 dark:text-gray-400">Sem respostas ainda.</p>
             ) : (
@@ -160,7 +161,7 @@ export default async function RelatorioAvaliacaoPage(props: { params: Promise<{ 
               </ul>
             )}
             {rel.escalaInstrutor && <p className="text-[10px] text-gray-500 dark:text-gray-400">Média da pergunta: “{rel.escalaInstrutor}”</p>}
-          </div>
+          </CollapsibleSection></div>
         ))}
       </section>
 
