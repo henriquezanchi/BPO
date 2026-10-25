@@ -224,3 +224,38 @@ export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grup
     </div>
   );
 }
+
+/** Grupos de estudo e leituras comentadas da filial: lista e criação (instrutores, direção, administração, Escolástica). */
+export function EstudosAdmin({ schoolId, grupos }: { schoolId: string; grupos: ResumoGrupo[] }) {
+  const router = useRouter();
+  const [criando, setCriando] = useState<"ESTUDO" | "LEITURA" | null>(null);
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap gap-2">
+        {(["ESTUDO", "LEITURA"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setCriando(criando === t ? null : t)}
+            className={`flex min-h-10 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold ${criando === t ? "border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-200" : "bg-na-green text-white hover:bg-na-green-dark"}`}
+          >
+            {criando === t ? <X size={15} /> : <Plus size={15} />} {t === "ESTUDO" ? "Novo grupo de estudo" : "Nova leitura comentada"}
+          </button>
+        ))}
+      </div>
+      {criando && (
+        <section className="rounded-2xl border border-gray-200 bg-white p-4 lg:p-5 dark:border-gray-700 dark:bg-gray-900">
+          <FormGrupo key={criando} tipo={criando} schoolId={schoolId} onSalvo={(id) => router.push(`/grupos/${id}`)} onCancelar={() => setCriando(null)} />
+        </section>
+      )}
+      {grupos.length === 0 ? (
+        <Vazio texto="Nenhum grupo de estudo ou leitura comentada. Os alunos veem os abertos no Portal do Aluno e entram com “Quero participar”." />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {grupos.map((g) => (
+            <CartaoGrupo key={g.id} g={g} de="voluntario" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { ehTipoGrupo, gruposDaAgenda, papelNoGrupo, TIPOS_GRUPO, type Papel, type TipoGrupo } from "@/lib/grupos-portal";
+import { ehTipoGrupo, gruposDaAgenda, papelNoGrupo, TIPOS_DO_PORTAL, TIPOS_GRUPO, type Papel, type TipoGrupo } from "@/lib/grupos-portal";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import { linkDoCanal } from "@/lib/slack";
 import type { Member, Prisma } from "@prisma/client";
@@ -65,8 +65,8 @@ async function resumir(where: Prisma.ClassGroupWhereInput): Promise<ResumoGrupo[
 }
 
 /** Administração: secretarias e GAFs da filial. */
-export async function gruposDaFilial(schoolId: string, tipo: "SEC" | "GAF") {
-  return resumir({ schoolId, tipo });
+export async function gruposDaFilial(schoolId: string, tipo: TipoGrupo | TipoGrupo[]) {
+  return resumir({ schoolId, tipo: Array.isArray(tipo) ? { in: tipo } : tipo });
 }
 
 /** Grupos que a pessoa vê (Portal do Voluntário / Portal do aluno), com o papel dela. */
@@ -152,7 +152,7 @@ export async function detalheDoGrupo(m: Pessoa, grupoId: string) {
  * pessoa ainda não disse se participou (GAF, GDVE e secretarias).
  */
 export async function avisosDosGrupos(m: Pick<Member, "id"> & Parameters<typeof gruposDaAgenda>[0]) {
-  const ids = (await gruposDaAgenda({ ...m, classMemberships: m.classMemberships.filter((cm) => ["GAF", "GDVE", "SEC"].includes(cm.classGroup.tipo)) })).filter(Boolean);
+  const ids = (await gruposDaAgenda({ ...m, classMemberships: m.classMemberships.filter((cm) => (TIPOS_DO_PORTAL as readonly string[]).includes(cm.classGroup.tipo)) })).filter(Boolean);
   if (!ids.length) return { hoje: [], perguntas: [] };
   await ensureGroupMeetingWindow(ids);
   const agora = new Date();

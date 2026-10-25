@@ -220,6 +220,14 @@ export async function getMemberDashboard(memberId: string) {
 
   // Reuniões dos grupos em que a pessoa é integrante (groupIds, acima): grupos de FV e secretarias com acesso
   // de voluntário, GAF sempre, GDVE só para FV (regras em grupos-portal.ts).
+  // Grupos de estudo e leituras comentadas da filial que aceitam a pessoa (abertos e os dela).
+  const gruposDeEstudo = (
+    await db.classGroup.findMany({
+      where: { schoolId: member.schoolId, tipo: { in: ["ESTUDO", "LEITURA"] }, arquivadoEm: null, ...(member.isMembroPrograma ? {} : { permiteAlunos: true }) },
+      select: { id: true, name: true, tipo: true, descricao: true, modalidade: true, local: true, memberships: { where: { memberId: member.id }, select: { role: true } } },
+      orderBy: { name: "asc" },
+    })
+  ).map((g) => ({ id: g.id, nome: g.name, tipo: g.tipo === "LEITURA" ? "Leitura comentada" : "Grupo de estudo", descricao: g.descricao, modalidade: g.modalidade, local: g.local, participo: g.memberships.length > 0 }));
   const [avisosGrupos,meusGafs,destinosVoluntario] = await Promise.all([avisosDosGrupos({...member,classMemberships:member.classMemberships.filter(cm=>cm.classGroup.arquivadoEm===null)}),meusGrupos(member,['GAF']),destinosDaPessoa(member)]);
   await ensureGroupMeetingWindow(groupIds);
   const meetings = groupIds.length ? await db.groupMeeting.findMany({
@@ -376,6 +384,7 @@ export async function getMemberDashboard(memberId: string) {
     // N1 e programa complementar não veem (pedido do usuário 2026-10-21).
     bibliotecaLiberada: publicosDaPessoa(member).includes("membros"),
     meusGafs,
+    gruposDeEstudo,
     // Um atalho só para a Área do Voluntário, quando a pessoa tem algo lá (mesma regra do menu).
     areaVoluntario: destinosVoluntario.length > 0,
     // Pedidos aguardando quem tem Escolástica/Economia — número no botão da Área do Voluntário.

@@ -2,6 +2,7 @@
 
 import { SeletorPessoas, type PessoaOpcao } from "@/components/grupos/seletor-pessoas";
 import { buscarCandidatos, buscarResponsaveis, criarGrupo, editarGrupo } from "@/lib/actions/grupos-actions";
+import { ehDeAlunos, type TipoDoPortal } from "@/lib/grupos-comum";
 import { Loader2 } from "lucide-react";
 import { useCallback, useState, useTransition } from "react";
 
@@ -22,6 +23,8 @@ const TEXTOS = {
   GAF: { titulo: "Novo GAF", nome: "Nome do GAF", exemploNome: "GAF de terça à noite", resp: "Coordenação", respAjuda: "Quem conduz os encontros (instrutor, dirigente).", integ: "Participantes" },
   SEC: { titulo: "Nova secretaria", nome: "Nome da secretaria", exemploNome: "Escolástica", resp: "Secretário(a) e pró-secretários", respAjuda: "Quem responde pela secretaria.", integ: "Equipe de voluntários" },
   GDVE: { titulo: "Novo GDVE", nome: "Nome do GDVE", exemploNome: "GDVE de quinta", resp: "Coordenação (além de você)", respAjuda: "Somente FV.", integ: "Participantes (somente FV)" },
+  ESTUDO: { titulo: "Novo grupo de estudo", nome: "Nome do grupo", exemploNome: "Estudo do Bhagavad Gita", resp: "Coordenação", respAjuda: "Quem conduz os encontros (instrutor, dirigente).", integ: "Participantes" },
+  LEITURA: { titulo: "Nova leitura comentada", nome: "Nome da leitura", exemploNome: "Leitura comentada de A Voz do Silêncio", resp: "Coordenação", respAjuda: "Quem conduz a leitura.", integ: "Participantes" },
 } as const;
 
 /**
@@ -37,7 +40,7 @@ export function FormGrupo({
   onSalvo,
   onCancelar,
 }: {
-  tipo: "GAF" | "SEC" | "GDVE";
+  tipo: TipoDoPortal;
   schoolId: string;
   grupoId?: string;
   inicial?: CamposIniciais;
@@ -122,17 +125,17 @@ export function FormGrupo({
         <textarea name="descricao" rows={2} maxLength={2000} defaultValue={inicial?.descricao ?? ""} className={CAMPO} />
       </label>
 
-      {tipo === "GAF" && (
+      {ehDeAlunos(tipo) && (
         <>
           <label className="flex items-start gap-2.5 rounded-lg border border-gray-200 p-3 text-[13px] text-gray-800 dark:border-gray-700 dark:text-gray-200">
             <input type="checkbox" checked={permiteAlunos} onChange={(e) => setPermiteAlunos(e.target.checked)} className="mt-0.5 h-4 w-4 accent-na-green" />
             <span>
               <strong>Alunos também podem participar</strong>
-              <span className="block text-[11px] text-gray-500 dark:text-gray-400">Desmarcado, o GAF é só para membros (2º nível em diante).</span>
+              <span className="block text-[11px] text-gray-500 dark:text-gray-400">Desmarcado, o grupo é só para membros (2º nível em diante).</span>
             </span>
           </label>
           <label className={ROTULO}>
-            Programa de estudos
+            {tipo === "LEITURA" ? "Obra e trechos" : "Programa de estudos"}
             <textarea
               name="programa"
               rows={4}
@@ -150,7 +153,7 @@ export function FormGrupo({
           <SeletorPessoas rotulo={t.resp} ajuda={t.respAjuda} buscar={buscarResp} selecionados={responsaveis} onChange={setResponsaveis} />
           <SeletorPessoas
             rotulo={t.integ}
-            ajuda={tipo === "GAF" ? (permiteAlunos ? "Membros e alunos ativos da filial." : "Membros ativos da filial (2º nível em diante).") : undefined}
+            ajuda={ehDeAlunos(tipo) ? (permiteAlunos ? "Membros e alunos ativos da filial." : "Membros ativos da filial (2º nível em diante).") : undefined}
             buscar={buscarInteg}
             selecionados={integrantes}
             onChange={setIntegrantes}

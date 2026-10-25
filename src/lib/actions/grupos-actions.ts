@@ -3,7 +3,7 @@
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { candidatoElegivel, ehFV, filtroCandidatos, papelNoGrupo, type TipoGrupo } from "@/lib/grupos-portal";
+import { candidatoElegivel, ehFV, filtroCandidatos, papelNoGrupo, podeCriarEstudo, TIPOS_DO_PORTAL, type TipoDoPortal, type TipoGrupo } from "@/lib/grupos-portal";
 import { consultarMercurio } from "@/lib/mercurio-db/client";
 import { podeAdministrar } from "@/lib/recursos-filial";
 import { sugerirSecretarias, type FuncaoMercurio } from "@/lib/secretarias";
@@ -103,12 +103,14 @@ function validarCampos(c: CamposGrupo) {
   };
 }
 
-export async function criarGrupo(input: CamposGrupo & { schoolId: string; tipo: "GAF" | "SEC" | "GDVE"; responsaveis: string[]; integrantes: string[] }) {
+export async function criarGrupo(input: CamposGrupo & { schoolId: string; tipo: TipoDoPortal; responsaveis: string[]; integrantes: string[] }) {
   return executar(async () => {
     const m = await eu();
     const tipo = input.tipo;
-    if (!["GAF", "SEC", "GDVE"].includes(tipo)) throw new GrupoErro("Tipo de grupo inválido.");
-    if (tipo === "GDVE") {
+    if (!(TIPOS_DO_PORTAL as readonly string[]).includes(tipo)) throw new GrupoErro("Tipo de grupo inválido.");
+    if (tipo === "ESTUDO" || tipo === "LEITURA") {
+      if (!(await podeCriarEstudo(m, input.schoolId))) throw new GrupoErro("Grupo de estudo e leitura comentada são criados por instrutores, direção, administração e Escolástica da filial.");
+    } else if (tipo === "GDVE") {
       if (m.schoolId !== input.schoolId || !(await ehFV(m.id)) || !(await temAcessoVoluntario(m))) throw new GrupoErro("O GDVE é criado por FV da própria filial.");
     } else if (!(await administra(m, input.schoolId))) throw new GrupoErro("Só a administração da filial cria GAF e secretarias.");
     const dados = validarCampos(input);
@@ -146,7 +148,7 @@ export async function arquivarGrupo(grupoId: string) {
   return executar(async () => {
     const { m, papel } = await exigirGestor(grupoId);
     if (papel.tipo !== "GDVE" && !(await administra(m, papel.schoolId))) throw new GrupoErro("Só a administração da filial encerra GAF e secretarias.");
-    if (!["GAF", "SEC", "GDVE"].includes(papel.tipo)) throw new GrupoErro("Grupos do Mercúrio não são encerrados pelo Portal.");
+    if (!(TIPOS_DO_PORTAL as readonly string[]).includes(papel.tipo)) throw new GrupoErro("Grupos do Mercúrio não são encerrados pelo Portal.");
     await db.classGroup.update({ where: { id: grupoId }, data: { arquivadoEm: new Date() } });
     atualizar(grupoId);
     return {};
@@ -174,7 +176,7 @@ export async function adicionarPessoas(grupoId: string, role: "professor" | "alu
 export async function removerPessoa(grupoId: string, role: "professor" | "aluno", memberId: string) {
   return executar(async () => {
     const { papel } = await exigirGestor(grupoId);
-    if (!["GAF", "SEC", "GDVE"].includes(papel.tipo)) throw new GrupoErro("A composição deste grupo vem do Mercúrio.");
+    if (!(TIPOS_DO_PORTAL as readonly string[]).includes(papel.tipo)) throw new GrupoErro("A composição deste grupo vem do Mercúrio.");
     if (role === "professor" && (await db.classMembership.count({ where: { classGroupId: grupoId, role: "professor" } })) <= 1)
       throw new GrupoErro("O grupo precisa de pelo menos um responsável.");
     await db.classMembership.deleteMany({ where: { classGroupId: grupoId, memberId, role } });
@@ -332,5 +334,22 @@ export async function criarSecretariasSugeridas(schoolId: string, nomes: string[
     }
     atualizar();
     return { criadas };
+  });
+}
+
+/**
+ * "Quero participar" do Portal do Aluno (pedido do usuário 2026-10-25): grupo de estudo e leitura
+ * comentada são abertos — a pessoa entra na hora, se o grupo aceita alguém como ela (candidatoElegivel).
+ */
+export async function entrarNoGrupoDeEstudo(grupoId: string) {
+  return executar(async () => {
+    const m = await eu();
+    const g = await db.classGroup.findUnique({ where: { id: grupoId }, select: { id: true, tipo: true, schoolId: true, permiteAlunos: true, arquivadoEm: true } });
+    if (!g || g.arquivadoEm || (g.tipo !== "ESTUDO" && g.tipo !== "LEITURA")) throw new GrupoErro("Este grupo não está aberto.");
+    const motivo = await candidatoElegivel(g.tipo, g.schoolId, g.permiteAlunos, m.id);
+    if (motivo) throw new GrupoErro(motivo);
+    await db.classMembership.createMany({ data: [{ classGroupId: g.id, memberId: m.id, role: "aluno" }], skipDuplicates: true });
+    atualizar(g.id);
+    return {};
   });
 }

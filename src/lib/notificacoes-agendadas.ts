@@ -2,6 +2,7 @@ import { comAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { db } from "@/lib/db";
 import { agendaUlissesBranchWhere, eventAudienceWhere, eventScopeWhere } from "@/lib/event-policy";
+import { TIPOS_DO_PORTAL, ehDeAlunos } from "@/lib/grupos-comum";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import { enviarPush } from "@/lib/push";
 import { Prisma } from "@prisma/client";
@@ -40,7 +41,7 @@ async function integrantes(grupo: { id: string; tipo: string }, cache: Map<strin
   if (pronto) return pronto;
   const vinculos = await db.classMembership.findMany({ where: { classGroupId: grupo.id, member: { mercurioAtivo: true } }, select: { memberId: true } });
   let ids = [...new Set(vinculos.map((v) => v.memberId))];
-  if (grupo.tipo !== "GAF") {
+  if (!ehDeAlunos(grupo.tipo)) {
     const liberados = await comAcessoVoluntario(ids);
     ids = ids.filter((id) => liberados.has(id));
   }
@@ -49,7 +50,7 @@ async function integrantes(grupo: { id: string; tipo: string }, cache: Map<strin
 }
 
 export async function avisosDeEncontros() {
-  const grupos = await db.classGroup.findMany({ where: { tipo: { in: ["GAF", "GDVE", "SEC"] }, arquivadoEm: null }, select: { id: true } });
+  const grupos = await db.classGroup.findMany({ where: { tipo: { in: [...TIPOS_DO_PORTAL] }, arquivadoEm: null }, select: { id: true } });
   const ids = grupos.map((g) => g.id);
   if (!ids.length) return { lembretes: 0, perguntas: 0 };
   await ensureGroupMeetingWindow(ids);

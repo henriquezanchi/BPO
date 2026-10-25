@@ -15,7 +15,7 @@ import {
   salvarAtividade,
 } from "@/lib/actions/grupos-actions";
 import type { DetalheGrupo } from "@/lib/grupos-dados";
-import { FREQUENCIAS, MODALIDADES, TIPOS_GRUPO } from "@/lib/grupos-comum";
+import { FREQUENCIAS, MODALIDADES, TIPOS_GRUPO, ehDeAlunos, type TipoDoPortal } from "@/lib/grupos-comum";
 import { CalendarClock, ExternalLink, ListChecks, Loader2, MapPin, Pencil, Plus, Trash2, Users, Video, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition, type ReactNode } from "react";
@@ -88,7 +88,7 @@ export function GrupoPainel({ dados, abaInicial, avisos, orientacoes }: { dados:
       {editando && (
         <section className={CARTAO}>
           <FormGrupo
-            tipo={grupo.tipo as "GAF" | "SEC" | "GDVE"}
+            tipo={grupo.tipo as TipoDoPortal}
             schoolId={grupo.schoolId}
             grupoId={grupo.id}
             inicial={{
@@ -183,7 +183,7 @@ function Sobre({ dados, recarregar }: { dados: D; recarregar: () => void }) {
       ) : (
         <p className="text-[12px] text-gray-500">Sem descrição.</p>
       )}
-      {grupo.tipo === "GAF" && (
+      {ehDeAlunos(grupo.tipo) && (
         <>
           <p className="mt-3 text-[12px] text-gray-600 dark:text-gray-400">
             {grupo.permiteAlunos ? "Aberto a membros e alunos." : "Só para membros (2º nível em diante)."}
@@ -236,7 +236,7 @@ function Equipe({ dados, recarregar }: { dados: D; recarregar: () => void }) {
   const rotulos =
     grupo.tipo === "SEC"
       ? ["Responsáveis", "Equipe de voluntários"]
-      : grupo.tipo === "GAF" || grupo.tipo === "GDVE"
+      : ehDeAlunos(grupo.tipo) || grupo.tipo === "GDVE"
         ? ["Coordenação", "Participantes"]
         : ["Responsáveis", "Integrantes"];
 

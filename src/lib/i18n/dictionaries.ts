@@ -37,6 +37,7 @@ export interface Dictionary {
     voluntariado: string;
     ajuda: string;
     gaf: string;
+    grupos_estudo: string;
     jornada: string;
     transparencia: string;
   };
@@ -98,6 +99,7 @@ const pt: Dictionary = {
     voluntariado: "Voluntariado",
     ajuda: "Central de Ajuda",
     gaf: "Conhecer o GAF",
+    grupos_estudo: "Grupos de estudo e leituras",
     transparencia: "Transparência Financeira",
     jornada: "Minha Jornada",
   },
@@ -170,6 +172,7 @@ const en: Dictionary = {
     voluntariado: "Volunteering",
     ajuda: "Help Center",
     gaf: "Learn about GAF",
+    grupos_estudo: "Study groups",
     transparencia: "Financial Transparency",
     jornada: "My Journey",
   },

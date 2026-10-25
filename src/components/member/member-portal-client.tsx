@@ -9,6 +9,7 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { MemberDashboard } from "@/lib/member-data";
 import {
   BookOpen,
+  BookOpenText,
   CalendarCheck,
   CheckCircle2,
   ClipboardCheck,
@@ -41,6 +42,7 @@ import { ProfileEditPanel } from "./panels/profile-edit-panel";
 import { StudyAreaPanel } from "./panels/study-area-panel";
 import { TransparenciaPanel } from "./panels/transparencia-panel";
 import { GafPanel, HelpPanel, VolunteerPanel } from "./misc-panels";
+import { GruposEstudoPanel } from "./grupos-estudo-panel";
 import { useAgendaComUlisses } from "@/lib/ulisses/navegador";
 import { AvisosGrupos } from "./avisos-grupos";
 
@@ -54,6 +56,7 @@ type ModalKey =
   | "voluntariado"
   | "ajuda"
   | "gaf"
+  | "grupos_estudo"
   | "jornada"
   | "transparencia";
 
@@ -292,6 +295,14 @@ export function MemberPortalClient({ dashboard, eventoId }: { dashboard: MemberD
           {(dashboard.recursos.gaf || dashboard.meusGafs.length > 0) && (
             <FeatureTile icon={<UsersRound size={16} />} title={t.tiles.gaf.title} subtitle={dashboard.meusGafs.length ? dashboard.meusGafs.map((g) => g.nome).join(", ") : t.tiles.gaf.subtitle} onClick={() => setModal("gaf")} />
           )}
+          {dashboard.gruposDeEstudo.length > 0 && (
+            <FeatureTile
+              icon={<BookOpenText size={16} />}
+              title="Grupos de estudo"
+              subtitle={dashboard.gruposDeEstudo.some((g) => g.participo) ? dashboard.gruposDeEstudo.filter((g) => g.participo).map((g) => g.nome).join(", ") : "Estudos e leituras comentadas abertos"}
+              onClick={() => setModal("grupos_estudo")}
+            />
+          )}
           <FeatureTile icon={<LifeBuoy size={16} />} title={t.tiles.ajuda.title} subtitle={t.tiles.ajuda.subtitle} onClick={() => setModal("ajuda")} />
           <FeatureTile
             icon={<Compass size={16} />}
@@ -376,6 +387,7 @@ export function MemberPortalClient({ dashboard, eventoId }: { dashboard: MemberD
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}
           {modal === "gaf" && <GafPanel memberId={member.id} gafs={dashboard.meusGafs} />}
+          {modal === "grupos_estudo" && <GruposEstudoPanel grupos={dashboard.gruposDeEstudo} />}
           {modal === "jornada" && (
             <JornadaPanel
               dataEntrada={member.dataEntradaEscola}

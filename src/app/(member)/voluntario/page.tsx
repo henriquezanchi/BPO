@@ -18,6 +18,7 @@ const SECOES: { titulo: string; tipos: ResumoGrupo["tipo"][] }[] = [
   { titulo: "Grupos de FV", tipos: ["BF", "BM", "CS"] },
   { titulo: "GDVE", tipos: ["GDVE"] },
   { titulo: "GAF", tipos: ["GAF"] },
+  { titulo: "Grupos de estudo e leituras", tipos: ["ESTUDO", "LEITURA"] },
 ];
 
 /**
