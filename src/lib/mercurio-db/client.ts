@@ -106,6 +106,12 @@ function lerTabela(html: string): Linha[] {
     );
 }
 
+/** Colunas da view `cadastro` (desde 24/10/2026 uma view mantida pelo João Guilherme, que pode não ter todas). */
+export async function colunasDoCadastro(): Promise<Set<string>> {
+  const linhas = await consultarMercurio("SHOW COLUMNS FROM cadastro");
+  return new Set(linhas.map((l) => l.Field ?? Object.values(l)[0] ?? ""));
+}
+
 /** Roda um SELECT e devolve as linhas (todos os valores como texto, NULL como null). Máx. 5000 linhas por chamada. */
 export async function consultarMercurio(sql: string, tentativa = 0): Promise<Linha[]> {
   const s = sessao && Date.now() - sessao.criadaEm < VALIDADE_SESSAO_MS ? sessao : await abrirSessao();

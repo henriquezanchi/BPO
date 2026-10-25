@@ -14,7 +14,18 @@ export const dynamic = "force-dynamic";
 export default async function AcessosVoluntarioPage() {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/voluntario/acessos");
-  if (!(await temAcessoVoluntario(member))) redirect("/voluntario");
+  // Responsável por grupo sem acesso liberado vê o link no menu: explica em vez de voltar ao Início.
+  if (!(await temAcessoVoluntario(member)))
+    return (
+      <ShellTrabalho largura="estreita">
+        <div>
+          <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Liberar acessos</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            A liberação é feita em camadas: o Chefe de Filial libera primeiro os responsáveis pelos grupos, e depois cada responsável libera os integrantes do seu grupo. Seu acesso ainda não foi liberado; peça ao Chefe de Filial.
+          </p>
+        </div>
+      </ShellTrabalho>
+    );
 
   const pessoas = await candidatosParaLiberar(member);
   const nacional = await ehAdministradorNacional(member);

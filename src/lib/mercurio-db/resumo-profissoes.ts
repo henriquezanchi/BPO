@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import { consultarMercurio } from "@/lib/mercurio-db/client";
+import { colunasDoCadastro, consultarMercurio } from "@/lib/mercurio-db/client";
 import { chaveDeGenero, classificarProfissao, normalizar, rotuloDeProfissao, type Area } from "@/lib/profissoes";
 
 /**
@@ -49,10 +49,12 @@ async function consultarEmPaginas(sql: string, tamanho = 4000): Promise<Linha[]>
 }
 
 export async function gerarResumoProfissoes(): Promise<ResumoProfissoes> {
+  // cad_empresa (só desempata a área) ficou fora da view de 24/10/2026: sem ela, classifica só pela profissão.
+  const empresa = (await colunasDoCadastro()).has("cad_empresa") ? "UPPER(TRIM(IFNULL(cad_empresa, '')))" : "''";
   const [unidades, linhas] = await Promise.all([
     consultarMercurio("SELECT uni_id, uni_nome, uni_cidade, uni_uf, uni_regiao FROM unidades"),
     consultarEmPaginas(
-      "SELECT cad_unidade u, IF(cad_nivel REGEXP '^N[2-9]$', 1, 0) m, UPPER(TRIM(IFNULL(cad_profissao, ''))) p, UPPER(TRIM(IFNULL(cad_empresa, ''))) e, COUNT(*) n FROM cadastro WHERE cad_situacao='ATI' GROUP BY u, m, p, e ORDER BY u, m, p, e",
+      `SELECT cad_unidade u, IF(cad_nivel REGEXP '^N[2-9]$', 1, 0) m, UPPER(TRIM(IFNULL(cad_profissao, ''))) p, ${empresa} e, COUNT(*) n FROM cadastro WHERE cad_situacao='ATI' GROUP BY u, m, p, e ORDER BY u, m, p, e`,
     ),
   ]);
 

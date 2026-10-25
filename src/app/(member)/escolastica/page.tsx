@@ -15,17 +15,25 @@ export const dynamic = "force-dynamic";
  * Portal e a direção (areas-filial.ts).
  */
 export default async function EscolasticaPage(props: { searchParams: Promise<{ aba?: string }> }) {
-  if((await props.searchParams).aba==='orientacoes')return <ShellTrabalho><AreaSecretaria secretaria="Escolástica"/></ShellTrabalho>;
-  const member = await exigirArea("escolastica", "/escolastica");
   const { aba = "pendencias" } = await props.searchParams;
+  const cabecalho = (
+    <>
+      <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
+      <AbasArea base="/escolastica" atual={aba} abas={ABAS_ESCOLASTICA} />
+    </>
+  );
+  // "Orientações e gestão" tem controle de acesso próprio (administração nacional/regional também entra).
+  if (aba === "orientacoes")
+    return (
+      <ShellTrabalho>
+        {cabecalho}
+        <AreaSecretaria secretaria="Escolástica" />
+      </ShellTrabalho>
+    );
+  const member = await exigirArea("escolastica", "/escolastica");
   return (
     <ShellTrabalho>
-      <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
-      <AbasArea
-        base="/escolastica"
-        atual={aba}
-        abas={[...ABAS_ESCOLASTICA,["orientacoes", "Orientações e gestão"]]}
-      />
+      {cabecalho}
       {aba === "membros" ? (
         <MembrosEscolastica schoolId={member.schoolId} data={await getDirectorDashboard(member.schoolId)} />
       ) : (

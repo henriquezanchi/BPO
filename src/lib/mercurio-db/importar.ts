@@ -104,7 +104,7 @@ export async function garantirEscola(uniId: string, opcoes: { portalAberto?: boo
  * (rodada diária — não cria cadastro de quem nunca entrou no Portal).
  */
 /** Colunas de `cadastro` que a sincronização lê (conferidas antes de gravar). */
-const COLUNAS_CADASTRO = ["cad_2o_nivel", "cad_cel_ddd", "cad_cel_fone", "cad_dirigente", "cad_email", "cad_escolaridade", "cad_estado_civil", "cad_ingresso", "cad_machado", "cad_matr", "cad_nascimento", "cad_naturalidade", "cad_nivel", "cad_nome", "cad_orgao_expedidor", "cad_pedagogo", "cad_profissao", "cad_raio_fv", "cad_res_bairro", "cad_res_cep", "cad_res_cidade", "cad_res_ddd", "cad_res_fone", "cad_res_logradouro", "cad_res_uf", "cad_rg", "cad_rg_emissao", "cad_situacao", "cad_situacao_fv", "cad_tur_unidade", "cad_turma", "cad_unidade"];
+const COLUNAS_CADASTRO = ["cad_2o_nivel", "cad_cel_ddd", "cad_cel_fone", "cad_email", "cad_escolaridade", "cad_estado_civil", "cad_ingresso", "cad_machado", "cad_matr", "cad_nascimento", "cad_naturalidade", "cad_nivel", "cad_nome", "cad_orgao_expedidor", "cad_profissao", "cad_raio_fv", "cad_res_bairro", "cad_res_cep", "cad_res_cidade", "cad_res_ddd", "cad_res_fone", "cad_res_logradouro", "cad_res_uf", "cad_rg", "cad_rg_emissao", "cad_situacao", "cad_situacao_fv", "cad_tur_unidade", "cad_turma", "cad_unidade"];
 
 export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: string[]; ano?: number } = {}) {
   const school = await garantirEscola(uniId);
@@ -119,6 +119,10 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   // sem todas as colunas usadas abaixo, a sincronização para em vez de gravar.
   const faltando = cadastros.length ? COLUNAS_CADASTRO.filter((c) => !(c in cadastros[0])) : [];
   if (faltando.length) throw new Error(`A view "cadastro" do Mercúrio está sem as colunas ${faltando.join(", ")}. Peça ao João Guilherme para incluí-las; nada foi gravado.`);
+  // cad_dirigente e cad_pedagogo ficaram fora da view de 24/10/2026: sem elas, o Portal mantém o
+  // que já tinha (dirigente) ou só acrescenta (instrutor de turma ativa), sem apagar.
+  const temDirigente = !cadastros.length || "cad_dirigente" in cadastros[0];
+  const temPedagogo = !cadastros.length || "cad_pedagogo" in cadastros[0];
 
   const conhecidos = new Set(
     (await db.member.findMany({ where: { mercurioId: { in: cadastros.map((c) => c.cad_matr!) } }, select: { mercurioId: true } })).map((m) => m.mercurioId),
@@ -128,10 +132,30 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
 
   const lista = alvo.map((c) => sqlNumero(c.cad_matr!)).join(",");
   const [unidade] = await consultarMercurio(`SELECT uni_diretor, uni_subchefe FROM unidades WHERE uni_id=${sqlTexto(uniId)}`);
-  const fichas = await consultarTudo(`SELECT fic_matr, fic_mes, fic_status, fic_recibo, fic_datapg FROM fichas WHERE fic_ano=${sqlNumero(ano)} AND fic_matr IN (${lista}) ORDER BY fic_matr, fic_mes`);
+  const fichasCopia = await consultarTudo(`SELECT fic_matr, fic_mes, fic_status, fic_recibo, fic_datapg FROM fichas WHERE fic_ano=${sqlNumero(ano)} AND fic_matr IN (${lista}) ORDER BY fic_matr, fic_mes`);
   const composicao = await consultarTudo(
     `SELECT c.cal_matr, c.cal_grupo, c.cal_valor, p.pro_descricao FROM compaluno c LEFT JOIN produtos p ON p.pro_cod=c.cal_grupo WHERE c.cal_unidade=${sqlTexto(uniId)} AND c.cal_matr IN (${lista}) ORDER BY c.cal_matr`,
   );
+  // `fichas` ainda é cópia (última carga em 17/10/2026), mas reciboc/reciboi viraram views online
+  // em 24/10/2026: mês com recibo válido de item da composição conta como pago, mesmo que a cópia
+  // ainda diga "em branco" (sem isso, a sincronização de 25/10 desfez pagamentos de outubro).
+  const recibosOnline = await consultarTudo(
+    `SELECT i.rei_matr, i.rei_mes, i.rei_produto, r.rec_id, r.rec_data, p.pro_descricao FROM reciboi i JOIN reciboc r ON r.rec_id=i.rei_id LEFT JOIN produtos p ON p.pro_cod=i.rei_produto WHERE i.rei_ano=${sqlNumero(ano)} AND i.rei_matr IN (${lista}) AND r.rec_status<>'CAN' AND (r.rec_data_cancel IS NULL OR r.rec_data_cancel < '1900-01-01') ORDER BY r.rec_data, r.rec_id`,
+  );
+  const composicaoDe = new Map<string, Set<string>>();
+  for (const c of composicao) composicaoDe.set(c.cal_matr!, (composicaoDe.get(c.cal_matr!) ?? new Set<string>()).add(c.cal_grupo ?? ""));
+  const pagoOnline = new Map<string, Linha>();
+  for (const r of recibosOnline) {
+    const itens = composicaoDe.get(r.rei_matr!);
+    if (itens?.size ? itens.has(r.rei_produto ?? "") : /^CONTRIBUI/i.test(r.pro_descricao ?? "")) pagoOnline.set(`${r.rei_matr}-${Number(r.rei_mes)}`, r);
+  }
+  const fichas: Linha[] = fichasCopia.map((f) => {
+    const r = pagoOnline.get(`${f.fic_matr}-${Number(f.fic_mes)}`);
+    return r && f.fic_status !== "PAG" ? { ...f, fic_status: "PAG", fic_recibo: r.rec_id, fic_datapg: r.rec_data } : f;
+  });
+  const naCopia = new Set(fichas.map((f) => `${f.fic_matr}-${Number(f.fic_mes)}`));
+  for (const [chave, r] of pagoOnline)
+    if (!naCopia.has(chave)) fichas.push({ fic_matr: r.rei_matr, fic_mes: String(Number(r.rei_mes)), fic_status: "PAG", fic_recibo: r.rec_id, fic_datapg: r.rec_data });
   const funcoes = await consultarTudo(`SELECT dfn_matr, dfn_funcao, dfn_descricao FROM dirigente_funcoes WHERE dfn_atual='S' AND dfn_matr IN (${lista}) ORDER BY dfn_matr`);
   // Filiais que cada pessoa chefia (pode ser mais de uma, e de outra unidade).
   const chefiadasPor = new Map<string, string[]>();
@@ -260,8 +284,9 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
       mercurioAtivo: true,
       mercurioAtivoSync: new Date(),
       // Quem dá aula numa turma ativa também é instrutor (acesso a "Minhas Turmas"), mesmo sem o campo de pedagogo preenchido.
-      isPedagogo: textoOuNull(c.cad_pedagogo) !== null || (aulasPor.get(matr) ?? []).length > 0,
-      pedagogoSyncedAt: new Date(),
+      ...(temPedagogo || aulasPor.get(matr)?.length
+        ? { isPedagogo: textoOuNull(c.cad_pedagogo) !== null || (aulasPor.get(matr) ?? []).length > 0, pedagogoSyncedAt: new Date() }
+        : {}),
       isDiretor,
       filiaisChefiadas,
       isSubChefe,
@@ -279,7 +304,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
       // Público dos eventos (2026-10-19).
       nivel: nivel || null,
       isHD: c.cad_machado === "HDA" || c.cad_machado === "HDR",
-      isDirigente: c.cad_dirigente === "S",
+      ...(temDirigente ? { isDirigente: c.cad_dirigente === "S" } : {}),
       isFV: c.cad_situacao_fv === "BRG",
       emProvacionismo: c.cad_situacao_fv === "PRO",
       perfilGruposSyncedAt: new Date(),
@@ -292,8 +317,13 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     });
 
     const meses = fichasPor.get(matr) ?? [];
+    // Pago pelo Portal (Asaas) e ainda não lançado no Mercúrio: não volta a "em aberto".
+    const pagoNoPortal = new Set(
+      (await db.contributionMonthlyStatus.findMany({ where: { memberId: member.id, year: ano, status: "paga", mercurioRecId: null }, select: { month: true } })).map((s) => s.month),
+    );
     for (const f of meses) {
       const status = STATUS_FICHA[f.fic_status ?? ""] ?? "em_branco";
+      if (status !== "paga" && pagoNoPortal.has(Number(f.fic_mes))) continue;
       const paga = dataOuNull(f.fic_datapg);
       const d = {
         status,

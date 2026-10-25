@@ -119,3 +119,11 @@ Segunda rodada do mesmo dia (pedidos do usuário: conexão pelo controle remoto,
 - **Margem de segurança** (overscan das TVs): nada importante a menos de ~5% da borda; rodapé numa linha (filial com reticências; data só no rodapé de largura total). Conferido por medição automática em 1920×1080, 1366×768, 1919×909, 1080×1920 e 768×1366.
 - Migração aditiva `20261024210000_telas_conteudos_conexao` aplicada e registrada (autorizada pelo usuário): `conteudos`, `orientacao`, tabelas `TelaCartao` e `TvConexao` com RLS. "TV de pátio" ligada a matrículas, frase, avisos, apoio, redes e programação.
 - Gestão logada (aba Telas, `/tv/conectar`) verificada só por tipos/lint: não há conta de teste. A ligação TV↔tela foi testada de ponta a ponta simulando a ação no banco.
+
+## 26. Claude — Mercúrio por views, liberação de acessos e abas da Escolástica (25/10/2026)
+
+- **Importação do Mercúrio com as views novas** (`mercurio-db/importar.ts`, `client.ts`, `resumo-filial.ts`, `resumo-profissoes.ts`): a view `cadastro` está sem `cad_dirigente`, `cad_pedagogo` e `cad_empresa`. Sem elas, a importação mantém dirigente/pedagogo do Portal (só acrescenta instrutor de turma ativa), o resumo conta dirigentes pelo Portal e profissões ignoram a empresa. `colunasDoCadastro()` detecta quando voltarem.
+- **Regressão corrigida:** `fichas` ainda é cópia de 17/10. Agora o mês com recibo online válido de item da composição conta como pago (recibos `reciboc`/`reciboi` são views ao vivo), e mês pago pelo Portal sem recibo do Mercúrio não é rebaixado. Todas as filiais reimportadas.
+- **Liberar acessos** (`voluntario/acessos/page.tsx`): responsável por grupo sem acesso próprio via o link no menu e voltava ao Início; agora a página explica que o Chefe de Filial libera primeiro.
+- **Escolástica:** "Orientações e gestão" entrou em `ABAS_ESCOLASTICA` (aparece também na Avaliação dos instrutores) e ganhou título e abas; continua com o controle de acesso próprio de `AreaSecretaria` (nacional/regional entram sem a área da filial).
+

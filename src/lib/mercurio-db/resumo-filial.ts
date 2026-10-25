@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { consultarMercurio, sqlTexto } from "./client";
+import { colunasDoCadastro, consultarMercurio, sqlTexto } from "./client";
 
 /**
  * Resumo diário da filial pro Relatório do Painel do Diretor (pedido do
@@ -59,12 +59,14 @@ export async function gerarResumoFilial(uniId: string, schoolId: string): Promis
   const mesStr = (a: number, m: number) => `${a}-${String(m).padStart(2, "0")}`;
   const inicio12 = new Date(Date.UTC(ano, mes - 12, 1)).toISOString().slice(0, 10);
   const mesAnterior = mes === 1 ? mesStr(ano - 1, 12) : mesStr(ano, mes - 1);
+  // Sem cad_dirigente na view (desde 24/10/2026), conta os dirigentes que o Portal já conhece.
+  const dirigentesNoMercurio = (await colunasDoCadastro()).has("cad_dirigente");
 
   const [atualizacao, niveis, fvPro, hdDir, entradas, saidas, segundo, motivos, aniversariantes, fichasMes, atrasos, receita, turmas] = await Promise.all([
     consultarMercurio("SELECT MAX(data) d FROM `atualização`").catch(() => [{ d: null }]),
     consultarMercurio(`SELECT cad_nivel, COUNT(*) n FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u} GROUP BY cad_nivel`),
     consultarMercurio(`SELECT cad_situacao_fv, COUNT(*) n FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u} AND cad_situacao_fv IN ('BRG','PRO') GROUP BY cad_situacao_fv`),
-    consultarMercurio(`SELECT SUM(cad_machado IN ('HDA','HDR')) hd, SUM(cad_dirigente='S') dir FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u}`),
+    consultarMercurio(`SELECT SUM(cad_machado IN ('HDA','HDR')) hd, ${dirigentesNoMercurio ? "SUM(cad_dirigente='S')" : "NULL"} dir FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u}`),
     consultarMercurio(`SELECT DATE_FORMAT(cad_ingresso,'%Y-%m') m, COUNT(*) n FROM cadastro WHERE cad_unidade=${u} AND cad_ingresso >= '${inicio12}' GROUP BY m`),
     consultarMercurio(`SELECT DATE_FORMAT(cad_baixa,'%Y-%m') m, COUNT(*) n FROM cadastro WHERE cad_unidade=${u} AND cad_situacao='INA' AND cad_baixa >= '${inicio12}' GROUP BY m`),
     consultarMercurio(`SELECT DATE_FORMAT(cad_2o_nivel,'%Y-%m') m, COUNT(*) n FROM cadastro WHERE cad_unidade=${u} AND cad_2o_nivel >= '${inicio12}' GROUP BY m`),
@@ -110,7 +112,7 @@ export async function gerarResumoFilial(uniId: string, schoolId: string): Promis
       fv: n(fvPro.find((x) => x.cad_situacao_fv === "BRG")?.n),
       provacionistas: n(fvPro.find((x) => x.cad_situacao_fv === "PRO")?.n),
       hd: n(hdDir[0]?.hd),
-      dirigentes: n(hdDir[0]?.dir),
+      dirigentes: dirigentesNoMercurio ? n(hdDir[0]?.dir) : await db.member.count({ where: { schoolId, mercurioAtivo: true, isDirigente: true } }),
     },
     movimento: {
       meses: meses.map((m) => ({ mes: m, entradas: mEnt.get(m) ?? 0, saidas: mSai.get(m) ?? 0, segundoNivel: mSeg.get(m) ?? 0 })),
