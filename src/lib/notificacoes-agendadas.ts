@@ -1,5 +1,6 @@
 import { comAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
+import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { agendaUlissesBranchWhere, eventAudienceWhere, eventScopeWhere } from "@/lib/event-policy";
 import { TIPOS_DO_PORTAL, ehDeAlunos } from "@/lib/grupos-comum";
@@ -348,4 +349,27 @@ export async function avisosDeEventosInscritos() {
     if (r.aparelhos) enviados++;
   }
   return enviados;
+}
+
+// ───────────────────────── Conversas individuais com o instrutor ─────────────────────────
+// Pedido do usuário 2026-10-25: aviso para o aluno e o instrutor 2 h antes (cada conversa, uma vez).
+
+export async function avisosDeAtendimentos() {
+  const agora = new Date();
+  const proximas = await db.atendimentoReserva.findMany({
+    where: { status: "marcada", lembreteEnviadoEm: null, alunoId: { not: null }, inicio: { gt: agora, lte: new Date(agora.getTime() + 120 * MIN) } },
+    include: { aluno: { select: { name: true } }, instrutor: { select: { name: true, school: { select: { uf: true } } } } },
+  });
+  let pessoas = 0;
+  for (const r of proximas) {
+    const marcado = await db.atendimentoReserva.updateMany({ where: { id: r.id, lembreteEnviadoEm: null }, data: { lembreteEnviadoEm: agora } });
+    if (!marcado.count) continue;
+    const hora = r.inicio.toLocaleTimeString("pt-BR", { timeZone: fusoDaEscola(r.instrutor.school.uf), hour: "2-digit", minute: "2-digit" });
+    const onde = r.modalidade === "online" ? (r.linkOnline ? "Online: toque para entrar." : "Online.") : r.local ? `Local: ${r.local}.` : "Na escola.";
+    const nome = (n: string) => n.split(" ").slice(0, 2).join(" ");
+    const a = await enviarPush([r.alunoId!], { titulo: `Conversa com ${nome(r.instrutor.name)} às ${hora}`, corpo: onde, url: r.modalidade === "online" && r.linkOnline ? r.linkOnline : "/atendimentos", etiqueta: `atendimento-${r.id}` });
+    const i = await enviarPush([r.instrutorId], { titulo: `Conversa com ${nome(r.aluno?.name ?? "aluno")} às ${hora}`, corpo: r.assunto ? `Assunto: ${r.assunto.slice(0, 120)}` : onde, url: "/professor/atendimentos", etiqueta: `atendimento-${r.id}` });
+    pessoas += a.pessoas + i.pessoas;
+  }
+  return { conversas: proximas.length, pessoas };
 }

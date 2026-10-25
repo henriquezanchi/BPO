@@ -186,12 +186,17 @@ model School {
   scholasticPendencies ScholasticPendency[]
   financialSnapshots FinancialSnapshot[]
   matriculasOnline MatriculaOnline[]
+  atendimentoJanelas AtendimentoJanela[]
+  atendimentoReservas AtendimentoReserva[]
 }
 
 model Member {
   acropolePlayAccess AcropolePlayAccess?
   meetingSeriesCreated GroupMeetingSeries[]
   groupMeetingsCreated GroupMeeting[] @relation("MeetingCreator")
+  atendimentoJanelas AtendimentoJanela[] @relation("AtendimentoJanelaInstrutor")
+  atendimentosComoInstrutor AtendimentoReserva[] @relation("AtendimentoReservaInstrutor")
+  atendimentosComoAluno AtendimentoReserva[] @relation("AtendimentoReservaAluno")
   meetingResponses GroupMeetingResponse[]
   meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
   pushSubscriptions PushSubscription[]
@@ -2032,3 +2037,59 @@ model MatriculaOnline {
   @@index([schoolId, status])
 }
 
+/// Atendimentos individuais com o instrutor (pedido do usuário 2026-10-25): faixas de horário que o instrutor abre
+/// (semanal por diaSemana, ou avulsa por data "YYYY-MM-DD"), fatiadas em conversas de duracaoMinutos. Horários no fuso da filial.
+model AtendimentoJanela {
+  id             String   @id @default(cuid())
+  schoolId       String
+  instrutorId    String
+  diaSemana      Int?
+  data           String?
+  inicioMinuto   Int
+  fimMinuto      Int
+  duracaoMinutos Int      @default(30)
+  modalidade     String   @default("presencial") // presencial | online | ambos
+  local          String?
+  linkOnline     String?
+  datasFechadas  String[] @default([])
+  ativa          Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+  school         School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  instrutor      Member   @relation("AtendimentoJanelaInstrutor", fields: [instrutorId], references: [id], onDelete: Cascade)
+  reservas       AtendimentoReserva[]
+
+  @@index([instrutorId])
+  @@index([schoolId])
+}
+
+/// Conversa marcada (status marcada | realizada | faltou | cancelada) ou horário fechado pelo instrutor (status bloqueio, sem aluno).
+/// Índice único parcial (instrutorId, inicio) WHERE status IN ('marcada','bloqueio') está só na migração.
+model AtendimentoReserva {
+  id                 String             @id @default(cuid())
+  schoolId           String
+  instrutorId        String
+  alunoId            String?
+  janelaId           String?
+  inicio             DateTime
+  fim                DateTime
+  modalidade         String             @default("presencial")
+  local              String?
+  linkOnline         String?
+  assunto            String?
+  status             String             @default("marcada")
+  canceladoPor       String? // aluno | instrutor
+  motivoCancelamento String?
+  canceladoEm        DateTime?
+  lembreteEnviadoEm  DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @default(now()) @updatedAt
+  school             School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  instrutor          Member             @relation("AtendimentoReservaInstrutor", fields: [instrutorId], references: [id], onDelete: Cascade)
+  aluno              Member?            @relation("AtendimentoReservaAluno", fields: [alunoId], references: [id], onDelete: Cascade)
+  janela             AtendimentoJanela? @relation(fields: [janelaId], references: [id])
+
+  @@index([instrutorId, inicio])
+  @@index([alunoId, inicio])
+  @@index([schoolId, inicio])
+}

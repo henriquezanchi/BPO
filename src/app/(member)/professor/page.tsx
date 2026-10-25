@@ -34,6 +34,7 @@ export default async function ProfessorPage() {
           >
             Diário de Classe <ExternalLink size={12} />
           </a>
+          <Link href="/professor/atendimentos" className="flex w-fit items-center gap-1.5 rounded-lg bg-na-green px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-na-green-dark">Atendimentos individuais</Link>
           <a href="https://www.oinabn.com.br/orpheu" target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Orpheu <ExternalLink size={12} /></a></div>
         )}
       </div>

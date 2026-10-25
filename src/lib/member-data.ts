@@ -7,6 +7,7 @@ import { BADGE_CATALOG, calcularStreakMeses, verificarEAtribuirConquistas } from
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { filiaisAdministradas, recursosDaFilial } from "@/lib/recursos-filial";
 import { avaliacaoPendente } from "@/lib/avaliacao";
+import { instrutoresParaAtendimento } from "@/lib/atendimentos";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
@@ -103,6 +104,8 @@ export type AgendaItem =
       className: string;
       reactions: AgendaReactionSummary[];
     }
+  // Conversa individual com o instrutor (pedido do usuário 2026-10-25); aparece para o aluno e para o instrutor.
+  | { kind: "atendimento"; id: string; title: string; date: Date; endsAt: Date; papel: "aluno" | "instrutor"; comQuem: string; modalidade: string; local: string | null; linkOnline: string | null; assunto: string | null }
   | {
       kind: "enquete";
       id: string;
@@ -243,6 +246,15 @@ export async function getMemberDashboard(memberId: string) {
     select:{id:true,title:true,startsAt:true,endsAt:true,publicDetails:true,fullUniform:true,status:true,cancellationReason:true,version:true,classGroup:{select:{name:true}},responses:{where:{memberId},select:{response:true}}},
   }) : [];
 
+  const [atendimentos, instrutoresDisponiveis] = await Promise.all([
+    db.atendimentoReserva.findMany({
+      where: { status: "marcada", fim: { gte: new Date() }, OR: [{ alunoId: memberId }, { instrutorId: memberId }] },
+      select: { id: true, inicio: true, fim: true, alunoId: true, modalidade: true, local: true, linkOnline: true, assunto: true, aluno: { select: { name: true } }, instrutor: { select: { name: true } } },
+      orderBy: { inicio: "asc" },
+    }),
+    member.mercurioAtivo ? instrutoresParaAtendimento(memberId).catch(() => []) : Promise.resolve([]),
+  ]);
+
   // Reações de emoji (ver toggleAgendaReaction) — 1 query só pros dois
   // tipos de item, agregada localmente em vez de N queries por card.
   const reacoesGravadas = await db.agendaReaction.findMany({
@@ -346,6 +358,11 @@ export async function getMemberDashboard(memberId: string) {
         reactions: resumoReacoes(a.id),
       }),
     ),
+    ...atendimentos.map((r): AgendaItem => {
+      const papel = r.alunoId === memberId ? "aluno" : "instrutor";
+      const comQuem = papel === "aluno" ? r.instrutor.name : (r.aluno?.name ?? "");
+      return { kind: "atendimento", id: r.id, title: `Conversa com ${comQuem.split(" ").slice(0, 2).join(" ")}`, date: r.inicio, endsAt: r.fim, papel, comQuem, modalidade: r.modalidade, local: r.local, linkOnline: r.linkOnline, assunto: papel === "instrutor" ? r.assunto : null };
+    }),
     ...classPolls.map(
       (p): AgendaItem => ({
         kind: "enquete",
@@ -386,6 +403,7 @@ export async function getMemberDashboard(memberId: string) {
     walletBalance: Number(walletAgg._sum.amount ?? 0),
     fortunaBalances,
     agendaItems,
+    podeMarcarAtendimento: instrutoresDisponiveis.length > 0,
     avisosGrupos,
     // Também decide o rótulo "Portal do Membro" x "Portal do Aluno" no topo do Portal.
     // Biblioteca (bastião) só para membros — 2º nível em diante, mesma regra do público "Membros" dos eventos;

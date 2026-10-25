@@ -168,3 +168,7 @@ Erro reproduzido: `/escolastica` falhava com `ABAS_ESCOLASTICA is not iterable`.
 ## Site de matrículas — onde fica o link (25/10/2026)
 
 Cada abertura tem um link público `/matricula/<token>` (Fase 1, bloco 48 da COORDENACAO). O link aparece numa faixa verde "Link de matrícula" com **Abrir** e **Copiar link** em dois lugares: no cartão da abertura (Aberturas de Turmas → Suas aberturas) e no detalhe da abertura selecionada (Planejamento). Para fechar ou reabrir: Editar parâmetros → "Matrículas pelo site". A página pública não mostra a sala (pedido do usuário). Detalhes no bloco 49.
+
+## Atendimentos individuais com o instrutor (25/10/2026)
+
+Instrutor: Instrutor → "Atendimentos individuais" (`/professor/atendimentos`) abre faixas de horário. Aluno: Agenda → "Conversar com meu instrutor" (`/atendimentos`). Direção/Escolástica/nacional: Escolástica → "Atendimentos dos instrutores". Horários no fuso da filial (UF). Detalhes, tabelas e regras no bloco 50 da COORDENACAO. Para rodar os testes e comparar com a linha de base: `npx tsx --experimental-test-module-mocks --test tests/*.test.ts tests/*.test.mjs` (30 falhas antigas).

@@ -14,7 +14,7 @@ import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
-import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper, Ticket, Users, UtensilsCrossed } from "lucide-react";
+import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, MessagesSquare, PartyPopper, Ticket, Users, UtensilsCrossed, Video } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
 
@@ -42,6 +42,7 @@ const COR_PONTO: Record<AgendaItem["kind"], string> = {
   evento: "bg-na-gold",
   atividade: "bg-na-green",
   enquete: "bg-na-turquesa",
+  atendimento: "bg-na-green-dark",
 };
 
 /**
@@ -395,6 +396,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
     {item.status==='cancelada'?<p>Reunião cancelada: {item.cancellationReason}</p>:<><p>Comparecimento obrigatório. Se não puder participar, registre uma justificativa.</p>{item.fullUniform&&<p className="font-semibold">CRM com traje completo</p>}{item.description&&<p>{item.description}</p>}<MeetingResponse key={`${item.id}:${item.version}`} memberId={memberId} id={item.id} version={item.version} initial={item.myResponse}/></>}
   </CollapsibleSection></section>;
   if (item.kind === "enquete") return <PollCard memberId={memberId} item={item} />;
+  if (item.kind === "atendimento") return <CartaoAtendimento item={item} />;
 
   if (item.kind === "evento") {
     return (
@@ -505,6 +507,57 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
   );
 }
 
+/** Conversa individual marcada (aluno ou instrutor); cancelar e detalhes ficam na página de atendimentos. */
+function CartaoAtendimento({ item }: { item: Extract<AgendaItem, { kind: "atendimento" }> }) {
+  const MODALIDADE: Record<string, string> = { presencial: "Presencial", online: "Online" };
+  return (
+    <div className="flex flex-col gap-1.5 rounded-xl border border-na-green/40 border-l-4 border-l-na-green-dark bg-white p-3 dark:bg-gray-900">
+      <p className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
+        <MessagesSquare size={11} /> Conversa individual
+      </p>
+      <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">{item.papel === "aluno" ? `Com ${item.comQuem}` : `Com ${item.comQuem} (aluno)`}</p>
+      <p className="text-[12px] text-gray-600 dark:text-gray-300">
+        {item.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}–{item.endsAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+      </p>
+      <p className="flex items-center gap-1 text-[12px] text-gray-500 dark:text-gray-400">
+        {item.modalidade === "online" ? <Video size={12} /> : <MapPin size={12} />}
+        {MODALIDADE[item.modalidade] ?? item.modalidade}
+        {item.local ? ` · ${item.local}` : ""}
+      </p>
+      {item.assunto && <p className="text-[12px] text-gray-600 italic dark:text-gray-300">“{item.assunto}”</p>}
+      <div className="flex flex-wrap gap-3 text-[12px] font-semibold">
+        {item.linkOnline && (
+          <a href={item.linkOnline} target="_blank" rel="noopener noreferrer" className="text-na-green-dark underline dark:text-emerald-400">
+            Entrar na chamada
+          </a>
+        )}
+        <Link href={item.papel === "aluno" ? "/atendimentos" : "/professor/atendimentos"} className="text-gray-500 hover:underline dark:text-gray-400">
+          Ver ou cancelar
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/** Atalho para marcar conversa com o instrutor (só para quem está numa turma com instrutor no Portal). */
+function LinkAtendimento() {
+  return (
+    <Link
+      href="/atendimentos"
+      className="flex items-center gap-3 rounded-xl border border-na-green/40 bg-na-green-light/40 px-3 py-2.5 transition hover:border-na-green dark:border-emerald-900 dark:bg-emerald-950/20"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-na-green/20 text-na-green-dark dark:text-emerald-300">
+        <MessagesSquare size={16} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">Conversar com meu instrutor</span>
+        <span className="block text-[11px] text-gray-600 dark:text-gray-400">Marque um horário individual</span>
+      </span>
+      <ChevronRight size={16} className="shrink-0 text-gray-400" />
+    </Link>
+  );
+}
+
 function itemKey(item: AgendaItem) {
   return `${item.kind}-${item.id}`;
 }
@@ -535,7 +588,7 @@ function LinkMeusEventos() {
 
 /** Linha compacta da lista "Próximos eventos": data em destaque, título e tipo; tocar abre o dia. */
 function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "enquete" }>; onAbrir: () => void }) {
-  const Icone = item.kind === "evento" ? PartyPopper : item.kind === "reuniao" ? Users : GraduationCap;
+  const Icone = item.kind === "evento" ? PartyPopper : item.kind === "reuniao" ? Users : item.kind === "atendimento" ? MessagesSquare : GraduationCap;
   const tipo =
     item.kind === "evento"
       ? item.filialOrigem
@@ -545,7 +598,9 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
           : `Evento ${item.scope === "nacional" ? "nacional" : "regional"}`
       : item.kind === "reuniao"
         ? item.className
-        : `${ACTIVITY_LABEL[item.type] ?? item.type} · ${item.className}`;
+        : item.kind === "atendimento"
+          ? "Conversa individual"
+          : `${ACTIVITY_LABEL[item.type] ?? item.type} · ${item.className}`;
   const semHora = item.kind === "evento" && item.allDay;
   const cancelado = (item.kind === "evento" && item.status === "cancelado") || (item.kind === "reuniao" && item.status === "cancelada");
   return (
@@ -578,7 +633,7 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
   );
 }
 
-export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoId }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string }) {
+export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoId, podeMarcarAtendimento }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string; podeMarcarAtendimento?: boolean }) {
   const eventoCompartilhado = items.find((item) => item.kind === "evento" && item.id === eventoId);
   const avisoEvento = eventoId && !eventoCompartilhado
     ? <p role="status" className="text-sm text-gray-600 dark:text-gray-300">Este evento não está disponível na sua agenda. Ele pode ter encerrado ou ser destinado a outra escola.</p>
@@ -607,6 +662,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
     return (
       <div className="flex flex-col gap-4">
         <LinkMeusEventos />
+        {podeMarcarAtendimento && <LinkAtendimento />}
         {avisoEvento}
         <p className="py-8 text-center text-[13px] text-gray-500 dark:text-gray-400">Nenhum evento ou atividade agendada no momento.</p>
       </div>
@@ -674,6 +730,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
         </section>
       )}
       <LinkMeusEventos />
+      {podeMarcarAtendimento && <LinkAtendimento />}
       <div ref={calendario} className="scroll-mt-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-2 flex items-center justify-between">
           <button
