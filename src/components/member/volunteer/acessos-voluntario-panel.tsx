@@ -10,6 +10,9 @@ interface Pessoa {
   filial: string | null;
   papel: string[];
   grupos: string[];
+  schoolId: string;
+  cidade: string | null;
+  secretarias: string[];
   sugerido: boolean;
   liberado: boolean;
 }
@@ -18,19 +21,41 @@ function normalizar(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
+const porNome = (a: string, b: string) => a.localeCompare(b, "pt-BR", { sensitivity: "base" });
+const SEM_SECRETARIA = "__nenhuma__";
+const selectCls =
+  "min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
+
 export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas: Pessoa[]; mostrarSugeridos: boolean }) {
   const [liberados, setLiberados] = useState(() => new Set(pessoas.filter((p) => p.liberado).map((p) => p.id)));
   const [busca, setBusca] = useState("");
+  const [filial, setFilial] = useState("");
+  const [secretaria, setSecretaria] = useState("");
   const [emAndamento, setEmAndamento] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
+  const filiais = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of pessoas) m.set(p.schoolId, p.cidade ?? "Sem cidade");
+    return [...m].sort((a, b) => porNome(a[1], b[1]));
+  }, [pessoas]);
+  const secretarias = useMemo(() => [...new Set(pessoas.flatMap((p) => p.secretarias))].sort(porNome), [pessoas]);
+
   const filtradas = useMemo(() => {
     const q = normalizar(busca.trim());
-    return q ? pessoas.filter((p) => normalizar(p.name).includes(q)) : pessoas;
-  }, [busca, pessoas]);
-  const sugeridas = mostrarSugeridos && !busca ? filtradas.filter((p) => p.sugerido) : [];
-  const demais = mostrarSugeridos && !busca ? filtradas.filter((p) => !p.sugerido) : filtradas;
+    return pessoas
+      .filter(
+        (p) =>
+          (!q || normalizar(p.name).includes(q)) &&
+          (!filial || p.schoolId === filial) &&
+          (!secretaria || (secretaria === SEM_SECRETARIA ? p.secretarias.length === 0 : p.secretarias.includes(secretaria))),
+      )
+      .sort((a, b) => porNome(a.name, b.name));
+  }, [busca, filial, secretaria, pessoas]);
+  const semFiltro = !busca && !filial && !secretaria;
+  const sugeridas = mostrarSugeridos && semFiltro ? filtradas.filter((p) => p.sugerido) : [];
+  const demais = mostrarSugeridos && semFiltro ? filtradas.filter((p) => !p.sugerido) : filtradas;
 
   function alternar(p: Pessoa) {
     const liberar = !liberados.has(p.id);
@@ -90,7 +115,33 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
           className="w-full bg-transparent text-sm outline-none"
         />
       </label>
+      {(filiais.length > 1 || secretarias.length > 0) && (
+        <div className="-mt-2 flex flex-wrap gap-2">
+          {filiais.length > 1 && (
+            <select value={filial} onChange={(e) => setFilial(e.target.value)} aria-label="Filtrar por filial" className={selectCls}>
+              <option value="">Todas as filiais</option>
+              {filiais.map(([id, nome]) => (
+                <option key={id} value={id}>
+                  {nome}
+                </option>
+              ))}
+            </select>
+          )}
+          {secretarias.length > 0 && (
+            <select value={secretaria} onChange={(e) => setSecretaria(e.target.value)} aria-label="Filtrar por secretaria" className={selectCls}>
+              <option value="">Todas as secretarias</option>
+              {secretarias.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+              <option value={SEM_SECRETARIA}>Sem secretaria</option>
+            </select>
+          )}
+        </div>
+      )}
       <p className="-mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+        {semFiltro ? "" : `${filtradas.length} de ${pessoas.length} na lista · `}
         {liberados.size} {liberados.size === 1 ? "pessoa liberada" : "pessoas liberadas"}. Toque de novo em “Liberado” pra retirar o acesso.
       </p>
 

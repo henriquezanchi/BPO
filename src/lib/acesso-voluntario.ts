@@ -94,20 +94,36 @@ export async function candidatosParaLiberar(liberador: Pessoa) {
       isSubChefe: true,
       isSecretarioEscolastica: true,
       isSecretarioEconomia: true,
-      classMemberships: { where: { classGroup: { tipo: { not: "turma" } } }, select: { role: true, classGroup: { select: { name: true } } } },
+      schoolId: true,
+      classMemberships: { where: { classGroup: { tipo: { not: "turma" } } }, select: { role: true, classGroup: { select: { name: true, tipo: true } } } },
     },
     orderBy: { name: "asc" },
   });
-  const liberados = new Map(
-    (await db.acessoVoluntario.findMany({ where: { memberId: { in: pessoas.map((p) => p.id) } } })).map((l) => [l.memberId, l]),
-  );
+  const ids = pessoas.map((p) => p.id);
+  const [acessos, mandatos] = await Promise.all([
+    db.acessoVoluntario.findMany({ where: { memberId: { in: ids } } }),
+    db.secretariaMandato.findMany({ where: { memberId: { in: ids }, ativo: true }, select: { memberId: true, secretaria: true } }),
+  ]);
+  const liberados = new Map(acessos.map((l) => [l.memberId, l]));
   return pessoas.map((p) => {
     const chefia = p.classMemberships.filter((c) => c.role === "professor").map((c) => c.classGroup.name);
     const grupos = p.classMemberships.filter((c) => c.role === "aluno").map((c) => c.classGroup.name);
+    // Secretarias da pessoa: grupos de secretaria (SEC), secretário de Economia/Escolástica e mandatos na rede.
+    const secretarias = [
+      ...new Set([
+        ...p.classMemberships.filter((c) => c.classGroup.tipo === "SEC").map((c) => c.classGroup.name),
+        ...(p.isSecretarioEscolastica ? ["Escolástica"] : []),
+        ...(p.isSecretarioEconomia ? ["Economia"] : []),
+        ...mandatos.filter((m) => m.memberId === p.id).map((m) => m.secretaria),
+      ]),
+    ];
     return {
       id: p.id,
       name: p.name,
       filial: escolas.length > 1 ? p.school.city : null,
+      schoolId: p.schoolId,
+      cidade: p.school.city,
+      secretarias,
       papel: [
         ...chefia.map((g) => `Responsável · ${g}`),
         ...(p.isSubChefe ? ["Sub-Chefe"] : []),
