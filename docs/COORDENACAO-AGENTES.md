@@ -169,3 +169,7 @@ Plano aprovado pelo usuário: (1) corrigir erros, (2) tela única de grupos, (3)
 - **Nome repetido:** criar/editar grupo avisa "Já existe uma turma/um grupo com o nome…" (antes, erro genérico do banco). A importação do Mercúrio (`importar.ts`) e `scripts/sync-teacher-classes.ts` renomeiam o grupo do Portal homônimo de uma turma ("Nome (GAF)") em vez de misturar alunos nele.
 - **Uma lista de secretarias:** a oferta de voluntariado do Portal do Aluno usa `SECRETARIAS_OFERTA` (nomes do catálogo `SECRETARIAS_PADRAO`: "Café", "Difusão e Comunicação", "Técnica e Manutenção") e o servidor só aceita esses nomes.
 - Fica para a etapa 3 (precisa de coluna nova): o pedido para participar de GAF ligado a um grupo específico.
+
+## 33. Claude — Tempo de tela pelo texto (25/10/2026)
+
+- Pedido do usuário: tempo flexível por slide. `lib/tempo-tela.ts`: palavras visíveis (com letra ou número) ÷ 200 por minuto (leitura silenciosa de adulto, 200–250 ppm; usamos o limite mais lento porque quem lê a TV está de passagem) + 3 s quando o evento tem cartaz; mínimo 5 s, máximo 45 s. `tela-tv.tsx` troca por `setTimeout` com o tempo do slide atual (frase conta com a frase da volta) e a barra de progresso usa o mesmo tempo. Na TV de pátio: eventos com cartaz 19–21 s, frase 8 s. Teste em `tests/tempo-tela.test.mjs`.

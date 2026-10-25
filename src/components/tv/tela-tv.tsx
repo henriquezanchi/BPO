@@ -6,9 +6,9 @@ import { CalendarDays, Cake, Camera, CircleFadingPlus, CirclePlay, GraduationCap
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { lembrarTela } from "./parear-tv";
+import { tempoDoSlide } from "@/lib/tempo-tela";
 import s from "./tela-tv.module.css";
 
-const TROCA_MS = 10_000;
 const ATUALIZA_MS = 5 * 60_000; // dados novos e cartazes com link renovado
 const RECARREGA_MS = 6 * 60 * 60_000; // pega versões novas do Portal
 const FUSO = "America/Sao_Paulo";
@@ -221,7 +221,7 @@ function Slide({ slide, ativo, frase }: { slide: SlideTela; ativo: boolean; fras
   );
 }
 
-/** Tela de TV da filial: eventos e conteúdos em rotação a cada 10 s (pedido do usuário 2026-10-24). */
+/** Tela de TV da filial: eventos e conteúdos em rotação, cada slide pelo tempo de leitura (pedidos do usuário 2026-10-24/25). */
 export function TelaTv({ slides, filial, token }: { slides: SlideTela[]; filial: string; token: string }) {
   const router = useRouter();
   // Contador só cresce: dá o slide (atual % total) e quantas voltas a rotação já deu.
@@ -237,11 +237,13 @@ export function TelaTv({ slides, filial, token }: { slides: SlideTela[]; filial:
   const volta = Math.max(0, Math.floor((atual - posFrase + 1) / Math.max(total, 1)));
   const frase = slideFrase?.frases.length ? slideFrase.frases[(inicioFrase + volta) % slideFrase.frases.length] : null;
 
+  // Cada slide fica o tempo de ler o que mostra (lib/tempo-tela.ts), e não mais 10 s fixos.
+  const duracao = tempoDoSlide(slides[indice], frase);
   useEffect(() => {
     if (total < 2) return;
-    const t = setInterval(() => setAtual((i) => i + 1), TROCA_MS);
-    return () => clearInterval(t);
-  }, [total]);
+    const t = setTimeout(() => setAtual((i) => i + 1), duracao);
+    return () => clearTimeout(t);
+  }, [atual, total, duracao]);
 
   // Guarda esta tela: ao religar, a TV que abre /tv volta direto para cá.
   useEffect(() => lembrarTela(token), [token]);
@@ -302,7 +304,7 @@ export function TelaTv({ slides, filial, token }: { slides: SlideTela[]; filial:
         <Relogio />
         {total > 1 && (
           <div className={s.progresso}>
-            <i key={atual} style={{ animationDuration: `${TROCA_MS}ms` }} />
+            <i key={atual} style={{ animationDuration: `${duracao}ms` }} />
           </div>
         )}
       </footer>
