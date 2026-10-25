@@ -50,7 +50,7 @@ export interface ResumoFilialDados {
 }
 
 /** O cliente do banco de consulta devolve no máximo 5.000 linhas por vez (session_max_rows). */
-async function emPaginas(sql: string, tamanho = 4000) {
+export async function emPaginas(sql: string, tamanho = 4000) {
   const todas: Record<string, string | null>[] = [];
   for (let desde = 0; ; desde += tamanho) {
     const pagina = await consultarMercurio(`${sql} LIMIT ${tamanho} OFFSET ${desde}`);

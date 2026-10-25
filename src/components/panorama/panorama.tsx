@@ -251,6 +251,9 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
             <Numero valor={p.portal.contas} rotulo="contas criadas" />
           </div>
           {p.portal.falhas > 0 && <p className="text-[12px] text-na-danger-dark dark:text-red-300">{p.portal.falhas} envio(s) ao Mercúrio com falha.</p>}
+          <Link href={`/voluntario/filial/uso${alcance.chave.includes(",") ? `?filiais=${alcance.chave}` : `?alcance=${alcance.chave}`}`} className="flex w-fit items-center gap-0.5 text-[12px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
+            Ver quem usa e quem não usa <ChevronRight size={13} />
+          </Link>
         </Area>
 
         <Area
