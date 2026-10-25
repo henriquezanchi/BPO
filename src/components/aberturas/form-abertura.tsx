@@ -6,6 +6,9 @@ import { useState } from "react";
 import { CAMPO_CLASS, Campo, Feedback, SubmitButton, hiddenAberturaFields, useFormAction } from "./form-action";
 import type { Abertura, Pessoa } from "./types";
 import { hora } from "./utils";
+import { CampoOrcamento } from "./campo-orcamento";
+
+const DIAS = ["domingos", "segundas-feiras", "terças-feiras", "quartas-feiras", "quintas-feiras", "sextas-feiras", "sábados"];
 
 const STATUS = [
   ["rascunho", "Rascunho"],
@@ -28,6 +31,21 @@ function dataSaoPaulo(value: unknown) {
 export function FormAbertura({ schoolId, professores, abertura, onFechar }: { schoolId: string; professores: Pessoa[]; abertura?: Abertura | null; onFechar: (id?: string) => void }) {
   const [professorIds, setProfessorIds] = useState<string[]>(abertura?.professorIds ?? []);
   const [primeiraAula, setPrimeiraAula] = useState(dataSaoPaulo(abertura?.primeiraAula));
+  const diaSemana = primeiraAula ? new Date(`${primeiraAula}T12:00:00Z`).getUTCDay() : null;
+  // Palestra de abertura já registrada (a mais cedo do Ciclo cultural) e o orçamento detalhado mais recente.
+  const palestraExistente = dataSaoPaulo(
+    (abertura?.registros ?? [])
+      .filter((r) => r.tipo === "palestra")
+      .map((r) => String((r.dados as { inicio?: unknown } | null)?.inicio ?? ""))
+      .filter(Boolean)
+      .sort()[0] ?? "",
+  );
+  const ultimoOrcamento = (abertura?.registros ?? []).filter((r) => r.tipo === "orcamento").at(-1);
+  const orcamentoItens = ((ultimoOrcamento?.dados as { itens?: Record<string, number> } | null)?.itens ?? {}) as Record<string, number>;
+  const [palestraTocada, setPalestraTocada] = useState(false);
+  const [palestraManual, setPalestra] = useState("");
+  const semanaAntes = primeiraAula && !abertura ? new Date(new Date(`${primeiraAula}T12:00:00Z`).getTime() - 7 * 864e5).toISOString().slice(0, 10) : "";
+  const palestra = palestraTocada ? palestraManual : semanaAntes;
   const action = useFormAction(salvarAbertura);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -51,16 +69,20 @@ export function FormAbertura({ schoolId, professores, abertura, onFechar }: { sc
             <Campo label="Primeira aula">
               <input required type="date" name="primeiraAula" value={primeiraAula} onChange={(event) => setPrimeiraAula(event.target.value)} className={CAMPO_CLASS} />
             </Campo>
-            <Campo label="Inscrições até" hint="Opcional. Se aceitar inscrições tardias, informe a data final; ela deve ser igual ou posterior à primeira aula. Sem preencher, a conciliação considera até 30 dias após a primeira aula.">
+            <Campo label="Inscrições até" hint="Opcional, para inscrições tardias. Em branco: até 30 dias após a primeira aula.">
               <input type="date" name="inscricoesAte" min={primeiraAula || undefined} defaultValue={dataSaoPaulo(abertura?.inscricoesAte)} className={CAMPO_CLASS} />
             </Campo>
-            <Campo label="Dia da semana" hint="Precisa coincidir com a data da primeira aula.">
-              <select required name="diaSemana" defaultValue={String(abertura?.diaSemana ?? 1)} className={CAMPO_CLASS}>
-                {[[0,"Domingo"],[1,"Segunda-feira"],[2,"Terça-feira"],[3,"Quarta-feira"],[4,"Quinta-feira"],[5,"Sexta-feira"],[6,"Sábado"]].map(([id, label]) => <option key={String(id)} value={String(id)}>{label}</option>)}
-              </select>
-            </Campo>
-            <Campo label="Horário de início">
+            {/* Dia da semana sai da data da primeira aula (pedido do usuário 2026-10-25). */}
+            <Campo label="Horário de início" hint={diaSemana === null ? "Escolha a data da primeira aula." : `Aulas às ${DIAS[diaSemana]}.`}>
               <input required type="time" name="inicio" defaultValue={hora(abertura?.inicioMinuto ?? 19 * 60)} className={CAMPO_CLASS} />
+            </Campo>
+            <input type="hidden" name="diaSemana" value={diaSemana ?? ""} />
+            <Campo label="Palestra cultural de abertura" hint={palestraExistente ? "Já registrada; altere no Ciclo cultural." : "Normalmente uma semana antes da primeira aula. Entra no Ciclo cultural."}>
+              {palestraExistente ? (
+                <input type="date" value={palestraExistente} disabled className={CAMPO_CLASS} />
+              ) : (
+                <input type="date" name="palestraCultural" value={palestra} max={primeiraAula || undefined} onChange={(event) => { setPalestra(event.target.value); setPalestraTocada(true); }} className={CAMPO_CLASS} />
+              )}
             </Campo>
             <Campo label="Sala">
               <input required name="sala" maxLength={80} defaultValue={abertura?.sala ?? ""} placeholder="Sala ou espaço" className={CAMPO_CLASS} />
@@ -71,14 +93,13 @@ export function FormAbertura({ schoolId, professores, abertura, onFechar }: { sc
             <Campo label="Meta de matrículas">
               <input required type="number" name="metaMatriculas" min="1" max="1000" defaultValue={abertura?.metaMatriculas ?? 12} className={CAMPO_CLASS} />
             </Campo>
-            <Campo label="Orçamento (R$)" hint="Valor planejado para esta abertura.">
-              <input required type="number" name="orcamento" min="0" step="0.01" inputMode="decimal" defaultValue={abertura ? (abertura.orcamentoCentavos / 100).toFixed(2) : "0.00"} className={CAMPO_CLASS} />
-            </Campo>
+
             <Campo label="Situação">
               <select name="status" defaultValue={abertura?.status ?? "rascunho"} className={CAMPO_CLASS}>
                 {STATUS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </Campo>
+            <CampoOrcamento totalCentavos={abertura?.orcamentoCentavos ?? 0} itensIniciais={orcamentoItens} />
             <div className="sm:col-span-2">
               <p className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-200">Professores envolvidos</p>
               <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Para confirmar uma abertura planejada, em curso ou concluída, selecione pelo menos dois professores.</p>

@@ -10,6 +10,7 @@ import {sincronizarAberturasEscola} from '@/lib/aberturas/sincronizacao';
 import {revalidatePath} from 'next/cache';
 import {z} from 'zod';
 import type {Prisma} from '@prisma/client';
+import { CHAVES_CUSTO } from '@/lib/aberturas/categorias';
 
 const field=(f:FormData,k:string)=>String(f.get(k)||'').trim();
 const texto=(s:string,max=200)=>z.string().min(1).max(max).parse(s);
@@ -34,7 +35,24 @@ export async function salvarAbertura(f:FormData){try{
  if(status!=='rascunho'&&status!=='cancelada'&&professorIds.length<2)throw Error('Selecione pelo menos dois professores para confirmar a abertura.');
  const inscricoes=field(f,'inscricoesAte');
  if(inscricoes){dataLocal.parse(inscricoes);if(inscricoes<primeira)throw Error('O prazo de inscrições deve ser igual ou posterior à primeira aula.');}
- const dados={inscricoesAte:inscricoes?new Date(inscricoes+'T23:59:59.999-03:00'):null,primeiraAula:new Date(primeira+'T'+field(f,'inicio')+':00-03:00'),diaSemana,inicioMinuto,duracaoMinutos:120,capacidade,metaMatriculas,orcamentoCentavos:centavos(field(f,'orcamento')||'0'),sala:texto(field(f,'sala')),status,professorIds};
+ // Orçamento opcional: valor único ou por item (categorias de lib/aberturas/categorias.ts), somado (pedido do usuário 2026-10-25).
+ let orcamentoItens:Record<string,number>|null=null;
+ const itensBrutos=field(f,'orcamentoItens');
+ if(itensBrutos!==''){
+  let lido:unknown;try{lido=JSON.parse(itensBrutos);}catch{throw Error('Orçamento por item inválido.');}
+  if(!lido||typeof lido!=='object'||Array.isArray(lido))throw Error('Orçamento por item inválido.');
+  orcamentoItens={};
+  for(const [k,v] of Object.entries(lido as Record<string,unknown>)){if(!(CHAVES_CUSTO as readonly string[]).includes(k))throw Error('Item de orçamento desconhecido.');const c=centavos(String(v));if(c>0)orcamentoItens[k]=c;}
+ }
+ const totalItens=orcamentoItens?Object.values(orcamentoItens).reduce((s,v)=>s+v,0):0;
+ const orcamentoCentavos=totalItens>0?totalItens:centavos(field(f,'orcamento')||'0');
+ // Palestra cultural de abertura (geralmente uma semana antes): vira um registro do Ciclo cultural.
+ const palestraData=field(f,'palestraCultural');
+ if(palestraData){dataLocal.parse(palestraData);if(palestraData>primeira)throw Error('A palestra cultural deve ser antes ou no dia da primeira aula.');}
+ const palestraInicio=palestraData?new Date(palestraData+'T'+field(f,'inicio')+':00-03:00'):null;
+ const registroPalestra=palestraInicio?{autorId:member.id,tipo:'palestra',dados:{titulo:'Palestra cultural de abertura',tema:'A definir',inicio:palestraInicio.toISOString(),fim:new Date(palestraInicio.getTime()+90*60000).toISOString()}}:null;
+ const registroOrcamento=orcamentoItens!==null?{autorId:member.id,tipo:'orcamento',dados:{itens:orcamentoItens,totalCentavos:orcamentoCentavos}}:null;
+ const dados={inscricoesAte:inscricoes?new Date(inscricoes+'T23:59:59.999-03:00'):null,primeiraAula:new Date(primeira+'T'+field(f,'inicio')+':00-03:00'),diaSemana,inicioMinuto,duracaoMinutos:120,capacidade,metaMatriculas,orcamentoCentavos,sala:texto(field(f,'sala')),status,professorIds};
  const id=field(f,'aberturaId');
  const salvo=await db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "School" WHERE id=${schoolId} FOR UPDATE`;
@@ -42,8 +60,8 @@ export async function salvarAbertura(f:FormData){try{
    const conflito=await tx.aberturaTurma.findFirst({where:{schoolId,...(id?{id:{not:id}}:{}),status:{in:['planejada','em_curso']},diaSemana,inicioMinuto:{lt:inicioMinuto+120,gt:inicioMinuto-120},OR:[{sala:{equals:dados.sala,mode:'insensitive'}},{professorIds:{hasSome:professorIds}}]},select:{titulo:true}});
    if(conflito)throw Error('Há outra turma planejada com a mesma sala ou professores nesse horário: '+conflito.titulo);
   }
-  if(id){const changed=await tx.aberturaTurma.updateMany({where:{id,schoolId,revisao:revisao(f)},data:{...dados,revisao:{increment:1}}});if(changed.count!==1)throw Error('A abertura foi alterada por outra pessoa. Atualize a página.');await tx.aberturaRegistro.create({data:{aberturaId:id,autorId:member.id,tipo:'alteracao',dados:{...dados,inscricoesAte:dados.inscricoesAte?.toISOString()??null,primeiraAula:dados.primeiraAula.toISOString()}}});return id;}
-  const created=await tx.aberturaTurma.create({data:{...dados,titulo:'Turma · '+primeira.split('-').reverse().join('/')+' · '+field(f,'inicio'),schoolId,autorId:member.id,registros:{create:[{autorId:member.id,tipo:'tarefa',dados:{titulo:'Confirmar equipe docente e substituições',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Planejar palestras culturais e divulgação',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Organizar acolhimento e conferir matrículas no Mercúrio',status:'pendente',prazo:primeira}}]}}});return created.id;
+  if(id){const changed=await tx.aberturaTurma.updateMany({where:{id,schoolId,revisao:revisao(f)},data:{...dados,revisao:{increment:1}}});if(changed.count!==1)throw Error('A abertura foi alterada por outra pessoa. Atualize a página.');for(const extra of [registroPalestra,registroOrcamento])if(extra){if(extra.tipo==='palestra'&&await tx.aberturaRegistro.findFirst({where:{aberturaId:id,tipo:'palestra'},select:{id:true}}))continue;await tx.aberturaRegistro.create({data:{aberturaId:id,...extra}});}await tx.aberturaRegistro.create({data:{aberturaId:id,autorId:member.id,tipo:'alteracao',dados:{...dados,inscricoesAte:dados.inscricoesAte?.toISOString()??null,primeiraAula:dados.primeiraAula.toISOString()}}});return id;}
+  const created=await tx.aberturaTurma.create({data:{...dados,titulo:'Turma · '+primeira.split('-').reverse().join('/')+' · '+field(f,'inicio'),schoolId,autorId:member.id,registros:{create:[...[registroPalestra,registroOrcamento].filter(<T,>(x:T|null):x is T=>x!==null),{autorId:member.id,tipo:'tarefa',dados:{titulo:'Confirmar equipe docente e substituições',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Planejar palestras culturais e divulgação',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Organizar acolhimento e conferir matrículas no Mercúrio',status:'pendente',prazo:primeira}}]}}});return created.id;
  });atualizar();return {ok:true,id:salvo};
  }catch(e){return falha(e);}}
 
