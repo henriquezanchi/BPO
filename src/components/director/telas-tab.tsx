@@ -2,6 +2,7 @@
 
 import { atualizarCartao, atualizarTela, conectarTv, criarCartao, criarTela, excluirCartao, excluirTela, trocarLinkTela, type DadosCartao, type DadosTela } from "@/lib/actions/telas-actions";
 import { CONTEUDOS_PADRAO, CONTEUDOS_TELA, ORIENTACOES_TELA, PUBLICOS_TELA, TIPOS_CARTAO, type ConteudoTela, type OrientacaoTela, type PublicoTela, type TipoCartao } from "@/lib/telas-publicos";
+import { FrasesTela } from "./frases-tela";
 import { Check, Copy, ExternalLink, Link2, Pencil, Plus, RefreshCw, Trash2, Tv } from "lucide-react";
 import { useState, useTransition } from "react";
 
@@ -338,7 +339,7 @@ function CartoesFilial({ schoolId, cartoes }: { schoolId: string; cartoes: Carta
 }
 
 /** Telas de TV da filial (pedido do usuário 2026-10-24): um link por TV, com os públicos e conteúdos escolhidos. */
-export function TelasTab({ schoolId, telas, cartoes, origem }: { schoolId: string; telas: TelaResumo[]; cartoes: CartaoResumo[]; origem: string }) {
+export function TelasTab({ schoolId, telas, cartoes, frases, origem }: { schoolId: string; telas: TelaResumo[]; cartoes: CartaoResumo[]; frases: Parameters<typeof FrasesTela>[0]; origem: string }) {
   const [dados, setDados] = useState<DadosTela>({ nome: "", publicos: ["aberto_publico", "todos_ativos"], conteudos: CONTEUDOS_PADRAO, orientacao: "auto" });
   const { erro, pendente, rodar } = useAcao();
   const enderecoTv = `${origem.replace(/^https?:\/\//, "")}/tv`;
@@ -378,6 +379,8 @@ export function TelasTab({ schoolId, telas, cartoes, origem }: { schoolId: strin
       )}
 
       <CartoesFilial schoolId={schoolId} cartoes={cartoes} />
+
+      <FrasesTela {...frases} />
     </div>
   );
 }

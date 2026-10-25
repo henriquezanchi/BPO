@@ -136,5 +136,10 @@ Segunda rodada do mesmo dia (pedidos do usuário: conexão pelo controle remoto,
 - **TVs:** saiu o conteúdo/cartão "Círculo de Amigos / doação" (`apoio`); a TV de pátio foi atualizada no banco.
 - **Evento cancelado** (`lib/evento-cancelado.ts`): na Agenda, só enquanto o reembolso do inscrito não é confirmado e no máximo 5 dias depois do cancelamento (data do `EventAudit` "cancelado"); em Meus eventos vai para a seção "Cancelados", no fim.
 - **Minha jornada sem 2026:** não é erro; o Mercúrio não tem participações em cursos de 2026 em Barra do Garças nem no Universitário (Boa Viagem e Lago Sul lançam).
-- Código das frases por filial continua fora do commit (depende da migração `20261025120000_frases_tela`, ainda não autorizada).
+- Código das frases por filial ficou para o bloco 28.
 
+## 28. Claude — Frase da semana por filial (25/10/2026)
+
+- **Lista padrão** (`lib/telas-frases.ts`): 174 frases de 48 autores em grupos por autor, intercalados por `rodizio` (autor muda a cada semana). Entraram Lúcia Helena Galvão, Luis Carlos Marques (assina Luis Carlos Marques Fonseca), Michel Echenique, autores do programa de estudos (Buda, Bhagavad Gita, Lao-Tsé, Confúcio, Ptahhotep, Platão, Pitágoras, Marco Aurélio, Sêneca, Epicteto, Plotino…) e outros citados nos sites oficiais (coluna "Citas célebres" da Revista Esfinge). Cada frase tem `fonte` (página oficial da Nova Acrópole) e foi conferida no texto original; tradução nossa quando a página está em outro idioma. Frases apócrifas ficaram fora mesmo quando aparecem em site da NA. Lista aprovada pelo usuário.
+- **Por filial:** tabela `FraseTela` (RLS) e aba Telas → Frases (`components/director/frases-tela.tsx`, ações em `telas-actions.ts`, área `eventos`): incluir, editar, ativar/desativar, apagar e importar a lista padrão. A TV usa as frases ativas da filial; sem nenhuma, a padrão. `obra` é opcional no rodapé da TV.
+- Migração aditiva `20261025120000_frases_tela` aplicada e registrada (autorizada pelo usuário em 25/10).

@@ -3,7 +3,7 @@ import { semEmoji, urlDoEventoNoPortal } from "@/lib/compartilhar-evento";
 import { EVENT_AUDIENCES, agendaUlissesBranchWhere, eventScopeWhere, safeEventRegistrationUrl } from "@/lib/event-policy";
 import { eventPosterUrl } from "@/lib/event-posters";
 import { gerarResumosTela, impressaoDescricao, primeiraFrase } from "@/lib/resumo-tela";
-import { fraseDaSemana } from "@/lib/telas-frases";
+import { FRASES_PADRAO, fraseDaSemana } from "@/lib/telas-frases";
 import { TIPOS_CARTAO, type ConteudoTela, type TipoCartao } from "@/lib/telas-publicos";
 import type { Prisma } from "@prisma/client";
 import { after } from "next/server";
@@ -56,7 +56,7 @@ export type SlideCartao = {
   chamada: string;
 };
 
-export type SlideFrase = { tipo: "frase"; id: string; texto: string; autor: string; obra: string };
+export type SlideFrase = { tipo: "frase"; id: string; texto: string; autor: string; obra: string | null };
 
 export type SlideLista = {
   tipo: "lista";
@@ -209,8 +209,10 @@ async function conteudosDaTela(tela: TelaParaSlides, eventos: EventoDb[]): Promi
   const extras: SlideTela[] = [];
   if (quer.has("matriculas")) extras.push(...(await slidesMatriculas(tela)));
   if (quer.has("frase")) {
-    const f = fraseDaSemana();
-    extras.push({ tipo: "frase", id: `frase-${f.autor}`, ...f });
+    // Frases da filial (ativas); sem nenhuma, a lista padrão.
+    const daFilial = await db.fraseTela.findMany({ where: { schoolId: tela.school.id, ativa: true }, orderBy: { createdAt: "asc" }, select: { texto: true, autor: true, obra: true } });
+    const f = fraseDaSemana(daFilial.length ? daFilial : FRASES_PADRAO);
+    if (f) extras.push({ tipo: "frase", id: `frase-${f.autor}-${f.texto.length}`, ...f });
   }
   const tipos = (Object.keys(TIPOS_CARTAO) as TipoCartao[]).filter((t) => quer.has(TIPOS_CARTAO[t].conteudo));
   if (tipos.length) extras.push(...(await slidesCartoes(tela.school.id, tipos)));

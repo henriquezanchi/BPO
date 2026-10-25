@@ -183,7 +183,8 @@ function SlideDeFrase({ f }: { f: SlideFrase }) {
       <blockquote className={`${s.entra} ${f.texto.length > 90 ? s.fraseLonga : ""}`}>
         <p>{f.texto}</p>
         <footer>
-          <strong>{f.autor}</strong> · {f.obra}
+          <strong>{f.autor}</strong>
+          {f.obra && <> · {f.obra}</>}
         </footer>
       </blockquote>
       <p className={s.fraseRotulo}>Frase da semana</p>

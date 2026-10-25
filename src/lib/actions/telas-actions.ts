@@ -4,6 +4,7 @@ import { requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { normalizarCodigo } from "@/lib/telas-conexao";
 import { novoTokenTela } from "@/lib/telas-eventos";
+import { FRASES_PADRAO } from "@/lib/telas-frases";
 import { TIPOS_CARTAO, validarConteudosTela, validarOrientacaoTela, validarPublicosTela, type TipoCartao } from "@/lib/telas-publicos";
 import { revalidatePath } from "next/cache";
 
@@ -121,4 +122,48 @@ export async function excluirCartao(schoolId: string, id: string) {
     await requireArea(schoolId, "eventos");
     garantir((await db.telaCartao.deleteMany({ where: { id, schoolId } })).count);
   }, "Não foi possível excluir o cartão.");
+}
+
+// ---------- Frases da semana da filial ----------
+
+export type DadosFrase = { texto: string; autor: string; obra: string; ativa: boolean };
+
+function validarFrase(d: DadosFrase) {
+  const texto = d.texto.trim().replace(/\s+/g, " ").replace(/^["“”']+|["“”']+$/g, "");
+  if (!texto) throw Error("Escreva a frase.");
+  if (texto.length > 220) throw Error("A frase pode ter até 220 letras, para caber na TV.");
+  const autor = d.autor.trim().replace(/\s+/g, " ").slice(0, 60);
+  if (!autor) throw Error("Diga quem é o autor da frase.");
+  return { texto, autor, obra: d.obra.trim().replace(/\s+/g, " ").slice(0, 90) || null, ativa: d.ativa };
+}
+
+export async function criarFrase(schoolId: string, dados: DadosFrase) {
+  return executar(async () => {
+    const actor = await requireArea(schoolId, "eventos");
+    await db.fraseTela.create({ data: { schoolId, ...validarFrase(dados), criadoPor: actor.id } });
+  }, "Não foi possível salvar a frase.");
+}
+
+export async function atualizarFrase(schoolId: string, id: string, dados: DadosFrase) {
+  return executar(async () => {
+    await requireArea(schoolId, "eventos");
+    garantir((await db.fraseTela.updateMany({ where: { id, schoolId }, data: validarFrase(dados) })).count);
+  }, "Não foi possível salvar a frase.");
+}
+
+export async function excluirFrase(schoolId: string, id: string) {
+  return executar(async () => {
+    await requireArea(schoolId, "eventos");
+    garantir((await db.fraseTela.deleteMany({ where: { id, schoolId } })).count);
+  }, "Não foi possível apagar a frase.");
+}
+
+/** Traz para a filial as frases da lista padrão que ela ainda não tem (para editar ou desligar). */
+export async function importarFrasesPadrao(schoolId: string) {
+  return executar(async () => {
+    const actor = await requireArea(schoolId, "eventos");
+    const ja = new Set((await db.fraseTela.findMany({ where: { schoolId }, select: { texto: true } })).map((f) => f.texto));
+    const novas = FRASES_PADRAO.filter((f) => !ja.has(f.texto));
+    if (novas.length) await db.fraseTela.createMany({ data: novas.map((f) => ({ schoolId, ...f, criadoPor: actor.id })) });
+  }, "Não foi possível importar as frases.");
 }

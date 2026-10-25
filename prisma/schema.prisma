@@ -175,6 +175,7 @@ model School {
   events             Event[]
   telasEventos       TelaEventos[]
   telaCartoes        TelaCartao[]
+  frasesTela         FraseTela[]
   payables           Payable[]
   repasses           Repasse[]
   otherIncomes       OtherIncome[]
@@ -1939,6 +1940,22 @@ model TelaCartao {
   ate       DateTime? // some da TV depois deste dia
   criadoPor String?
   createdAt DateTime  @default(now())
+
+  @@index([schoolId])
+}
+
+// Frases da semana das TVs, por filial (pedido do usuário 2026-10-25): a filial cadastra,
+// edita, desliga e apaga. Sem nenhuma frase ativa, a TV usa a lista padrão (lib/telas-frases.ts).
+model FraseTela {
+  id        String   @id @default(cuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  texto     String
+  autor     String
+  obra      String?
+  ativa     Boolean  @default(true)
+  criadoPor String?
+  createdAt DateTime @default(now())
 
   @@index([schoolId])
 }
