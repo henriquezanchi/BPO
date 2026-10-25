@@ -22,7 +22,6 @@ export async function aberturaPorToken(token: string) {
       primeiraAula: true,
       inicioMinuto: true,
       diaSemana: true,
-      sala: true,
       capacidade: true,
       status: true,
       matriculaAberta: true,

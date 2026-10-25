@@ -3,7 +3,7 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, BookOpenCheck, CalendarDays, CalendarPlus, CheckCircle2, ClipboardCheck, Clock3, GraduationCap, UsersRound } from "lucide-react";
+import { ArrowRight, BookOpenCheck, CalendarDays, CalendarPlus, CheckCircle2, ClipboardCheck, Clock3, GraduationCap, Link2, UsersRound } from "lucide-react";
 import { vincularTurmaAbertura } from "@/lib/actions/aberturas-actions";
 import { FormAbertura } from "./form-abertura";
 import { FormRegistro } from "./form-registro";
@@ -145,7 +145,7 @@ function PlanejamentoTab({ data, abertura, selecionar, nova, editar }: { data: P
 function DetalheAbertura({ abertura, data, editar }: { abertura: Abertura; data: PainelAberturas; editar: () => void }) {
   const despesas = despesasDaAbertura(abertura);
   const gastos = despesas.filter((item) => !item.previsto).reduce((total, item) => total + item.valor, 0);
-  return <section className={CARD}><CollapsibleSection title={<h2 className="mt-1 text-xl font-black text-gray-950 dark:text-white">{abertura.titulo}</h2>}><div className="flex flex-col gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-gray-800"><div><p className="text-xs font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Abertura selecionada</p><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{formatarData(abertura.primeiraAula)} · {hora(abertura.inicioMinuto)} · {abertura.sala || "Sala não informada"} · {rotuloStatus(abertura.status)}</p></div><button type="button" onClick={editar} className="min-h-9 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-700 dark:border-gray-700 dark:text-gray-200">Editar parâmetros</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><MiniResumo label="Professores envolvidos" value={abertura.professorIds.map((id) => data.professores.find((item) => item.id === id)?.name ?? "Pessoa da equipe").join(", ") || "Sem equipe definida"} /><MiniResumo label="Mercúrio · código da turma" value={abertura.mercurioTurmaId || "Sem vínculo confirmado"} /><MiniResumo label="Orçamento" value={formatarCentavos(abertura.orcamentoCentavos)} /><MiniResumo label="Despesas lançadas" value={`${formatarReais(gastos)} · ${despesas.length} registro(s)`} /></div><div className="mt-3"><FormVinculoTurma data={data} abertura={abertura} /></div><div className="mt-5"><div className="mb-3 flex items-center justify-between gap-2"><h3 className="font-bold text-gray-900 dark:text-gray-100">Linha do ciclo</h3><span className="text-xs text-gray-500 dark:text-gray-400">{abertura.registros.length} registros</span></div>{abertura.registros.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Ainda não há registros neste ciclo.</p> : <div className="space-y-2">{[...abertura.registros].reverse().map((registro) => <RegistroLinha key={registro.id} registro={registro} />)}</div>}</div></CollapsibleSection></section>;
+  return <section className={CARD}><CollapsibleSection title={<h2 className="mt-1 text-xl font-black text-gray-950 dark:text-white">{abertura.titulo}</h2>}><div className="flex flex-col gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-start sm:justify-between dark:border-gray-800"><div><p className="text-xs font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Abertura selecionada</p><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{formatarData(abertura.primeiraAula)} · {hora(abertura.inicioMinuto)} · {abertura.sala || "Sala não informada"} · {rotuloStatus(abertura.status)}</p></div><button type="button" onClick={editar} className="min-h-9 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-700 dark:border-gray-700 dark:text-gray-200">Editar parâmetros</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><MiniResumo label="Professores envolvidos" value={abertura.professorIds.map((id) => data.professores.find((item) => item.id === id)?.name ?? "Pessoa da equipe").join(", ") || "Sem equipe definida"} /><MiniResumo label="Mercúrio · código da turma" value={abertura.mercurioTurmaId || "Sem vínculo confirmado"} /><MiniResumo label="Orçamento" value={formatarCentavos(abertura.orcamentoCentavos)} /><MiniResumo label="Despesas lançadas" value={`${formatarReais(gastos)} · ${despesas.length} registro(s)`} /></div><div className="mt-3"><LinkMatricula abertura={abertura} /></div><div className="mt-3"><FormVinculoTurma data={data} abertura={abertura} /></div><div className="mt-5"><div className="mb-3 flex items-center justify-between gap-2"><h3 className="font-bold text-gray-900 dark:text-gray-100">Linha do ciclo</h3><span className="text-xs text-gray-500 dark:text-gray-400">{abertura.registros.length} registros</span></div>{abertura.registros.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Ainda não há registros neste ciclo.</p> : <div className="space-y-2">{[...abertura.registros].reverse().map((registro) => <RegistroLinha key={registro.id} registro={registro} />)}</div>}</div></CollapsibleSection></section>;
 }
 
 function FormVinculoTurma({ data, abertura }: { data: PainelAberturas; abertura: Abertura }) {
@@ -291,27 +291,36 @@ function LinkMatricula({ abertura }: { abertura: Abertura }) {
   const pagas = site.filter((m) => m.status === "paga" || m.status === "lancada").length;
   if (!abertura.matriculaToken) return null;
   const url = typeof window === "undefined" ? `/matricula/${abertura.matriculaToken}` : `${window.location.origin}/matricula/${abertura.matriculaToken}`;
+  const aberto = abertura.matriculaAberta !== false;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-[11px] dark:bg-gray-950/40">
-      <span className="text-gray-600 dark:text-gray-300">
-        {abertura.matriculaAberta === false ? "Matrículas pelo site fechadas" : "Matrículas pelo site abertas"}
-        {site.length > 0 && ` · ${site.length} pelo site, ${pagas} paga${pagas === 1 ? "" : "s"}`}
+    <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-[12px] ${aberto ? "border-na-green/40 bg-na-green-light/40 dark:border-emerald-800 dark:bg-emerald-950/20" : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950/40"}`}>
+      <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-200">
+        <Link2 size={14} className={aberto ? "text-na-green-dark dark:text-emerald-400" : "text-gray-400"} />
+        <span>
+          <b>Link de matrícula</b> {aberto ? "aberto" : "fechado (ligue em Editar parâmetros)"}
+          {site.length > 0 && ` · ${site.length} pelo site, ${pagas} paga${pagas === 1 ? "" : "s"}`}
+        </span>
       </span>
-      {abertura.matriculaAberta !== false && (
-        <button
-          type="button"
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(url);
-              setCopiado(true);
-            } catch {
-              /* sem área de transferência */
-            }
-          }}
-          className="font-semibold text-na-green-dark hover:underline dark:text-emerald-400"
-        >
-          {copiado ? "Link copiado" : "Copiar link de matrícula"}
-        </button>
+      {aberto && (
+        <span className="flex items-center gap-1.5 font-semibold">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="rounded-lg px-2 py-1 text-na-green-dark hover:underline dark:text-emerald-400">
+            Abrir
+          </a>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(url);
+                setCopiado(true);
+              } catch {
+                /* sem área de transferência */
+              }
+            }}
+            className="rounded-lg bg-na-green px-2.5 py-1 text-white hover:bg-na-green-dark"
+          >
+            {copiado ? "Link copiado" : "Copiar link"}
+          </button>
+        </span>
       )}
     </div>
   );

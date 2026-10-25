@@ -22,7 +22,7 @@ export default async function MatriculaPage(props: { params: Promise<{ token: st
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">Matrícula no curso de Filosofia</h1>
           {a && (
             <p className="mt-2 text-sm text-white/85">
-              Início em {a.primeiraAula.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "long" })} · aulas às {DIAS[a.diaSemana]}, {hora(a.inicioMinuto)} · {a.sala}
+              Início em {a.primeiraAula.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "long" })} · aulas às {DIAS[a.diaSemana]}, {hora(a.inicioMinuto)}
             </p>
           )}
         </header>

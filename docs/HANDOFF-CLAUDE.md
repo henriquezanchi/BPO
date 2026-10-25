@@ -164,3 +164,7 @@ Estoque de apostilas por matéria e tema, na Escolástica:
 ## Correção da Escolástica — 23/10/2026
 
 Erro reproduzido: `/escolastica` falhava com `ABAS_ESCOLASTICA is not iterable`. A página Server Component tentava espalhar uma constante exportada por `components/trabalho/areas.tsx` (`use client`). Configuração movida para `lib/abas-escolastica.ts`, módulo neutro, e imports das páginas principal/avaliação corrigidos. Permissões e dados preservados. Não reexportar configuração compartilhada por módulos client para uso no servidor. Reprodução local antes: HTTP 500; depois: HTTP 200, quatro links corretos e nenhum erro JavaScript em desktop/mobile. Rota temporária de verificação removida antes da publicação.
+
+## Site de matrículas — onde fica o link (25/10/2026)
+
+Cada abertura tem um link público `/matricula/<token>` (Fase 1, bloco 48 da COORDENACAO). O link aparece numa faixa verde "Link de matrícula" com **Abrir** e **Copiar link** em dois lugares: no cartão da abertura (Aberturas de Turmas → Suas aberturas) e no detalhe da abertura selecionada (Planejamento). Para fechar ou reabrir: Editar parâmetros → "Matrículas pelo site". A página pública não mostra a sala (pedido do usuário). Detalhes no bloco 49.
