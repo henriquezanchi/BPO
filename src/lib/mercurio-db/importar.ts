@@ -103,6 +103,9 @@ export async function garantirEscola(uniId: string, opcoes: { portalAberto?: boo
  * acesso de 1 pessoa); sem ela, atualiza só quem JÁ tem Member local
  * (rodada diária — não cria cadastro de quem nunca entrou no Portal).
  */
+/** Colunas de `cadastro` que a sincronização lê (conferidas antes de gravar). */
+const COLUNAS_CADASTRO = ["cad_2o_nivel", "cad_cel_ddd", "cad_cel_fone", "cad_dirigente", "cad_email", "cad_escolaridade", "cad_estado_civil", "cad_ingresso", "cad_machado", "cad_matr", "cad_nascimento", "cad_naturalidade", "cad_nivel", "cad_nome", "cad_orgao_expedidor", "cad_pedagogo", "cad_profissao", "cad_raio_fv", "cad_res_bairro", "cad_res_cep", "cad_res_cidade", "cad_res_ddd", "cad_res_fone", "cad_res_logradouro", "cad_res_uf", "cad_rg", "cad_rg_emissao", "cad_situacao", "cad_situacao_fv", "cad_tur_unidade", "cad_turma", "cad_unidade"];
+
 export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: string[]; ano?: number } = {}) {
   const school = await garantirEscola(uniId);
   const ano = opcoes.ano ?? new Date().getFullYear();
@@ -111,6 +114,11 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   // Desde 19/10/2026 o banco de consulta traz também os desligados (cad_situacao='INA'):
   // toda leitura de cadastro precisa filtrar cad_situacao='ATI'.
   const cadastros = await consultarTudo(`SELECT * FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${sqlTexto(uniId)}${filtroMatr} ORDER BY cad_matr`);
+  // Desde 24/10/2026 `cadastro` é uma view com só as colunas pedidas (João Guilherme). Coluna que
+  // sumir da view viraria "vazio" e apagaria dado bom (ex.: todos deixariam de ser dirigentes):
+  // sem todas as colunas usadas abaixo, a sincronização para em vez de gravar.
+  const faltando = cadastros.length ? COLUNAS_CADASTRO.filter((c) => !(c in cadastros[0])) : [];
+  if (faltando.length) throw new Error(`A view "cadastro" do Mercúrio está sem as colunas ${faltando.join(", ")}. Peça ao João Guilherme para incluí-las; nada foi gravado.`);
 
   const conhecidos = new Set(
     (await db.member.findMany({ where: { mercurioId: { in: cadastros.map((c) => c.cad_matr!) } }, select: { mercurioId: true } })).map((m) => m.mercurioId),
