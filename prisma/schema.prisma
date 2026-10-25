@@ -687,8 +687,12 @@ model GafRequest {
   memberId  String
   member    Member   @relation(fields: [memberId], references: [id])
   createdAt DateTime @default(now())
+  // GAF escolhido pelo aluno (2026-10-25); nulo nos pedidos antigos, sem GAF definido.
+  classGroupId String?
+  classGroup   ClassGroup? @relation(fields: [classGroupId], references: [id], onDelete: SetNull)
 
   @@index([memberId])
+  @@index([classGroupId])
 }
 
 model VolunteerOffer {
@@ -1164,6 +1168,7 @@ model ClassGroup {
 
   @@unique([schoolId, name])
   @@index([schoolId])
+  gafRequests     GafRequest[]
 }
 
 model ClassMembership {

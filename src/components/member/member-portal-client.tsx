@@ -386,7 +386,7 @@ export function MemberPortalClient({ dashboard, eventoId }: { dashboard: MemberD
           {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} mostrarBiblioteca={dashboard.bibliotecaLiberada} />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}
-          {modal === "gaf" && <GafPanel memberId={member.id} gafs={dashboard.meusGafs} />}
+          {modal === "gaf" && <GafPanel memberId={member.id} gafs={dashboard.meusGafs} disponiveis={dashboard.gafsDisponiveis} />}
           {modal === "grupos_estudo" && <GruposEstudoPanel grupos={dashboard.gruposDeEstudo} />}
           {modal === "jornada" && (
             <JornadaPanel

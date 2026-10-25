@@ -1,21 +1,20 @@
 import { AdminFilialPanel } from "@/components/admin/admin-filial-panel";
 import { AcessosSubchefe } from "@/components/admin/acessos-subchefe";
 import { SenhasAdmin } from "@/components/admin/senhas-admin";
-import { escolasChefiadas } from "@/lib/acesso-voluntario";
+import { ehAdministradorNacional, escolasChefiadas } from "@/lib/acesso-voluntario";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ehDirecaoDaFilial, filiaisAdministradas, recursosDaFilial, RECURSOS } from "@/lib/recursos-filial";
-import { Building2, Settings, Sparkles } from "lucide-react";
+import { AbasAdmin } from "@/components/admin/abas-admin";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+// Secretarias e GAF têm páginas próprias (/secretarias, /grupos); Liberar acessos é a outra aba (AbasAdmin).
 const ABAS = [
-  { id: "secretarias", rotulo: "Secretarias", icone: Building2, descricao: "Abre em Secretarias." },
-  { id: "gaf", rotulo: "GAF", icone: Sparkles, descricao: "Abre em Grupos." },
-  { id: "recursos", rotulo: "Recursos e administradores", icone: Settings, descricao: "O que aparece para os alunos no Portal, quem mais administra a filial e senhas esquecidas." },
+  { id: "recursos", rotulo: "Recursos e administradores", descricao: "O que aparece para os alunos no Portal, quem mais administra a filial e senhas esquecidas." },
 ] as const;
 type Aba = (typeof ABAS)[number]["id"];
 
@@ -40,7 +39,7 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
   const aba: Aba = ABAS.some((a) => a.id === abaPedida) ? (abaPedida as Aba) : "recursos";
   const abaInfo = ABAS.find((a) => a.id === aba)!;
   // Secretarias e GAF abrem em Grupos, na mesma filial.
-  const link = (a: Aba, f = escola.id) => (a === "recursos" ? `/admin?filial=${f}&aba=${a}` : a === "secretarias" ? `/secretarias?filial=${f}` : `/grupos?aba=${a}&filial=${f}`);
+  const link = (a: Aba, f = escola.id) => `/admin?filial=${f}&aba=${a}`;
   const nomeEscola = (n: string) => n.replace(/^Nova Acrópole\s*-\s*/i, "");
 
   let conteudo: React.ReactNode;
@@ -101,20 +100,7 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
             ))}
           </div>
         )}
-        <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-gray-200 px-4 lg:mx-0 lg:px-0 dark:border-gray-800" aria-label="Seções da Administração">
-          {ABAS.map((a) => (
-            <Link
-              key={a.id}
-              href={link(a.id)}
-              aria-current={aba === a.id ? "page" : undefined}
-              className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-[13px] font-semibold ${
-                aba === a.id ? "border-na-green text-na-green-dark dark:text-emerald-400" : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
-              }`}
-            >
-              <a.icone size={15} /> {a.rotulo}
-            </Link>
-          ))}
-        </nav>
+        <AbasAdmin atual="recursos" filial={escolas.length > 1 ? escola.id : undefined} acessos={member.isDiretor || member.isSubChefe || member.filiaisChefiadas.length > 0 || (await ehAdministradorNacional(member))} />
         <p className="text-[13px] text-gray-500 dark:text-gray-400">{abaInfo.descricao}</p>
       </header>
       {conteudo}

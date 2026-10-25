@@ -220,6 +220,14 @@ export async function getMemberDashboard(memberId: string) {
 
   // Reuniões dos grupos em que a pessoa é integrante (groupIds, acima): grupos de FV e secretarias com acesso
   // de voluntário, GAF sempre, GDVE só para FV (regras em grupos-portal.ts).
+  // GAFs da filial que aceitam a pessoa e de que ela ainda não participa, com o pedido já feito (2026-10-25).
+  const gafsDisponiveis = (
+    await db.classGroup.findMany({
+      where: { schoolId: member.schoolId, tipo: "GAF", arquivadoEm: null, memberships: { none: { memberId: member.id } }, ...(member.isMembroPrograma ? {} : { permiteAlunos: true }) },
+      select: { id: true, name: true, descricao: true, modalidade: true, local: true, gafRequests: { where: { memberId: member.id }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
+      orderBy: { name: "asc" },
+    })
+  ).map((g) => ({ id: g.id, nome: g.name, descricao: g.descricao, modalidade: g.modalidade, local: g.local, pedidoEm: g.gafRequests[0]?.createdAt.toISOString() ?? null }));
   // Grupos de estudo e leituras comentadas da filial que aceitam a pessoa (abertos e os dela).
   const gruposDeEstudo = (
     await db.classGroup.findMany({
@@ -385,6 +393,7 @@ export async function getMemberDashboard(memberId: string) {
     bibliotecaLiberada: publicosDaPessoa(member).includes("membros"),
     meusGafs,
     gruposDeEstudo,
+    gafsDisponiveis,
     // Um atalho só para a Área do Voluntário, quando a pessoa tem algo lá (mesma regra do menu).
     areaVoluntario: destinosVoluntario.length > 0,
     // Pedidos aguardando quem tem Escolástica/Economia — número no botão da Área do Voluntário.

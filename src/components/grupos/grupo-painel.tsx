@@ -12,6 +12,7 @@ import {
   buscarResponsaveis,
   removerAtividade,
   removerPessoa,
+  responderPedidoGaf,
   salvarAtividade,
 } from "@/lib/actions/grupos-actions";
 import type { DetalheGrupo } from "@/lib/grupos-dados";
@@ -316,12 +317,51 @@ function Equipe({ dados, recarregar }: { dados: D; recarregar: () => void }) {
         <Users size={15} /> {grupo.tipo === "SEC" ? "Equipe" : "Pessoas"}
       </h2>}>
       <div className="flex flex-col gap-4">
+        {gerir && dados.pedidos.length > 0 && <PedidosGaf pedidos={dados.pedidos} recarregar={recarregar} />}
         {lista("professor", grupo.responsaveis, rotulos[0])}
         {lista("aluno", grupo.integrantes, rotulos[1])}
       </div>
       {!doPortal && <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">A composição deste grupo vem do Mercúrio.</p>}
       {erro && <p className="mt-2 text-[12px] text-na-danger-dark dark:text-red-400">{erro}</p>}
     </CollapsibleSection></section>
+  );
+}
+
+/** Pedidos para participar deste GAF, feitos pelo Portal do Aluno (2026-10-25). */
+function PedidosGaf({ pedidos, recarregar }: { pedidos: D["pedidos"]; recarregar: () => void }) {
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+  function responder(id: string, aceitar: boolean) {
+    setErro(null);
+    iniciar(async () => {
+      const r = await responderPedidoGaf(id, aceitar);
+      if (!r.ok) return setErro(r.error);
+      recarregar();
+    });
+  }
+  return (
+    <div className="rounded-xl border border-na-gold/40 bg-na-gold/10 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+      <p className="mb-2 text-[12px] font-bold text-na-gold-dark dark:text-amber-300">Pedidos para participar ({pedidos.length})</p>
+      <ul className="flex flex-col gap-1.5">
+        {pedidos.map((p) => (
+          <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-gray-800 dark:text-gray-200">
+            <span className="min-w-0">
+              {p.nome} {!p.membro && <span className="text-[11px] text-gray-500">· aluno</span>}
+              <span className="block text-[11px] text-gray-500 dark:text-gray-400">Pediu em {new Date(p.em).toLocaleDateString("pt-BR")}</span>
+            </span>
+            <span className="flex gap-1.5">
+              <button disabled={pendente} onClick={() => responder(p.id, true)} className="rounded-lg bg-na-green px-2.5 py-1 text-[12px] font-semibold text-white disabled:opacity-60">
+                Aceitar
+              </button>
+              <button disabled={pendente} onClick={() => responder(p.id, false)} className="rounded-lg px-2.5 py-1 text-[12px] font-semibold text-gray-600 disabled:opacity-60 dark:text-gray-300">
+                Recusar
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {erro && <p className="mt-2 text-[12px] text-na-danger-dark dark:text-red-300">{erro}</p>}
+    </div>
   );
 }
 

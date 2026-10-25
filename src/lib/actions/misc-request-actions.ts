@@ -2,6 +2,7 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { candidatoElegivel } from "@/lib/grupos-portal";
 import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
 
 /**
@@ -10,9 +11,22 @@ import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
  * 2026-09-22: ninguém na escola via o pedido). Agora persiste, e aparece no
  * detalhe do membro no Painel do Diretor (ver director-actions.ts).
  */
-export async function solicitarAdesaoGaf(memberId: string) {
-  await requireAuthenticatedMember(memberId);
-  await db.gafRequest.create({ data: { memberId } });
+/**
+ * Pedido de participação no GAF. Com `classGroupId` (2026-10-25), vai para o GAF escolhido pelo aluno —
+ * conferido aqui: GAF ativo da filial dele, que o aceita, sem vínculo nem pedido pendente.
+ */
+export async function solicitarAdesaoGaf(memberId: string, classGroupId?: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const m = await requireAuthenticatedMember(memberId);
+  if (classGroupId) {
+    const g = await db.classGroup.findUnique({ where: { id: classGroupId }, select: { tipo: true, schoolId: true, permiteAlunos: true, arquivadoEm: true } });
+    if (!g || g.tipo !== "GAF" || g.arquivadoEm || g.schoolId !== m.schoolId) return { ok: false, error: "Este GAF não está disponível." };
+    const motivo = await candidatoElegivel("GAF", g.schoolId, g.permiteAlunos, memberId);
+    if (motivo) return { ok: false, error: motivo };
+    if (await db.classMembership.findFirst({ where: { classGroupId, memberId } })) return { ok: false, error: "Você já participa deste GAF." };
+    if (await db.gafRequest.findFirst({ where: { classGroupId, memberId } })) return { ok: false, error: "Seu pedido para este GAF já foi enviado." };
+  }
+  await db.gafRequest.create({ data: { memberId, classGroupId: classGroupId ?? null } });
+  return { ok: true };
 }
 
 export async function oferecerApoioVoluntario(memberId: string, secretarias: string[]) {

@@ -2,6 +2,8 @@ import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { AcessosVoluntarioPanel } from "@/components/member/volunteer/acessos-voluntario-panel";
 import { candidatosParaLiberar, ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
+import { AbasAdmin } from "@/components/admin/abas-admin";
+import { filiaisAdministradas } from "@/lib/recursos-filial";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -29,13 +31,21 @@ export default async function AcessosVoluntarioPage() {
 
   const pessoas = await candidatosParaLiberar(member);
   const nacional = await ehAdministradorNacional(member);
+  // Quem administra filial vê esta página como aba da Administração (pedido do usuário 2026-10-25).
   const chefeDeFilial = member.isDiretor || member.isSubChefe || member.filiaisChefiadas.length > 0 || nacional;
+  const naAdministracao = chefeDeFilial && (await filiaisAdministradas(member)).length > 0;
   if (!chefeDeFilial && pessoas.length === 0) redirect("/voluntario");
 
   return (
-    <ShellTrabalho largura="estreita">
-      <div>
-        <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Liberar acessos</h1>
+    <ShellTrabalho ativo={naAdministracao ? "/admin" : undefined}>
+      {naAdministracao && (
+        <>
+          <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Administração</h1>
+          <AbasAdmin atual="acessos" acessos />
+        </>
+      )}
+      <div className="max-w-2xl">
+        {!naAdministracao && <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Liberar acessos</h1>}
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           A área de voluntários (grupos, avisos e canais) fica oculta até alguém liberar.{" "}
           {chefeDeFilial
@@ -45,7 +55,9 @@ export default async function AcessosVoluntarioPage() {
             : "Você pode liberar os integrantes dos grupos pelos quais é responsável."}
         </p>
       </div>
-      <AcessosVoluntarioPanel pessoas={pessoas} mostrarSugeridos={chefeDeFilial} />
+      <div className="max-w-2xl">
+        <AcessosVoluntarioPanel pessoas={pessoas} mostrarSugeridos={chefeDeFilial} />
+      </div>
     </ShellTrabalho>
   );
 }

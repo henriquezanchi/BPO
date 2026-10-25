@@ -126,9 +126,21 @@ export async function detalheDoGrupo(m: Pessoa, grupoId: string) {
     },
   });
   const nomes = new Map(g.memberships.map((x) => [x.member.id, x.member.name]));
+  // Pedidos feitos pelo Portal do Aluno para este GAF (só a coordenação vê).
+  const pedidos =
+    g.tipo === "GAF" && papel.podeGerir
+      ? (
+          await db.gafRequest.findMany({
+            where: { classGroupId: grupoId },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, createdAt: true, member: { select: { name: true, isMembroPrograma: true } } },
+          })
+        ).map((p) => ({ id: p.id, nome: p.member.name, em: p.createdAt.toISOString(), membro: p.member.isMembroPrograma }))
+      : [];
   return {
     agora: Date.now(),
     papel,
+    pedidos,
     grupo: {
       ...g,
       tipo: g.tipo as TipoGrupo,

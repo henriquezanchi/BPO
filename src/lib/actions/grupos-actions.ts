@@ -353,3 +353,22 @@ export async function entrarNoGrupoDeEstudo(grupoId: string) {
     return {};
   });
 }
+
+/** Coordenação do GAF responde a um pedido feito pelo Portal do Aluno (2026-10-25): aceitar inclui a pessoa. */
+export async function responderPedidoGaf(pedidoId: string, aceitar: boolean) {
+  return executar(async () => {
+    const pedido = await db.gafRequest.findUnique({ where: { id: pedidoId }, select: { memberId: true, classGroupId: true } });
+    if (!pedido?.classGroupId) throw new GrupoErro("Pedido não encontrado.");
+    const { papel } = await exigirGestor(pedido.classGroupId);
+    if (aceitar) {
+      const g = await db.classGroup.findUniqueOrThrow({ where: { id: pedido.classGroupId }, select: { permiteAlunos: true } });
+      const motivo = await candidatoElegivel(papel.tipo, papel.schoolId, g.permiteAlunos, pedido.memberId);
+      if (motivo) throw new GrupoErro(motivo);
+      await db.classMembership.createMany({ data: [{ classGroupId: pedido.classGroupId, memberId: pedido.memberId, role: "aluno" }], skipDuplicates: true });
+    }
+    await db.gafRequest.deleteMany({ where: { memberId: pedido.memberId, classGroupId: pedido.classGroupId } });
+    atualizar(pedido.classGroupId);
+    return {};
+  });
+}
+

@@ -179,7 +179,7 @@ export function SecretariasAdmin({ schoolId, grupos }: { schoolId: string; grupo
 }
 
 /** GAFs da filial: lista, criação e pedidos de participação feitos pelo Portal. */
-export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grupos: ResumoGrupo[]; pedidos: { nome: string; em: string; nivelMembro: boolean }[] }) {
+export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grupos: ResumoGrupo[]; pedidos: { nome: string; em: string; nivelMembro: boolean; gaf: string | null }[] }) {
   const router = useRouter();
   const [criando, setCriando] = useState(false);
   return (
@@ -205,7 +205,7 @@ export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grup
       </div>
       <aside className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
         <CollapsibleSection title={<h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Pedidos para participar</h3>}>
-        <p className="mt-0.5 mb-3 text-[11px] text-gray-500 dark:text-gray-400">Feitos pelo Portal do Aluno. Adicione a pessoa na página do GAF.</p>
+        <p className="mt-0.5 mb-3 text-[11px] text-gray-500 dark:text-gray-400">Feitos pelo Portal do Aluno. Os pedidos para um GAF aparecem também na página dele (aba Pessoas), para aceitar ou recusar; os sem GAF escolhido, adicione a pessoa no GAF.</p>
         {pedidos.length === 0 ? (
           <p className="text-[12px] text-gray-500">Nenhum pedido.</p>
         ) : (
@@ -214,6 +214,7 @@ export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grup
               <li key={p.nome + p.em} className="flex items-center justify-between gap-2 text-[12px] text-gray-700 dark:text-gray-300">
                 <span className="truncate">
                   {p.nome} {!p.nivelMembro && <span className="text-[10px] text-gray-400">aluno</span>}
+                  <span className="block text-[10px] text-gray-400">{p.gaf ?? "Sem GAF escolhido"}</span>
                 </span>
                 <span className="shrink-0 text-[11px] text-gray-400">{new Date(p.em).toLocaleDateString("pt-BR")}</span>
               </li>
