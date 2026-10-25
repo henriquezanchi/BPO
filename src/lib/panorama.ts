@@ -13,7 +13,8 @@ import { Prisma, type Member } from "@prisma/client";
  * os números do Portal das filiais escolhidas. Só leitura; quem pode ver cada alcance é decidido em alcancesDaPessoa.
  */
 
-export type Escola = { id: string; nome: string; uf: string | null; unidade: string | null };
+/** Filial aberta no Portal, ou unidade do Mercúrio ainda fora dele (`foraDoPortal`, id "uni:<unidade>"). */
+export type Escola = { id: string; nome: string; uf: string | null; unidade: string | null; foraDoPortal?: boolean };
 export type Alcance = { chave: string; rotulo: string; escolas: Escola[] };
 
 const nomeCurto = (n: string) => n.replace(/^Nova Acrópole\s*-\s*/i, "");
@@ -22,9 +23,18 @@ const nomeCurto = (n: string) => n.replace(/^Nova Acrópole\s*-\s*/i, "");
 export async function alcancesDaPessoa(m: Member): Promise<{ escolas: Escola[]; alcances: Alcance[]; nacional: boolean }> {
   const nacional = await ehAdministradorNacional(m);
   const ids = nacional ? null : [...new Set([m.schoolId, ...(await escolasChefiadas(m))])];
-  const escolas = (
+  const escolas: Escola[] = (
     await db.school.findMany({ where: ids ? { id: { in: ids } } : {}, select: { id: true, name: true, uf: true, mercurioUnidade: true }, orderBy: { name: "asc" } })
   ).map((s) => ({ id: s.id, nome: nomeCurto(s.name), uf: s.uf, unidade: s.mercurioUnidade }));
+  // Administração nacional: também as unidades da OINAB-N ainda fora do Portal (pedido do usuário 2026-10-25).
+  if (nacional) {
+    const prof = await db.resumoNacional.findUnique({ where: { chave: "profissoes" }, select: { dados: true } });
+    const doPortal = new Set(escolas.map((e) => e.unidade));
+    for (const u of (prof?.dados as unknown as ResumoProfissoes | undefined)?.unidades ?? []) {
+      if (!doPortal.has(u.id)) escolas.push({ id: `uni:${u.id}`, nome: nomeCurto(u.nome || u.cidade || u.id), uf: u.uf || null, unidade: u.id, foraDoPortal: true });
+    }
+    escolas.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }
   const alcances: Alcance[] = escolas.map((e) => ({ chave: e.id, rotulo: e.nome, escolas: [e] }));
   if (nacional) {
     for (const [id, r] of Object.entries(REGIONAIS)) {
@@ -168,8 +178,12 @@ export async function carregarPanorama(escolas: Escola[], todas = false) {
   const ha30 = new Date(agora.getTime() - 30 * 864e5);
   const ativosNa = { schoolId: { in: ids }, mercurioAtivo: true };
 
-  const [resumos, contas, entraram, notificacoes, pedidosCadastro, pendencias, falhas, proximos, passados, aberturas, crms, acessos, grupos] = await Promise.all([
-    db.resumoFilial.findMany({ where: { schoolId: { in: ids } }, select: { schoolId: true, dados: true } }),
+  const virtuais = escolas.filter((e) => e.foraDoPortal && e.unidade);
+  const [resumos, resumosFora, contas, entraram, notificacoes, pedidosCadastro, pendencias, falhas, proximos, passados, aberturas, crms, acessos, grupos] = await Promise.all([
+    db.resumoFilial.findMany({ where: { schoolId: { in: ids } }, select: { schoolId: true, dados: true, geradoEm: true } }),
+    virtuais.length
+      ? db.resumoNacional.findMany({ where: { chave: { in: virtuais.map((e) => `unidade:${e.unidade}`) } }, select: { chave: true, dados: true, geradoEm: true } })
+      : Promise.resolve([]),
     db.member.groupBy({ by: ["schoolId"], where: { ...ativosNa, authUserId: { not: null } }, _count: { _all: true } }),
     db.$queryRaw<{ schoolId: string; n: bigint }[]>`SELECT m."schoolId", count(*) n FROM auth.users u JOIN "Member" m ON m."authUserId" = u.id::text WHERE u.last_sign_in_at IS NOT NULL AND m."mercurioAtivo" AND m."schoolId" IN (${Prisma.join(ids)}) GROUP BY 1`,
     db.$queryRaw<{ schoolId: string; n: bigint }[]>`SELECT m."schoolId", count(DISTINCT p."memberId") n FROM "PushSubscription" p JOIN "Member" m ON m.id = p."memberId" WHERE m."schoolId" IN (${Prisma.join(ids)}) GROUP BY 1`,
@@ -194,6 +208,9 @@ export async function carregarPanorama(escolas: Escola[], todas = false) {
   ]);
 
   const resumoDe = new Map(resumos.map((r) => [r.schoolId, r.dados as unknown as ResumoFilialDados]));
+  for (const r of resumosFora) resumoDe.set(`uni:${r.chave.slice("unidade:".length)}`, r.dados as unknown as ResumoFilialDados);
+  // Data do resumo mais antigo do alcance: o que a tela mostra como "Atualizado em".
+  const geracoes = [...resumos, ...resumosFora].map((r) => r.geradoEm.getTime());
   const contasDe = new Map(contas.map((c) => [c.schoolId, c._count._all]));
   const entraramDe = contarPorEscola(entraram);
   const notificacoesDe = contarPorEscola(notificacoes);
@@ -222,6 +239,9 @@ export async function carregarPanorama(escolas: Escola[], todas = false) {
   return {
     agora: agora.getTime(),
     temResumo: resumoDe.size > 0,
+    atualizadoEm: geracoes.length ? Math.min(...geracoes) : null,
+    atualizadoAte: geracoes.length ? Math.max(...geracoes) : null,
+    foraDoPortal: virtuais.length,
     profissoes: profissoesDados,
     detalhes,
     faltamResumos: escolas.filter((e) => !resumoDe.has(e.id)).map((e) => e.nome),
@@ -263,6 +283,7 @@ export async function carregarPanorama(escolas: Escola[], todas = false) {
       return {
         id: e.id,
         nome: e.nome,
+        foraDoPortal: !!e.foraDoPortal,
         ativos: d?.pessoas.ativos ?? null,
         entradas: mesAtual(d)?.entradas ?? null,
         saidas: mesAtual(d)?.saidas ?? null,

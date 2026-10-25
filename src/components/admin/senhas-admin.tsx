@@ -1,5 +1,5 @@
 "use client";
-import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { CartaoSecao } from "@/components/ui/cartao-secao";
 
 import { voltarSenhaInicial } from "@/lib/actions/senha-actions";
 import { KeyRound, Loader2, Search } from "lucide-react";
@@ -34,13 +34,7 @@ export function SenhasAdmin({ pessoas }: { pessoas: { id: string; name: string }
   }
 
   return (
-    <section className="flex flex-col gap-3"><CollapsibleSection title={<h2 className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
-          <KeyRound size={15} /> Esqueceu a senha?
-        </h2>}>
-      <div>
-
-        <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">Volte a senha da pessoa para a inicial: os 6 primeiros números do CPF dela no Mercúrio.</p>
-      </div>
+    <CartaoSecao icone={KeyRound} titulo="Esqueceu a senha?" descricao="Volta a senha da pessoa para a inicial: os 6 primeiros números do CPF dela no Mercúrio.">
       <label className="flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 dark:border-gray-700">
         <Search size={14} className="text-gray-400" />
         <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Digite o nome da pessoa" className="w-full bg-transparent text-sm outline-none" aria-label="Buscar pessoa" />
@@ -66,6 +60,6 @@ export function SenhasAdmin({ pessoas }: { pessoas: { id: string; name: string }
           {aviso.texto}
         </p>
       )}
-    </CollapsibleSection></section>
+    </CartaoSecao>
   );
 }

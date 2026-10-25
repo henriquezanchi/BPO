@@ -49,7 +49,22 @@ export interface ResumoFilialDados {
   };
 }
 
-export async function gerarResumoFilial(uniId: string, schoolId: string): Promise<ResumoFilialDados> {
+/** O cliente do banco de consulta devolve no máximo 5.000 linhas por vez (session_max_rows). */
+async function emPaginas(sql: string, tamanho = 4000) {
+  const todas: Record<string, string | null>[] = [];
+  for (let desde = 0; ; desde += tamanho) {
+    const pagina = await consultarMercurio(`${sql} LIMIT ${tamanho} OFFSET ${desde}`);
+    todas.push(...pagina);
+    if (pagina.length < tamanho) return todas;
+  }
+}
+
+/**
+ * Gera e grava o resumo de uma unidade do Mercúrio. Com `schoolId` (filial aberta no Portal) grava em
+ * ResumoFilial; sem ele (unidade da OINAB-N ainda fora do Portal, 2026-10-25) grava em ResumoNacional
+ * com a chave "unidade:<id>".
+ */
+export async function gerarResumoFilial(uniId: string, schoolId: string | null, unidade?: { nome: string; cidade: string; uf: string }): Promise<ResumoFilialDados> {
   const u = sqlTexto(uniId);
   const agora = new Date();
   const fusoBR = (d: Date) => new Date(d.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
@@ -62,7 +77,7 @@ export async function gerarResumoFilial(uniId: string, schoolId: string): Promis
   // Sem cad_dirigente na view (desde 24/10/2026), conta os dirigentes que o Portal já conhece.
   const dirigentesNoMercurio = (await colunasDoCadastro()).has("cad_dirigente");
 
-  const [atualizacao, niveis, fvPro, hdDir, entradas, saidas, segundo, motivos, aniversariantes, fichasMes, atrasos, receita, turmas] = await Promise.all([
+  const [atualizacao, niveis, fvPro, hdDir, entradas, saidas, segundo, motivos, aniversariantes, fichasMes, atrasosFicha, receita, turmas, recibosOnline] = await Promise.all([
     consultarMercurio("SELECT MAX(data) d FROM `atualização`").catch(() => [{ d: null }]),
     consultarMercurio(`SELECT cad_nivel, COUNT(*) n FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u} GROUP BY cad_nivel`),
     consultarMercurio(`SELECT cad_situacao_fv, COUNT(*) n FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u} AND cad_situacao_fv IN ('BRG','PRO') GROUP BY cad_situacao_fv`),
@@ -75,10 +90,10 @@ export async function gerarResumoFilial(uniId: string, schoolId: string): Promis
     ),
     consultarMercurio(`SELECT cad_matr, cad_nome, DAY(cad_nascimento) dia, cad_nivel FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u} AND MONTH(cad_nascimento)=${mes} ORDER BY dia, cad_nome`),
     consultarMercurio(
-      `SELECT f.fic_status, COUNT(DISTINCT f.fic_matr) n FROM fichas f JOIN cadastro c ON c.cad_matr=f.fic_matr WHERE c.cad_situacao='ATI' AND c.cad_unidade=${u} AND f.fic_unidade=${u} AND f.fic_ano=${ano} AND f.fic_mes=${mes} GROUP BY f.fic_status`,
+      `SELECT f.fic_matr, f.fic_status FROM fichas f JOIN cadastro c ON c.cad_matr=f.fic_matr WHERE c.cad_situacao='ATI' AND c.cad_unidade=${u} AND f.fic_unidade=${u} AND f.fic_ano=${ano} AND f.fic_mes=${mes}`,
     ),
-    consultarMercurio(
-      `SELECT COUNT(DISTINCT f.fic_matr) pessoas, COUNT(*) meses FROM fichas f JOIN cadastro c ON c.cad_matr=f.fic_matr WHERE c.cad_situacao='ATI' AND c.cad_unidade=${u} AND f.fic_ano=${ano} AND f.fic_status='ATR'`,
+    emPaginas(
+      `SELECT f.fic_matr, f.fic_mes FROM fichas f JOIN cadastro c ON c.cad_matr=f.fic_matr WHERE c.cad_situacao='ATI' AND c.cad_unidade=${u} AND f.fic_ano=${ano} AND f.fic_status='ATR' ORDER BY f.fic_matr, f.fic_mes`,
     ),
     consultarMercurio(
       `SELECT DATE_FORMAT(r.rec_data,'%Y-%m') m, COUNT(DISTINCT r.rec_id) recibos, SUM(i.rei_valtotal) valor FROM reciboc r JOIN reciboi i ON i.rei_id=r.rec_id WHERE r.rec_unidade=${u} AND r.rec_data >= '${mesAnterior}-01' AND (r.rec_data_cancel IS NULL OR r.rec_data_cancel < '1900-01-01') GROUP BY m`,
@@ -86,7 +101,17 @@ export async function gerarResumoFilial(uniId: string, schoolId: string): Promis
     consultarMercurio(
       `SELECT t.tur_turma, t.tur_nivel, t.tur_dia, t.tur_horario, t.tur_previsao_formatura, (SELECT COUNT(*) FROM cadastro c WHERE c.cad_situacao='ATI' AND c.cad_tur_unidade=t.tur_unidade AND c.cad_turma=t.tur_turma) alunos, (SELECT COUNT(DISTINCT tm.tma_instrutor) FROM turmas_materias tm WHERE tm.tma_unidade=t.tur_unidade AND tm.tma_turma=t.tur_turma) instrutores FROM turmas t WHERE t.tur_unidade=${u} HAVING alunos > 0 ORDER BY t.tur_turma`,
     ),
+    // Recibos são view ao vivo; fichas é cópia (desde 17/10/2026). Mês com recibo válido de contribuição conta como pago,
+    // a mesma regra da importação (importar.ts): produto da composição da pessoa (compaluno) ou "CONTRIBUI…".
+    emPaginas(
+      `SELECT DISTINCT i.rei_matr, i.rei_mes FROM reciboi i JOIN reciboc r ON r.rec_id=i.rei_id JOIN cadastro c ON c.cad_matr=i.rei_matr LEFT JOIN produtos p ON p.pro_cod=i.rei_produto WHERE c.cad_situacao='ATI' AND c.cad_unidade=${u} AND i.rei_ano=${ano} AND i.rei_mes<=${mes} AND r.rec_status<>'CAN' AND (r.rec_data_cancel IS NULL OR r.rec_data_cancel < '1900-01-01') AND (p.pro_descricao LIKE 'CONTRIBUI%' OR EXISTS (SELECT 1 FROM compaluno ca WHERE ca.cal_matr=i.rei_matr AND ca.cal_grupo=i.rei_produto)) ORDER BY i.rei_matr, i.rei_mes`,
+    ),
   ]);
+  const pagoOnline = new Set(recibosOnline.map((r) => `${r.rei_matr}-${n(r.rei_mes)}`));
+  const statusMes = new Map(fichasMes.map((f) => [f.fic_matr ?? "", f.fic_status ?? ""]));
+  for (const r of recibosOnline) if (n(r.rei_mes) === mes) statusMes.set(r.rei_matr ?? "", "PAG");
+  const contaMes = (st: string) => [...statusMes.values()].filter((x) => x === st).length;
+  const atrasos = atrasosFicha.filter((a) => !pagoOnline.has(`${a.fic_matr}-${n(a.fic_mes)}`));
 
   const porNivelMap = new Map(niveis.map((x) => [x.cad_nivel ?? "??", n(x.n)]));
   const membros = [...porNivelMap.entries()].filter(([k]) => /^N[2-9]$/.test(k)).reduce((s, [, v]) => s + v, 0);
@@ -96,7 +121,6 @@ export async function gerarResumoFilial(uniId: string, schoolId: string): Promis
   });
   const mapa = (rows: Record<string, string | null>[]) => new Map(rows.map((r) => [r.m ?? "", n(r.n)]));
   const [mEnt, mSai, mSeg] = [mapa(entradas), mapa(saidas), mapa(segundo)];
-  const fic = new Map(fichasMes.map((f) => [f.fic_status ?? "", n(f.n)]));
   const rec = new Map(receita.map((r) => [r.m ?? "", r]));
 
   const dados: ResumoFilialDados = {
@@ -112,7 +136,7 @@ export async function gerarResumoFilial(uniId: string, schoolId: string): Promis
       fv: n(fvPro.find((x) => x.cad_situacao_fv === "BRG")?.n),
       provacionistas: n(fvPro.find((x) => x.cad_situacao_fv === "PRO")?.n),
       hd: n(hdDir[0]?.hd),
-      dirigentes: dirigentesNoMercurio ? n(hdDir[0]?.dir) : await db.member.count({ where: { schoolId, mercurioAtivo: true, isDirigente: true } }),
+      dirigentes: dirigentesNoMercurio ? n(hdDir[0]?.dir) : schoolId ? await db.member.count({ where: { schoolId, mercurioAtivo: true, isDirigente: true } }) : 0,
     },
     movimento: {
       meses: meses.map((m) => ({ mes: m, entradas: mEnt.get(m) ?? 0, saidas: mSai.get(m) ?? 0, segundoNivel: mSeg.get(m) ?? 0 })),
@@ -120,9 +144,9 @@ export async function gerarResumoFilial(uniId: string, schoolId: string): Promis
     },
     aniversariantes: aniversariantes.map((a) => ({ matricula: a.cad_matr ?? "", nome: (a.cad_nome ?? "").trim(), dia: n(a.dia), nivel: a.cad_nivel ?? "" })),
     contribuicao: {
-      mesAtual: { paga: fic.get("PAG") ?? 0, emBranco: fic.get("BRA") ?? 0, atrasada: fic.get("ATR") ?? 0, isenta: fic.get("INA") ?? 0 },
-      pessoasComAtraso: n(atrasos[0]?.pessoas),
-      mesesEmAtraso: n(atrasos[0]?.meses),
+      mesAtual: { paga: contaMes("PAG"), emBranco: contaMes("BRA"), atrasada: contaMes("ATR"), isenta: contaMes("INA") },
+      pessoasComAtraso: new Set(atrasos.map((a) => a.fic_matr)).size,
+      mesesEmAtraso: atrasos.length,
     },
     receita: [mesAnterior, mesStr(ano, mes)].map((m) => ({ mes: m, valor: Math.round(Number(rec.get(m)?.valor ?? 0) * 100) / 100, recibos: n(rec.get(m)?.recibos) })),
     turmas: {
@@ -139,10 +163,19 @@ export async function gerarResumoFilial(uniId: string, schoolId: string): Promis
     },
   };
 
-  await db.resumoFilial.upsert({
-    where: { schoolId },
-    update: { dados: dados as unknown as object, geradoEm: new Date() },
-    create: { schoolId, dados: dados as unknown as object },
-  });
+  if (schoolId) {
+    await db.resumoFilial.upsert({
+      where: { schoolId },
+      update: { dados: dados as unknown as object, geradoEm: new Date() },
+      create: { schoolId, dados: dados as unknown as object },
+    });
+  } else {
+    const comUnidade = { ...dados, unidade: { id: uniId, ...unidade } };
+    await db.resumoNacional.upsert({
+      where: { chave: `unidade:${uniId}` },
+      update: { dados: comUnidade as unknown as object, geradoEm: new Date() },
+      create: { chave: `unidade:${uniId}`, dados: comUnidade as unknown as object },
+    });
+  }
   return dados;
 }

@@ -2,7 +2,7 @@ import { PainelProfissoes } from "@/components/relatorios/painel-profissoes";
 import { formatBRL } from "@/lib/format";
 import type { Alcance, Panorama } from "@/lib/panorama";
 import { DIA_LIMITE_DESCONTO } from "@/lib/situacao-contribuicao";
-import { BookOpenText, Briefcase, Cake, CalendarDays, ChevronRight, GraduationCap, HandHeart, Smartphone, Users, Wallet } from "lucide-react";
+import { BookOpenText, Briefcase, Cake, CalendarDays, ChevronRight, GraduationCap, HandHeart, RefreshCw, Smartphone, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 
 /**
@@ -15,6 +15,7 @@ const rotuloMes = (m: string) => `${MESES[Number(m.slice(5, 7)) - 1]}/${m.slice(
 const COR_ENTRADA = "bg-[#009485] dark:bg-[#16a090]";
 const COR_SAIDA = "bg-[#9a6b00] dark:bg-[#b8862a]";
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
+const quando = (ms: number) => new Date(ms).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(",", " às");
 
 function Numero({ valor, rotulo, destaque }: { valor: string | number; rotulo: string; destaque?: "alerta" }) {
   return (
@@ -25,9 +26,9 @@ function Numero({ valor, rotulo, destaque }: { valor: string | number; rotulo: s
   );
 }
 
-function Area({ titulo, icone: Icone, href, children, detalhes }: { titulo: string; icone: typeof Users; href?: string; children: React.ReactNode; detalhes?: React.ReactNode }) {
+function Area({ titulo, icone: Icone, href, children, detalhes, largo }: { titulo: string; icone: typeof Users; href?: string; children: React.ReactNode; detalhes?: React.ReactNode; largo?: boolean }) {
   return (
-    <section className="flex min-w-0 flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <section className={`flex min-w-0 flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 ${largo ? "lg:col-span-2" : ""}`}>
       <header className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-[13px] font-bold tracking-wide text-gray-700 uppercase dark:text-gray-300">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-na-green-light text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -44,7 +45,7 @@ function Area({ titulo, icone: Icone, href, children, detalhes }: { titulo: stri
       {children}
       {detalhes && (
         <details className="group border-t border-gray-100 pt-3 dark:border-gray-800">
-          <summary className="cursor-pointer text-[12px] font-semibold text-gray-600 dark:text-gray-300">Detalhes</summary>
+          <summary className="cursor-pointer text-[12px] font-semibold text-gray-600 dark:text-gray-300">{largo ? "Financeiro no Portal" : "Detalhes"}</summary>
           <div className="mt-3 flex flex-col gap-3">{detalhes}</div>
         </details>
       )}
@@ -65,10 +66,20 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-[11px] text-gray-500 dark:text-gray-400">
-        {m.atualizacaoMercurio ? `Dados do Mercúrio de ${new Date(m.atualizacaoMercurio.replace(" ", "T") + "-03:00").toLocaleDateString("pt-BR")}` : "Sem data do Mercúrio"} · pessoas ativas de cada filial inteira no Mercúrio
-        (não só quem usa o Portal) · {alcance.escolas.length === 1 ? "1 filial" : `${alcance.escolas.length} filiais abertas no Portal`}{p.faltamResumos.length ? ` · ainda sem resumo: ${p.faltamResumos.join(", ")}` : ""}.
-      </p>
+      {/* Data da atualização sempre visível (pedido do usuário 2026-10-25). */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-na-green-light px-3 py-1 text-[12px] font-bold text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-300">
+          <RefreshCw size={12} />
+          {p.atualizadoEm ? `Atualizado em ${quando(p.atualizadoEm)}` : "Aguardando a primeira atualização"}
+          {p.atualizadoEm && p.atualizadoAte && p.atualizadoAte - p.atualizadoEm > 36e5 ? ` a ${quando(p.atualizadoAte)}` : ""}
+        </span>
+        <span className="text-[11px] text-gray-500 dark:text-gray-400">
+          Pessoas e recibos lidos do Mercúrio nessa hora; ficha de contribuição do Mercúrio de{" "}
+          {m.atualizacaoMercurio ? new Date(m.atualizacaoMercurio.replace(" ", "T") + "-03:00").toLocaleDateString("pt-BR") : "—"}. Filiais inteiras no Mercúrio, não só quem usa o Portal
+          {p.foraDoPortal ? ` · ${p.foraDoPortal} unidade${p.foraDoPortal === 1 ? "" : "s"} ainda fora do Portal (sem números do Portal)` : ""}
+          {p.faltamResumos.length ? ` · ainda sem resumo: ${p.faltamResumos.length > 5 ? `${p.faltamResumos.length} unidades` : p.faltamResumos.join(", ")}` : ""}.
+        </span>
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Area
@@ -245,6 +256,7 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
         <Area
           titulo="Economia"
           icone={Wallet}
+          largo
           href={link("/economia")}
           detalhes={financeiro}
         >
@@ -303,6 +315,7 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
                       <Link href={`${base}?alcance=${f.id}`} className="font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
                         {f.nome}
                       </Link>
+                      {f.foraDoPortal && <span className="ml-1.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400">fora do Portal</span>}
                     </td>
                     <td className="py-1.5 pr-3 text-right">{f.ativos ?? "—"}</td>
                     <td className="py-1.5 pr-3 text-right">{f.entradas === null ? "—" : `${f.entradas}/${f.saidas}`}</td>

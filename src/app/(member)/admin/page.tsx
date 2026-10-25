@@ -63,7 +63,7 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
         )
       : [];
     conteudo = (
-      <div className="flex max-w-2xl flex-col gap-8">
+      <div className="flex max-w-2xl flex-col gap-3">
         <AdminFilialPanel
           key={escola.id}
           schoolId={escola.id}

@@ -1,9 +1,9 @@
 "use client";
-import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { CartaoSecao } from "@/components/ui/cartao-secao";
 
 import { alterarRecursoFilial, designarAdministrador, removerAdministrador } from "@/lib/actions/admin-filial-actions";
 import type { ChaveRecurso } from "@/lib/recursos-filial";
-import { Loader2, Search, X } from "lucide-react";
+import { LayoutGrid, Loader2, Search, UserCog, X } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 
 interface Recurso {
@@ -65,9 +65,8 @@ export function AdminFilialPanel({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-2">
-        <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Recursos do Portal do Aluno</h2>}>
+    <div className="flex flex-col gap-3">
+      <CartaoSecao icone={LayoutGrid} titulo="Recursos do Portal do Aluno" descricao="O que aparece para os alunos: voluntariado, GAF, transparência, Acrópole Play e outros.">
         <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-200 dark:divide-gray-800 dark:border-gray-700">
           {recursos.map((r) => {
             const ligado = estado[r.chave];
@@ -91,10 +90,9 @@ export function AdminFilialPanel({
             );
           })}
         </ul>
-      </CollapsibleSection></section>
+      </CartaoSecao>
 
-      <section className="flex flex-col gap-2">
-        <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Administradores da filial</h2>}>
+      <CartaoSecao icone={UserCog} titulo="Administradores da filial" descricao="Quem mais administra a filial no Portal, além do Chefe e do Sub-Chefe.">
         <p className="-mt-1 text-[11px] text-gray-500 dark:text-gray-400">
           O Chefe e o Sub-Chefe já administram. {podeEscolherAdmins ? "Você pode incluir outras pessoas." : "Só eles incluem ou removem outras pessoas."}
         </p>
@@ -142,7 +140,7 @@ export function AdminFilialPanel({
             )}
           </div>
         )}
-      </CollapsibleSection></section>
+      </CartaoSecao>
       {erro && <p className="text-[12px] text-na-danger-dark dark:text-red-300">{erro}</p>}
     </div>
   );

@@ -240,7 +240,7 @@ export function VisaoGeralTab({
       {(() => {
         const financeiro = (
           <>
-        <h3 className="-mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Financeiro no Portal</h3>
+        {comRelatorio && <h3 className="-mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Financeiro no Portal</h3>}
         <div
           className={`rounded-2xl border p-5 ${
             resultadoPositivo
@@ -259,7 +259,7 @@ export function VisaoGeralTab({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <div className={`grid grid-cols-2 gap-4 sm:grid-cols-3 ${comRelatorio ? "lg:grid-cols-6" : ""}`}>
           <KpiCard
             title="Receita Prevista (Mensal)"
             value={formatBRL(kpis.receitaPrevista)}
