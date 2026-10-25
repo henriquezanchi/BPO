@@ -4,6 +4,7 @@ import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
+import { rubricaIncluivelPeloMembro } from "@/lib/rubrica-visibilidade";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -44,12 +45,19 @@ function mesmoDiaUTC(a: Date, b: Date): boolean {
  * relatório de "quanto a contribuição cresceu" (ver
  * getCrescimentoComposicao em economia-actions.ts).
  */
-export async function solicitarItemComposicao(memberId: string, mercurioGroupId: string, label: string, valor: number) {
-  exigirEscritaMercurio(await requireAuthenticatedMember(memberId));
+export async function solicitarItemComposicao(memberId: string, mercurioGroupId: string, rotulo: string, valor: number) {
+  const eu = await requireAuthenticatedMember(memberId);
+  exigirEscritaMercurio(eu);
 
   if (!Number.isFinite(valor) || valor <= 0) {
     return { ok: false as const, error: "Valor inválido." };
   }
+  // Só rubricas do catálogo da filial que o membro pode incluir (o rótulo vem do catálogo, não da tela).
+  const doCatalogo = await db.schoolCompositionCatalogItem.findFirst({ where: { schoolId: eu.schoolId, mercurioGroupId }, select: { label: true } });
+  if (!doCatalogo || !rubricaIncluivelPeloMembro(doCatalogo.label)) {
+    return { ok: false as const, error: `"${rotulo}" só pode ser incluído pela secretaria da filial.` };
+  }
+  const label = doCatalogo.label;
 
   const item = await db.contributionCompositionItem.create({
     data: { memberId, mercurioGroupId, label, amount: valor, addedViaPortal: true },

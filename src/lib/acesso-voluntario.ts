@@ -11,9 +11,16 @@ import type { Member } from "@prisma/client";
  *  - quem já foi liberado e é responsável por um grupo libera os
  *    integrantes desse grupo (vínculos que o sistema já conhece).
  */
-type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "filiaisChefiadas" | "mercurioId">;
+type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "filiaisChefiadas" | "mercurioId">;
 
-const ehChefeDeFilial = (m: Pessoa) => m.isDiretor || m.filiaisChefiadas.length > 0;
+// Sub-Chefe de Filial também libera (pedido do usuário 2026-10-25), só na própria filial.
+const ehChefeDeFilial = (m: Pessoa) => m.isDiretor || m.isSubChefe || m.filiaisChefiadas.length > 0;
+
+/** Filiais em que a pessoa libera acessos: as que chefia e, se é Sub-Chefe, a própria. */
+async function escolasQueLibera(m: Pessoa): Promise<string[]> {
+  const escolas = await escolasChefiadas(m);
+  return m.isSubChefe && !escolas.includes(m.schoolId) ? [...escolas, m.schoolId] : escolas;
+}
 
 /** Administração nacional (LiberadorNacional): vale como Chefe de Filial em todas as filiais. */
 export async function ehAdministradorNacional(m: Pick<Member, "mercurioId">): Promise<boolean> {
@@ -41,7 +48,7 @@ export async function comAcessoVoluntario(memberIds: string[]): Promise<Set<stri
   if (!memberIds.length) return new Set();
   const [liberados, diretores] = await Promise.all([
     db.acessoVoluntario.findMany({ where: { memberId: { in: memberIds } }, select: { memberId: true } }),
-    db.member.findMany({ where: { id: { in: memberIds }, OR: [{ isDiretor: true }, { filiaisChefiadas: { isEmpty: false } }] }, select: { id: true } }),
+    db.member.findMany({ where: { id: { in: memberIds }, OR: [{ isDiretor: true }, { isSubChefe: true }, { filiaisChefiadas: { isEmpty: false } }] }, select: { id: true } }),
   ]);
   return new Set([...liberados.map((l) => l.memberId), ...diretores.map((d) => d.id)]);
 }
@@ -60,7 +67,7 @@ export async function podeLiberar(liberador: Pessoa, alvoId: string): Promise<bo
   if (!(await temAcessoVoluntario(liberador))) return false;
   const alvo = await db.member.findUnique({ where: { id: alvoId }, select: { schoolId: true, isDiretor: true } });
   if (!alvo || alvo.isDiretor) return false;
-  if ((await escolasChefiadas(liberador)).includes(alvo.schoolId)) return true;
+  if ((await escolasQueLibera(liberador)).includes(alvo.schoolId)) return true;
   const grupos = (await gruposQueLidera(liberador.id)).map((g) => g.classGroupId);
   if (!grupos.length) return false;
   return (await db.classMembership.count({ where: { memberId: alvoId, role: "aluno", classGroupId: { in: grupos } } })) > 0;
@@ -69,7 +76,7 @@ export async function podeLiberar(liberador: Pessoa, alvoId: string): Promise<bo
 /** Pessoas que aparecem na tela de liberação deste liberador. */
 export async function candidatosParaLiberar(liberador: Pessoa) {
   if (!(await temAcessoVoluntario(liberador))) return [];
-  const escolas = await escolasChefiadas(liberador);
+  const escolas = await escolasQueLibera(liberador);
   const where = escolas.length
     ? { schoolId: { in: escolas }, mercurioAtivo: true, isDiretor: false, id: { not: liberador.id } }
     : {

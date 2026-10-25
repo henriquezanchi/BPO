@@ -42,3 +42,10 @@ export function rubricaVisivelPara(label: string, member: MembroComGrupos): bool
   const regra = REGRAS.find((r) => r.labelRegex.test(label));
   return regra ? regra.permitido(member) : true;
 }
+
+/** Rubricas que o próprio membro pode incluir pelo Portal (pedido do usuário 2026-10-25); as demais, só pela secretaria. */
+const INCLUIVEIS_PELO_MEMBRO = /^(contribui[cç][ãa]o biblioteca|doa[cç][ãa]o crian[cç]a para o bem mensal|contribui[cç][ãa]o voluntariado|doa[cç][ãa]o mensal de membro\/provacionista)$/i;
+
+export function rubricaIncluivelPeloMembro(label: string): boolean {
+  return INCLUIVEIS_PELO_MEMBRO.test(label.trim().replace(/\s+/g, " "));
+}

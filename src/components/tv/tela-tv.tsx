@@ -1,7 +1,7 @@
 "use client";
 
 import type { IconeCartao, SlideCartao, SlideEvento, SlideFrase, SlideLista, SlideTela } from "@/lib/telas-eventos";
-import { CalendarDays, Cake, Camera, CircleFadingPlus, CirclePlay, GraduationCap, HeartHandshake, MapPin, Megaphone, Ticket, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { CalendarDays, Cake, Camera, CircleFadingPlus, CirclePlay, GraduationCap, MapPin, Megaphone, Ticket, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { lembrarTela } from "./parear-tv";
@@ -15,7 +15,6 @@ const FUSO = "America/Sao_Paulo";
 const ICONES: Record<IconeCartao | SlideLista["icone"], LucideIcon> = {
   matricula: GraduationCap,
   aviso: Megaphone,
-  apoio: HeartHandshake,
   instagram: Camera,
   play: CirclePlay,
   programacao: CalendarDays,

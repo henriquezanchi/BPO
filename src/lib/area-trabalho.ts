@@ -104,7 +104,7 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     tem("cafe") && { href: "/voluntario/cafe", rotulo: "Café", descricao: "Caixa Fortuna", icone: "cafe", secao: "Secretarias" },
     tem("direcao") && { href: "/voluntario/filial", rotulo: "Visão da filial", descricao: "Resumo da filial e de cada área", icone: "direcao", secao: "Gestão da filial" },
     administra.length > 0 && { href: "/admin", rotulo: "Administração", descricao: "Secretarias, GAF, recursos e senhas", icone: "admin", secao: "Gestão da filial" },
-    (chefe || lideraFV > 0) && { href: "/voluntario/acessos", rotulo: "Liberar acessos", descricao: "Quem vê a área de voluntários", icone: "acessos", secao: "Gestão da filial" },
+    (chefe || m.isSubChefe || lideraFV > 0) && { href: "/voluntario/acessos", rotulo: "Liberar acessos", descricao: "Quem vê a área de voluntários", icone: "acessos", secao: "Gestão da filial" },
     nacional && { href: "/nacional", rotulo: "Painel Nacional", descricao: "Toda a OINAB-N", icone: "nacional", secao: "Nacional" },
   ];
   const lista = d.filter(Boolean) as Destino[];

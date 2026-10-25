@@ -12,7 +12,8 @@ import { db } from "@/lib/db";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
 import { avisosDosGrupos, meusGrupos } from "@/lib/grupos-dados";
 import { gruposDaAgenda } from "@/lib/grupos-portal";
-import { rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
+import { PRAZO_EVENTO_CANCELADO_MS } from "@/lib/evento-cancelado";
+import { rubricaIncluivelPeloMembro, rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
 import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
 
 /** Status que contam como "inadimplente" — usado tanto pra alertar a Economia quanto pro snapshot de PaymentCharge.memberWasOverdue. */
@@ -155,7 +156,7 @@ export async function getMemberDashboard(memberId: string) {
   // carregamento do Portal (ver discussão de escala em CLAUDE.md/histórico).
   const gruposJaTidos = new Set(member.compositionItems.map((i) => i.mercurioGroupId));
   const availableToAdd = member.school.compositionCatalog
-    .filter((c) => !gruposJaTidos.has(c.mercurioGroupId) && rubricaVisivelPara(c.label, member))
+    .filter((c) => !gruposJaTidos.has(c.mercurioGroupId) && rubricaIncluivelPeloMembro(c.label) && rubricaVisivelPara(c.label, member))
     .map((c) => ({ value: c.mercurioGroupId, label: c.label }));
 
   const walletAgg = await db.fortunaTransaction.aggregate({
@@ -192,7 +193,7 @@ export async function getMemberDashboard(memberId: string) {
       where: {
         // Filial da pessoa, eventos de outras filiais abertos a ela (abertoA) e nacionais/regionais.
         OR: [...(eventScopeWhere(member.school).OR ?? []), { scope: { in: ["nacional", "regional"] } }],
-        AND: [eventAudienceWhere(member,acessoVoluntario),agendaUlissesBranchWhere(member.schoolId),{OR:[{status:"publicado"},{status:"cancelado",registrations:{some:{memberId}}}]}],
+        AND: [eventAudienceWhere(member,acessoVoluntario),agendaUlissesBranchWhere(member.schoolId),{OR:[{status:"publicado"},{status:"cancelado",registrations:{some:{memberId,refundState:{not:"reembolsado"}}},audits:{some:{action:"cancelado",createdAt:{gte:new Date(Date.now()-PRAZO_EVENTO_CANCELADO_MS)}}}}]}],
         startsAt: { gte: new Date(Date.now()-86400000) },
       },
       orderBy: { startsAt: "asc" },

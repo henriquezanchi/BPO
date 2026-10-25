@@ -127,4 +127,14 @@ Segunda rodada do mesmo dia (pedidos do usuário: conexão pelo controle remoto,
 - **Liberar acessos** (`voluntario/acessos/page.tsx`): responsável por grupo sem acesso próprio via o link no menu e voltava ao Início; agora a página explica que o Chefe de Filial libera primeiro.
 - **Escolástica:** "Orientações e gestão" entrou em `ABAS_ESCOLASTICA` (aparece também na Avaliação dos instrutores) e ganhou título e abas; continua com o controle de acesso próprio de `AreaSecretaria` (nacional/regional entram sem a área da filial).
 - **Dono do sistema** (`lib/dono-do-sistema.ts`, pedido do usuário: acesso a todas as funcionalidades): matrícula 21596. `ehAdministradorNacional` devolve verdadeiro para ele (todas as filiais e áreas via `escolasChefiadas`/`areasNaFilial`, liberar acessos, `/nacional`, secretarias da rede) e `getAuthenticatedMember` o devolve com `isDiretor: true` (telas que conferem direção da própria filial). Não grava nada no banco; para incluir outro dono, acrescentar a matrícula ao conjunto. Novas checagens de permissão devem passar por `ehAdministradorNacional`/`areasNaFilial` para o dono continuar entrando.
+- **Sub-Chefe libera acessos** (pedido do usuário): `ehChefeDeFilial` em `acesso-voluntario.ts` inclui `isSubChefe`; `escolasQueLibera` = filiais chefiadas + a própria, se Sub-Chefe (só para liberar; `escolasChefiadas` não mudou, para não ampliar Administração, Aberturas etc.). Menu e página de Liberar acessos seguem a mesma regra.
+
+## 27. Claude — Etapa 1 da lista de demandas do usuário (25/10/2026)
+
+- **Situação da Contribuição** (`contribution-status-panel.tsx`): resumo mais curto; seletor de ano só com mais de um ano (a importação traz só o ano corrente); "Regularize primeiro" só quando há mês anterior ao atual em aberto.
+- **Incluir novo item:** o membro só inclui CONTRIBUIÇÃO BIBLIOTECA, DOAÇÃO CRIANÇA PARA O BEM MENSAL, CONTRIBUIÇÃO VOLUNTARIADO e DOAÇÃO MENSAL DE MEMBRO/PROVACIONISTA (`rubricaIncluivelPeloMembro` em `rubrica-visibilidade.ts`), na lista (`member-data.ts`) e no servidor (`solicitarItemComposicao` confere o catálogo da filial e usa o rótulo dele).
+- **TVs:** saiu o conteúdo/cartão "Círculo de Amigos / doação" (`apoio`); a TV de pátio foi atualizada no banco.
+- **Evento cancelado** (`lib/evento-cancelado.ts`): na Agenda, só enquanto o reembolso do inscrito não é confirmado e no máximo 5 dias depois do cancelamento (data do `EventAudit` "cancelado"); em Meus eventos vai para a seção "Cancelados", no fim.
+- **Minha jornada sem 2026:** não é erro; o Mercúrio não tem participações em cursos de 2026 em Barra do Garças nem no Universitário (Boa Viagem e Lago Sul lançam).
+- Código das frases por filial continua fora do commit (depende da migração `20261025120000_frases_tela`, ainda não autorizada).
 

@@ -14,12 +14,11 @@ export function validarPublicosTela(publicos: string[]): PublicoTela[] {
   return v;
 }
 
-/** O que a TV intercala com os eventos (pedido do usuário 2026-10-24: "tudo"). */
+/** O que a TV intercala com os eventos (pedido do usuário 2026-10-24: "tudo"; Círculo de Amigos/doação saiu em 25/10). */
 export const CONTEUDOS_TELA = {
   matriculas: "Matrículas abertas",
   frase: "Frase da semana",
   avisos: "Avisos da filial",
-  apoio: "Círculo de Amigos e doações",
   redes: "Instagram e Acrópole Play",
   programacao: "Programação da semana",
   aniversariantes: "Aniversariantes do mês",
@@ -52,7 +51,6 @@ export const TIPOS_CARTAO = {
   // Matrícula escrita à mão: enquanto a filial não cadastra a turma em Aberturas (que gera o slide sozinha).
   matricula: { rotulo: "Matrículas abertas", conteudo: "matriculas", exemploTitulo: "Curso de Filosofia: nova turma em março", exemploLink: "https://…" },
   aviso: { rotulo: "Aviso", conteudo: "avisos", exemploTitulo: "Feriado de 15 de novembro: sede fechada", exemploLink: "" },
-  apoio: { rotulo: "Círculo de Amigos / doação", conteudo: "apoio", exemploTitulo: "Faça parte do Círculo de Amigos", exemploLink: "https://…" },
   instagram: { rotulo: "Instagram", conteudo: "redes", exemploTitulo: "Siga a filial no Instagram", exemploLink: "https://instagram.com/…" },
   play: { rotulo: "Acrópole Play", conteudo: "redes", exemploTitulo: "Palestras gravadas no Acrópole Play", exemploLink: "https://…" },
 } as const satisfies Record<string, { rotulo: string; conteudo: ConteudoTela; exemploTitulo: string; exemploLink: string }>;

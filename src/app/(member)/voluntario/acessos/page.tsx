@@ -29,7 +29,7 @@ export default async function AcessosVoluntarioPage() {
 
   const pessoas = await candidatosParaLiberar(member);
   const nacional = await ehAdministradorNacional(member);
-  const chefeDeFilial = member.isDiretor || member.filiaisChefiadas.length > 0 || nacional;
+  const chefeDeFilial = member.isDiretor || member.isSubChefe || member.filiaisChefiadas.length > 0 || nacional;
   if (!chefeDeFilial && pessoas.length === 0) redirect("/voluntario");
 
   return (
@@ -41,7 +41,7 @@ export default async function AcessosVoluntarioPage() {
           {chefeDeFilial
             ? nacional
               ? "Como administração nacional, você libera qualquer pessoa de qualquer filial — comece pelos chefes de filial, chefes de grupo, sub-chefes e secretários."
-              : "Como Chefe de Filial, você libera qualquer pessoa da filial — comece pelos chefes de grupo, sub-chefes e secretários; eles liberam os integrantes dos seus grupos."
+              : `Como ${member.isDiretor || member.filiaisChefiadas.length ? "Chefe" : "Sub-Chefe"} de Filial, você libera qualquer pessoa da filial — comece pelos chefes de grupo, sub-chefes e secretários; eles liberam os integrantes dos seus grupos.`
             : "Você pode liberar os integrantes dos grupos pelos quais é responsável."}
         </p>
       </div>

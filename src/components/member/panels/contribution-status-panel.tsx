@@ -154,15 +154,17 @@ export function ContributionStatusPanel({
 
       <section aria-label="Resumo das contribuições" className="my-4 space-y-2 border-y border-gray-200 py-4 text-sm dark:border-gray-700">
         <h3 className="font-bold text-na-green-dark dark:text-na-green-light">Suas contribuições</h3>
-        <p>{overdue.length ? `${overdue.length} competência(s) registrada(s) em atraso.` : monthlyStatus.length ? "Nenhum atraso nos registros disponíveis." : "Ainda não temos a situação da escola para consulta."}</p>
-        {!!received.length && <p>{received.length} pagamento(s) confirmado(s) pelo Portal. O registro na escola pode levar mais tempo.</p>}
-        <p className="text-xs text-gray-600 dark:text-gray-300">{latestSync ? `Última atualização de um registro: ${latestSync.toLocaleString("pt-BR")}.` : "Sem data de atualização disponível."} Não são cobrados juros sobre as contribuições.</p>
-        <p className="text-xs text-gray-600 dark:text-gray-300">O valor atual da composição não é usado para estimar valores de meses anteriores. Se você já pagou na escola e isso não aparece, peça a conferência antes de pagar novamente.</p>
+        <p>{overdue.length ? `${overdue.length} ${overdue.length > 1 ? "meses" : "mês"} em atraso.` : monthlyStatus.length ? "Nenhum atraso." : "Ainda não temos a situação da escola."}</p>
+        {!!received.length && <p>{received.length} pagamento(s) feito(s) pelo Portal, ainda sendo registrado(s) na escola.</p>}
+        <p className="text-xs text-gray-600 dark:text-gray-300">
+          {latestSync ? `Atualizado em ${latestSync.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}. ` : ""}Sem juros. Já pagou na escola e não aparece? Peça a conferência antes de pagar de novo.
+        </p>
       </section>
 
-      <label className="mb-3 flex items-center gap-2 text-sm">Ano<select aria-label="Ano das contribuições" value={selectedYear} onChange={e=>setSelectedYear(Number(e.target.value))} className="min-h-11 rounded-lg border border-gray-300 p-2 dark:bg-gray-800">{years.map(year=><option key={year} value={year}>{year}</option>)}</select></label>
-      {firstOpen && <button type="button" onClick={()=>setSelectedYear(firstOpen.year)} className="mb-2 min-h-11 text-sm font-semibold text-na-green-dark dark:text-na-green-light">Ir para a contribuição mais antiga em aberto</button>}
-      {firstOpen && <p className="mb-3 text-xs text-na-warning-dark dark:text-na-warning-light">Regularize primeiro {String(firstOpen.month).padStart(2,"0")}/{firstOpen.year}. Meses posteriores ficam bloqueados enquanto houver contribuição anterior em aberto.</p>}
+      {/* A importação do Mercúrio traz só o ano corrente: o seletor aparece apenas se houver mais de um ano. */}
+      {years.length > 1 && <label className="mb-3 flex items-center gap-2 text-sm">Ano<select aria-label="Ano das contribuições" value={selectedYear} onChange={e=>setSelectedYear(Number(e.target.value))} className="min-h-11 rounded-lg border border-gray-300 p-2 dark:bg-gray-800">{years.map(year=><option key={year} value={year}>{year}</option>)}</select></label>}
+      {firstOpen && firstOpen.year !== selectedYear && <button type="button" onClick={()=>setSelectedYear(firstOpen.year)} className="mb-2 min-h-11 text-sm font-semibold text-na-green-dark dark:text-na-green-light">Ir para a contribuição mais antiga em aberto</button>}
+      {firstOpen && periodNumber(firstOpen) < periodNumber({year:new Date().getFullYear(),month:new Date().getMonth()+1}) && <p className="mb-3 text-xs text-na-warning-dark dark:text-na-warning-light">Regularize primeiro {String(firstOpen.month).padStart(2,"0")}/{firstOpen.year}; os meses seguintes liberam depois.</p>}
       <div className="mb-4 grid grid-cols-4 gap-2">
         {MESES.map((nome, i) => {
           const mes = i + 1;

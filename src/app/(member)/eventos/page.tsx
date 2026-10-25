@@ -5,6 +5,7 @@ import {
 } from "@/components/member/meus-eventos";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { canceladoAindaNoCalendario } from "@/lib/evento-cancelado";
 import {
   ArrowLeft,
   CalendarDays,
@@ -20,13 +21,14 @@ export const dynamic = "force-dynamic";
  * Meus eventos (pedido do usuário 2026-10-22: "a página está meio sem graça,
  * preto e branco, sem destacar a categoria, nome ou data"). Mesmo visual da
  * Agenda: data em destaque, categoria, etiqueta colorida com a situação da
- * inscrição; próximos primeiro, depois os anteriores.
+ * inscrição; próximos primeiro, depois os anteriores. Cancelado vai para o fim quando o reembolso
+ * é confirmado ou passam 5 dias (evento-cancelado.ts).
  */
 async function carregar(memberId: string) {
   const [registrations, reception] = await Promise.all([
     db.eventRegistration.findMany({
       where: { memberId },
-      include: { event: { include: { school: { select: { name: true } } } } },
+      include: { event: { include: { school: { select: { name: true } }, audits: { where: { action: "cancelado" }, select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 } } } },
       orderBy: { event: { startsAt: "asc" } },
     }),
     db.eventReception.findMany({
@@ -45,8 +47,12 @@ export default async function Page() {
   const { registrations, reception } = await carregar(member.id);
   const agora = new Date();
   const fim = (r: Registro) => r.event.endsAt ?? r.event.startsAt;
-  const proximos = registrations.filter((r) => fim(r) >= agora);
-  const anteriores = registrations.filter((r) => fim(r) < agora).reverse();
+  const noFim = (r: (typeof registrations)[number]) =>
+    r.event.status === "cancelado" && !canceladoAindaNoCalendario(r.event.audits[0]?.createdAt, r.refundState, agora);
+  const ativos = registrations.filter((r) => !noFim(r));
+  const proximos = ativos.filter((r) => fim(r) >= agora);
+  const anteriores = ativos.filter((r) => fim(r) < agora).reverse();
+  const cancelados = registrations.filter(noFim).reverse();
   const recepcaoProxima = reception.filter(
     (r) => (r.event.endsAt ?? r.event.startsAt) >= agora,
   );
@@ -137,6 +143,24 @@ export default async function Page() {
             Anteriores
           </h2>
           {anteriores.map((r) => (
+            <CartaoEvento
+              key={r.id}
+              r={r}
+              minhaEscola={member.schoolId}
+              passado
+              memberId={member.id}
+              podeResponder={!member.isJanos}
+            />
+          ))}
+        </section>
+      )}
+
+      {cancelados.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+            Cancelados
+          </h2>
+          {cancelados.map((r) => (
             <CartaoEvento
               key={r.id}
               r={r}

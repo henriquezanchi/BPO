@@ -198,7 +198,6 @@ function intercalar(eventos: SlideTela[], extras: SlideTela[]) {
 const CHAMADA_CARTAO: Record<TipoCartao, string> = {
   matricula: "Garanta sua vaga",
   aviso: "Saiba mais pelo celular",
-  apoio: "Apoie a escola",
   instagram: "Siga a filial",
   play: "Assista pelo celular",
 };
