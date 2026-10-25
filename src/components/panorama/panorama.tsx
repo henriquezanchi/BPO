@@ -52,31 +52,6 @@ function Area({ titulo, icone: Icone, href, children, detalhes }: { titulo: stri
   );
 }
 
-export function SeletorAlcance({ alcances, atual, base }: { alcances: Alcance[]; atual: string; base: string }) {
-  if (alcances.length < 2) return null;
-  const grupos = [alcances.filter((a) => a.escolas.length === 1), alcances.filter((a) => a.escolas.length > 1)].filter((g) => g.length);
-  return (
-    <nav className="flex flex-col gap-1.5" aria-label="Alcance">
-      {grupos.map((g, i) => (
-        <div key={i} className="flex flex-wrap gap-1.5">
-          {g.map((a) => (
-            <Link
-              key={a.chave}
-              href={`${base}?alcance=${a.chave}`}
-              aria-current={a.chave === atual ? "page" : undefined}
-              className={`rounded-full border px-3 py-1 text-[12px] font-semibold ${
-                a.chave === atual ? "border-na-green bg-na-green text-white" : "border-gray-300 text-gray-600 hover:border-na-green dark:border-gray-700 dark:text-gray-300"
-              }`}
-            >
-              {a.rotulo}
-            </Link>
-          ))}
-        </div>
-      ))}
-    </nav>
-  );
-}
-
 export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p: Panorama; alcance: Alcance; base: string; minhaFilial: boolean; financeiro?: React.ReactNode }) {
   const m = p.mercurio;
   const varias = alcance.escolas.length > 1;
@@ -91,8 +66,8 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
   return (
     <div className="flex flex-col gap-5">
       <p className="text-[11px] text-gray-500 dark:text-gray-400">
-        {m.atualizacaoMercurio ? `Dados do Mercúrio de ${new Date(m.atualizacaoMercurio.replace(" ", "T") + "-03:00").toLocaleDateString("pt-BR")}` : "Sem data do Mercúrio"} · somente pessoas
-        ativas{p.faltamResumos.length ? ` · ainda sem resumo: ${p.faltamResumos.join(", ")}` : ""}.
+        {m.atualizacaoMercurio ? `Dados do Mercúrio de ${new Date(m.atualizacaoMercurio.replace(" ", "T") + "-03:00").toLocaleDateString("pt-BR")}` : "Sem data do Mercúrio"} · pessoas ativas de cada filial inteira no Mercúrio
+        (não só quem usa o Portal) · {alcance.escolas.length === 1 ? "1 filial" : `${alcance.escolas.length} filiais abertas no Portal`}{p.faltamResumos.length ? ` · ainda sem resumo: ${p.faltamResumos.join(", ")}` : ""}.
       </p>
 
       <div className="grid gap-5 lg:grid-cols-2">
@@ -105,7 +80,7 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
               <ul className="flex flex-col gap-1.5">
                 {m.porNivel.map((n) => (
                   <li key={n.nivel} className="flex items-center gap-3 text-[12px] text-gray-700 dark:text-gray-300">
-                    <span className="w-40 shrink-0 truncate">{n.rotulo}</span>
+                    <span className="w-44 shrink-0 text-[11px] leading-tight">{n.rotulo}</span>
                     <span className="h-2 rounded-r bg-[#009485] dark:bg-[#16a090]" style={{ width: `${pct(n.total, Math.max(1, m.pessoas.ativos))}%`, minWidth: 3 }} />
                     <span className="tabular-nums">{n.total}</span>
                   </li>
@@ -241,8 +216,8 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
           <Area titulo="Abertura de turmas" icone={BookOpenText} href={link("/voluntario/aberturas")}>
             <div className="grid grid-cols-3 gap-3">
               <Numero valor={p.aberturas.ativas} rotulo="aberturas planejadas ou em curso" />
-              <Numero valor={p.aberturas.interessados.toLocaleString("pt-BR")} rotulo="na base de interessados do CRM" />
-              <Numero valor={p.aberturas.matriculas.toLocaleString("pt-BR")} rotulo="matrículas registradas no CRM" />
+              <Numero valor={p.aberturas.interessados.toLocaleString("pt-BR")} rotulo="na base de interessados (desde o início)" />
+              <Numero valor={p.aberturas.matriculas.toLocaleString("pt-BR")} rotulo="matrículas vindas de interessados" />
             </div>
           </Area>
         </div>

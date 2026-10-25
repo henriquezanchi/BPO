@@ -73,7 +73,7 @@ export async function registrarAbertura(f:FormData){try{
  if(tipo==='despesa')dados.valorCentavos=centavos(String(dados.valor));
  if(tipo==='sinal'||tipo==='avaliacao'){
   const cache=await db.aberturaCrmCache.findUnique({where:{schoolId}});const crm=cache?.dados as {leads?:{id:string}[]}|undefined;
-  if(!crm?.leads?.some(l=>String(l.id)===String(dados.leadId)))throw Error('Atualize o CRM e selecione um interessado desta filial.');
+  if(!crm?.leads?.some(l=>String(l.id)===String(dados.leadId)))throw Error('Atualize os interessados e selecione um desta filial.');
  }
  if(tipo==='sinal'){
   dados.aberturaId=abertura.id;dados.responsavel=member.id;dados.contextoHorario={diaSemana:abertura.diaSemana,inicioMinuto:abertura.inicioMinuto};
@@ -91,7 +91,7 @@ export async function registrarAbertura(f:FormData){try{
   const match=crm?.matriculas?.filter(m=>String(m.mercurioId)===String(dados.mercurioId)&&String(m.turmaId)===abertura.mercurioTurmaId);
   if(dados.leadId&&!match?.some(m=>String(m.leadId)===String(dados.leadId)))throw Error('O interessado não corresponde à identidade acadêmica confirmada.');
   dados.turmaId=abertura.mercurioTurmaId;
-  if(!match?.length)throw Error('Matrícula ainda não foi localizada na fonte acadêmica desta filial. Atualize o CRM.');
+  if(!match?.length)throw Error('Matrícula ainda não foi localizada na fonte acadêmica desta filial. Atualize os interessados.');
   if(dados.status==='matriculado'&&!match.some(m=>m.data?.slice(0,10)===dados.data))throw Error('A data deve coincidir com a matrícula acadêmica confirmada.');
   dados.fonte=dados.status==='matriculado'?'mercurio':'registro_local';dados.confirmadoEm=new Date().toISOString();
  }
@@ -104,7 +104,7 @@ export async function registrarAbertura(f:FormData){try{
   const snapshot={leadId:String(dados.leadId),...await avaliarLeadAbertura(abertura,String(dados.leadId),true)};
   await db.$transaction([db.aberturaRegistro.create({data:{aberturaId:abertura.id,autorId:member.id,tipo:'avaliacao',dados:snapshot as Prisma.InputJsonValue}}),db.aberturaTurma.update({where:{id:abertura.id},data:{revisao:{increment:1}}})]);
   try{await consultarCrmAberturas(schoolId,{aberturaId:abertura.id,abertura:snapshot.abertura,avaliacoes:[{leadId:snapshot.leadId,sinais:snapshot.sinais.filter(s=>s.aberturaId===abertura.id),snapshot}]});}
-  catch{atualizar();return {ok:true,aviso:'Registro salvo no BPO. A integração CRM ficou pendente; use Atualizar CRM antes de realizar novos contatos.'};}
+  catch{atualizar();return {ok:true,aviso:'Registro salvo no Portal. A atualização dos interessados ficou pendente; use Atualizar interessados antes de novos contatos.'};}
  }
  atualizar();return {ok:true};
  }catch(e){return falha(e);}}

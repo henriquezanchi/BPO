@@ -21,6 +21,6 @@ export async function avaliarLeadAbertura(abertura:AberturaTurma,leadId:string,p
  const contexto={id:abertura.id,diaSemana:abertura.diaSemana,inicioMinuto:abertura.inicioMinuto,primeiraAula:abertura.primeiraAula.toISOString()};
  const lead=crm?.leads?.find(l=>String(l.id)===leadId);
  const snapshot=avaliarFatos(sinais,contexto,undefined,{naoContatar:lead?.naoContatar===true,atualizadoEm:lead?.preferenciaContatoEm||null});
- if(!fonteAtualizada&&(snapshot.proximaAcao as {codigo?:string})?.codigo!=='respeitar_nao_contatar')snapshot.proximaAcao={codigo:'conferir_preferencia_atual',motivo:'Confira a preferência de contato atual no CRM antes de realizar qualquer contato; a consulta recente não foi confirmada.'};
+ if(!fonteAtualizada&&(snapshot.proximaAcao as {codigo?:string})?.codigo!=='respeitar_nao_contatar')snapshot.proximaAcao={codigo:'conferir_preferencia_atual',motivo:'Confira a preferência de contato atual na base de interessados antes de realizar qualquer contato; a consulta recente não foi confirmada.'};
  return {...snapshot,sinais,abertura:contexto,baseAcademica:crm?.baseAtualizadaEm??null,fingerprint:createHash('sha256').update(JSON.stringify({sinais,contexto})).digest('hex'),preResultado:!jaMatriculado};
 }

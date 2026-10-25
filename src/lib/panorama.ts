@@ -36,6 +36,41 @@ export async function alcancesDaPessoa(m: Member): Promise<{ escolas: Escola[]; 
   return { escolas, alcances, nacional };
 }
 
+/** Filiais por regional e estado, para o seletor da Visão geral. */
+export function gruposPorRegiao(escolas: Escola[]) {
+  const nomeRegional = (id: string | null) => (id && REGIONAIS[id] ? `Regional ${REGIONAIS[id].nome}` : "Outras");
+  const mapa = new Map<string, { id: string; nome: string; estados: Map<string, { uf: string; escolas: { id: string; nome: string }[] }> }>();
+  for (const e of escolas) {
+    const rid = regionalDaUf(e.uf) ?? "outras";
+    const g = mapa.get(rid) ?? { id: rid, nome: nomeRegional(regionalDaUf(e.uf)), estados: new Map() };
+    const uf = e.uf ?? "—";
+    const est = g.estados.get(uf) ?? { uf, escolas: [] };
+    est.escolas.push({ id: e.id, nome: e.nome });
+    g.estados.set(uf, est);
+    mapa.set(rid, g);
+  }
+  return [...mapa.values()]
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+    .map((g) => ({ id: g.id, nome: g.nome, estados: [...g.estados.values()].sort((a, b) => a.uf.localeCompare(b.uf)) }));
+}
+
+/**
+ * Alcance escolhido: `filiais=id,id` (várias, do seletor), `alcance=<chave>` (filial, regional ou todas) ou,
+ * sem nada, a própria filial. Só entram filiais que a pessoa pode ver.
+ */
+export function escolherAlcance(alcances: Alcance[], escolas: Escola[], params: { filiais?: string; alcance?: string }, propria: string): Alcance {
+  const todasAs = alcances.find((a) => a.chave === "todas");
+  if (params.filiais) {
+    const ids = new Set(params.filiais.split(","));
+    const sel = escolas.filter((e) => ids.has(e.id));
+    if (sel.length === escolas.length && todasAs) return todasAs;
+    const igual = alcances.find((a) => a.escolas.length === sel.length && a.escolas.every((e) => ids.has(e.id)));
+    if (igual) return igual;
+    if (sel.length) return { chave: sel.map((e) => e.id).join(","), rotulo: `${sel.length} filiais: ${sel.map((e) => e.nome).join(", ")}`, escolas: sel };
+  }
+  return alcances.find((a) => a.chave === params.alcance) ?? alcances.find((a) => a.chave === propria) ?? alcances[0];
+}
+
 // ---------- soma dos resumos do Mercúrio ----------
 function somarResumos(lista: ResumoFilialDados[]) {
   const porNivel = new Map<string, { nivel: string; rotulo: string; total: number }>();

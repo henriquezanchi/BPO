@@ -15,7 +15,7 @@ export function GraficoCustoConversao({ data }: { data: PainelAberturas }) {
     <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Investimento e matrícula</h2>}>
       <div className="mb-4 flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-na-gold/15 text-na-gold-dark dark:text-amber-300"><BarChart3 size={18} /></span>
-        <div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Custos lançados e conversão observada na base atual do CRM.</p></div>
+        <div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Custos lançados e conversão observada na base atual de interessados.</p></div>
       </div>
       {linhas.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Crie uma abertura para acompanhar custos e resultados.</p> : <div className="space-y-3">{linhas.map(({ abertura, relatorio }) => {
         const real = relatorio?.despesas.realCentavos ?? 0;
