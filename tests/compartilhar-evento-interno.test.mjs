@@ -11,10 +11,10 @@ const evento = {
 };
 const texto = (e) => new URL(linkWhatsAppDoEvento(e, portal)).searchParams.get('text');
 
-test('evento interno compartilha convite, programação completa, local, gratuidade e link próprio', () => {
+test('evento interno compartilha os dados, programação completa, local, gratuidade e link próprio', () => {
   const t = texto(evento);
-  assert.match(t, /^Vamos participar juntos\?/);
-  assert.match(t, /\n\*Sábado de Integração\*\n/);
+  // Sem frase em primeira pessoa (pedido do usuário 2026-10-25): começa pelo título.
+  assert.match(t, /^\*Sábado de Integração\*\n/);
   assert.ok(!t.includes('**'));
   assert.match(t, /sábado, 7 de novembro, às 8h\nSede/);
   assert.ok(t.includes(evento.description));

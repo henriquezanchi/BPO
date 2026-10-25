@@ -14,7 +14,7 @@ import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
-import { CalendarClock, Check, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper, Ticket, Users, UtensilsCrossed } from "lucide-react";
+import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper, Ticket, Users, UtensilsCrossed } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -387,7 +387,7 @@ function ListaDeEspera({ memberId, eventId, espera }: { memberId: string; eventI
   );
 }
 
-function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean; emBreve?: boolean }) {
+function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean; emBreve?: boolean; aberto?: boolean }) {
   if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm"><CollapsibleSection title={<h3 className="font-bold">{item.title}</h3>}>
     <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><p>{item.date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</p>
     {item.status==='cancelada'?<p>Reunião cancelada: {item.cancellationReason}</p>:<><p>Comparecimento obrigatório. Se não puder participar, registre uma justificativa.</p>{item.fullUniform&&<p className="font-semibold">CRM com traje completo</p>}{item.description&&<p>{item.description}</p>}<MeetingResponse key={`${item.id}:${item.version}`} memberId={memberId} id={item.id} version={item.version} initial={item.myResponse}/></>}
@@ -419,22 +419,31 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
           }} />
         )}
         </div>
+        {/* Fechado por padrão (pedido do usuário 2026-10-25): descrição e detalhes só ao tocar. */}
+        <details open={aberto} className="group">
+        <summary className="flex cursor-pointer list-none items-start justify-between gap-2 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+        <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</span>
+        <span className="mt-1 block text-[11px] capitalize text-gray-500 dark:text-gray-400">
+          {item.allDay ? formatDateBR(item.date) : item.date.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"})}
+        </span>
+        {item.location && (
+          <span className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+            <MapPin size={11} className="shrink-0" /> {item.location}
+          </span>
+        )}
+        {item.status === "cancelado" && <span className="mt-1 block text-[11px] font-semibold text-red-700 dark:text-red-300">Cancelado</span>}
+        </span>
+        <ChevronDown size={16} className="mt-0.5 shrink-0 text-gray-400 transition group-open:rotate-180" aria-hidden />
+        </summary>
+        <div className="mt-2">
         {item.posterUrl&&<a href={item.posterUrl} target="_blank" rel="noopener noreferrer" className="mb-3 block">
           {/* eslint-disable-next-line @next/next/no-img-element -- cartaz privado com URL assinada */}
           <img src={item.posterUrl} alt={`Cartaz de ${item.title}`} loading="lazy" className="max-h-96 w-full rounded-lg object-contain"/>
         </a>}
-        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
-        <div className="mt-1 text-[11px] capitalize text-gray-500 dark:text-gray-400">
-          {item.allDay ? formatDateBR(item.date) : item.date.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"})}
-        </div>
-        {item.location && (
-          <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-            <MapPin size={11} className="shrink-0" /> {item.location}
-          </div>
-        )}
         {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark">Inscreva-se</a>}
         {(() => { const publico = eventoCompartilhavel(item); return publico && <CompartilharEvento evento={publico} />; })()}
-        {item.description && <p className="mt-1.5 text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
+        {item.description && <p className="mt-1.5 whitespace-pre-line break-words text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
         {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{(item.availableSpots??0)===1?'1 vaga disponível':`${item.availableSpots??0} vagas disponíveis`} de {item.capacity}</p>}
         {item.participantInstructions&&<p className="mt-2 whitespace-pre-wrap text-xs"><strong>Orientações: </strong>{item.participantInstructions}</p>}
         {item.contactInfo&&<p className="mt-2 break-words text-xs"><strong>Dúvidas: </strong>{item.contactInfo}</p>}
@@ -459,6 +468,8 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
             )}
           </>
         )}
+        </div>
+        </details>
       </div>
     );
   }
@@ -487,7 +498,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve }: { memberId: stri
           {item.studyItems}
         </div>
       )}
-      {item.description && <p className="mt-2 text-[11px] text-gray-600 dark:text-gray-400">{item.description}</p>}
+      {item.description && <p className="mt-2 whitespace-pre-line break-words text-[11px] text-gray-600 dark:text-gray-400">{item.description}</p>}
     </div>
   );
 }
@@ -583,10 +594,8 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
 
   const hoje = useMemo(() => new Date(), []);
 
-  // Abre direto no 1º dia com algo agendado (hoje, se tiver; senão o próximo
-  // item futuro) — evita abrir a agenda numa data vazia sem o membro saber
-  // pra onde navegar. O mês exibido acompanha esse mesmo dia.
-  const [diaSelecionado, setDiaSelecionado] = useState(() => (eventoCompartilhado?.date ?? items[0]?.date ?? hoje));
+  // Abre sempre em hoje (pedido do usuário 2026-10-25); os próximos de outras datas ficam na lista abaixo.
+  const [diaSelecionado, setDiaSelecionado] = useState(() => hoje);
   const [mesExibido, setMesExibido] = useState(() => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1));
   const [limiteProximos, setLimiteProximos] = useState(POR_PAGINA);
   const topo = useRef<HTMLDivElement>(null);
@@ -632,7 +641,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
       {avisoEvento}
       {eventoCompartilhado && <section aria-label="Evento compartilhado" className="space-y-2">
         <CollapsibleSection defaultOpen title={<h3 className="text-xs font-semibold text-na-green-dark dark:text-emerald-400">Evento compartilhado</h3>}>
-        <ItemCard key={itemKey(eventoCompartilhado)} memberId={memberId} item={eventoCompartilhado} somenteConsulta={somenteConsulta} emBreve={emBreve} />
+        <ItemCard key={itemKey(eventoCompartilhado)} memberId={memberId} item={eventoCompartilhado} somenteConsulta={somenteConsulta} emBreve={emBreve} aberto />
       </CollapsibleSection></section>}
       <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-2 flex items-center justify-between">

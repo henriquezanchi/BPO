@@ -154,3 +154,8 @@ Revisão do Claude (25/10/2026), na integração com a master: merge sem conflit
 ## 30. Claude — Frases a cada volta da TV (25/10/2026)
 
 - Pedido do usuário: sair a "frase da semana" e variar a frase. `SlideFrase` agora leva todas as frases ativas da filial (ou a lista padrão) e um `inicio` sorteado no servidor; `tela-tv.tsx` mostra `frases[(inicio + volta) % n]`, com `volta` contada a partir do slide anterior ao da frase (o texto não troca enquanto pré-carrega ou sai). O contador `atual` passou a só crescer (`indice = atual % total`). O `inicio` fica guardado no estado da TV, então a atualização dos dados (5 min) não troca a frase no meio. A ordem da lista padrão (`rodizio`) já alterna autores. Saíram `fraseDaSemana`, o rótulo "Frase da semana" da TV e o destaque "Na TV esta semana" da gestão; o conteúdo da tela chama-se "Frases".
+
+## 31. Claude — Agenda e compartilhamento de eventos (25/10/2026)
+
+- **Agenda** (`agenda-panel.tsx`): o calendário abre sempre em hoje (antes abria no primeiro dia com evento). Cartão de evento fechado por padrão: mostra tipo, título, data, local (e "Cancelado"); cartaz, descrição, inscrição e demais detalhes abrem ao tocar (`<details>`). O "Evento compartilhado" (link `?evento=`) abre aberto. Descrições com `whitespace-pre-line` (as quebras de linha do Ulisses e dos eventos internos já vinham no banco, só não eram exibidas).
+- **Compartilhar** (`lib/compartilhar-evento.ts`): saiu a frase em primeira pessoa ("Quero dividir um evento…", `aberturaDoEvento`) e a do evento interno ("Vamos participar juntos?"). WhatsApp, Facebook, Telegram e e-mail levam a descrição inteira (`textoCompleto`, sem "…"); Instagram continua com `resumo` de 1200 por causa do limite da legenda. Testes de compartilhamento atualizados.

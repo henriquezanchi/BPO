@@ -75,25 +75,6 @@ export function semEmoji(texto: string): string {
     .join("\n");
 }
 
-/**
- * Abertura em tom de conversa (pedido do usuário 2026-10-22): quem compartilha
- * é aluno ou membro, para amigos e grupos de família ou de conhecidos que
- * talvez nem conheçam a Nova Acrópole — tom intermediário, que apresenta a
- * escola em poucas palavras sem parecer propaganda nem mensagem automática.
- * Varia por evento (escolha fixa pelo título, sem sorteio).
- */
-const ABERTURAS = [
-  "Oi, pessoal! Estudo filosofia na Nova Acrópole e vai ter este evento aberto ao público. Achei que podia interessar a vocês:",
-  "Compartilhando um evento aberto da Nova Acrópole, a escola de filosofia onde eu estudo. Costumam ser encontros muito bons, vale a pena conferir:",
-  "Pra quem gosta de filosofia ou de boas conversas sobre a vida: a Nova Acrópole, escola onde eu estudo, vai ter este evento aberto a todos.",
-  "Oi! Quero dividir um evento da Nova Acrópole, a escola de filosofia que eu frequento. É aberto ao público, quem quiser é bem-vindo:",
-];
-export function aberturaDoEvento(titulo: string): string {
-  let h = 0;
-  for (const c of titulo) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return ABERTURAS[h % ABERTURAS.length];
-}
-
 const FUSO = "America/Sao_Paulo";
 
 /** "sábado, 25 de outubro" */
@@ -133,14 +114,13 @@ export function urlDoEventoNoPortal(id: string, urlPortal: string): string {
 export function linkWhatsAppDoEvento(item: ItemDeAgenda, urlPortal: string): string {
   const publico = eventoCompartilhavel(item);
   if (publico) return linkDoCanal(publico, "whatsapp");
+  // Sem frase em primeira pessoa (pedido do usuário 2026-10-25): os dados e a descrição do evento.
   const linhas = [
-    "Vamos participar juntos? Compartilhando este encontro da Nova Acrópole:",
-    "",
     `*${semEmoji(item.title).replace(/\*/g, "").trim()}*`,
     quandoTexto(item),
     item.location ?? null,
     "",
-    item.description?.trim() || null,
+    textoCompleto(item.description) || null,
     "",
     item.price === 0 ? "Entrada gratuita." : item.price !== undefined && item.price > 0
       ? `Valor: ${item.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.` : null,
@@ -157,6 +137,14 @@ export function quandoTexto(e: Pick<EventoCompartilhavel, "date" | "allDay">): s
   return e.allDay ? diaPorExtenso(e.date) : `${diaPorExtenso(e.date)}, às ${horaCurta(e.date)}`;
 }
 
+/** Descrição inteira, só com espaços e linhas em branco arrumados (nada cortado). */
+export function textoCompleto(texto: string | null): string {
+  return (texto ?? "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** Resumo da descrição sem cortar palavra no meio. */
 export function resumo(texto: string | null, limite: number): string {
   const limpo = (texto ?? "")
@@ -171,7 +159,7 @@ export function resumo(texto: string | null, limite: number): string {
 
 /**
  * Texto de cada canal:
- *  - WhatsApp: negrito com *asteriscos*, curto, link no fim (vira prévia).
+ *  - WhatsApp: negrito com *asteriscos*, descrição inteira, link no fim (vira prévia).
  *  - Instagram: legenda mais longa; link não é clicável na legenda, então
  *    vai escrito e o story recebe o adesivo de link.
  *  - Telegram / e-mail: texto simples.
@@ -181,12 +169,12 @@ export function textoParaCanal(e: EventoCompartilhavel, canal: Canal): string {
   const quandoEOnde = [`📅 ${quando}`, e.location ? `📍 ${e.location}` : null].filter(Boolean).join("\n");
   switch (canal) {
     case "whatsapp":
-      // Sem emoji (o WhatsApp do computador os troca por "?") e com uma abertura em tom de conversa.
+      // Sem emoji (o WhatsApp do computador os troca por "?"). Sem frase em primeira pessoa e com a descrição
+      // inteira (pedido do usuário 2026-10-25: faltavam as palestras e o texto vinha cortado).
       return semEmoji(
         [
-          aberturaDoEvento(e.title),
           `*${e.title}*\n${quando}${e.location ? `\n${e.location}` : ""}`,
-          resumo(e.description ? semEmoji(e.description) : null, 280) || null,
+          textoCompleto(e.description ? semEmoji(e.description) : null) || null,
           `Inscrições: ${e.registrationUrl}`,
         ]
           .filter(Boolean)
@@ -198,10 +186,10 @@ export function textoParaCanal(e: EventoCompartilhavel, canal: Canal): string {
         .join("\n\n");
     case "facebook":
       // O Facebook não aceita texto pronto no link (só o endereço): este texto vai copiado para colar.
-      return semEmoji([aberturaDoEvento(e.title), `${e.title}\n${quandoTexto(e)}${e.location ? `\n${e.location}` : ""}`].join("\n\n"));
+      return semEmoji([`${e.title}\n${quandoTexto(e)}${e.location ? `\n${e.location}` : ""}`, textoCompleto(e.description) || null].filter(Boolean).join("\n\n"));
     case "telegram":
     case "email":
-      return [e.title, `${quando}${e.location ? ` · ${e.location}` : ""}`, resumo(e.description, 600) || null, `Inscrições: ${e.registrationUrl}`]
+      return [e.title, `${quando}${e.location ? ` · ${e.location}` : ""}`, textoCompleto(e.description) || null, `Inscrições: ${e.registrationUrl}`]
         .filter(Boolean)
         .join("\n\n");
     default:

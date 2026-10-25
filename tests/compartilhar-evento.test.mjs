@@ -13,8 +13,10 @@ test('texto de cada canal no formato dele, com horário de Brasília',()=>{
  const e=eventoCompartilhavel(base,agora);
  assert.equal(horaCurta(e.date),'19h');
  const wa=textoParaCanal(e,'whatsapp');
- // Abertura em tom de conversa e sem emoji (o WhatsApp do computador troca emoji por "?") — 22/10/2026.
- assert.match(wa,/^[^\n*]+\n\n\*Palestra: Filosofia para viver\*\ndomingo, 25 de outubro, às 19h\nNova Acrópole Barra/);
+ // Começa pelo título (sem frase em primeira pessoa, 25/10/2026) e sem emoji (o WhatsApp do computador troca emoji por "?").
+ assert.match(wa,/^\*Palestra: Filosofia para viver\*\ndomingo, 25 de outubro, às 19h\nNova Acrópole Barra/);
+ const longa=textoParaCanal({...e,description:'Palestra um. '.repeat(60)+'Palestra final.'},'whatsapp');
+ assert.ok(longa.includes('Palestra final.'));assert.equal(longa.includes('…'),false);
  assert.equal(/[\u{10000}-\u{10FFFF}]/u.test(wa),false);
  assert.ok(wa.endsWith('Inscrições: https://inscricao.acropolebrasil.com.br/?eventoId=9'));
  assert.match(textoParaCanal(e,'instagram'),/#NovaAcrópole/);
