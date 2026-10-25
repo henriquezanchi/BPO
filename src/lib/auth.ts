@@ -2,6 +2,7 @@ import { cache } from "react";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { db } from "@/lib/db";
+import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -21,7 +22,9 @@ export const getAuthenticatedMember = cache(async () => {
 
   if (!user) return null;
 
-  return db.member.findUnique({ where: { authUserId: user.id }, include: { school: true } });
+  const member = await db.member.findUnique({ where: { authUserId: user.id }, include: { school: true } });
+  // Dono do sistema também responde como direção da própria filial (ver dono-do-sistema.ts).
+  return member && ehDonoDoSistema(member) ? { ...member, isDiretor: true } : member;
 });
 
 /**

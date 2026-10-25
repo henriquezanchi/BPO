@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
 import type { Member } from "@prisma/client";
 
 /**
@@ -17,6 +18,7 @@ const ehChefeDeFilial = (m: Pessoa) => m.isDiretor || m.filiaisChefiadas.length 
 /** Administração nacional (LiberadorNacional): vale como Chefe de Filial em todas as filiais. */
 export async function ehAdministradorNacional(m: Pick<Member, "mercurioId">): Promise<boolean> {
   if (!m.mercurioId) return false;
+  if (ehDonoDoSistema(m)) return true;
   return (await db.liberadorNacional.count({ where: { mercurioId: m.mercurioId } })) > 0;
 }
 
