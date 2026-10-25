@@ -1,7 +1,7 @@
 /**
- * Frase da semana das telas de TV (pedidos do usuário 2026-10-24/25). Cada filial tem a própria
+ * Frases das telas de TV (pedidos do usuário 2026-10-24/25). Cada filial tem a própria
  * lista (tabela FraseTela, editada na aba Telas); filial sem frase ativa usa esta lista padrão,
- * que também pode ser importada para a filial e editada lá. Troca toda segunda-feira.
+ * que também pode ser importada para a filial e editada lá. A TV mostra a próxima a cada volta.
  *
  * Só frases conferidas palavra por palavra na fonte indicada em `fonte` (pesquisas de 25/10/2026).
  * Autores do programa de estudos e demais autores: a frase está num site oficial da Nova Acrópole
@@ -305,9 +305,3 @@ function rodizio<T>(grupos: T[][]): T[] {
 export const FRASES_COM_FONTE: FraseComFonte[] = rodizio(GRUPOS);
 export const FRASES_PADRAO: FraseDaTela[] = FRASES_COM_FONTE.map(({ texto, autor, obra }) => ({ texto, autor, obra }));
 
-/** Frase da semana corrente (semanas contadas a partir de uma segunda-feira, no fuso de Brasília). */
-export function fraseDaSemana<T>(lista: T[], agora = new Date()): T | null {
-  if (!lista.length) return null;
-  const semana = Math.floor((agora.getTime() - 3 * 36e5 - Date.UTC(2026, 0, 5)) / (7 * 864e5));
-  return lista[((semana % lista.length) + lista.length) % lista.length];
-}

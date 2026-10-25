@@ -17,7 +17,7 @@ export function validarPublicosTela(publicos: string[]): PublicoTela[] {
 /** O que a TV intercala com os eventos (pedido do usuário 2026-10-24: "tudo"; Círculo de Amigos/doação saiu em 25/10). */
 export const CONTEUDOS_TELA = {
   matriculas: "Matrículas abertas",
-  frase: "Frase da semana",
+  frase: "Frases",
   avisos: "Avisos da filial",
   redes: "Instagram e Acrópole Play",
   programacao: "Programação da semana",

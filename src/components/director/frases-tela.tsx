@@ -44,13 +44,13 @@ function CamposFrase({ dados, onChange }: { dados: DadosFrase; onChange: (d: Dad
   );
 }
 
-function ItemFrase({ schoolId, f, daSemana }: { schoolId: string; f: FraseResumo; daSemana: boolean }) {
+function ItemFrase({ schoolId, f }: { schoolId: string; f: FraseResumo }) {
   const inicial: DadosFrase = { texto: f.texto, autor: f.autor, obra: f.obra ?? "", ativa: f.ativa };
   const [editando, setEditando] = useState(false);
   const [dados, setDados] = useState(inicial);
   const { erro, pendente, rodar } = useAcao();
   return (
-    <li className={`space-y-3 rounded-xl border p-3 ${daSemana ? "border-na-green" : "border-gray-200 dark:border-gray-700"} ${f.ativa ? "" : "opacity-60"}`}>
+    <li className={`space-y-3 rounded-xl border p-3 border-gray-200 dark:border-gray-700 ${f.ativa ? "" : "opacity-60"}`}>
       {editando ? (
         <>
           <CamposFrase dados={dados} onChange={setDados} />
@@ -66,7 +66,6 @@ function ItemFrase({ schoolId, f, daSemana }: { schoolId: string; f: FraseResumo
       ) : (
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {daSemana && <p className="text-xs font-bold uppercase tracking-wide text-na-green-dark dark:text-emerald-400">Na TV esta semana</p>}
             <p className="text-sm">“{f.texto}”</p>
             <p className="text-xs text-gray-500">
               {f.autor}
@@ -94,10 +93,10 @@ function ItemFrase({ schoolId, f, daSemana }: { schoolId: string; f: FraseResumo
 }
 
 /**
- * Frases da semana da filial (pedido do usuário 2026-10-25): a filial cadastra, edita, desliga e
+ * Frases das TVs da filial (pedido do usuário 2026-10-25): a filial cadastra, edita, desliga e
  * apaga. Sem nenhuma ativa, as TVs usam a lista padrão (que pode ser importada e editada aqui).
  */
-export function FrasesTela({ schoolId, frases, padrao, daSemanaId }: { schoolId: string; frases: FraseResumo[]; padrao: { total: number; daSemana: { texto: string; autor: string } | null }; daSemanaId: string | null }) {
+export function FrasesTela({ schoolId, frases, padrao }: { schoolId: string; frases: FraseResumo[]; padrao: { total: number } }) {
   const [abrindo, setAbrindo] = useState(false);
   const [nova, setNova] = useState(VAZIA);
   const { erro, pendente, rodar } = useAcao();
@@ -107,23 +106,18 @@ export function FrasesTela({ schoolId, frases, padrao, daSemanaId }: { schoolId:
     <section className="space-y-3">
       <div>
         <h2 className="flex items-center gap-2 font-bold">
-          <Quote size={17} className="text-na-green dark:text-emerald-400" aria-hidden /> Frases da semana
+          <Quote size={17} className="text-na-green dark:text-emerald-400" aria-hidden /> Frases
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-300">
-          Uma frase por semana, trocando às segundas, nas TVs que mostram “Frase da semana”.{" "}
+          A cada volta da TV entra a próxima frase da lista, começando de um ponto sorteado.{" "}
           {ativas ? `A filial tem ${ativas} frase${ativas > 1 ? "s" : ""} ligada${ativas > 1 ? "s" : ""}.` : `Sem frases da filial ligadas, as TVs usam a lista padrão (${padrao.total} frases com fonte conferida).`}
         </p>
-        {!ativas && padrao.daSemana && (
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-            Esta semana: “{padrao.daSemana.texto}” — {padrao.daSemana.autor}
-          </p>
-        )}
       </div>
 
       {frases.length > 0 && (
         <ul className="space-y-2">
           {frases.map((f) => (
-            <ItemFrase key={f.id} schoolId={schoolId} f={f} daSemana={f.id === daSemanaId} />
+            <ItemFrase key={f.id} schoolId={schoolId} f={f} />
           ))}
         </ul>
       )}

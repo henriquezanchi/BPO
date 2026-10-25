@@ -3,7 +3,7 @@ import { semEmoji, urlDoEventoNoPortal } from "@/lib/compartilhar-evento";
 import { EVENT_AUDIENCES, agendaUlissesBranchWhere, eventScopeWhere, safeEventRegistrationUrl } from "@/lib/event-policy";
 import { eventPosterUrl } from "@/lib/event-posters";
 import { gerarResumosTela, impressaoDescricao, primeiraFrase } from "@/lib/resumo-tela";
-import { FRASES_PADRAO, fraseDaSemana } from "@/lib/telas-frases";
+import { FRASES_PADRAO, type FraseDaTela } from "@/lib/telas-frases";
 import { TIPOS_CARTAO, type ConteudoTela, type TipoCartao } from "@/lib/telas-publicos";
 import type { Prisma } from "@prisma/client";
 import { after } from "next/server";
@@ -14,7 +14,7 @@ import QRCode from "qrcode";
  * Telas de TV da filial (pedido do usuário 2026-10-24): cada TV tem um link com token e
  * mostra, em rotação, os eventos dos próximos 30 dias dos públicos escolhidos, com a mesma
  * abrangência da Agenda (eventos de outras filiais abertos à filial também entram).
- * Entre os eventos entram os conteúdos escolhidos para a tela (matrículas, frase da semana,
+ * Entre os eventos entram os conteúdos escolhidos para a tela (matrículas, frases,
  * cartões da filial, programação, aniversariantes). Públicos e conteúdos em lib/telas-publicos.ts.
  */
 export const DIAS_NA_TELA = 30;
@@ -56,7 +56,8 @@ export type SlideCartao = {
   chamada: string;
 };
 
-export type SlideFrase = { tipo: "frase"; id: string; texto: string; autor: string; obra: string | null };
+/** Todas as frases ativas: a TV mostra a próxima a cada volta, a partir de `inicio` (sorteado). */
+export type SlideFrase = { tipo: "frase"; id: string; frases: FraseDaTela[]; inicio: number };
 
 export type SlideLista = {
   tipo: "lista";
@@ -211,8 +212,8 @@ async function conteudosDaTela(tela: TelaParaSlides, eventos: EventoDb[]): Promi
   if (quer.has("frase")) {
     // Frases da filial (ativas); sem nenhuma, a lista padrão.
     const daFilial = await db.fraseTela.findMany({ where: { schoolId: tela.school.id, ativa: true }, orderBy: { createdAt: "asc" }, select: { texto: true, autor: true, obra: true } });
-    const f = fraseDaSemana(daFilial.length ? daFilial : FRASES_PADRAO);
-    if (f) extras.push({ tipo: "frase", id: `frase-${f.autor}-${f.texto.length}`, ...f });
+    const frases = daFilial.length ? daFilial : FRASES_PADRAO;
+    if (frases.length) extras.push({ tipo: "frase", id: "frases", frases, inicio: Math.floor(Math.random() * frases.length) });
   }
   const tipos = (Object.keys(TIPOS_CARTAO) as TipoCartao[]).filter((t) => quer.has(TIPOS_CARTAO[t].conteudo));
   if (tipos.length) extras.push(...(await slidesCartoes(tela.school.id, tipos)));

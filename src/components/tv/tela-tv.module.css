@@ -574,17 +574,6 @@
   color: var(--ouro);
 }
 
-.fraseRotulo {
-  position: absolute;
-  top: 8vh;
-  right: 7vw;
-  margin: 0;
-  font-size: 2.2vh;
-  font-weight: 800;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--tinta-suave);
-}
 
 .rodapeCheio {
   left: 0;
@@ -931,9 +920,6 @@
   }
 
   .frase blockquote footer,
-  .fraseRotulo {
-    font-size: 3.2vw;
-  }
 
   .lista {
     gap: 2.4vh;

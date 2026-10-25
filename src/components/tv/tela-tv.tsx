@@ -1,6 +1,7 @@
 "use client";
 
 import type { IconeCartao, SlideCartao, SlideEvento, SlideFrase, SlideLista, SlideTela } from "@/lib/telas-eventos";
+import type { FraseDaTela } from "@/lib/telas-frases";
 import { CalendarDays, Cake, Camera, CircleFadingPlus, CirclePlay, GraduationCap, MapPin, Megaphone, Ticket, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -177,7 +178,7 @@ function SlideDeCartao({ c }: { c: SlideCartao }) {
   );
 }
 
-function SlideDeFrase({ f }: { f: SlideFrase }) {
+function SlideDeFrase({ f }: { f: FraseDaTela }) {
   return (
     <div className={s.frase}>
       <blockquote className={`${s.entra} ${f.texto.length > 90 ? s.fraseLonga : ""}`}>
@@ -187,7 +188,6 @@ function SlideDeFrase({ f }: { f: SlideFrase }) {
           {f.obra && <> · {f.obra}</>}
         </footer>
       </blockquote>
-      <p className={s.fraseRotulo}>Frase da semana</p>
     </div>
   );
 }
@@ -213,10 +213,10 @@ function SlideDeLista({ l }: { l: SlideLista }) {
   );
 }
 
-function Slide({ slide, ativo }: { slide: SlideTela; ativo: boolean }) {
+function Slide({ slide, ativo, frase }: { slide: SlideTela; ativo: boolean; frase: FraseDaTela | null }) {
   return (
     <section className={`${s.slide} ${slide.tipo === "frase" ? s.slideCheio : ""} ${ativo ? s.ativo : ""}`} aria-hidden={!ativo}>
-      {slide.tipo === "evento" ? <SlideDeEvento e={slide} /> : slide.tipo === "cartao" ? <SlideDeCartao c={slide} /> : slide.tipo === "frase" ? <SlideDeFrase f={slide} /> : <SlideDeLista l={slide} />}
+      {slide.tipo === "evento" ? <SlideDeEvento e={slide} /> : slide.tipo === "cartao" ? <SlideDeCartao c={slide} /> : slide.tipo === "frase" ? frase && <SlideDeFrase f={frase} /> : <SlideDeLista l={slide} />}
     </section>
   );
 }
@@ -224,13 +224,22 @@ function Slide({ slide, ativo }: { slide: SlideTela; ativo: boolean }) {
 /** Tela de TV da filial: eventos e conteúdos em rotação a cada 10 s (pedido do usuário 2026-10-24). */
 export function TelaTv({ slides, filial, token }: { slides: SlideTela[]; filial: string; token: string }) {
   const router = useRouter();
+  // Contador só cresce: dá o slide (atual % total) e quantas voltas a rotação já deu.
   const [atual, setAtual] = useState(0);
   const total = slides.length;
   const indice = total ? atual % total : 0;
+  // Uma frase diferente a cada volta, seguindo a lista a partir de um ponto sorteado pelo servidor.
+  // O ponto fica guardado: a atualização dos dados (5 min) não troca a frase no meio da exibição.
+  const posFrase = slides.findIndex((x) => x.tipo === "frase");
+  const slideFrase = posFrase >= 0 ? (slides[posFrase] as SlideFrase) : null;
+  const [inicioFrase] = useState(() => slideFrase?.inicio ?? 0);
+  // A volta conta a partir do slide anterior ao da frase, para não trocar o texto enquanto ela pré-carrega ou sai.
+  const volta = Math.max(0, Math.floor((atual - posFrase + 1) / Math.max(total, 1)));
+  const frase = slideFrase?.frases.length ? slideFrase.frases[(inicioFrase + volta) % slideFrase.frases.length] : null;
 
   useEffect(() => {
     if (total < 2) return;
-    const t = setInterval(() => setAtual((i) => (i + 1) % total), TROCA_MS);
+    const t = setInterval(() => setAtual((i) => i + 1), TROCA_MS);
     return () => clearInterval(t);
   }, [total]);
 
@@ -287,7 +296,7 @@ export function TelaTv({ slides, filial, token }: { slides: SlideTela[]; filial:
 
   return (
     <main className={s.tela}>
-      {slides.map((e, i) => (visiveis.has(i) ? <Slide key={e.id} slide={e} ativo={i === indice} /> : null))}
+      {slides.map((e, i) => (visiveis.has(i) ? <Slide key={e.id} slide={e} ativo={i === indice} frase={frase} /> : null))}
       <footer className={`${s.rodape} ${cheio ? s.rodapeCheio : ""}`}>
         {assinatura}
         <Relogio />

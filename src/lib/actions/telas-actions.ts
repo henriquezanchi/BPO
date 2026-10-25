@@ -124,7 +124,7 @@ export async function excluirCartao(schoolId: string, id: string) {
   }, "Não foi possível excluir o cartão.");
 }
 
-// ---------- Frases da semana da filial ----------
+// ---------- Frases das TVs da filial ----------
 
 export type DadosFrase = { texto: string; autor: string; obra: string; ativa: boolean };
 
