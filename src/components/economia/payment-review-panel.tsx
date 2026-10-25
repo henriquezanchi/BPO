@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { getPaymentReview } from "@/lib/actions/payment-review-actions";
 import { formatBRL } from "@/lib/format";
@@ -30,7 +31,7 @@ export function PaymentReviewPanel({schoolId}:{schoolId:string}) {
     return()=>{cancelled=true;};
   },[schoolId,status]);
   return <section className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900" aria-label="Conferência de pagamentos">
-    <h2 className="text-base font-bold text-na-green-dark dark:text-na-green-light">Recebimentos e registro na escola</h2>
+    <CollapsibleSection title={<h2 className="text-base font-bold text-na-green-dark dark:text-na-green-light">Recebimentos e registro na escola</h2>}>
     <p className="text-sm text-gray-600 dark:text-gray-300">Receber pelo Portal e registrar no sistema da escola são etapas diferentes. Confira abaixo o andamento, por competência.</p>
     <div className="flex flex-wrap items-end gap-3">
       <label className="min-w-0 flex-1 text-sm">Mostrar<select aria-label="Situação dos pagamentos" value={status} onChange={e=>{++version.current;setPage({items:[],nextCursor:null});setLoading(true);setError("");setStatus(e.target.value as typeof status);}} className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 bg-transparent p-2 dark:border-gray-600"><option value="pago">Recebimento confirmado</option><option value="pendente">Aguardando pagamento</option></select></label>
@@ -47,5 +48,5 @@ export function PaymentReviewPanel({schoolId}:{schoolId:string}) {
     </li>)}</ul>
     {page.nextCursor && <button type="button" disabled={loading} onClick={()=>load(true)} className="min-h-11 w-full rounded-lg bg-na-green px-4 text-sm font-semibold text-white disabled:opacity-50">Carregar mais pagamentos</button>}
     <p className="text-xs text-gray-600 dark:text-gray-300">O valor exibido é o da contribuição; recargas e taxas de cartão ficam fora deste valor. Esta consulta não altera recebimentos nem efetua baixa manual.</p>
-  </section>;
+  </CollapsibleSection></section>;
 }

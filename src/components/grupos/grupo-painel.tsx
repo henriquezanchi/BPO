@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { FormGrupo } from "@/components/grupos/form-grupo";
 import { SeletorPessoas, type PessoaOpcao } from "@/components/grupos/seletor-pessoas";
@@ -176,7 +177,7 @@ function Sobre({ dados, recarregar }: { dados: D; recarregar: () => void }) {
   const podeEncerrar = papel.podeGerir && TIPOS_GRUPO[grupo.tipo].doPortal;
   return (
     <section className={CARTAO}>
-      <h2 className={TITULO}>Sobre</h2>
+      <CollapsibleSection defaultOpen title={<h2 className={TITULO}>Sobre</h2>}>
       {grupo.descricao ? (
         <p className="text-[13px] whitespace-pre-wrap text-gray-700 dark:text-gray-300">{grupo.descricao}</p>
       ) : (
@@ -216,7 +217,7 @@ function Sobre({ dados, recarregar }: { dados: D; recarregar: () => void }) {
           {erro && <p className="mt-1 text-[11px] text-na-danger-dark">{erro}</p>}
         </div>
       )}
-    </section>
+    </CollapsibleSection></section>
   );
 }
 
@@ -311,16 +312,16 @@ function Equipe({ dados, recarregar }: { dados: D; recarregar: () => void }) {
 
   return (
     <section className={CARTAO}>
-      <h2 className={TITULO}>
+      <CollapsibleSection title={<h2 className={TITULO}>
         <Users size={15} /> {grupo.tipo === "SEC" ? "Equipe" : "Pessoas"}
-      </h2>
+      </h2>}>
       <div className="flex flex-col gap-4">
         {lista("professor", grupo.responsaveis, rotulos[0])}
         {lista("aluno", grupo.integrantes, rotulos[1])}
       </div>
       {!doPortal && <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">A composição deste grupo vem do Mercúrio.</p>}
       {erro && <p className="mt-2 text-[12px] text-na-danger-dark dark:text-red-400">{erro}</p>}
-    </section>
+    </CollapsibleSection></section>
   );
 }
 
@@ -330,11 +331,11 @@ function Atividades({ dados, recarregar }: { dados: D; recarregar: () => void })
   const ativas = grupo.atividades.filter((a) => a.status !== "concluida");
   const concluidas = grupo.atividades.filter((a) => a.status === "concluida");
   return (
-    <section className={CARTAO}>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className={`${TITULO} mb-0`}>
+    <section className={CARTAO}><CollapsibleSection title={<h2 className={`${TITULO} mb-0`}>
           <ListChecks size={15} /> Atividades
-        </h2>
+        </h2>}>
+      <div className="mb-3 flex items-center justify-between">
+
         {papel.podeGerir && editando === null && (
           <button onClick={() => setEditando("nova")} className={BOTAO_LEVE}>
             <Plus size={13} /> Nova atividade
@@ -364,7 +365,7 @@ function Atividades({ dados, recarregar }: { dados: D; recarregar: () => void })
           </ul>
         </details>
       )}
-    </section>
+    </CollapsibleSection></section>
   );
 }
 
@@ -555,7 +556,7 @@ function ConteudoEncontros({ dados, recarregar, futuros, passados }: { dados: D;
       )}
       {!papel.podeGerir && (papel.integrante || papel.responsavel) && passados.length > 0 && (
         <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
-          <h3 className="mb-2 text-[12px] font-bold text-gray-500 uppercase dark:text-gray-400">Encontros recentes</h3>
+          <CollapsibleSection title={<h3 className="mb-2 text-[12px] font-bold text-gray-500 uppercase dark:text-gray-400">Encontros recentes</h3>}>
           <ul className="flex flex-col gap-2">
             {passados.map((e) => (
               <li key={e.id} className="flex flex-col gap-1.5 rounded-lg border border-gray-100 p-2.5 text-[13px] dark:border-gray-800">
@@ -564,7 +565,7 @@ function ConteudoEncontros({ dados, recarregar, futuros, passados }: { dados: D;
               </li>
             ))}
           </ul>
-        </div>
+        </CollapsibleSection></div>
       )}
     </>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { liberarAcessoVoluntario, revogarAcessoVoluntario } from "@/lib/actions/acesso-voluntario-actions";
 import { Check, Loader2, Search } from "lucide-react";
@@ -149,13 +150,13 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
 
       {sugeridas.length > 0 && (
         <section>
-          <h2 className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-300">Sugeridos: chefes de grupo, sub-chefes e secretários</h2>
+          <CollapsibleSection title={<h2 className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-300">Sugeridos: chefes de grupo, sub-chefes e secretários</h2>}>
           <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-200 px-3 dark:divide-gray-800 dark:border-gray-700">
             {sugeridas.map((p) => (
               <Linha key={p.id} p={p} />
             ))}
           </ul>
-        </section>
+        </CollapsibleSection></section>
       )}
 
       {demais.length > 0 ? (

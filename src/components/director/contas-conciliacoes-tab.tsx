@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { excluirAccountantDocument, getAccountantDocumentUrl, uploadAccountantDocument } from "@/lib/actions/accountant-actions";
 import { confirmarPrevisao, importarExtratoOfx, removerPrevisao } from "@/lib/actions/bank-import-actions";
@@ -53,7 +54,7 @@ function OutrasReceitasCard({ schoolId }: { schoolId: string }) {
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-      <h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Outras Receitas do Mês</h3>
+      <CollapsibleSection title={<h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Outras Receitas do Mês</h3>}>
       <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
         Livraria, cursos avulsos, doações — dinheiro que não passa pelo Portal, lançado aqui pra aparecer na Transparência Financeira que os membros veem.
       </p>
@@ -94,7 +95,7 @@ function OutrasReceitasCard({ schoolId }: { schoolId: string }) {
           + Receita
         </button>
       </form>
-    </div>
+    </CollapsibleSection></div>
   );
 }
 
@@ -379,7 +380,7 @@ export function ContasConciliacoesTab({ schoolId, data }: { schoolId: string; da
       <OutrasReceitasCard schoolId={schoolId} />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Importar Extrato Bancário (OFX)</h3>
+        <CollapsibleSection title={<h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Importar Extrato Bancário (OFX)</h3>}>
         <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
           Lê os débitos do extrato e lança como contas já pagas (o extrato representa o passado). Reimportar o mesmo período não duplica nada.
         </p>
@@ -402,10 +403,10 @@ export function ContasConciliacoesTab({ schoolId, data }: { schoolId: string; da
           <span className="text-[11px] text-gray-500 dark:text-gray-400">({data.rubricasDisponiveis.length} rubrica(s) conhecida(s))</span>
         </div>
         {resultadoRubricas && <p className="mt-2 text-[11px] font-medium text-na-green-dark dark:text-emerald-400">{resultadoRubricas}</p>}
-      </div>
+      </CollapsibleSection></div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Contas a Pagar — Previstas</h3>
+        <CollapsibleSection title={<h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Contas a Pagar — Previstas</h3>}>
         <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">Anexe o recibo/NF direto na conta correspondente — evita conciliar o documento errado com o pagamento errado.</p>
         {data.despesasPendentes.length === 0 ? (
           <EmptyState text="Nenhuma conta a pagar cadastrada." />
@@ -436,10 +437,10 @@ export function ContasConciliacoesTab({ schoolId, data }: { schoolId: string; da
             + Conta
           </button>
         </form>
-      </div>
+      </CollapsibleSection></div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Contas Pagas — Realizadas</h3>
+        <CollapsibleSection defaultOpen title={<h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Contas Pagas — Realizadas</h3>}>
         {data.despesasRealizadas.length === 0 ? (
           <EmptyState text="Nenhuma conta paga registrada ainda." />
         ) : (
@@ -468,7 +469,7 @@ export function ContasConciliacoesTab({ schoolId, data }: { schoolId: string; da
             })}
           </div>
         )}
-      </div>
+      </CollapsibleSection></div>
     </div>
   );
 }

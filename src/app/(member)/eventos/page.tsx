@@ -1,3 +1,4 @@
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import {
   CartaoEvento,
   partes,
@@ -78,9 +79,9 @@ export default async function Page() {
 
       {recepcaoProxima.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
+          <CollapsibleSection title={<h2 className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
             <ShieldCheck size={14} /> Minha equipe de recepção
-          </h2>
+          </h2>}>
           {recepcaoProxima.map((r) => {
             const d = partes(r.event.startsAt);
             return (
@@ -104,13 +105,13 @@ export default async function Page() {
               </Link>
             );
           })}
-        </section>
+        </CollapsibleSection></section>
       )}
 
       <section className="flex flex-col gap-2">
-        <h2 className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
+        <CollapsibleSection title={<h2 className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
           <CalendarDays size={14} /> Próximos
-        </h2>
+        </h2>}>
         {proximos.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 p-5 text-center dark:border-gray-700">
             <p className="text-[13px] text-gray-600 dark:text-gray-400">
@@ -135,13 +136,13 @@ export default async function Page() {
             />
           ))
         )}
-      </section>
+      </CollapsibleSection></section>
 
       {anteriores.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+          <CollapsibleSection title={<h2 className="text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
             Anteriores
-          </h2>
+          </h2>}>
           {anteriores.map((r) => (
             <CartaoEvento
               key={r.id}
@@ -152,14 +153,14 @@ export default async function Page() {
               podeResponder={!member.isJanos}
             />
           ))}
-        </section>
+        </CollapsibleSection></section>
       )}
 
       {cancelados.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+          <CollapsibleSection title={<h2 className="text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
             Cancelados
-          </h2>
+          </h2>}>
           {cancelados.map((r) => (
             <CartaoEvento
               key={r.id}
@@ -170,7 +171,7 @@ export default async function Page() {
               podeResponder={!member.isJanos}
             />
           ))}
-        </section>
+        </CollapsibleSection></section>
       )}
 
       <p className="text-center text-[11px] text-gray-500 dark:text-gray-400">

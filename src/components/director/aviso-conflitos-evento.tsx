@@ -29,9 +29,9 @@ export function AvisoConflitosEvento({ schoolId }: { schoolId: string }) {
         const ini = String(dados.get("startsAt") ?? "");
         const fim = String(dados.get("endsAt") ?? "");
         if (!ini || !fim) return setConflitos(null);
-        // datetime-local vem sem fuso: é horário de Brasília.
-        const inicio = new Date(`${ini}:00-03:00`);
-        const termino = new Date(`${fim}:00-03:00`);
+        // Mesmo fuso do dispositivo usado pelo formulário ao salvar.
+        const inicio = new Date(ini);
+        const termino = new Date(fim);
         if (!(termino > inicio)) return setConflitos(null);
         setCarregando(true);
         try {

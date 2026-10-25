@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { useState } from "react";
 import { sincronizarCrmAberturas } from "@/lib/actions/aberturas-actions";
@@ -19,9 +20,9 @@ export function InteressadosTab({ data, abertura }: { data: PainelAberturas; abe
 
   return (
     <div className="space-y-5">
-      <section className={CARD}>
+      <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Interessados e matrículas</h2>}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"><UsersRound size={18} /></span><div><h2 className="font-black text-gray-950 dark:text-white">Interessados e matrículas</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Dados recebidos pela integração do CRM da filial. Interesse, adequação e próxima ação são fatos descritos pela integração, sem estimativa de probabilidade.</p></div></div>
+          <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"><UsersRound size={18} /></span><div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Dados recebidos pela integração do CRM da filial. Interesse, adequação e próxima ação são fatos descritos pela integração, sem estimativa de probabilidade.</p></div></div>
           <form onSubmit={action.submit} className="flex flex-col items-stretch gap-2 sm:min-w-64 sm:items-end">
             <input type="hidden" name="schoolId" value={data.schoolId} />
             <button type="submit" disabled={action.pending} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:border-na-green hover:text-na-green-dark disabled:opacity-60 dark:border-gray-700 dark:text-gray-200 dark:hover:text-emerald-400"><RefreshCw size={14} className={action.pending ? "animate-spin" : ""} />{action.pending ? "Atualizando CRM…" : "Atualizar dados do CRM"}</button>
@@ -29,24 +30,24 @@ export function InteressadosTab({ data, abertura }: { data: PainelAberturas; abe
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3"><StatusCard label="Status da integração" value={data.crm.status || "Sem status"} /><StatusCard label="Interessados importados" value={String(data.crm.leads.length)} icon="interesse" /><StatusCard label="Registros de matrícula" value={String(data.crm.matriculas.length)} icon="matricula" /></div>
         <div className="mt-3 flex flex-col gap-1 text-xs text-gray-500 sm:flex-row sm:justify-between dark:text-gray-400"><Feedback error={action.error} success={action.success} aviso={action.aviso} /><span>Base atualizada: {data.crm.baseAtualizadaEm ? formatarData(data.crm.baseAtualizadaEm, { dateStyle: "medium", timeStyle: "short" }) : "ainda não sincronizada"}</span></div>
-      </section>
+      </CollapsibleSection></section>
 
       <GraficoCustoConversao data={data} />
 
-      <section className={CARD}>
-        <div className="mb-3 flex items-center justify-between gap-3"><div><h2 className="font-black text-gray-950 dark:text-white">Fila de interessados</h2><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">A avaliação considera somente sinais e registros desta abertura selecionada.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{data.crm.leads.length}</span></div>
+      <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Fila de interessados</h2>}>
+        <div className="mb-3 flex items-center justify-between gap-3"><div><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">A avaliação considera somente sinais e registros desta abertura selecionada.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{data.crm.leads.length}</span></div>
         {!abertura && <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Selecione uma abertura em Planejamento para consultar adequação e próxima ação específicas do ciclo e registrar uma avaliação.</p>}
         <label className="mb-3 block text-sm">Buscar por nome ou identificador<input value={busca} onChange={e=>{setBusca(e.target.value);setPagina(0);}} className="mt-1 w-full rounded-xl border p-2 dark:bg-gray-950" /></label>
         {data.crm.leads.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Não há interessados na base sincronizada da filial.</p> : <div className="space-y-2">{filtrados.slice(atual*50,atual*50+50).map((lead, index) => <LeadCard key={String(lead.id ?? index)} lead={lead} data={data} abertura={abertura} />)}</div>}
         <div className="mt-4 flex items-center justify-between gap-2 text-xs"><button type="button" disabled={atual===0} onClick={()=>setPagina(atual-1)} className="rounded border px-3 py-2 disabled:opacity-40">Anterior</button><span>{filtrados.length} encontrados · página {atual+1} de {Math.max(1,Math.ceil(filtrados.length/50))}</span><button type="button" disabled={(atual+1)*50>=filtrados.length} onClick={()=>setPagina(atual+1)} className="rounded border px-3 py-2 disabled:opacity-40">Próxima</button></div>
-      </section>
+      </CollapsibleSection></section>
 
-      <section className={CARD}>
-        <div className="mb-3 flex items-center justify-between gap-3"><div><h2 className="font-black text-gray-950 dark:text-white">Matrículas informadas pelo Mercúrio</h2><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Vínculos acadêmicos devolvidos pela integração CRM.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{data.crm.matriculas.length}</span></div>
+      <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Matrículas informadas pelo Mercúrio</h2>}>
+        <div className="mb-3 flex items-center justify-between gap-3"><div><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Vínculos acadêmicos devolvidos pela integração CRM.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{data.crm.matriculas.length}</span></div>
         {data.crm.matriculas.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Não há matrículas na base sincronizada.</p> : <div className="divide-y divide-gray-100 dark:divide-gray-800">{data.crm.matriculas.map((matricula, index) => <MatriculaLinha key={`${String(matricula.mercurioId ?? index)}-${index}`} matricula={matricula} />)}</div>}
-      </section>
+      </CollapsibleSection></section>
 
-      {abertura && <section className={CARD}><div className="mb-3 flex items-start justify-between gap-3"><div><h2 className="font-black text-gray-950 dark:text-white">Registrar resultado acadêmico</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">A lista considera somente matrículas confirmadas no código de turma vinculado a esta abertura.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{abertura.titulo}</span></div><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={data.crm.leads} matriculas={data.crm.matriculas} eventos={data.eventos} pessoas={data.pessoas} tipoInicial="resultado" tiposPermitidos={["resultado"]} /></section>}
+      {abertura && <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Registrar resultado acadêmico</h2>}><div className="mb-3 flex items-start justify-between gap-3"><div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">A lista considera somente matrículas confirmadas no código de turma vinculado a esta abertura.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{abertura.titulo}</span></div><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={data.crm.leads} matriculas={data.crm.matriculas} eventos={data.eventos} pessoas={data.pessoas} tipoInicial="resultado" tiposPermitidos={["resultado"]} /></CollapsibleSection></section>}
     </div>
   );
 }
@@ -55,11 +56,11 @@ export function InvestimentosTab({ data, abertura }: { data: PainelAberturas; ab
   return (
     <div className="space-y-5">
       <GraficoCustoConversao data={data} />
-      <section className={CARD}>
-        <div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"><CircleDollarSign size={18} /></span><div><h2 className="font-black text-gray-950 dark:text-white">Orçamento por abertura</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Compare o valor planejado com despesas lançadas e valores previstos.</p></div></div>
+      <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Orçamento por abertura</h2>}>
+        <div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"><CircleDollarSign size={18} /></span><div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Compare o valor planejado com despesas lançadas e valores previstos.</p></div></div>
         <LinhasOrcamento aberturas={data.aberturas} aberturaSelecionadaId={abertura?.id} />
-      </section>
-      {abertura && <section className={CARD}><div className="mb-3"><h2 className="font-black text-gray-950 dark:text-white">Registrar investimento</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Lance uma despesa ou previsão em {abertura.titulo}.</p></div><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={data.crm.leads} matriculas={data.crm.matriculas} eventos={data.eventos} pessoas={data.pessoas} tipoInicial="despesa" tiposPermitidos={["despesa"]} /></section>}
+      </CollapsibleSection></section>
+      {abertura && <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Registrar investimento</h2>}><div className="mb-3"><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Lance uma despesa ou previsão em {abertura.titulo}.</p></div><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={data.crm.leads} matriculas={data.crm.matriculas} eventos={data.eventos} pessoas={data.pessoas} tipoInicial="despesa" tiposPermitidos={["despesa"]} /></CollapsibleSection></section>}
     </div>
   );
 }
@@ -76,11 +77,11 @@ function LeadCard({ lead, data, abertura }: { lead: PainelAberturas["crm"]["lead
   const interesse = avaliacaoDireta.interesse;
   const adequacao = avaliacaoDireta.adequacaoTurma;
   const proximaAcao = avaliacaoDireta.proximaAcao;
-  return <article className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-800 dark:bg-gray-950/30">
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><h3 className="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{nome}</h3>{status !== undefined && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">CRM · {texto(status)}</p>}</div></div>
+  return <article className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 dark:border-gray-800 dark:bg-gray-950/30"><CollapsibleSection title={<h3 className="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{nome}</h3>}>
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0">{status !== undefined && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">CRM · {texto(status)}</p>}</div></div>
     {abertura ? <div className="mt-3 grid gap-2 sm:grid-cols-3"><CampoCRM rotulo="Interesse" valor={interesse} /><CampoCRM rotulo="Adequação desta abertura" valor={adequacao} /><CampoCRM rotulo="Próxima ação" valor={proximaAcao} /></div> : <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Selecione uma abertura para consultar a avaliação específica.</p>}
     {abertura && <details className="mt-3 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"><summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-na-green-dark dark:text-emerald-400">Guardar avaliação no histórico</summary><div className="border-t border-gray-100 p-3 dark:border-gray-800"><p className="mb-3 text-xs text-gray-500 dark:text-gray-400">A avaliação atualiza com os sinais automaticamente. Use este registro opcional para guardar um recorte datado dos fatos e da próxima ação.</p><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={[lead]} matriculas={data.crm.matriculas} eventos={data.eventos} pessoas={data.pessoas} tipoInicial="avaliacao" tiposPermitidos={["avaliacao"]} leadInicialId={String(lead.id ?? "")} leadFixo /></div></details>}
-  </article>;
+  </CollapsibleSection></article>;
 }
 
 function asRecord(value: unknown): JsonRecord {

@@ -1,3 +1,4 @@
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { MeetingManager } from "@/components/member/groups/meeting-manager";
 import { CreateActivityForm } from "@/components/member/professor/create-activity-form";
@@ -48,7 +49,7 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
       </div>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-200">{ehGrupo ? "Integrantes" : "Alunos"}</h2>
+        <CollapsibleSection title={<h2 className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-200">{ehGrupo ? "Integrantes" : "Alunos"}</h2>}>
         {turma.students.length === 0 ? (
           <p className="text-xs text-gray-500 dark:text-gray-400">{ehGrupo ? "Nenhum integrante com acesso ao Portal ainda." : "Nenhum aluno matriculado ainda."}</p>
         ) : (
@@ -61,13 +62,13 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
             ))}
           </ul>
         )}
-      </section>
+      </CollapsibleSection></section>
 
       {slackDisponivel && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Canal no Slack</h2>
+          <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Canal no Slack</h2>}>
           <SlackChannelPanel classGroupId={turma.id} linkCanal={linkDoCanal(turma.slackTeamId, turma.slackChannelId)} />
-        </section>
+        </CollapsibleSection></section>
       )}
 
       {ehGrupo && ["BF","BM","CS"].includes(turma.tipo) && (
@@ -81,24 +82,24 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{ehGrupo ? "Novo aviso" : "Nova atividade"}</h2>
+        <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{ehGrupo ? "Novo aviso" : "Nova atividade"}</h2>}>
         <CreateActivityForm classGroupId={turma.id} ehGrupo={ehGrupo} temSlack={slackDisponivel && !!turma.slackChannelId} materias={materias} />
 
         {turma.activities.length > 0 && (
           <div>
-            <h3 className="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">{ehGrupo ? "Publicados" : "Atividades cadastradas"}</h3>
+            <CollapsibleSection title={<h3 className="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">{ehGrupo ? "Publicados" : "Atividades cadastradas"}</h3>}>
             <PublishedActivities activities={turma.activities} ehGrupo={ehGrupo} />
-          </div>
+          </CollapsibleSection></div>
         )}
-      </section>
+      </CollapsibleSection></section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Nova enquete</h2>
+        <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Nova enquete</h2>}>
         <CreatePollForm classGroupId={turma.id} />
 
         {turma.polls.length > 0 && (
           <div>
-            <h3 className="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">Enquetes publicadas</h3>
+            <CollapsibleSection title={<h3 className="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">Enquetes publicadas</h3>}>
             <ul className="flex flex-col gap-2">
               {turma.polls.map((p) => {
                 const total = p.options.reduce((soma, o) => soma + o.votes, 0);
@@ -116,9 +117,9 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
                 );
               })}
             </ul>
-          </div>
+          </CollapsibleSection></div>
         )}
-      </section>
+      </CollapsibleSection></section>
     </ShellTrabalho>
   );
 }

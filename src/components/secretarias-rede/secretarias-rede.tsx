@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import {
   buscarCandidatosMandato,
@@ -504,17 +505,17 @@ function ListaEscalas({ escalas }: { escalas: Escala[] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {escalas.map((escala) => (
-        <article key={escala.id} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <article key={escala.id} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900"><CollapsibleSection title={<h3 className="mt-1 text-sm font-bold text-gray-900 dark:text-gray-100">{escala.memberName}</h3>}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-xs font-semibold text-na-green-dark dark:text-emerald-400">{escala.secretaria} · {escala.schoolName}</p>
-              <h3 className="mt-1 text-sm font-bold text-gray-900 dark:text-gray-100">{escala.memberName}</h3>
+
               <p className="text-xs text-gray-600 dark:text-gray-400">{escala.funcao} · {DIAS_SEMANA[escala.diaSemana] ?? "Dia não informado"} · {horaMinuto(escala.inicioMinuto)}–{horaMinuto(escala.fimMinuto)}</p>
             </div>
             <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${escala.confirmado ? "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200"}`}>{escala.confirmado ? "Confirmada" : "Pendente"}</span>
           </div>
           <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Válida de {escala.validaDe} até {escala.validaAte}</p>
-        </article>
+        </CollapsibleSection></article>
       ))}
     </div>
   );

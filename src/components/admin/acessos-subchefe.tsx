@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { alterarAcessoSubchefe } from "@/lib/actions/admin-filial-actions";
 import { Loader2, ShieldCheck } from "lucide-react";
@@ -42,11 +43,11 @@ export function AcessosSubchefe({ schoolId, subchefes }: { schoolId: string; sub
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <div>
-        <h2 className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+    <section className="flex flex-col gap-3"><CollapsibleSection title={<h2 className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-gray-100">
           <ShieldCheck size={15} /> Acessos do sub-chefe
-        </h2>
+        </h2>}>
+      <div>
+
         <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">O sub-chefe tem os mesmos acessos do chefe. Desmarque o que quiser retirar.</p>
       </div>
       {subchefes.length === 0 ? (
@@ -77,6 +78,6 @@ export function AcessosSubchefe({ schoolId, subchefes }: { schoolId: string; sub
         ))
       )}
       {erro && <p className="text-[12px] text-na-danger-dark dark:text-red-400">{erro}</p>}
-    </section>
+    </CollapsibleSection></section>
   );
 }

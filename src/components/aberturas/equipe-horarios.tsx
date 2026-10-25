@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { salvarDisponibilidade, salvarEscalaSecretaria, salvarConfigAberturas, compararHorariosAbertura, removerDisponibilidade, removerEscalaSecretaria } from "@/lib/actions/aberturas-actions";
 import type { HorarioAvaliado, ResultadoComparacao } from "@/lib/aberturas/planejador";
@@ -41,39 +42,39 @@ export function EquipeHorarios({ data, abertura }: { data: PainelAberturas; aber
 
   return (
     <div className="space-y-5">
-      <section className={CARD}>
+      <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Disponibilidade dos professores</h2>}>
         <div className="mb-4 flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"><CalendarClock size={18} /></span>
-          <div><h2 className="font-black text-gray-950 dark:text-white">Disponibilidade dos professores</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Registre dias e horários recorrentes, com o período em que a disponibilidade vale.</p></div>
+          <div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Registre dias e horários recorrentes, com o período em que a disponibilidade vale.</p></div>
         </div>
         <FormularioDisponibilidade key={disponibilidadeEmEdicao?.id ?? "nova-disponibilidade"} data={data} abertura={abertura} item={disponibilidadeEmEdicao} aoCancelar={() => setDisponibilidadeEmEdicao(null)} inicioPadrao={inicioPadrao} fimPadrao={fimPadrao} />
-      </section>
+      </CollapsibleSection></section>
 
-      <section className={CARD}>
-        <div className="mb-3 flex items-center gap-2"><Clock3 size={17} className="text-gray-500" /><h3 className="font-bold text-gray-900 dark:text-gray-100">Horários informados</h3><span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">{disponibilidade.length}</span></div>
+      <section className={CARD}><CollapsibleSection title={<h3 className="font-bold text-gray-900 dark:text-gray-100">Horários informados</h3>}>
+        <div className="mb-3 flex items-center gap-2"><Clock3 size={17} className="text-gray-500" /><span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">{disponibilidade.length}</span></div>
         {disponibilidade.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Nenhuma disponibilidade foi registrada ainda.</p> : <div className="divide-y divide-gray-100 dark:divide-gray-800">{disponibilidade.map((item) => <DisponibilidadeLinha key={item.id} item={item} nome={data.professores.find((p) => p.id === item.professorId)?.name} aoEditar={() => setDisponibilidadeEmEdicao(item)} schoolId={data.schoolId} />)}</div>}
-      </section>
+      </CollapsibleSection></section>
 
-      <section className={CARD}>
+      <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Escala da secretaria</h2>}>
         <div className="mb-4 flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"><Users size={18} /></span>
-          <div><h2 className="font-black text-gray-950 dark:text-white">Escala da secretaria</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Assuma um horário de apoio à abertura na secretaria responsável.</p></div>
+          <div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Assuma um horário de apoio à abertura na secretaria responsável.</p></div>
         </div>
         <FormularioEscala key={escalaEmEdicao?.id ?? "nova-escala"} data={data} escala={escalaEmEdicao} aoCancelar={() => setEscalaEmEdicao(null)} inicioPadrao={inicioPadrao} fimPadrao={fimPadraoEscala} />
         <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800">
-          <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">Turnos registrados</h3>
+          <CollapsibleSection title={<h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">Turnos registrados</h3>}>
           {data.escalas.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Ainda não há turnos de secretaria registrados.</p> : <div className="grid gap-2 sm:grid-cols-2">{data.escalas.map((escala) => <EscalaCard key={escala.id} escala={escala} schoolId={data.schoolId} aoEditar={() => setEscalaEmEdicao(escala)} />)}</div>}
-        </div>
+        </CollapsibleSection></div>
         <Link href="/voluntario/aberturas?aba=orientacoes" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-na-green-dark hover:underline dark:text-emerald-400">Orientações da Secretaria de Abertura de Turma <ArrowUpRight size={14} /></Link>
-      </section>
+      </CollapsibleSection></section>
 
-      <section className={CARD}>
+      <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Parâmetros da escola</h2>}>
         <div className="mb-4 flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"><WandSparkles size={18} /></span>
-          <div><h2 className="font-black text-gray-950 dark:text-white">Parâmetros da escola</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Defina a capacidade e as funções que precisam estar cobertas nas aberturas.</p></div>
+          <div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Defina a capacidade e as funções que precisam estar cobertas nas aberturas.</p></div>
         </div>
         <FormularioConfiguracao key={JSON.stringify(data.configs ?? {})} data={data} />
-      </section>
+      </CollapsibleSection></section>
 
       <CompararHorarios key={abertura?.id ?? "sem-abertura"} data={data} abertura={abertura} inicioPadrao={inicioPadrao} fimPadrao={fimPadrao} />
     </div>
@@ -166,8 +167,8 @@ function CompararHorarios({ data, abertura, inicioPadrao, fimPadrao }: { data: P
   const viaveis = resultado?.viaveis ?? [];
   const diasSelecionados = abertura ? [abertura.diaSemana] : [1, 2, 3, 4, 5];
   return (
-    <section className={CARD}>
-      <div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300"><CalendarClock size={18} /></span><div><h2 className="font-black text-gray-950 dark:text-white">Comparar horários possíveis</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Consulte conflitos de calendário e a disponibilidade de professores para um período.</p></div></div>
+    <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Comparar horários possíveis</h2>}>
+      <div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300"><CalendarClock size={18} /></span><div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Consulte conflitos de calendário e a disponibilidade de professores para um período.</p></div></div>
       {!abertura && <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">Selecione ou crie uma abertura na aba Planejamento para comparar horários com seus professores.</p>}
       <form onSubmit={compara} className="space-y-3">
         {hiddenAberturaFields(data.schoolId, abertura?.id, abertura?.revisao)}
@@ -176,8 +177,8 @@ function CompararHorarios({ data, abertura, inicioPadrao, fimPadrao }: { data: P
         <Feedback error={action.error} success={action.success} aviso={action.aviso} />
         <div className="flex justify-end">{abertura ? <SubmitButton pending={action.pending}>Comparar agenda</SubmitButton> : <button type="button" disabled className="min-h-10 cursor-not-allowed rounded-xl bg-gray-300 px-4 py-2 text-sm font-bold text-gray-500 dark:bg-gray-800">Comparar agenda</button>}</div>
       </form>
-      {resultado && <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-bold text-gray-900 dark:text-gray-100">Opções avaliadas</h3><p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Janela: {formatarData(resultado.janela.inicio)} a {formatarData(resultado.janela.fim)} · fuso {resultado.fusoHorario}</p></div><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">{viaveis.length} viável(is) de {opcoes.length}</span></div>{opcoes.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">A comparação não retornou opções para estes critérios.</p> : <div className="grid gap-3 xl:grid-cols-2">{opcoes.map((opcao, index) => <OpcaoHorario key={`${opcao.diaSemana}-${opcao.inicioMinuto}-${index}`} opcao={opcao} pessoas={data.professores} />)}</div>}<details className="mt-4 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-950/60 dark:text-gray-400"><summary className="cursor-pointer font-semibold">Como as opções são ordenadas</summary><ul className="mt-2 list-disc space-y-1 pl-4">{resultado.criteriosOrdenacao.map((criterio) => <li key={criterio}>{criterio}</li>)}</ul></details></div>}
-    </section>
+      {resultado && <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800"><CollapsibleSection title={<h3 className="font-bold text-gray-900 dark:text-gray-100">Opções avaliadas</h3>}><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Janela: {formatarData(resultado.janela.inicio)} a {formatarData(resultado.janela.fim)} · fuso {resultado.fusoHorario}</p></div><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">{viaveis.length} viável(is) de {opcoes.length}</span></div>{opcoes.length === 0 ? <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">A comparação não retornou opções para estes critérios.</p> : <div className="grid gap-3 xl:grid-cols-2">{opcoes.map((opcao, index) => <OpcaoHorario key={`${opcao.diaSemana}-${opcao.inicioMinuto}-${index}`} opcao={opcao} pessoas={data.professores} />)}</div>}<details className="mt-4 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-950/60 dark:text-gray-400"><summary className="cursor-pointer font-semibold">Como as opções são ordenadas</summary><ul className="mt-2 list-disc space-y-1 pl-4">{resultado.criteriosOrdenacao.map((criterio) => <li key={criterio}>{criterio}</li>)}</ul></details></CollapsibleSection></div>}
+    </CollapsibleSection></section>
   );
 }
 

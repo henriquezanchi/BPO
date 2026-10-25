@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import {useEffect,useState,useTransition} from "react";
 import {createGroupMeetings,getGroupMeetings,changeGroupMeeting} from "@/lib/actions/group-meeting-actions";
@@ -38,7 +39,7 @@ export function MeetingManager({groupId,mostrarTraje=true}:{groupId:string;mostr
  const end=editing?localInZone(new Date(editing.endsAt),zone):'';
  const inputStyle='mt-1 min-h-11 w-full min-w-0 rounded-lg border border-gray-300 p-2.5 text-base dark:border-gray-600 dark:bg-gray-900';
  return <section className="max-w-lg space-y-4" aria-label="Reuniões do grupo">
-  <h2 className="text-base font-bold text-na-green-dark dark:text-na-green-light">Reuniões do grupo</h2>
+  <CollapsibleSection title={<h2 className="text-base font-bold text-na-green-dark dark:text-na-green-light">Reuniões do grupo</h2>}>
   <p className="text-sm text-gray-600 dark:text-gray-300">Defina o encontro do grupo. Os integrantes conferem a convocação e justificam ausência pela Agenda; depois do encontro, o Portal pergunta a cada um se participou.</p>
   {error&&<p role="alert" className="text-sm text-na-danger-dark dark:text-na-danger-light">{error}</p>}{notice&&<p role="status" className="text-sm text-na-green-dark dark:text-na-green-light">{notice}</p>}
   <form key={editing?.id??'nova'} onSubmit={submit} className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
@@ -65,5 +66,5 @@ export function MeetingManager({groupId,mostrarTraje=true}:{groupId:string;mostr
    {row.status==='agendada'&&new Date(row.startsAt)>new Date()&&<div className="flex flex-wrap items-center gap-4">{row.seriesId&&<select aria-label={`Alcance do cancelamento de ${row.title}`} value={cancelScopes[row.id]??'esta'} onChange={e=>setCancelScopes(previous=>({...previous,[row.id]:e.target.value as 'esta'|'seguintes'}))} className="min-h-11 max-w-full rounded-lg border p-2 dark:bg-gray-900"><option value="esta">Cancelar somente esta</option><option value="seguintes">Encerrar a rotina a partir desta</option></select>}<button type="button" disabled={pending} onClick={()=>{setEditing(row);setScope('esta');}} className="min-h-11 font-semibold text-na-green-dark dark:text-na-green-light">Editar</button><button type="button" disabled={pending} onClick={()=>cancel(row)} className="min-h-11 text-na-danger-dark dark:text-na-danger-light">Cancelar reunião</button></div>}
   </li>)}</ul>
   {rows.length>visible&&<button type="button" className="min-h-11 text-sm font-semibold" onClick={()=>setVisible(n=>n+4)}>Ver próximas reuniões</button>}
- </section>;
+ </CollapsibleSection></section>;
 }

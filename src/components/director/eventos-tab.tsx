@@ -1,4 +1,6 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
+
 import { PRAZOS_DESISTENCIA } from '@/lib/event-policy';
 import {EventPosterInput} from "./event-poster-input";
 import {EventReceptionSelector} from "./event-reception-selector";
@@ -10,6 +12,7 @@ import {formatBRL} from '@/lib/format';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useState,useTransition} from 'react';
+import {EventDateSuggestions} from "./event-date-suggestions";
 import {AvisoConflitosEvento} from './aviso-conflitos-evento';
 
 const field='w-full min-w-0 rounded-lg border border-gray-300 bg-transparent p-2.5 text-sm dark:border-gray-700';
@@ -28,13 +31,13 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
   <p className="text-sm text-gray-500">Crie atividades internas, escolha quem pode participar e organize a recepção. Eventos pagos usam o split da escola; a cobrança só é liberada com a carteira configurada.</p>
   {!data.eventPaymentConfigured&&<p role="status" className="rounded-xl border border-amber-300 p-3 text-sm text-amber-800 dark:text-amber-300">O PIX ainda não está liberado: falta configurar a credencial do Asaas no servidor do Portal. Eventos gratuitos continuam disponíveis.</p>}
   <section className="max-w-xl rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
-   <h3 className="mb-4 font-bold">{editing?'Editar evento':'Novo evento interno'}</h3>
+   <CollapsibleSection key={editing?.id ?? "novo-evento"} defaultOpen={!!editing} title={<h3 className="mb-4 font-bold">{editing?'Editar evento':'Novo evento interno'}</h3>}>
    <form key={editing?.id??`new-${formGeneration}`} action={save} className="space-y-3">
     <label className="flex flex-col gap-1 text-xs">Título<input name="title" required maxLength={160} defaultValue={editing?.title} className={field}/></label>
     <EventPosterInput initialPath={editing?.posterPath} initialUrl={editing?.posterUrl} onUploading={setPosterUploading}/>
     <div className="grid gap-3 sm:grid-cols-2"><label className="flex min-w-0 flex-col gap-1 text-xs">Início<input type="datetime-local" name="startsAt" required defaultValue={editing?localDate(editing.startsAt):''} className={field}/></label><label className="flex min-w-0 flex-col gap-1 text-xs">Término<input type="datetime-local" name="endsAt" required defaultValue={editing?.endsAt?localDate(editing.endsAt):''} className={field}/></label></div>
     <label className="flex flex-col gap-1 text-xs">Local<input name="location" required maxLength={300} defaultValue={editing?.location??''} className={field}/></label>
-    <PublicosEvento inicial={editing?.publicos?.length?editing.publicos:editing?[editing.audience]:undefined}/><AvisoConflitosEvento schoolId={schoolId}/>
+    <PublicosEvento inicial={editing?.publicos?.length?editing.publicos:editing?[editing.audience]:undefined}/><EventDateSuggestions schoolId={schoolId}/><AvisoConflitosEvento schoolId={schoolId}/>
     <AberturaEvento inicial={editing?.abertoA} valoresIniciais={editing?.abertoValores}/>
     <label className="flex flex-col gap-1 text-xs">Contribuição por inscrição (R$; zero para gratuito)<input type="number" name="price" min={0} max={999999.99} step="0.01" required defaultValue={editing?.price??0} className={field}/></label>
     {/* Lanche compartilhado (pedido do usuário 2026-10-21): aparece em destaque no evento, como a contribuição. */}
@@ -48,7 +51,7 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
     <p className="text-xs text-gray-500">Horários no fuso do seu dispositivo. O valor fica fixo após a primeira inscrição.</p>
     <div className="flex gap-2"><button disabled={pending||posterUploading} className={button}>{posterUploading?"Enviando cartaz…":pending?'Salvando…':editing?'Salvar alterações':'Publicar evento'}</button>{editing&&<button type="button" onClick={()=>setEditing(null)} className="px-3 text-sm">Cancelar edição</button>}</div>
    </form>
-  </section>
+  </CollapsibleSection></section>
   {cancelling&&<section role="dialog" aria-modal="false" aria-labelledby="cancelar-evento-titulo" className="max-w-xl space-y-3 rounded-2xl border border-na-danger/40 p-4">
    <h3 id="cancelar-evento-titulo" className="font-bold">Cancelar {cancelling.title}?</h3>
    <p className="text-sm">As inscrições e o histórico serão preservados.</p>
@@ -60,12 +63,12 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
   {message&&<p role="status" className="text-sm">{message}</p>}
   <p className="text-xs text-gray-500">Lembretes de inscrição, véspera e horário ficam preparados, aguardando a conexão do WhatsApp. Nenhuma mensagem é declarada enviada sem confirmação do provedor.</p>
   {!data.eventos.length&&<p className="text-sm text-gray-500">Nenhum evento cadastrado ainda.</p>}
-  {data.eventos.map(e=><section key={e.id} className="space-y-3 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+  {data.eventos.map(e=><section key={e.id} id={`evento-${e.id}`} className="space-y-3 rounded-2xl border border-gray-200 p-4 dark:border-gray-700"><CollapsibleSection title={<h3 className="font-bold">{e.title} {e.status==='cancelado'&&'· Cancelado'}</h3>}>
    {e.posterUrl&&<>
     {/* eslint-disable-next-line @next/next/no-img-element -- cartaz privado com URL assinada */}
     <img src={e.posterUrl} alt={`Cartaz de ${e.title}`} loading="lazy" className="max-h-96 w-full rounded-xl object-contain"/>
    </>}
-   <h3 className="font-bold">{e.title} {e.status==='cancelado'&&'· Cancelado'}</h3>
+
    <p className="text-sm">{new Date(e.startsAt).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'})} · {e.source==='manual'?(e.price?formatBRL(e.price):'Gratuito'):'Inscrição no organizador'}{e.lancheCompartilhado?' · Lanche compartilhado':''}</p>
    <p className="text-xs text-gray-500">{(e.publicos?.length?e.publicos:[e.audience]).map(p=>EVENT_AUDIENCES[p as keyof typeof EVENT_AUDIENCES]??'Público restrito').join(', ')}{e.abertoA&&e.abertoA!=='filial'?` · aberto a ${ABERTURAS[e.abertoA as keyof typeof ABERTURAS]?.toLowerCase()??'outras filiais'}`:''} · {e.inscritos} inscrições{e.capacity!==null&&e.capacity!==undefined?` / ${e.capacity} vagas`:''} · {e.presentes} presenças</p>
    {e.location&&<p className="text-sm">{e.location}</p>}{e.description&&<p className="whitespace-pre-wrap text-sm">{e.description}</p>}
@@ -76,7 +79,7 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
     {e.status==='publicado'&&<EventReceptionSelector key={e.staff.join('|')} schoolId={schoolId} eventId={e.id} members={(data.receptionCandidates??data.membros.filter(m=>m.mercurioAtivo)).filter(m=>!e.staff.includes(m.id))}/>}
 
    </details>
-  </section>)}
+  </CollapsibleSection></section>)}
  </div>;
 }
 

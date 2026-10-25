@@ -1,3 +1,4 @@
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { PainelProfissoes } from "@/components/relatorios/painel-profissoes";
 import { ehAdministradorNacional } from "@/lib/acesso-voluntario";
@@ -26,13 +27,13 @@ export default async function PainelNacionalPage() {
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Todas as unidades do Mercúrio, somente pessoas ativas.</p>
       </div>
       <section className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
-        <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">Profissões e áreas de atuação</h2>
+        <CollapsibleSection title={<h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">Profissões e áreas de atuação</h2>}>
         {resumo ? (
           <PainelProfissoes dados={resumo.dados as unknown as ResumoProfissoes} nacional />
         ) : (
           <p className="text-[12px] text-gray-500 dark:text-gray-400">Disponível depois da próxima sincronização com o Mercúrio (3h30).</p>
         )}
-      </section>
+      </CollapsibleSection></section>
     </ShellTrabalho>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { PainelProfissoes } from "@/components/relatorios/painel-profissoes";
 import { getProfissoesFilial } from "@/lib/actions/profissoes-actions";
@@ -28,10 +29,10 @@ function Kpi({ rotulo, valor, detalhe }: { rotulo: string; valor: string | numbe
 function Cartao({ titulo, children, aviso }: { titulo: string; children: React.ReactNode; aviso?: string }) {
   return (
     <section className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
-      <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{titulo}</h3>
+      <CollapsibleSection title={<h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{titulo}</h3>}>
       {children}
       {aviso && <p className="text-[11px] text-gray-500 dark:text-gray-400">{aviso}</p>}
-    </section>
+    </CollapsibleSection></section>
   );
 }
 

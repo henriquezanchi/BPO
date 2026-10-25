@@ -1,3 +1,4 @@
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { formatDateBR } from "@/lib/format";
 import { getAuthenticatedMember } from "@/lib/auth";
@@ -17,6 +18,7 @@ export default async function ProfessorPage() {
   if (!member.isPedagogo && !(await lideraAlgumGrupo(member.id))) redirect("/portal");
 
   const classes = await getTeacherClasses(member.id);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
   return (
     <ShellTrabalho largura="estreita">
@@ -25,7 +27,7 @@ export default async function ProfessorPage() {
           {!member.isPedagogo ? "Meus Grupos" : classes.some((c) => c.tipo !== "turma") ? "Turmas e Grupos" : "Minhas Turmas"}
         </h1>
         {member.isPedagogo && (
-          <a
+          <div className="flex flex-wrap gap-2"><a
             href="https://pedagogia.acropolebrasil.com.br/#/home"
             target="_blank"
             rel="noreferrer"
@@ -33,6 +35,7 @@ export default async function ProfessorPage() {
           >
             Diário de Classe <ExternalLink size={12} />
           </a>
+          <a href="https://www.oinabn.com.br/orpheu" target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Orpheu <ExternalLink size={12} /></a></div>
         )}
       </div>
 
@@ -47,7 +50,7 @@ export default async function ProfessorPage() {
         .filter((secao) => secao.lista.length > 0)
         .map((secao) => (
           <section key={secao.titulo} className="flex flex-col gap-3">
-            <h2 className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">{secao.titulo}</h2>
+            <CollapsibleSection title={<h2 className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">{secao.titulo}</h2>}>
             {secao.lista.map((c) => (
               <Link
                 key={c.id}
@@ -63,9 +66,9 @@ export default async function ProfessorPage() {
 
                 {c.activities.length > 0 && (
                   <ul className="flex flex-col gap-1.5">
-                    {c.activities.slice(0, 3).map((a) => (
+                    {[...c.activities].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()).slice(0, 3).map((a) => (
                       <li key={a.id} className="flex justify-between gap-3 rounded-lg bg-gray-50 p-2 text-xs dark:bg-gray-800">
-                        <span>{a.title}</span>
+                        <span>{a.title}{new Date(a.dueDate).toISOString().slice(0, 10) < today && <span className="ml-2 text-[10px] text-gray-500 dark:text-gray-400">· Já aconteceu</span>}</span>
                         <span className="shrink-0 text-gray-500 dark:text-gray-400">{formatDateBR(a.dueDate)}</span>
                       </li>
                     ))}
@@ -73,7 +76,7 @@ export default async function ProfessorPage() {
                 )}
               </Link>
             ))}
-          </section>
+          </CollapsibleSection></section>
         ))}
     </ShellTrabalho>
   );

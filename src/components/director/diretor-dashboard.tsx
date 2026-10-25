@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -308,7 +309,7 @@ export function VisaoGeralTab({
       <QrCodeCadastroCard />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Últimos Pagamentos PIX Confirmados</h3>
+        <CollapsibleSection title={<h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Últimos Pagamentos PIX Confirmados</h3>}>
         {transacoesRecentes.length === 0 ? (
           <EmptyState text="Nenhum pagamento confirmado pelo Portal ainda." />
         ) : (
@@ -341,7 +342,7 @@ export function VisaoGeralTab({
             </table>
           </div>
         )}
-      </div>
+      </CollapsibleSection></div>
     </div>
   );
 }

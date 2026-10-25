@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import {
   abrirNegociacao,
@@ -76,9 +77,9 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900"><CollapsibleSection title={<h3 className="text-sm font-black text-na-green-dark dark:text-emerald-400">Réguas de Cobrança</h3>}>
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-black text-na-green-dark dark:text-emerald-400">Réguas de Cobrança</h3>
+
           <button
             onClick={handleGerarRascunhos}
             disabled={isPending}
@@ -161,10 +162,10 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
             Criar régua
           </button>
         </form>
-      </div>
+      </CollapsibleSection></div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Fila de Aprovação</h3>
+        <CollapsibleSection title={<h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Fila de Aprovação</h3>}>
         <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">Revise e edite antes de enviar — nada sai sem essa aprovação.</p>
         {data.rascunhosPendentes.length === 0 ? (
           <EmptyState text="Nenhum rascunho pendente." />
@@ -202,10 +203,10 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
             ))}
           </ul>
         )}
-      </div>
+      </CollapsibleSection></div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Atrasados por Tempo de Atraso</h3>
+        <CollapsibleSection title={<h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Atrasados por Tempo de Atraso</h3>}>
         <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
           Só matrículas ativas no Mercúrio (quem trancou não aparece aqui). Clique num card pra abrir uma negociação.
         </p>
@@ -220,10 +221,10 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
           onDataChange={setNegData}
           onAbrir={handleAbrirNegociacao}
         />
-      </div>
+      </CollapsibleSection></div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Em Negociação</h3>
+        <CollapsibleSection title={<h3 className="mb-4 text-sm font-black text-na-green-dark dark:text-emerald-400">Em Negociação</h3>}>
         {data.negociacoesAbertas.length === 0 ? (
           <EmptyState text="Nenhuma negociação em aberto." />
         ) : (
@@ -254,7 +255,7 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
             ))}
           </ul>
         )}
-      </div>
+      </CollapsibleSection></div>
 
       <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-900">
         <p className="text-sm text-gray-500 dark:text-gray-400">Antecipação de recebíveis (factoring) não faz parte desta versão.</p>

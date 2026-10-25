@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { abrirCampanha, alterarStatusCampanha } from "@/lib/actions/avaliacao-actions";
 import { BarChart3, Loader2, Play, Square } from "lucide-react";
@@ -59,7 +60,7 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Rodadas</h2>
+      <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Rodadas</h2>}>
 
       {abrindo ? (
         <form onSubmit={abrir} className="flex flex-col gap-3 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
@@ -176,6 +177,6 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
           ))}
         </ul>
       )}
-    </section>
+    </CollapsibleSection></section>
   );
 }

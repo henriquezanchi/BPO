@@ -1,4 +1,5 @@
 "use client";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { FormGrupo } from "@/components/grupos/form-grupo";
 import { criarSecretariasSugeridas, getSugestoesSecretarias, type SugestaoComPessoas } from "@/lib/actions/grupos-actions";
@@ -121,7 +122,7 @@ export function SecretariasAdmin({ schoolId, grupos }: { schoolId: string; grupo
 
       {sugestoes && (
         <section className="rounded-2xl border border-gray-200 bg-white p-4 lg:p-5 dark:border-gray-700 dark:bg-gray-900">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Sugestões a partir das funções no Mercúrio</h3>
+          <CollapsibleSection title={<h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Sugestões a partir das funções no Mercúrio</h3>}>
           <p className="mt-1 mb-3 text-[12px] text-gray-500 dark:text-gray-400">
             Lidas das funções de dirigente atuais da filial. Responsável = secretário, pró-secretário ou coordenador; equipe = colaboradores e assistentes. Marque as que quer criar; depois dá para ajustar cada uma.
           </p>
@@ -161,7 +162,7 @@ export function SecretariasAdmin({ schoolId, grupos }: { schoolId: string; grupo
               {pendente && <Loader2 size={14} className="animate-spin" />} Criar {escolhidas.length} secretaria{escolhidas.length === 1 ? "" : "s"}
             </button>
           )}
-        </section>
+        </CollapsibleSection></section>
       )}
 
       {grupos.length === 0 ? (
@@ -203,7 +204,7 @@ export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grup
         )}
       </div>
       <aside className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Pedidos para participar</h3>
+        <CollapsibleSection title={<h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Pedidos para participar</h3>}>
         <p className="mt-0.5 mb-3 text-[11px] text-gray-500 dark:text-gray-400">Feitos pelo Portal do Aluno. Adicione a pessoa na página do GAF.</p>
         {pedidos.length === 0 ? (
           <p className="text-[12px] text-gray-500">Nenhum pedido.</p>
@@ -219,7 +220,7 @@ export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grup
             ))}
           </ul>
         )}
-      </aside>
+      </CollapsibleSection></aside>
     </div>
   );
 }
