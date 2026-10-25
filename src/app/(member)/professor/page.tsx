@@ -54,7 +54,7 @@ export default async function ProfessorPage() {
             {secao.lista.map((c) => (
               <Link
                 key={c.id}
-                href={`/professor/turma/${c.id}`}
+                href={c.tipo === "turma" ? `/professor/turma/${c.id}` : `/grupos/${c.id}?aba=avisos`}
                 className="flex flex-col gap-3 rounded-2xl border border-gray-200 p-5 transition hover:border-na-gold dark:border-gray-700"
               >
                 <div className="flex items-center justify-between gap-4">

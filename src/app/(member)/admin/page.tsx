@@ -1,12 +1,10 @@
 import { AdminFilialPanel } from "@/components/admin/admin-filial-panel";
-import { GafAdmin, SecretariasAdmin } from "@/components/admin/grupos-admin";
 import { AcessosSubchefe } from "@/components/admin/acessos-subchefe";
 import { SenhasAdmin } from "@/components/admin/senhas-admin";
 import { escolasChefiadas } from "@/lib/acesso-voluntario";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { gruposDaFilial } from "@/lib/grupos-dados";
 import { ehDirecaoDaFilial, filiaisAdministradas, recursosDaFilial, RECURSOS } from "@/lib/recursos-filial";
 import { Building2, Settings, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -15,8 +13,8 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 const ABAS = [
-  { id: "secretarias", rotulo: "Secretarias", icone: Building2, descricao: "Secretarias da filial, equipes de voluntários, atividades e reuniões." },
-  { id: "gaf", rotulo: "GAF", icone: Sparkles, descricao: "Grupos de Acompanhamento Filosófico: coordenação, participantes, encontros e programa." },
+  { id: "secretarias", rotulo: "Secretarias", icone: Building2, descricao: "Abre em Grupos." },
+  { id: "gaf", rotulo: "GAF", icone: Sparkles, descricao: "Abre em Grupos." },
   { id: "recursos", rotulo: "Recursos e administradores", icone: Settings, descricao: "O que aparece para os alunos no Portal, quem mais administra a filial e senhas esquecidas." },
 ] as const;
 type Aba = (typeof ABAS)[number]["id"];
@@ -36,9 +34,12 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
   const escolas = await db.school.findMany({ where: { id: { in: ids } }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   const { filial, aba: abaPedida } = await props.searchParams;
   const escola = escolas.find((e) => e.id === filial) ?? escolas.find((e) => e.id === member.schoolId) ?? escolas[0];
-  const aba: Aba = ABAS.some((a) => a.id === abaPedida) ? (abaPedida as Aba) : "secretarias";
+  // Secretarias e GAF passaram para Grupos (pedido do usuário 2026-10-25: criação de grupos num lugar só).
+  if (abaPedida === "secretarias" || abaPedida === "gaf") redirect(`/grupos?aba=${abaPedida}${filial ? `&filial=${filial}` : ""}`);
+  const aba: Aba = ABAS.some((a) => a.id === abaPedida) ? (abaPedida as Aba) : "recursos";
   const abaInfo = ABAS.find((a) => a.id === aba)!;
-  const link = (a: Aba, f = escola.id) => `/admin?filial=${f}&aba=${a}`;
+  // Secretarias e GAF abrem em Grupos, na mesma filial.
+  const link = (a: Aba, f = escola.id) => (a === "recursos" ? `/admin?filial=${f}&aba=${a}` : `/grupos?aba=${a}&filial=${f}`);
   const nomeEscola = (n: string) => n.replace(/^Nova Acrópole\s*-\s*/i, "");
 
   let conteudo: React.ReactNode;
@@ -74,21 +75,6 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
         {chefe && <AcessosSubchefe schoolId={escola.id} subchefes={subchefes} />}
         <SenhasAdmin pessoas={pessoas} />
       </div>
-    );
-  } else if (aba === "secretarias") {
-    conteudo = <SecretariasAdmin key={escola.id} schoolId={escola.id} grupos={await gruposDaFilial(escola.id, "SEC")} />;
-  } else {
-    const [grupos, pedidos] = await Promise.all([
-      gruposDaFilial(escola.id, "GAF"),
-      db.gafRequest.findMany({
-        where: { member: { schoolId: escola.id, mercurioAtivo: true } },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-        select: { createdAt: true, member: { select: { name: true, isMembroPrograma: true } } },
-      }),
-    ]);
-    conteudo = (
-      <GafAdmin key={escola.id} schoolId={escola.id} grupos={grupos} pedidos={pedidos.map((p) => ({ nome: p.member.name, em: p.createdAt.toISOString(), nivelMembro: p.member.isMembroPrograma }))} />
     );
   }
 

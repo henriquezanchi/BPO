@@ -1,6 +1,5 @@
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { CartaoGrupo } from "@/components/admin/grupos-admin";
-import { CriarGdve } from "@/components/member/volunteer/criar-gdve";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
@@ -79,7 +78,11 @@ export default async function VoluntarioPage() {
       {secoes.map((s) => (
         <section key={s.titulo} className="flex flex-col gap-3">
           <CollapsibleSection title={<h2 className="text-[12px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">{s.titulo}</h2>}>
-          {s.titulo === "GDVE" && podeCriarGdve && <CriarGdve schoolId={member.schoolId} />}
+          {s.titulo === "GDVE" && podeCriarGdve && (
+            <Link href="/grupos?aba=gdve" className="w-fit text-[13px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
+              Criar GDVE em Grupos →
+            </Link>
+          )}
           {s.grupos.length > 0 && (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {s.grupos.map((g) => (

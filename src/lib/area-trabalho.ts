@@ -68,6 +68,8 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
   ]);
   const d: (Destino | false)[] = [
     { href: "/voluntario", rotulo: "Início", descricao: "Seus grupos, secretarias e encontros", icone: "inicio", secao: "Meu trabalho" },
+    // Grupos num lugar só (pedido do usuário 2026-10-25): ver, criar e coordenar.
+    (acesso || fv || temGrupo > 0 || administra.length > 0) && { href: "/grupos", rotulo: "Grupos", descricao: "Secretarias, GAF, grupos de FV e GDVE", icone: "grupos", secao: "Meu trabalho" },
     (m.isPedagogo || lideraFV > 0) && {
       href: "/professor",
       rotulo: m.isPedagogo ? "Instrutor" : "Avisos dos grupos",
@@ -103,7 +105,7 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     aberturas.length > 0 && { href: "/voluntario/aberturas", rotulo: "Abertura de turmas", descricao: "Planejamento, equipe, interessados e resultados", icone: "aberturas", secao: "Secretarias" },
     tem("cafe") && { href: "/voluntario/cafe", rotulo: "Café", descricao: "Caixa Fortuna", icone: "cafe", secao: "Secretarias" },
     tem("direcao") && { href: "/voluntario/filial", rotulo: "Visão da filial", descricao: "Resumo da filial e de cada área", icone: "direcao", secao: "Gestão da filial" },
-    administra.length > 0 && { href: "/admin", rotulo: "Administração", descricao: "Secretarias, GAF, recursos e senhas", icone: "admin", secao: "Gestão da filial" },
+    administra.length > 0 && { href: "/admin", rotulo: "Administração", descricao: "Recursos do Portal, administradores e senhas", icone: "admin", secao: "Gestão da filial" },
     (chefe || m.isSubChefe || lideraFV > 0) && { href: "/voluntario/acessos", rotulo: "Liberar acessos", descricao: "Quem vê a área de voluntários", icone: "acessos", secao: "Gestão da filial" },
     nacional && { href: "/nacional", rotulo: "Painel Nacional", descricao: "Toda a OINAB-N", icone: "nacional", secao: "Nacional" },
   ];

@@ -18,7 +18,7 @@ import type { DetalheGrupo } from "@/lib/grupos-dados";
 import { FREQUENCIAS, MODALIDADES, TIPOS_GRUPO } from "@/lib/grupos-comum";
 import { CalendarClock, ExternalLink, ListChecks, Loader2, MapPin, Pencil, Plus, Trash2, Users, Video, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useState, useTransition, type ReactNode } from "react";
 
 type D = NonNullable<DetalheGrupo>;
 type Atividade = D["grupo"]["atividades"][number];
@@ -36,27 +36,37 @@ const quando = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 const STATUS: Record<string, string> = { ativa: "Ativa", pausada: "Pausada", concluida: "Concluída" };
 
-type Aba = "encontros" | "atividades" | "equipe" | "sobre";
+export type AbaGrupo = "encontros" | "avisos" | "atividades" | "equipe" | "sobre" | "orientacoes";
+type Aba = AbaGrupo;
 
 /**
- * Página de um grupo (GAF, GDVE, secretaria, Grupo Feminino/Masculino/de
- * Segurança). No computador, duas colunas; no celular, abas.
+ * Página única de um grupo (GAF, GDVE, secretaria, Grupo Feminino/Masculino/de Segurança), pedido do
+ * usuário 2026-10-25: abas (na URL, ?aba=) em qualquer tela. "Avisos e enquetes" (antes só em
+ * Professor) e "Orientações" (secretarias) chegam prontos do servidor.
  */
-export function GrupoPainel({ dados }: { dados: D }) {
+export function GrupoPainel({ dados, abaInicial, avisos, orientacoes }: { dados: D; abaInicial?: string; avisos?: ReactNode; orientacoes?: ReactNode }) {
   const { papel, grupo } = dados;
   const router = useRouter();
-  const [aba, setAba] = useState<Aba>("encontros");
   const [editando, setEditando] = useState(false);
   const doPortal = TIPOS_GRUPO[grupo.tipo].doPortal;
   const recarregar = () => router.refresh();
 
-  const abas: [Aba, string][] = [
+  const abas = ([
     ["encontros", "Encontros"],
+    avisos ? ["avisos", "Avisos e enquetes"] : null,
     ["atividades", "Atividades"],
     ["equipe", grupo.tipo === "SEC" ? "Equipe" : "Pessoas"],
     ["sobre", "Sobre"],
-  ];
-  const mostrar = (a: Aba) => `${aba === a ? "flex" : "hidden"} flex-col gap-4 lg:flex`;
+    orientacoes ? ["orientacoes", "Orientações"] : null,
+  ].filter(Boolean) as [Aba, string][]);
+  const [aba, setAbaEstado] = useState<Aba>(() => abas.find(([a]) => a === abaInicial)?.[0] ?? "encontros");
+  // Troca na hora e guarda na URL (voltar/compartilhar abre na mesma aba).
+  const setAba = (a: Aba) => {
+    setAbaEstado(a);
+    const url = new URL(window.location.href);
+    url.searchParams.set("aba", a);
+    window.history.replaceState(null, "", url);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -99,40 +109,30 @@ export function GrupoPainel({ dados }: { dados: D }) {
         </section>
       )}
 
-      <nav
-        className="sticky top-0 z-10 -mx-4 flex gap-1 overflow-x-auto bg-na-bg/95 px-4 py-2 backdrop-blur lg:hidden dark:bg-gray-950/95"
-        aria-label="Seções do grupo"
-      >
+      {/* Mesmo visual das abas das áreas (AbasArea). */}
+      <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-gray-200 px-4 lg:mx-0 lg:px-0 dark:border-gray-800" aria-label="Seções do grupo">
         {abas.map(([a, r]) => (
           <button
             key={a}
             onClick={() => setAba(a)}
-            aria-current={aba === a}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold ${aba === a ? "bg-na-green text-white" : "bg-white text-gray-600 dark:bg-gray-900 dark:text-gray-300"}`}
+            aria-current={aba === a ? "page" : undefined}
+            className={`shrink-0 border-b-2 px-3 py-2 text-[13px] font-semibold ${
+              aba === a ? "border-na-green text-na-green-dark dark:text-emerald-400" : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
+            }`}
           >
             {r}
           </button>
         ))}
       </nav>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-        <div className="flex flex-col gap-4">
-          <div className={mostrar("encontros")}>
-            <Encontros dados={dados} recarregar={recarregar} />
-          </div>
-          <div className={mostrar("atividades")}>
-            <Atividades dados={dados} recarregar={recarregar} />
-          </div>
-        </div>
-        <aside className="flex flex-col gap-4">
-          <div className={mostrar("sobre")}>
-            <Sobre dados={dados} recarregar={recarregar} />
-          </div>
-          <div className={mostrar("equipe")}>
-            <Equipe dados={dados} recarregar={recarregar} />
-          </div>
-        </aside>
+      <div className="flex max-w-3xl flex-col gap-4">
+        {aba === "encontros" && <Encontros dados={dados} recarregar={recarregar} />}
+        {aba === "avisos" && avisos}
+        {aba === "atividades" && <Atividades dados={dados} recarregar={recarregar} />}
+        {aba === "equipe" && <Equipe dados={dados} recarregar={recarregar} />}
+        {aba === "sobre" && <Sobre dados={dados} recarregar={recarregar} />}
       </div>
+      {aba === "orientacoes" && orientacoes}
     </div>
   );
 }
@@ -312,7 +312,7 @@ function Equipe({ dados, recarregar }: { dados: D; recarregar: () => void }) {
 
   return (
     <section className={CARTAO}>
-      <CollapsibleSection title={<h2 className={TITULO}>
+      <CollapsibleSection defaultOpen title={<h2 className={TITULO}>
         <Users size={15} /> {grupo.tipo === "SEC" ? "Equipe" : "Pessoas"}
       </h2>}>
       <div className="flex flex-col gap-4">
@@ -331,7 +331,7 @@ function Atividades({ dados, recarregar }: { dados: D; recarregar: () => void })
   const ativas = grupo.atividades.filter((a) => a.status !== "concluida");
   const concluidas = grupo.atividades.filter((a) => a.status === "concluida");
   return (
-    <section className={CARTAO}><CollapsibleSection title={<h2 className={`${TITULO} mb-0`}>
+    <section className={CARTAO}><CollapsibleSection defaultOpen title={<h2 className={`${TITULO} mb-0`}>
           <ListChecks size={15} /> Atividades
         </h2>}>
       <div className="mb-3 flex items-center justify-between">

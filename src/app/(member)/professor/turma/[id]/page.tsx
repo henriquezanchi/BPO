@@ -25,7 +25,9 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
   // ESTA turma/grupo) — vale pra instrutor e pra chefe de brigada.
   const turma = await getTeacherClassDetail(id).catch(() => null);
   if (!turma) redirect("/portal");
-  const ehGrupo = turma.tipo !== "turma";
+  // Grupos (FV, GAF, secretarias, GDVE): uma tela só, na aba de avisos (pedido do usuário 2026-10-25).
+  if (turma.tipo !== "turma") redirect(`/grupos/${turma.id}?aba=avisos`);
+  const ehGrupo = false;
   const pessoas = ehGrupo ? "integrantes" : "alunos";
   const slackDisponivel = !!tokenSlackDaFilial(turma.mercurioUnidade);
   // Matérias em curso na turma (vêm do Mercúrio) com os temas do catálogo, para a prova/trabalho/leitura.

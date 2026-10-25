@@ -1,5 +1,6 @@
 import {carregarContextoSecretaria,podeAcessarSecretaria} from "@/lib/secretarias-rede/acesso";
 import { AreaSecretaria } from "@/components/secretarias-rede/area-secretaria";
+import { AvisosDoGrupo } from "@/components/grupos/avisos-do-grupo";
 import { GrupoPainel } from "@/components/grupos/grupo-painel";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -17,14 +18,23 @@ export const dynamic = "force-dynamic";
  * Segurança. Voluntários e administração veem dentro da Área do Voluntário;
  * quem só participa de um GAF (aluno) vê uma página simples, com volta ao Portal.
  */
-export default async function GrupoPage(props: { params: Promise<{ id: string }>; searchParams: Promise<{ de?: string }> }) {
+export default async function GrupoPage(props: { params: Promise<{ id: string }>; searchParams: Promise<{ de?: string; aba?: string }> }) {
   const { id } = await props.params;
-  const { de } = await props.searchParams;
+  const { aba } = await props.searchParams;
   const member = await getAuthenticatedMember();
   if (!member) redirect(`/login?next=/grupos/${id}`);
   const [dados, destinos] = await Promise.all([detalheDoGrupo(member, id), destinosDaPessoa(member)]);
   if (!dados) notFound();
   const orientacoes=dados.grupo.tipo==='SEC'&&member.mercurioAtivo&&podeAcessarSecretaria(await carregarContextoSecretaria(member),dados.grupo.name);
+  // Uma tela só por grupo (pedido do usuário 2026-10-25): avisos/enquetes (antes em Professor) e orientações viram abas.
+  const painel = (
+    <GrupoPainel
+      dados={dados}
+      abaInicial={aba}
+      avisos={dados.papel.podeGerir ? <AvisosDoGrupo grupoId={dados.grupo.id} /> : undefined}
+      orientacoes={orientacoes ? <AreaSecretaria secretaria={dados.grupo.name} /> : undefined}
+    />
+  );
 
   if (!destinos.length) {
     return (
@@ -35,14 +45,13 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
           </Link>
           <ThemeToggle />
         </div>
-        <GrupoPainel dados={dados} />
+        {painel}
       </main>
     );
   }
   return (
-    <ShellTrabalho ativo={de === "admin" ? "/admin" : "/voluntario"}>
-      <GrupoPainel dados={dados} />
-      {orientacoes&&<AreaSecretaria secretaria={dados.grupo.name}/>}
+    <ShellTrabalho ativo="/grupos">
+      {painel}
     </ShellTrabalho>
   );
 }
