@@ -84,7 +84,7 @@
 .moldura {
   position: absolute;
   z-index: 2;
-  inset: 6vh 3.2vw;
+  inset: 6vh 3.2vw 6vh 5vw;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,7 +129,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 5.5vh 5vw 10.5vh 4.4vw;
+  padding: 5.5vh 5vw 12vh 4.4vw;
 }
 
 .dados > * {
@@ -340,6 +340,7 @@
 /* ---------- Rodapé fixo (por cima dos slides) ---------- */
 
 .rodape {
+  /* uma linha só, acima da faixa que a TV pode cortar (overscan) */
   position: absolute;
   z-index: 2;
   right: 0;
@@ -348,20 +349,31 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 8.5vh;
-  padding: 0 5vw 0.6vh 4.4vw;
+  gap: 2vw;
+  height: 11vh;
+  padding: 0 5vw 3.5vh 4.4vw;
   background: linear-gradient(180deg, transparent, rgb(2 31 27 / 0.55));
+  white-space: nowrap;
 }
 
 .assinatura {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
+  min-width: 0;
   gap: 1.3vw;
   font-size: 2.1vh;
   color: var(--tinta-suave);
 }
 
+.assinatura span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .assinatura .marca {
+  flex: none;
   width: 7.4vh;
   aspect-ratio: 1078 / 682;
   background: var(--tinta);
@@ -369,6 +381,7 @@
 
 .relogio {
   display: flex;
+  flex: none;
   align-items: baseline;
   gap: 1.4vw;
   font-variant-numeric: tabular-nums;
@@ -380,8 +393,15 @@
 }
 
 .relogio span {
+  /* a data só cabe com folga no rodapé de largura total (frase, tela vazia) */
+  display: none;
   font-size: 2.1vh;
   color: var(--tinta-suave);
+}
+
+.rodapeCheio .relogio span,
+.vazio .relogio span {
+  display: inline;
 }
 
 .marca {
@@ -391,9 +411,9 @@
 
 .progresso {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  right: 5vw;
+  bottom: 2.4vh;
+  left: 4.4vw;
   height: 0.55vh;
   background: var(--tinta-fraca);
 }
@@ -441,6 +461,303 @@
   left: 0;
 }
 
+/* ---------- Conteúdos além dos eventos (cartões, frase, listas) ---------- */
+
+.emblema {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4vh;
+  background:
+    radial-gradient(60vh 60vh at 50% 42%, rgb(255 202 0 / 0.12), transparent 70%),
+    radial-gradient(90vh 90vh at 30% 110%, rgb(0 148 133 / 0.28), transparent 65%),
+    var(--fundo-fundo);
+}
+
+.emblemaIcone {
+  position: relative;
+  z-index: 2;
+  color: var(--ouro);
+}
+
+.emblemaIcone::before {
+  /* anel fino em volta do ícone */
+  content: "";
+  position: absolute;
+  inset: -7vh;
+  border: 1px solid rgb(255 202 0 / 0.24);
+  border-radius: 50%;
+}
+
+.emblemaIcone svg {
+  display: block;
+  width: 26vh;
+  height: 26vh;
+}
+
+.rotulo {
+  margin: 0;
+  font-size: 2.8vh;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ouro);
+}
+
+.descricaoCartao {
+  font-size: 3vh;
+  -webkit-line-clamp: 4;
+}
+
+.chamadaSolta {
+  margin: 0;
+  padding-top: 3vh;
+  border-top: 1px solid var(--tinta-fraca);
+  font-size: 3.4vh;
+  font-weight: 800;
+}
+
+.slideCheio {
+  grid-template-columns: 1fr;
+}
+
+.frase {
+  position: relative;
+  display: grid;
+  place-content: center;
+  padding: 12vh 12vw 16vh;
+  background:
+    radial-gradient(80vh 60vh at 50% 40%, rgb(0 148 133 / 0.18), transparent 70%),
+    linear-gradient(180deg, #043a33 0%, var(--fundo) 60%, #022622 100%);
+}
+
+.frase blockquote {
+  position: relative;
+  width: min(24ch, 76vw);
+  margin: 0;
+  font-size: 7.4vh;
+}
+
+.frase blockquote::before {
+  content: "\201C";
+  position: absolute;
+  top: -0.5em;
+  left: -0.62em;
+  font-size: 3em;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--ouro);
+  opacity: 0.55;
+}
+
+.frase blockquote p {
+  margin: 0;
+  font-weight: 300;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.frase .fraseLonga {
+  width: min(30ch, 76vw);
+  font-size: 5.8vh;
+}
+
+.frase blockquote footer {
+  margin-top: 5vh;
+  font-size: 2.8vh;
+  color: var(--tinta-suave);
+}
+
+.frase blockquote footer strong {
+  font-weight: 800;
+  color: var(--ouro);
+}
+
+.fraseRotulo {
+  position: absolute;
+  top: 8vh;
+  right: 7vw;
+  margin: 0;
+  font-size: 2.2vh;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+}
+
+.rodapeCheio {
+  left: 0;
+  padding-left: 7vw;
+  padding-right: 7vw;
+}
+
+.rodapeCheio .progresso {
+  right: 7vw;
+  left: 7vw;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4vh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8vh 5vw 12vh 4.4vw;
+}
+
+.tituloLista {
+  flex: none;
+  font-size: 6vh;
+}
+
+.itens {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itens li {
+  display: grid;
+  grid-template-columns: 9ch minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2vw;
+  padding: 1.5vh 0;
+  border-bottom: 1px solid var(--tinta-fraca);
+  font-size: 3vh;
+  line-height: 1.25;
+  break-inside: avoid;
+}
+
+.itemDestaque {
+  font-weight: 800;
+  color: var(--ouro);
+  text-transform: capitalize;
+  font-variant-numeric: tabular-nums;
+}
+
+.itemTexto {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemDetalhe {
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.itensColunas {
+  columns: 2;
+  column-gap: 3vw;
+}
+
+.itensColunas li {
+  grid-template-columns: 3ch minmax(0, 1fr) auto;
+}
+
+/* ---------- Vertical girada (TV em pé cujo navegador não gira) ---------- */
+
+.quadroGirado {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vh;
+  height: 100vw;
+  border: 0;
+  transform-origin: top left;
+}
+
+.girarDireita {
+  transform: rotate(90deg) translateY(-100%);
+}
+
+.girarEsquerda {
+  transform: rotate(-90deg) translateX(-100%);
+}
+
+/* ---------- Conexão da TV (/tv) ---------- */
+
+.parear {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) auto;
+  align-items: center;
+  gap: 6vw;
+  height: 100%;
+  padding: 8vh 8vw;
+}
+
+.parearTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 3vh;
+  min-width: 0;
+}
+
+.marcaParear {
+  width: 16vh;
+  aspect-ratio: 1078 / 682;
+  margin-bottom: 2vh;
+  background: var(--ouro);
+  -webkit-mask: url("/na-logo.png") center / contain no-repeat;
+  mask: url("/na-logo.png") center / contain no-repeat;
+}
+
+.codigo {
+  margin: 0;
+  font-size: 19vh;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: 0.04em;
+  color: var(--ouro);
+  font-variant-numeric: tabular-nums;
+}
+
+.codigo span {
+  display: inline-block;
+  width: 0.35em;
+}
+
+.passos {
+  margin: 1vh 0 0;
+  padding-left: 1.2em;
+  font-size: 3.2vh;
+  line-height: 1.45;
+}
+
+.passos li {
+  list-style: decimal;
+}
+
+.passos li::marker {
+  font-weight: 900;
+  color: var(--ouro);
+}
+
+.passos li + li {
+  margin-top: 1.2vh;
+}
+
+.passos strong {
+  color: var(--ouro);
+  overflow-wrap: anywhere;
+}
+
+.aviso {
+  margin: 0;
+  font-size: 2.3vh;
+  color: var(--tinta-suave);
+}
+
+.qr.qrParear {
+  width: 54vh;
+  height: 54vh;
+  padding: 3.4vh;
+  border-radius: 3vh;
+}
+
 /* ---------- TV na vertical ---------- */
 
 @media (orientation: portrait) {
@@ -455,12 +772,12 @@
   }
 
   .moldura {
-    inset: 3vh 7vw;
+    inset: 5vh 7vw 3vh;
   }
 
   .dados {
     overflow: hidden;
-    padding: 2.6vh 7vw 8vh;
+    padding: 2.6vh 7vw 12vh;
   }
 
   .quando {
@@ -542,8 +859,14 @@
 
   .rodape {
     left: 0;
-    height: 6.5vh;
-    padding: 0 7vw 0.4vh;
+    height: 11vh;
+    padding: 0 7vw 5vh;
+  }
+
+  .progresso {
+    right: 7vw;
+    bottom: 3.6vh;
+    left: 7vw;
   }
 
   .assinatura {
@@ -563,8 +886,97 @@
     font-size: 4.4vw;
   }
 
-  .relogio span {
+  .rodapeCheio .relogio span,
+  .vazio .relogio span {
     display: none;
+  }
+
+  .emblema {
+    gap: 2vh;
+  }
+
+  .emblemaIcone::before {
+    inset: -4vh;
+  }
+
+  .emblemaIcone svg {
+    width: min(16vh, 24vw);
+    height: min(16vh, 24vw);
+  }
+
+  .rotulo {
+    font-size: 2.8vw;
+  }
+
+  .descricaoCartao {
+    font-size: 3.4vw;
+  }
+
+  .chamadaSolta {
+    font-size: 4vw;
+  }
+
+  .frase {
+    padding: 14vh 9vw 14vh;
+  }
+
+  .frase blockquote {
+    width: min(20ch, 78vw);
+    font-size: 8vw;
+  }
+
+  .frase .fraseLonga {
+    width: min(24ch, 78vw);
+    font-size: 6.6vw;
+  }
+
+  .frase blockquote footer,
+  .fraseRotulo {
+    font-size: 3.2vw;
+  }
+
+  .lista {
+    gap: 2.4vh;
+    padding: 3vh 7vw 12vh;
+  }
+
+  .tituloLista {
+    font-size: 6.4vw;
+  }
+
+  .itens li {
+    gap: 3vw;
+    padding: 1.2vh 0;
+    font-size: 3.4vw;
+  }
+
+  .parear {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 5vh;
+    padding: 6vh 8vw;
+  }
+
+  .marcaParear {
+    width: 22vw;
+  }
+
+  .codigo {
+    font-size: 17vw;
+  }
+
+  .passos {
+    font-size: 3.6vw;
+  }
+
+  .aviso {
+    font-size: 2.8vw;
+  }
+
+  .qr.qrParear {
+    width: 56vw;
+    height: 56vw;
+    padding: 4vw;
   }
 }
 

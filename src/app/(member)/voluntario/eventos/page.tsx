@@ -41,7 +41,15 @@ export default async function EventosAreaPage(props: { searchParams: Promise<{ a
         <TelasTab
           schoolId={member.schoolId}
           origem={await origemDoPortal()}
-          telas={await db.telaEventos.findMany({ where: { schoolId: member.schoolId }, orderBy: { createdAt: "asc" }, select: { id: true, nome: true, publicos: true, token: true } })}
+          telas={await db.telaEventos.findMany({ where: { schoolId: member.schoolId }, orderBy: { createdAt: "asc" }, select: { id: true, nome: true, publicos: true, conteudos: true, orientacao: true, token: true } })}
+          cartoes={(await db.telaCartao.findMany({ where: { schoolId: member.schoolId }, orderBy: { createdAt: "asc" } })).map((c) => ({
+            id: c.id,
+            tipo: c.tipo,
+            titulo: c.titulo,
+            texto: c.texto,
+            link: c.link,
+            ate: c.ate ? c.ate.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }) : null,
+          }))}
         />
       ) : (
         <EventosTab schoolId={member.schoolId} data={await getDirectorDashboard(member.schoolId)} />

@@ -174,6 +174,7 @@ model School {
   members            Member[]
   events             Event[]
   telasEventos       TelaEventos[]
+  telaCartoes        TelaCartao[]
   payables           Payable[]
   repasses           Repasse[]
   otherIncomes       OtherIncome[]
@@ -1914,9 +1915,45 @@ model TelaEventos {
   school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   nome      String
   publicos  String[] @default([])
+  // Conteúdos intercalados com os eventos (lib/telas-publicos.ts: CONTEUDOS_TELA) e
+  // orientação ("auto" | "direita" | "esquerda" = vertical girada) — pedidos de 2026-10-24.
+  conteudos  String[] @default([])
+  orientacao String   @default("auto")
   token     String   @unique
   criadoPor String?
   createdAt DateTime @default(now())
+  conexoes  TvConexao[]
 
   @@index([schoolId])
+}
+
+// Cartões que a filial escreve para as TVs (avisos, Círculo de Amigos, Instagram, Acrópole Play).
+model TelaCartao {
+  id        String    @id @default(cuid())
+  schoolId  String
+  school    School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tipo      String // "aviso" | "apoio" | "instagram" | "play"
+  titulo    String
+  texto     String?
+  link      String?
+  ate       DateTime? // some da TV depois deste dia
+  criadoPor String?
+  createdAt DateTime  @default(now())
+
+  @@index([schoolId])
+}
+
+// Conexão TV ↔ tela pelo controle remoto: a TV abre /tv, mostra um código de 6 números
+// e um QR; um voluntário logado escolhe a tela; a TV (que guarda o segredo) é levada a ela.
+model TvConexao {
+  id          String       @id @default(cuid())
+  codigo      String       @unique
+  segredo     String       @unique
+  telaId      String?
+  tela        TelaEventos? @relation(fields: [telaId], references: [id], onDelete: Cascade)
+  expiraEm    DateTime
+  conectadoEm DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([expiraEm])
 }

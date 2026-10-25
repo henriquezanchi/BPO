@@ -13,3 +13,47 @@ export function validarPublicosTela(publicos: string[]): PublicoTela[] {
   if (!v.length) throw Error("Escolha ao menos um público para a tela.");
   return v;
 }
+
+/** O que a TV intercala com os eventos (pedido do usuário 2026-10-24: "tudo"). */
+export const CONTEUDOS_TELA = {
+  matriculas: "Matrículas abertas",
+  frase: "Frase da semana",
+  avisos: "Avisos da filial",
+  apoio: "Círculo de Amigos e doações",
+  redes: "Instagram e Acrópole Play",
+  programacao: "Programação da semana",
+  aniversariantes: "Aniversariantes do mês",
+} as const;
+export type ConteudoTela = keyof typeof CONTEUDOS_TELA;
+export const CONTEUDOS_PADRAO: ConteudoTela[] = ["matriculas", "frase", "avisos"];
+
+/** Aniversariantes nunca numa TV aberta ao público (privacidade). */
+export function validarConteudosTela(conteudos: string[], publicos: string[]): ConteudoTela[] {
+  const v = [...new Set(conteudos)].filter((c): c is ConteudoTela => Object.hasOwn(CONTEUDOS_TELA, c));
+  if (v.includes("aniversariantes") && publicos.includes("aberto_publico"))
+    throw Error("Aniversariantes só aparecem em TV interna: desmarque \"Aberto ao público\" ou os aniversariantes.");
+  return v;
+}
+
+/** Vertical girada: para TVs presas em pé cujo navegador não gira sozinho. */
+export const ORIENTACOES_TELA = {
+  auto: "Automática (horizontal, ou vertical se a TV já girar a imagem)",
+  direita: "Vertical — girar para a direita",
+  esquerda: "Vertical — girar para a esquerda",
+} as const;
+export type OrientacaoTela = keyof typeof ORIENTACOES_TELA;
+
+export function validarOrientacaoTela(o: string): OrientacaoTela {
+  return Object.hasOwn(ORIENTACOES_TELA, o) ? (o as OrientacaoTela) : "auto";
+}
+
+/** Cartões que a filial escreve; cada tipo entra num conteúdo da TV. */
+export const TIPOS_CARTAO = {
+  // Matrícula escrita à mão: enquanto a filial não cadastra a turma em Aberturas (que gera o slide sozinha).
+  matricula: { rotulo: "Matrículas abertas", conteudo: "matriculas", exemploTitulo: "Curso de Filosofia: nova turma em março", exemploLink: "https://…" },
+  aviso: { rotulo: "Aviso", conteudo: "avisos", exemploTitulo: "Feriado de 15 de novembro: sede fechada", exemploLink: "" },
+  apoio: { rotulo: "Círculo de Amigos / doação", conteudo: "apoio", exemploTitulo: "Faça parte do Círculo de Amigos", exemploLink: "https://…" },
+  instagram: { rotulo: "Instagram", conteudo: "redes", exemploTitulo: "Siga a filial no Instagram", exemploLink: "https://instagram.com/…" },
+  play: { rotulo: "Acrópole Play", conteudo: "redes", exemploTitulo: "Palestras gravadas no Acrópole Play", exemploLink: "https://…" },
+} as const satisfies Record<string, { rotulo: string; conteudo: ConteudoTela; exemploTitulo: string; exemploLink: string }>;
+export type TipoCartao = keyof typeof TIPOS_CARTAO;

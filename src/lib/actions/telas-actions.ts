@@ -2,12 +2,15 @@
 
 import { requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { normalizarCodigo } from "@/lib/telas-conexao";
 import { novoTokenTela } from "@/lib/telas-eventos";
-import { validarPublicosTela } from "@/lib/telas-publicos";
+import { TIPOS_CARTAO, validarConteudosTela, validarOrientacaoTela, validarPublicosTela, type TipoCartao } from "@/lib/telas-publicos";
 import { revalidatePath } from "next/cache";
 
 /** Telas de TV da filial (pedido do usuário 2026-10-24): quem cuida dos Eventos cria e ajusta. */
 type Resultado = { ok: true } | { ok: false; error: string };
+
+export type DadosTela = { nome: string; publicos: string[]; conteudos: string[]; orientacao: string };
 
 async function executar(acao: () => Promise<unknown>, falha: string): Promise<Resultado> {
   try {
@@ -25,21 +28,26 @@ function validarNome(nome: string) {
   return n.slice(0, 60);
 }
 
+function validarTela(d: DadosTela) {
+  const publicos = validarPublicosTela(d.publicos);
+  return { nome: validarNome(d.nome), publicos, conteudos: validarConteudosTela(d.conteudos, publicos), orientacao: validarOrientacaoTela(d.orientacao) };
+}
+
 function garantir(count: number) {
   if (!count) throw Error("Tela não encontrada nesta filial.");
 }
 
-export async function criarTela(schoolId: string, nome: string, publicos: string[]) {
+export async function criarTela(schoolId: string, dados: DadosTela) {
   return executar(async () => {
     const actor = await requireArea(schoolId, "eventos");
-    await db.telaEventos.create({ data: { schoolId, nome: validarNome(nome), publicos: validarPublicosTela(publicos), token: novoTokenTela(), criadoPor: actor.id } });
+    await db.telaEventos.create({ data: { schoolId, ...validarTela(dados), token: novoTokenTela(), criadoPor: actor.id } });
   }, "Não foi possível criar a tela.");
 }
 
-export async function atualizarTela(schoolId: string, id: string, nome: string, publicos: string[]) {
+export async function atualizarTela(schoolId: string, id: string, dados: DadosTela) {
   return executar(async () => {
     await requireArea(schoolId, "eventos");
-    garantir((await db.telaEventos.updateMany({ where: { id, schoolId }, data: { nome: validarNome(nome), publicos: validarPublicosTela(publicos) } })).count);
+    garantir((await db.telaEventos.updateMany({ where: { id, schoolId }, data: validarTela(dados) })).count);
   }, "Não foi possível salvar a tela.");
 }
 
@@ -56,4 +64,61 @@ export async function excluirTela(schoolId: string, id: string) {
     await requireArea(schoolId, "eventos");
     garantir((await db.telaEventos.deleteMany({ where: { id, schoolId } })).count);
   }, "Não foi possível excluir a tela.");
+}
+
+/** Liga a TV que mostra o código (em /tv) a esta tela. */
+export async function conectarTv(schoolId: string, telaId: string, codigo: string) {
+  return executar(async () => {
+    await requireArea(schoolId, "eventos");
+    const c = normalizarCodigo(codigo);
+    if (!c) throw Error("O código tem 6 números, como aparece na TV.");
+    if (!(await db.telaEventos.count({ where: { id: telaId, schoolId } }))) throw Error("Tela não encontrada nesta filial.");
+    const r = await db.tvConexao.updateMany({ where: { codigo: c, telaId: null, expiraEm: { gt: new Date() } }, data: { telaId, conectadoEm: new Date() } });
+    if (!r.count) throw Error("Código não encontrado ou vencido. Confira o número na TV (ele muda a cada 15 minutos).");
+  }, "Não foi possível conectar a TV.");
+}
+
+// ---------- Cartões da filial (avisos, Círculo de Amigos, Instagram, Acrópole Play) ----------
+
+export type DadosCartao = { tipo: string; titulo: string; texto: string; link: string; ate: string };
+
+function validarCartao(d: DadosCartao) {
+  if (!Object.hasOwn(TIPOS_CARTAO, d.tipo)) throw Error("Tipo de cartão inválido.");
+  const titulo = d.titulo.trim().replace(/\s+/g, " ").slice(0, 90);
+  if (!titulo) throw Error("Escreva o título do cartão.");
+  const texto = d.texto.trim().slice(0, 220) || null;
+  let link: string | null = d.link.trim() || null;
+  if (link) {
+    if (!/^https?:\/\//i.test(link)) link = `https://${link}`;
+    try {
+      const u = new URL(link);
+      if (u.protocol !== "https:") throw 0;
+      link = u.toString();
+    } catch {
+      throw Error("O link precisa ser um endereço https:// válido.");
+    }
+  }
+  const ate = /^\d{4}-\d{2}-\d{2}$/.test(d.ate) ? new Date(`${d.ate}T23:59:59-03:00`) : null;
+  return { tipo: d.tipo as TipoCartao, titulo, texto, link, ate };
+}
+
+export async function criarCartao(schoolId: string, dados: DadosCartao) {
+  return executar(async () => {
+    const actor = await requireArea(schoolId, "eventos");
+    await db.telaCartao.create({ data: { schoolId, ...validarCartao(dados), criadoPor: actor.id } });
+  }, "Não foi possível criar o cartão.");
+}
+
+export async function atualizarCartao(schoolId: string, id: string, dados: DadosCartao) {
+  return executar(async () => {
+    await requireArea(schoolId, "eventos");
+    garantir((await db.telaCartao.updateMany({ where: { id, schoolId }, data: validarCartao(dados) })).count);
+  }, "Não foi possível salvar o cartão.");
+}
+
+export async function excluirCartao(schoolId: string, id: string) {
+  return executar(async () => {
+    await requireArea(schoolId, "eventos");
+    garantir((await db.telaCartao.deleteMany({ where: { id, schoolId } })).count);
+  }, "Não foi possível excluir o cartão.");
 }

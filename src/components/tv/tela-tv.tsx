@@ -1,15 +1,26 @@
 "use client";
 
-import type { SlideTela } from "@/lib/telas-eventos";
-import { MapPin, Ticket, Users, UtensilsCrossed } from "lucide-react";
+import type { IconeCartao, SlideCartao, SlideEvento, SlideFrase, SlideLista, SlideTela } from "@/lib/telas-eventos";
+import { CalendarDays, Cake, Camera, CircleFadingPlus, CirclePlay, GraduationCap, HeartHandshake, MapPin, Megaphone, Ticket, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { lembrarTela } from "./parear-tv";
 import s from "./tela-tv.module.css";
 
 const TROCA_MS = 10_000;
 const ATUALIZA_MS = 5 * 60_000; // dados novos e cartazes com link renovado
 const RECARREGA_MS = 6 * 60 * 60_000; // pega versões novas do Portal
 const FUSO = "America/Sao_Paulo";
+
+const ICONES: Record<IconeCartao | SlideLista["icone"], LucideIcon> = {
+  matricula: GraduationCap,
+  aviso: Megaphone,
+  apoio: HeartHandshake,
+  instagram: Camera,
+  play: CirclePlay,
+  programacao: CalendarDays,
+  aniversariantes: Cake,
+};
 
 function classeTitulo(titulo: string) {
   if (titulo.length <= 40) return s.tituloCurto;
@@ -60,10 +71,37 @@ function useCaber() {
   return ref;
 }
 
-function Slide({ e, ativo }: { e: SlideTela; ativo: boolean }) {
+function Data({ dia, mes, semana, hora }: { dia: string; mes: string; semana: string; hora: string | null }) {
+  return (
+    <div className={`${s.quando} ${s.entra}`}>
+      <span className={s.dia}>{dia}</span>
+      <div className={s.calendario}>
+        <span className={s.mes}>{mes}</span>
+        <span className={s.semana}>{semana}</span>
+        {hora && <span className={s.hora}>{hora}</span>}
+      </div>
+    </div>
+  );
+}
+
+function Inscricao({ qrSvg, chamada, explicacao, endereco }: { qrSvg: string; chamada: string; explicacao: string; endereco: string | null }) {
+  return (
+    <div className={`${s.inscricao} ${s.entra}`}>
+      {/* SVG gerado no servidor pela biblioteca qrcode (só caminhos, sem texto vindo de fora). */}
+      <div className={s.qr} dangerouslySetInnerHTML={{ __html: qrSvg }} />
+      <div className={s.chamada}>
+        <strong>{chamada}</strong>
+        <span>{explicacao}</span>
+        {endereco && <span className={s.endereco}>{endereco}</span>}
+      </div>
+    </div>
+  );
+}
+
+function SlideDeEvento({ e }: { e: SlideEvento }) {
   const corpo = useCaber();
   return (
-    <section className={`${s.slide} ${ativo ? s.ativo : ""}`} aria-hidden={!ativo}>
+    <>
       <div className={s.cartaz}>
         {e.cartaz ? (
           <>
@@ -82,15 +120,7 @@ function Slide({ e, ativo }: { e: SlideTela; ativo: boolean }) {
       </div>
 
       <div className={s.dados}>
-        <div className={`${s.quando} ${s.entra}`}>
-          <span className={s.dia}>{e.dia}</span>
-          <div className={s.calendario}>
-            <span className={s.mes}>{e.mes}</span>
-            <span className={s.semana}>{e.semana}</span>
-            {e.hora && <span className={s.hora}>{e.hora}</span>}
-          </div>
-        </div>
-
+        <Data {...e} />
         <div ref={corpo} className={`${s.corpo} ${s.entra}`}>
           <h1 className={`${s.titulo} ${classeTitulo(e.titulo)}`}>{e.titulo}</h1>
           {e.descricao && <p className={s.descricao}>{e.descricao}</p>}
@@ -113,23 +143,86 @@ function Slide({ e, ativo }: { e: SlideTela; ativo: boolean }) {
             )}
           </ul>
         </div>
-
-        <div className={`${s.inscricao} ${s.entra}`}>
-          {/* SVG gerado no servidor pela biblioteca qrcode (só caminhos, sem texto vindo de fora). */}
-          <div className={s.qr} dangerouslySetInnerHTML={{ __html: e.qrSvg }} />
-          <div className={s.chamada}>
-            <strong>Inscreva-se pelo celular</strong>
-            <span>{e.inscricaoNoPortal ? "Aponte a câmera para o código e entre no Portal do Aluno." : "Aponte a câmera para o código."}</span>
-            <span className={s.endereco}>{e.linkVisivel}</span>
-          </div>
-        </div>
+        <Inscricao qrSvg={e.qrSvg} chamada="Inscreva-se pelo celular" explicacao={e.inscricaoNoPortal ? "Aponte a câmera para o código e entre no Portal do Aluno." : "Aponte a câmera para o código."} endereco={e.linkVisivel} />
       </div>
+    </>
+  );
+}
+
+/** Painel esquerdo dos conteúdos sem cartaz: ícone grande em dourado sobre o verde da marca. */
+function Emblema({ icone }: { icone: IconeCartao | SlideLista["icone"] }) {
+  const Icone = ICONES[icone] ?? CircleFadingPlus;
+  return (
+    <div className={`${s.cartaz} ${s.emblema}`}>
+      <div className={`${s.emblemaIcone} ${s.entra}`}>
+        <Icone aria-hidden strokeWidth={1.4} />
+      </div>
+    </div>
+  );
+}
+
+function SlideDeCartao({ c }: { c: SlideCartao }) {
+  const corpo = useCaber();
+  return (
+    <>
+      <Emblema icone={c.icone} />
+      <div className={s.dados}>
+        {c.quando ? <Data {...c.quando} /> : <p className={`${s.rotulo} ${s.entra}`}>{c.rotulo}</p>}
+        <div ref={corpo} className={`${s.corpo} ${s.entra}`}>
+          <h1 className={`${s.titulo} ${classeTitulo(c.titulo)}`}>{c.titulo}</h1>
+          {c.texto && <p className={`${s.descricao} ${s.descricaoCartao}`}>{c.texto}</p>}
+        </div>
+        {c.qrSvg ? <Inscricao qrSvg={c.qrSvg} chamada={c.chamada} explicacao="Aponte a câmera para o código." endereco={c.linkVisivel} /> : c.chamada ? <p className={`${s.chamadaSolta} ${s.entra}`}>{c.chamada}</p> : <span />}
+      </div>
+    </>
+  );
+}
+
+function SlideDeFrase({ f }: { f: SlideFrase }) {
+  return (
+    <div className={s.frase}>
+      <blockquote className={`${s.entra} ${f.texto.length > 90 ? s.fraseLonga : ""}`}>
+        <p>{f.texto}</p>
+        <footer>
+          <strong>{f.autor}</strong> · {f.obra}
+        </footer>
+      </blockquote>
+      <p className={s.fraseRotulo}>Frase da semana</p>
+    </div>
+  );
+}
+
+function SlideDeLista({ l }: { l: SlideLista }) {
+  const colunas = l.icone === "aniversariantes" && l.itens.length > 7;
+  return (
+    <>
+      <Emblema icone={l.icone} />
+      <div className={s.lista}>
+        <h1 className={`${s.titulo} ${s.tituloLista} ${s.entra}`}>{l.titulo}</h1>
+        <ul className={`${s.itens} ${colunas ? s.itensColunas : ""} ${s.entra}`}>
+          {l.itens.map((i, n) => (
+            <li key={n}>
+              <span className={s.itemDestaque}>{i.destaque}</span>
+              <span className={s.itemTexto}>{i.texto}</span>
+              {i.detalhe && <span className={s.itemDetalhe}>{i.detalhe}</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
+  );
+}
+
+function Slide({ slide, ativo }: { slide: SlideTela; ativo: boolean }) {
+  return (
+    <section className={`${s.slide} ${slide.tipo === "frase" ? s.slideCheio : ""} ${ativo ? s.ativo : ""}`} aria-hidden={!ativo}>
+      {slide.tipo === "evento" ? <SlideDeEvento e={slide} /> : slide.tipo === "cartao" ? <SlideDeCartao c={slide} /> : slide.tipo === "frase" ? <SlideDeFrase f={slide} /> : <SlideDeLista l={slide} />}
     </section>
   );
 }
 
-/** Tela de TV da filial: eventos em rotação a cada 10 s (pedido do usuário 2026-10-24). */
-export function TelaTv({ slides, filial }: { slides: SlideTela[]; filial: string }) {
+/** Tela de TV da filial: eventos e conteúdos em rotação a cada 10 s (pedido do usuário 2026-10-24). */
+export function TelaTv({ slides, filial, token }: { slides: SlideTela[]; filial: string; token: string }) {
   const router = useRouter();
   const [atual, setAtual] = useState(0);
   const total = slides.length;
@@ -140,6 +233,9 @@ export function TelaTv({ slides, filial }: { slides: SlideTela[]; filial: string
     const t = setInterval(() => setAtual((i) => (i + 1) % total), TROCA_MS);
     return () => clearInterval(t);
   }, [total]);
+
+  // Guarda esta tela: ao religar, a TV que abre /tv volta direto para cá.
+  useEffect(() => lembrarTela(token), [token]);
 
   useEffect(() => {
     const dados = setInterval(() => router.refresh(), ATUALIZA_MS);
@@ -187,11 +283,12 @@ export function TelaTv({ slides, filial }: { slides: SlideTela[]; filial: string
 
   // Monta só o slide atual, o anterior (saindo) e o próximo (cartaz já carregando).
   const visiveis = new Set([indice, (indice + 1) % total, (indice - 1 + total) % total]);
+  const cheio = slides[indice]?.tipo === "frase";
 
   return (
     <main className={s.tela}>
-      {slides.map((e, i) => (visiveis.has(i) ? <Slide key={e.id} e={e} ativo={i === indice} /> : null))}
-      <footer className={s.rodape}>
+      {slides.map((e, i) => (visiveis.has(i) ? <Slide key={e.id} slide={e} ativo={i === indice} /> : null))}
+      <footer className={`${s.rodape} ${cheio ? s.rodapeCheio : ""}`}>
         {assinatura}
         <Relogio />
         {total > 1 && (
