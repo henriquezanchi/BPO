@@ -54,7 +54,7 @@ const DESTINO_DA_ABA: Record<string, string> = {
 };
 
 /** Visão da filial (direção): o que era a Visão Geral do Painel da Direção. */
-export function VisaoFilial({ schoolId, data }: { schoolId: string; data: DirectorDashboard }) {
+export function VisaoFilial({ schoolId, data, comRelatorio = true }: { schoolId: string; data: DirectorDashboard; comRelatorio?: boolean }) {
   const router = useRouter();
   const { saldos, carregando } = useSaldosFortuna(schoolId);
   return (
@@ -64,6 +64,7 @@ export function VisaoFilial({ schoolId, data }: { schoolId: string; data: Direct
       onNavigate={(aba, opts) => router.push(aba === "membros" && opts?.statusFiltro ? `/economia?aba=situacao&status=${opts.statusFiltro}` : (DESTINO_DA_ABA[aba] ?? "/voluntario"))}
       saldoFortunaConsolidado={saldos.saldoConsolidado}
       fortunaCarregando={carregando}
+      comRelatorio={comRelatorio}
     />
   );
 }

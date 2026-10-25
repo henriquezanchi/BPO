@@ -107,11 +107,10 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     tem("eventos") && { href: "/voluntario/eventos", rotulo: "Eventos", descricao: "Gestão de eventos e calendário", icone: "eventos", secao: "Secretarias" },
     aberturas.length > 0 && { href: "/voluntario/aberturas", rotulo: "Abertura de turmas", descricao: "Planejamento, equipe, interessados e resultados", icone: "aberturas", secao: "Secretarias" },
     tem("cafe") && { href: "/voluntario/cafe", rotulo: "Café", descricao: "Caixa Fortuna", icone: "cafe", secao: "Secretarias" },
-    tem("direcao") && { href: "/voluntario/filial", rotulo: "Visão da filial", descricao: "Resumo da filial e de cada área", icone: "direcao", secao: "Gestão da filial" },
+    (tem("direcao") || nacional || m.filiaisChefiadas.length > 0) && { href: "/voluntario/filial", rotulo: "Visão geral", descricao: nacional ? "Índices por área, da filial ao nacional" : "Índices da filial por área", icone: "direcao", secao: "Gestão da filial" },
     administra.length > 0 && { href: "/admin", rotulo: "Administração", descricao: "Recursos do Portal, administradores, senhas e liberar acessos", icone: "admin", secao: "Gestão da filial" },
     // Quem administra a filial libera acessos pela Administração (aba); responsáveis de grupo, por aqui.
     !(administra.length && (chefe || m.isSubChefe)) && (chefe || m.isSubChefe || lideraFV > 0) && { href: "/voluntario/acessos", rotulo: "Liberar acessos", descricao: "Quem vê a área de voluntários", icone: "acessos", secao: "Gestão da filial" },
-    nacional && { href: "/nacional", rotulo: "Painel Nacional", descricao: "Toda a OINAB-N", icone: "nacional", secao: "Nacional" },
   ];
   const lista = d.filter(Boolean) as Destino[];
   const nomes=new Map(mandatos.map(m=>[chaveSecretaria(m.secretaria),m.secretaria]));

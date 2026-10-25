@@ -223,18 +223,23 @@ export function VisaoGeralTab({
   onNavigate,
   saldoFortunaConsolidado,
   fortunaCarregando,
+  comRelatorio = true,
 }: {
   schoolId: string;
   data: DirectorDashboard;
   onNavigate: (aba: AbaId, opts?: { statusFiltro?: string }) => void;
   saldoFortunaConsolidado: number;
   fortunaCarregando: boolean;
+  /** false: só o financeiro do Portal (a Visão geral já mostra o relatório do Mercúrio por área). */
+  comRelatorio?: boolean;
 }) {
   const { kpis, transacoesRecentes } = data;
   const resultadoPositivo = kpis.resultadoFinanceiroMes >= 0;
   return (
     <div className="flex flex-col gap-5">
-      <RelatorioTab schoolId={schoolId}>
+      {(() => {
+        const financeiro = (
+          <>
         <h3 className="-mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Financeiro no Portal</h3>
         <div
           className={`rounded-2xl border p-5 ${
@@ -304,7 +309,10 @@ export function VisaoGeralTab({
             onClick={() => onNavigate("fortuna")}
           />
         </div>
-      </RelatorioTab>
+          </>
+        );
+        return comRelatorio ? <RelatorioTab schoolId={schoolId}>{financeiro}</RelatorioTab> : financeiro;
+      })()}
 
       <QrCodeCadastroCard />
 
