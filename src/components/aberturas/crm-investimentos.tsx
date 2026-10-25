@@ -60,7 +60,7 @@ export function InvestimentosTab({ data, abertura }: { data: PainelAberturas; ab
         <div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"><CircleDollarSign size={18} /></span><div><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Compare o valor planejado com despesas lançadas e valores previstos.</p></div></div>
         <LinhasOrcamento aberturas={data.aberturas} aberturaSelecionadaId={abertura?.id} />
       </CollapsibleSection></section>
-      {abertura && <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Registrar investimento</h2>}><div className="mb-3"><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Lance uma despesa ou previsão em {abertura.titulo}.</p></div><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={data.crm.leads} matriculas={data.crm.matriculas} eventos={data.eventos} pessoas={data.pessoas} tipoInicial="despesa" tiposPermitidos={["despesa"]} /></CollapsibleSection></section>}
+      {abertura && <section className={CARD}><CollapsibleSection defaultOpen title={<h2 className="font-black text-gray-950 dark:text-white">Lançar despesa</h2>}><div className="mb-3"><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Lance uma despesa ou previsão em {abertura.titulo}.</p></div><FormRegistro schoolId={data.schoolId} abertura={abertura} leads={data.crm.leads} matriculas={data.crm.matriculas} eventos={data.eventos} pessoas={data.pessoas} tipoInicial="despesa" tiposPermitidos={["despesa"]} /></CollapsibleSection></section>}
     </div>
   );
 }

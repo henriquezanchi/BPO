@@ -47,13 +47,17 @@ export function PainelAberturas({ data }: { data: PainelAberturas }) {
   }
 
   function fecharFormulario(id?: string) {
-    if (id) setAberturaId(id);
+    if (id) {
+      setAberturaId(id);
+      setAba("planejamento");
+      router.refresh();
+    }
     setFormAberto(false);
     setEmEdicao(null);
   }
 
   const mostrarAba = () => {
-    if (aba === "resumo") return <ResumoTab data={data} onIr={(id, destino = "planejamento") => { if (id) setAberturaId(id); setAba(destino); }} />;
+    if (aba === "resumo") return <ResumoTab data={data} nova={abrirNova} onIr={(id, destino = "planejamento") => { if (id) setAberturaId(id); setAba(destino); }} />;
     if (aba === "planejamento") return <PlanejamentoTab data={data} abertura={abertura} selecionar={setAberturaId} nova={abrirNova} editar={abrirEdicao} />;
     if (aba === "cultura") return <CicloCultural data={data} abertura={abertura} />;
     if (aba === "interessados") return <InteressadosTab data={data} abertura={abertura} />;
@@ -77,13 +81,14 @@ export function PainelAberturas({ data }: { data: PainelAberturas }) {
   </div>;
 }
 
-function ResumoTab({ data, onIr }: { data: PainelAberturas; onIr: (id?: string, destino?: Aba) => void }) {
+function ResumoTab({ data, onIr, nova }: { data: PainelAberturas; onIr: (id?: string, destino?: Aba) => void; nova: () => void }) {
   const capacidade = data.aberturas.filter((item) => item.status !== "cancelada").reduce((total, item) => total + item.capacidade, 0);
   const meta = data.aberturas.filter((item) => item.status !== "cancelada").reduce((total, item) => total + item.metaMatriculas, 0);
   const orcamento = data.aberturas.filter((item) => item.status !== "cancelada").reduce((total, item) => total + item.orcamentoCentavos, 0);
   const tarefas = data.aberturas.flatMap((item) => item.registros.filter((registro) => registro.tipo === "tarefa" && objeto(registro.dados).status !== "concluida").map((registro) => ({ abertura: item, registro })));
   const agenda = agendaProxima(data);
   return <div className="space-y-5">
+    <SuasAberturas data={data} onIr={onIr} nova={nova} />
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <IndicadorResumo icone={<CalendarDays size={17} />} titulo="Aberturas" valor={String(data.aberturas.filter((item) => item.status !== "cancelada").length)} detalhe={`${data.aberturas.filter((item) => item.status === "planejada" || item.status === "rascunho").length} em planejamento`} />
       <IndicadorResumo icone={<UsersRound size={17} />} titulo="Capacidade somada" valor={String(capacidade)} detalhe={`Meta de ${meta} matrículas`} />
@@ -202,3 +207,79 @@ function MiniResumo({ label, value }: { label: string; value: string }) {
 function rotuloStatus(status: string) {
   return ({ rascunho: "Rascunho", planejada: "Planejada", em_curso: "Em curso", concluida: "Concluída", cancelada: "Cancelada" } as Record<string, string>)[status] ?? status.replaceAll("_", " ");
 }
+
+const SITUACAO: Record<string, [string, string]> = {
+  rascunho: ["Rascunho", "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"],
+  planejada: ["Planejada", "bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300"],
+  em_curso: ["Em curso", "bg-na-success-light text-na-success-dark dark:bg-emerald-950/50 dark:text-emerald-300"],
+  concluida: ["Concluída", "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"],
+  cancelada: ["Cancelada", "bg-na-danger-light text-na-danger-dark dark:bg-red-950/50 dark:text-red-300"],
+};
+const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+/**
+ * Aberturas sempre à vista no topo do Resumo (pedido do usuário 2026-10-25: "criei um rascunho; para onde foi?").
+ * Cada cartão mostra inscritos/vagas (interessados vinculados à abertura ÷ capacidade) e leva ao planejamento.
+ */
+function SuasAberturas({ data, onIr, nova }: { data: PainelAberturas; onIr: (id?: string, destino?: Aba) => void; nova: () => void }) {
+  const relatorio = new Map((data.relatorios?.aberturas ?? []).map((r) => [r.aberturaId, r]));
+  const ordem = (a: Abertura) => (a.status === "cancelada" || a.status === "concluida" ? 1 : 0);
+  const lista = [...data.aberturas].sort((a, b) => ordem(a) - ordem(b) || String(a.primeiraAula).localeCompare(String(b.primeiraAula)));
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">Suas aberturas</h2>
+        <button type="button" onClick={nova} className="text-[12px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">+ Planejar abertura</button>
+      </div>
+      {lista.length === 0 ? (
+        <button type="button" onClick={nova} className="w-full rounded-2xl border border-dashed border-na-green/50 p-5 text-left text-sm text-gray-600 hover:bg-na-green-light/30 dark:text-gray-300 dark:hover:bg-emerald-950/20">
+          Nenhuma abertura ainda. <span className="font-semibold text-na-green-dark dark:text-emerald-400">Planejar a primeira</span>
+        </button>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {lista.map((a) => {
+            const r = relatorio.get(a.id);
+            const inscritos = r?.leads.denominadorObservado ?? 0;
+            const matriculas = r?.matriculas.confirmadasUnicasMercurio ?? 0;
+            const d = new Date(String(a.primeiraAula));
+            const dia = d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit" });
+            const mes = MESES_CURTOS[Number(d.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }).slice(5, 7)) - 1] ?? "";
+            const [rotulo, cor] = SITUACAO[a.status] ?? [a.status, SITUACAO.rascunho[1]];
+            const apagada = a.status === "cancelada" || a.status === "concluida";
+            return (
+              <article key={a.id} className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 dark:border-gray-800 dark:bg-gray-900">
+                <button type="button" onClick={() => onIr(a.id, "planejamento")} className="flex gap-3 text-left">
+                  <span className={`flex w-14 shrink-0 flex-col items-center justify-center self-start rounded-xl py-2 leading-tight ${apagada ? "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400" : "bg-na-green text-white"}`}>
+                    <span className="text-[10px] font-semibold uppercase opacity-90">{DIAS[a.diaSemana]?.slice(0, 3) ?? ""}</span>
+                    <span className="text-xl font-black">{dia}</span>
+                    <span className="text-[10px] font-semibold uppercase opacity-90">{mes}</span>
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-bold ${cor}`}>{rotulo}</span>
+                    <span className="text-[14px] leading-snug font-bold text-gray-900 dark:text-gray-100">{a.titulo}</span>
+                    <span className="text-[12px] text-gray-500 dark:text-gray-400">
+                      {hora(a.inicioMinuto)} · {a.sala || "sala a definir"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className="block text-2xl font-black text-gray-900 tabular-nums dark:text-gray-100">
+                      {inscritos}/{a.capacidade}
+                    </span>
+                    <span className="block text-[10px] text-gray-500 dark:text-gray-400">inscritos/vagas</span>
+                    {matriculas > 0 && <span className="block text-[10px] font-semibold text-na-success-dark dark:text-emerald-300">{matriculas} matrícula{matriculas === 1 ? "" : "s"}</span>}
+                  </span>
+                </button>
+                <div className="flex flex-wrap gap-1.5 border-t border-gray-100 pt-2.5 text-[12px] font-semibold dark:border-gray-800">
+                  <button type="button" onClick={() => onIr(a.id, "planejamento")} className="rounded-lg bg-na-green px-2.5 py-1 text-white hover:bg-na-green-dark">Planejamento</button>
+                  <button type="button" onClick={() => onIr(a.id, "investimentos")} className="rounded-lg border border-gray-300 px-2.5 py-1 text-gray-700 dark:border-gray-700 dark:text-gray-200">Lançar despesa</button>
+                  <button type="button" onClick={() => onIr(a.id, "interessados")} className="rounded-lg px-2.5 py-1 text-na-green-dark dark:text-emerald-400">Interessados</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
