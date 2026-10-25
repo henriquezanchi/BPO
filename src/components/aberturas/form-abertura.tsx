@@ -107,6 +107,16 @@ export function FormAbertura({ schoolId, professores, abertura, onFechar }: { sc
               </select>
             </Campo>
             <CampoOrcamento totalCentavos={abertura?.orcamentoCentavos ?? 0} itensIniciais={orcamentoItens} />
+            {/* Site de matrículas (pedido do usuário 2026-10-25): aberto ao criar; responsáveis podem desligar. */}
+            <Campo label="Valor da 1ª contribuição (R$)" hint="Cobrado no site de matrícula, na conta da filial. Em branco: a escola combina com a pessoa.">
+              <input type="number" name="valorContribuicao" min="0" step="0.01" inputMode="decimal" defaultValue={abertura?.valorContribuicaoCentavos ? (abertura.valorContribuicaoCentavos / 100).toFixed(2) : ""} className={CAMPO_CLASS} />
+            </Campo>
+            <Campo label="Matrículas pelo site" hint="Link público para a pessoa se matricular e pagar.">
+              <select name="matriculaAberta" defaultValue={abertura?.matriculaAberta === false ? "nao" : "sim"} className={CAMPO_CLASS}>
+                <option value="sim">Abertas</option>
+                <option value="nao">Fechadas</option>
+              </select>
+            </Campo>
             <div className="sm:col-span-2">
               <p className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-200">Professores envolvidos</p>
               <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Para confirmar uma abertura planejada, em curso ou concluída, selecione pelo menos dois professores.</p>

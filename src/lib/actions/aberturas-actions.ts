@@ -11,6 +11,7 @@ import {revalidatePath} from 'next/cache';
 import {z} from 'zod';
 import type {Prisma} from '@prisma/client';
 import { CHAVES_CUSTO } from '@/lib/aberturas/categorias';
+import { randomBytes } from 'node:crypto';
 
 const field=(f:FormData,k:string)=>String(f.get(k)||'').trim();
 const texto=(s:string,max=200)=>z.string().min(1).max(max).parse(s);
@@ -52,7 +53,10 @@ export async function salvarAbertura(f:FormData){try{
  const palestraInicio=palestraData?new Date(palestraData+'T'+field(f,'inicio')+':00-03:00'):null;
  const registroPalestra=palestraInicio?{autorId:member.id,tipo:'palestra',dados:{titulo:'Palestra cultural de abertura',tema:'A definir',inicio:palestraInicio.toISOString(),fim:new Date(palestraInicio.getTime()+90*60000).toISOString()}}:null;
  const registroOrcamento=orcamentoItens!==null?{autorId:member.id,tipo:'orcamento',dados:{itens:orcamentoItens,totalCentavos:orcamentoCentavos}}:null;
- const dados={inscricoesAte:inscricoes?new Date(inscricoes+'T23:59:59.999-03:00'):null,primeiraAula:new Date(primeira+'T'+field(f,'inicio')+':00-03:00'),diaSemana,inicioMinuto,duracaoMinutos:120,capacidade,metaMatriculas,orcamentoCentavos,sala:texto(field(f,'sala')),status,professorIds};
+ // Site de matrículas: valor da 1ª contribuição (opcional) e link ligado/desligado.
+ const valorTexto=field(f,'valorContribuicao');const valorContribuicaoCentavos=valorTexto?centavos(valorTexto):null;
+ const matriculaAberta=field(f,'matriculaAberta')!=='nao';
+ const dados={inscricoesAte:inscricoes?new Date(inscricoes+'T23:59:59.999-03:00'):null,primeiraAula:new Date(primeira+'T'+field(f,'inicio')+':00-03:00'),diaSemana,inicioMinuto,duracaoMinutos:120,capacidade,metaMatriculas,orcamentoCentavos,sala:texto(field(f,'sala')),status,professorIds,valorContribuicaoCentavos,matriculaAberta};
  const id=field(f,'aberturaId');
  const salvo=await db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "School" WHERE id=${schoolId} FOR UPDATE`;
@@ -61,7 +65,7 @@ export async function salvarAbertura(f:FormData){try{
    if(conflito)throw Error('Há outra turma planejada com a mesma sala ou professores nesse horário: '+conflito.titulo);
   }
   if(id){const changed=await tx.aberturaTurma.updateMany({where:{id,schoolId,revisao:revisao(f)},data:{...dados,revisao:{increment:1}}});if(changed.count!==1)throw Error('A abertura foi alterada por outra pessoa. Atualize a página.');for(const extra of [registroPalestra,registroOrcamento])if(extra){if(extra.tipo==='palestra'&&await tx.aberturaRegistro.findFirst({where:{aberturaId:id,tipo:'palestra'},select:{id:true}}))continue;await tx.aberturaRegistro.create({data:{aberturaId:id,...extra}});}await tx.aberturaRegistro.create({data:{aberturaId:id,autorId:member.id,tipo:'alteracao',dados:{...dados,inscricoesAte:dados.inscricoesAte?.toISOString()??null,primeiraAula:dados.primeiraAula.toISOString()}}});return id;}
-  const created=await tx.aberturaTurma.create({data:{...dados,titulo:'Turma · '+primeira.split('-').reverse().join('/')+' · '+field(f,'inicio'),schoolId,autorId:member.id,registros:{create:[...[registroPalestra,registroOrcamento].filter(<T,>(x:T|null):x is T=>x!==null),{autorId:member.id,tipo:'tarefa',dados:{titulo:'Confirmar equipe docente e substituições',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Planejar palestras culturais e divulgação',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Organizar acolhimento e conferir matrículas no Mercúrio',status:'pendente',prazo:primeira}}]}}});return created.id;
+  const created=await tx.aberturaTurma.create({data:{...dados,matriculaToken:randomBytes(16).toString('hex'),titulo:'Turma · '+primeira.split('-').reverse().join('/')+' · '+field(f,'inicio'),schoolId,autorId:member.id,registros:{create:[...[registroPalestra,registroOrcamento].filter(<T,>(x:T|null):x is T=>x!==null),{autorId:member.id,tipo:'tarefa',dados:{titulo:'Confirmar equipe docente e substituições',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Planejar palestras culturais e divulgação',status:'pendente',prazo:primeira}},{autorId:member.id,tipo:'tarefa',dados:{titulo:'Organizar acolhimento e conferir matrículas no Mercúrio',status:'pendente',prazo:primeira}}]}}});return created.id;
  });atualizar();return {ok:true,id:salvo};
  }catch(e){return falha(e);}}
 

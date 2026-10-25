@@ -21,6 +21,10 @@ export type Abertura = {
   capacidade: number;
   metaMatriculas: number;
   orcamentoCentavos: number;
+  matriculaToken?: string | null;
+  matriculaAberta?: boolean;
+  valorContribuicaoCentavos?: number | null;
+  matriculasSite?: { id: string; nome: string; celular: string; email: string; status: string; pagoEm: string | null; createdAt: string }[];
   sala: string | null;
   status: string;
   professorIds: string[];

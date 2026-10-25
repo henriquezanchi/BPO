@@ -274,12 +274,46 @@ function SuasAberturas({ data, onIr, nova }: { data: PainelAberturas; onIr: (id?
                   <button type="button" onClick={() => onIr(a.id, "investimentos")} className="rounded-lg border border-gray-300 px-2.5 py-1 text-gray-700 dark:border-gray-700 dark:text-gray-200">Lançar despesa</button>
                   <button type="button" onClick={() => onIr(a.id, "interessados")} className="rounded-lg px-2.5 py-1 text-na-green-dark dark:text-emerald-400">Interessados</button>
                 </div>
+                <LinkMatricula abertura={a} />
               </article>
             );
           })}
         </div>
       )}
     </section>
+  );
+}
+
+/** Link público de matrícula da abertura e as matrículas feitas por ele (pedido do usuário 2026-10-25). */
+function LinkMatricula({ abertura }: { abertura: Abertura }) {
+  const [copiado, setCopiado] = useState(false);
+  const site = abertura.matriculasSite ?? [];
+  const pagas = site.filter((m) => m.status === "paga" || m.status === "lancada").length;
+  if (!abertura.matriculaToken) return null;
+  const url = typeof window === "undefined" ? `/matricula/${abertura.matriculaToken}` : `${window.location.origin}/matricula/${abertura.matriculaToken}`;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-[11px] dark:bg-gray-950/40">
+      <span className="text-gray-600 dark:text-gray-300">
+        {abertura.matriculaAberta === false ? "Matrículas pelo site fechadas" : "Matrículas pelo site abertas"}
+        {site.length > 0 && ` · ${site.length} pelo site, ${pagas} paga${pagas === 1 ? "" : "s"}`}
+      </span>
+      {abertura.matriculaAberta !== false && (
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(url);
+              setCopiado(true);
+            } catch {
+              /* sem área de transferência */
+            }
+          }}
+          className="font-semibold text-na-green-dark hover:underline dark:text-emerald-400"
+        >
+          {copiado ? "Link copiado" : "Copiar link de matrícula"}
+        </button>
+      )}
+    </div>
   );
 }
 

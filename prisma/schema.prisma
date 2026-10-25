@@ -185,6 +185,7 @@ model School {
   paymentRubricas    SchoolPaymentRubrica[]
   scholasticPendencies ScholasticPendency[]
   financialSnapshots FinancialSnapshot[]
+  matriculasOnline MatriculaOnline[]
 }
 
 model Member {
@@ -1809,6 +1810,11 @@ model AberturaTurma {
   capacidade Int
   metaMatriculas Int
   orcamentoCentavos Int @default(0)
+  // Site de matrículas (2026-10-25): link público /matricula/<token>, liga/desliga e valor da 1ª contribuição.
+  matriculaToken String? @unique
+  matriculaAberta Boolean @default(true)
+  valorContribuicaoCentavos Int?
+  matriculasOnline MatriculaOnline[]
   sala String
   status String @default("rascunho")
   professorIds String[] @default([])
@@ -1979,3 +1985,50 @@ model TvConexao {
 
   @@index([expiraEm])
 }
+
+// Matrícula feita pelo site público da abertura (2026-10-25). CPF completo só cifrado (MATRICULA_CPF_CHAVE) até a
+// matrícula ser lançada no Mercúrio; depois fica só o início (cpfInicio). Status: aguardando_pagamento | paga | lancada | cancelada.
+model MatriculaOnline {
+  id                String        @id @default(cuid())
+  aberturaId        String
+  abertura          AberturaTurma @relation(fields: [aberturaId], references: [id], onDelete: Cascade)
+  schoolId          String
+  school            School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  nome              String
+  email             String
+  celular           String
+  nascimento        String?
+  sexo              String?
+  naturalidade      String?
+  nacionalidade     String?
+  estadoCivil       String?
+  rg                String?
+  rgOrgao           String?
+  rgEmissao         String?
+  cpfInicio         String
+  cpfCifrado        String?
+  escolaridade      String?
+  profissao         String?
+  cep               String?
+  logradouro        String?
+  numero            String?
+  complemento       String?
+  bairro            String?
+  cidade            String?
+  uf                String?
+  comoConheceu      String?
+  consentimentoEm   DateTime
+  status            String        @default("aguardando_pagamento")
+  valorCentavos     Int
+  asaasCustomerId   String?
+  asaasPaymentId    String?       @unique
+  pagoEm            DateTime?
+  lancadaEm         DateTime?
+  mercurioMatricula String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @default(now()) @updatedAt
+
+  @@index([aberturaId])
+  @@index([schoolId, status])
+}
+

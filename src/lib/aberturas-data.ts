@@ -90,7 +90,10 @@ export async function getPainelAberturas(requestedSchoolId?: string) {
   const [aberturasDb, professoresDb, disponibilidadesDb, eventosDb, resumo, escalasDb, configDb, cacheDb] = await Promise.all([
     db.aberturaTurma.findMany({
       where: { schoolId },
-      include: { registros: { orderBy: { createdAt: "asc" } } },
+      include: {
+        registros: { orderBy: { createdAt: "asc" } },
+        matriculasOnline: { where: { status: { not: "cancelada" } }, orderBy: { createdAt: "desc" }, select: { id: true, nome: true, celular: true, email: true, status: true, pagoEm: true, createdAt: true } },
+      },
       orderBy: [{ primeiraAula: "asc" }, { createdAt: "asc" }],
     }),
     db.member.findMany({ where: { schoolId, mercurioAtivo: true }, select: { id: true, name: true, isPedagogo: true }, orderBy: { name: "asc" } }),
@@ -125,6 +128,10 @@ export async function getPainelAberturas(requestedSchoolId?: string) {
     capacidade: abertura.capacidade,
     metaMatriculas: abertura.metaMatriculas,
     orcamentoCentavos: abertura.orcamentoCentavos,
+    matriculaToken: abertura.matriculaToken,
+    matriculaAberta: abertura.matriculaAberta,
+    valorContribuicaoCentavos: abertura.valorContribuicaoCentavos,
+    matriculasSite: abertura.matriculasOnline.map((m) => ({ ...m, pagoEm: m.pagoEm?.toISOString() ?? null, createdAt: m.createdAt.toISOString() })),
     sala: abertura.sala || null,
     status: abertura.status,
     professorIds: [...abertura.professorIds],
