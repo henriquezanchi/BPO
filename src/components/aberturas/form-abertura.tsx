@@ -7,6 +7,7 @@ import { CAMPO_CLASS, Campo, Feedback, SubmitButton, hiddenAberturaFields, useFo
 import type { Abertura, Pessoa } from "./types";
 import { hora } from "./utils";
 import { CampoOrcamento } from "./campo-orcamento";
+import { SugestaoData } from "./sugestao-data";
 
 const DIAS = ["domingos", "segundas-feiras", "terças-feiras", "quartas-feiras", "quintas-feiras", "sextas-feiras", "sábados"];
 
@@ -43,6 +44,11 @@ export function FormAbertura({ schoolId, professores, abertura, onFechar }: { sc
   const ultimoOrcamento = (abertura?.registros ?? []).filter((r) => r.tipo === "orcamento").at(-1);
   const orcamentoItens = ((ultimoOrcamento?.dados as { itens?: Record<string, number> } | null)?.itens ?? {}) as Record<string, number>;
   const [palestraTocada, setPalestraTocada] = useState(false);
+  const [inicio, setInicio] = useState(hora(abertura?.inicioMinuto ?? 19 * 60));
+  // Meta de matrículas: 80% da capacidade, até alguém editar (pedido do usuário 2026-10-25).
+  const [capacidade, setCapacidade] = useState(String(abertura?.capacidade ?? 20));
+  const [metaEditada, setMetaEditada] = useState<string | null>(abertura ? String(abertura.metaMatriculas) : null);
+  const metaPadrao = String(Math.max(1, Math.round((Number(capacidade) || 0) * 0.8)));
   const [palestraManual, setPalestra] = useState("");
   const semanaAntes = primeiraAula && !abertura ? new Date(new Date(`${primeiraAula}T12:00:00Z`).getTime() - 7 * 864e5).toISOString().slice(0, 10) : "";
   const palestra = palestraTocada ? palestraManual : semanaAntes;
@@ -72,9 +78,10 @@ export function FormAbertura({ schoolId, professores, abertura, onFechar }: { sc
             <Campo label="Inscrições até" hint="Opcional, para inscrições tardias. Em branco: até 30 dias após a primeira aula.">
               <input type="date" name="inscricoesAte" min={primeiraAula || undefined} defaultValue={dataSaoPaulo(abertura?.inscricoesAte)} className={CAMPO_CLASS} />
             </Campo>
+            {!abertura && <SugestaoData schoolId={schoolId} onUsar={(data, h) => { setPrimeiraAula(data); setInicio(h); setPalestraTocada(false); }} />}
             {/* Dia da semana sai da data da primeira aula (pedido do usuário 2026-10-25). */}
             <Campo label="Horário de início" hint={diaSemana === null ? "Escolha a data da primeira aula." : `Aulas às ${DIAS[diaSemana]}.`}>
-              <input required type="time" name="inicio" defaultValue={hora(abertura?.inicioMinuto ?? 19 * 60)} className={CAMPO_CLASS} />
+              <input required type="time" name="inicio" value={inicio} onChange={(event) => setInicio(event.target.value)} className={CAMPO_CLASS} />
             </Campo>
             <input type="hidden" name="diaSemana" value={diaSemana ?? ""} />
             <Campo label="Palestra cultural de abertura" hint={palestraExistente ? "Já registrada; altere no Ciclo cultural." : "Normalmente uma semana antes da primeira aula. Entra no Ciclo cultural."}>
@@ -88,10 +95,10 @@ export function FormAbertura({ schoolId, professores, abertura, onFechar }: { sc
               <input required name="sala" maxLength={80} defaultValue={abertura?.sala ?? ""} placeholder="Sala ou espaço" className={CAMPO_CLASS} />
             </Campo>
             <Campo label="Capacidade">
-              <input required type="number" name="capacidade" min="1" max="1000" defaultValue={abertura?.capacidade ?? 20} className={CAMPO_CLASS} />
+              <input required type="number" name="capacidade" min="1" max="1000" value={capacidade} onChange={(event) => setCapacidade(event.target.value)} className={CAMPO_CLASS} />
             </Campo>
-            <Campo label="Meta de matrículas">
-              <input required type="number" name="metaMatriculas" min="1" max="1000" defaultValue={abertura?.metaMatriculas ?? 12} className={CAMPO_CLASS} />
+            <Campo label="Meta de matrículas" hint="80% da capacidade; altere se quiser.">
+              <input required type="number" name="metaMatriculas" min="1" max="1000" value={metaEditada ?? metaPadrao} onChange={(event) => setMetaEditada(event.target.value)} className={CAMPO_CLASS} />
             </Campo>
 
             <Campo label="Situação">

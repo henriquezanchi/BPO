@@ -169,3 +169,43 @@ export async function removerEscalaSecretaria(f:FormData){try{
  const member=await getAuthenticatedMember();if(!member?.mercurioAtivo)throw Error('Entre com uma conta ativa.');const schoolId=field(f,'schoolId');const old=await db.secretariaEscala.findFirst({where:{id:field(f,'id'),schoolId}});const ctx=await carregarContextoSecretaria(member);
  if(!old||!podeGerirEscalaSecretaria(ctx,old.secretaria,schoolId))throw Error('Sem permissão para esta escala.');await db.secretariaEscala.delete({where:{id:old.id}});atualizar();revalidatePath(caminhoSecretaria(old.secretaria).split('?')[0]);return {ok:true};
  }catch(e){return falha(e);}}
+
+/**
+ * Sugestão da melhor data para uma abertura ainda não salva (pedido do usuário 2026-10-25): compara dias de
+ * segunda a sábado em quatro horários comuns, de 3 a 10 semanas à frente (tempo de divulgação), com o mesmo motor
+ * de "Equipe e horários" (professores disponíveis, conflitos de aulas, eventos e outras aberturas, ocupação, histórico).
+ */
+export async function sugerirDataAbertura(f:FormData){try{
+ const {schoolId}=await exigirAberturas(field(f,'schoolId'));
+ const {compararPlanejamento}=await import('@/lib/aberturas/comparacao');
+ const hoje=new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
+ const mais=(d:string,dias:number)=>new Date(Date.parse(d+'T12:00:00Z')+dias*86400000).toISOString().slice(0,10);
+ const janela={janelaInicio:mais(hoje,21),janelaFim:mais(hoje,70)};
+ const professorIds=[...new Set(f.getAll('professorIds').map(String))].slice(0,20);
+ const capacidadeTexto=field(f,'capacidade');const capacidade=capacidadeTexto?inteiro(capacidadeTexto,1,2000):20;
+ const sala=texto(field(f,'sala')||'Sala a definir');
+ const base={id:'nova',schoolId,autorId:'',titulo:'Nova abertura',primeiraAula:new Date(janela.janelaInicio+'T12:00:00-03:00'),diaSemana:1,inicioMinuto:1170,duracaoMinutos:120,capacidade,metaMatriculas:capacidade,orcamentoCentavos:0,sala,status:'rascunho',professorIds,revisao:0,createdAt:new Date(),updatedAt:new Date(),mercurioTurmaId:null,inscricoesAte:null} as Parameters<typeof compararPlanejamento>[1];
+ // Quantas pessoas já vão à escola em cada dia da semana (turmas do Mercúrio no resumo diário): movimento a favor da divulgação.
+ const resumo=await db.resumoFilial.findUnique({where:{schoolId},select:{dados:true}});
+ const turmas=((resumo?.dados as {turmas?:{lista?:{dia:string;alunos:number}[]}}|null)?.turmas?.lista)??[];
+ const diaDe=(t:string)=>['domingo','segunda','terca','quarta','quinta','sexta','sabado'].indexOf(t.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/-feira/g,'').trim());
+ const frequentam=[0,1,2,3,4,5,6].map(d=>turmas.filter(t=>diaDe(t.dia)===d).reduce((s,t)=>s+t.alunos,0));
+ const semDisponibilidade=!(await db.professorDisponibilidade.count({where:{schoolId,habilitado:true}}));
+ type Sugestao={data:string;diaSemana:number;inicioMinuto:number;situacao:string;docentes:number;ocupacao:number|null;frequentam:number;motivos:string[];nota:number};
+ const todas:Sugestao[]=[];
+ for(const inicioMinuto of [1170,1140,900,540]){
+  const r=await compararPlanejamento(schoolId,{...base,inicioMinuto},{...janela,dias:[1,2,3,4,5,6],inicioMinuto});
+  for(const o of r.opcoes){
+   const bloqueadas=new Set(o.motivos.impedimentos.map(m=>m.data).filter(Boolean));
+   const data=o.ocorrencias.find(d=>!bloqueadas.has(d));
+   if(!data)continue;
+   const docentes=new Set([...o.indicadores.docentes.titularesDisponiveis,...o.indicadores.docentes.suplentesDisponiveis,...o.indicadores.docentes.titularesConfirmados]).size;
+   const ocupacao=o.indicadores.ocupacao.percentualOcupado;
+   const nota=(o.situacao==='viavel'?100:o.situacao==='pendente'?50:0)+Math.min(docentes,4)*10-(ocupacao??50)/5-o.motivos.impedimentos.length*5+Math.min(frequentam[o.diaSemana],60)/6+(inicioMinuto===1170?3:0);
+   todas.push({data,diaSemana:o.diaSemana,inicioMinuto,situacao:o.situacao,docentes,ocupacao,frequentam:frequentam[o.diaSemana],motivos:[...o.motivos.impedimentos,...o.motivos.pendencias].map(m=>m.descricao).slice(0,3),nota});
+  }
+ }
+ const sugestoes=todas.sort((a,b)=>b.nota-a.nota||a.data.localeCompare(b.data)).filter((s,i,l)=>l.findIndex(x=>x.diaSemana===s.diaSemana&&x.inicioMinuto===s.inicioMinuto)===i).slice(0,3);
+ return {ok:true,sugestoes,semDisponibilidade};
+ }catch(e){return falha(e);}}
+

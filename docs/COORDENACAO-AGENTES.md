@@ -263,3 +263,9 @@ Plano aprovado pelo usuário: (1) corrigir erros, (2) tela única de grupos, (3)
 - **Orientações e gestão** em Economia, Eventos e Café agora mantêm título e abas (antes o menu da secretaria sumia); abas em constantes (`ABAS_ECONOMIA`, `ABAS_EVENTOS`).
 - **Aberturas**: indicadores Aberturas/Capacidade levam ao Planejamento e Orçamento planejado a Investimentos.
 - Fortuna: o cartão da carteira sempre aparece no Portal do Aluno e a consulta do dono devolve saldos localmente; aguardando o print do usuário para saber onde não aparece.
+
+## 47. Claude — Sugestão da melhor data e meta de 80% (25/10/2026)
+
+- **"Sugerir a melhor data"** no formulário de abertura nova (`components/aberturas/sugestao-data.tsx`, ação `sugerirDataAbertura`): usa `compararPlanejamento` (mesmo motor de Equipe e horários) com uma abertura provisória (sala, capacidade e professores já preenchidos), segunda a sábado, 19h30/19h/15h/9h, de 3 a 10 semanas à frente; nota = situação (viável/pendente/impedido), professores livres, ocupação, impedimentos e pessoas que já vêm à escola naquele dia (alunos das turmas no resumo do Mercúrio). Mostra as 3 melhores combinações com motivos; "Usar" preenche data e horário (e a palestra de abertura volta a 7 dias antes). Avisa quando não há disponibilidade de professores cadastrada. Em BGA, ~0,6 s por horário.
+- **Meta de matrículas** = 80% da capacidade até ser editada; horário de início passou a ser controlado (para a sugestão preencher).
+- MATRICULA_CPF_CHAVE criada na Vercel (produção) e no `.env` local, para a Fase 1 do site de matrículas.
