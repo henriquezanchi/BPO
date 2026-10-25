@@ -59,6 +59,7 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     db.secretariaMandato.findMany({where:{memberId:m.id,ativo:true},select:{secretaria:true,escopo:true}}),
   ]);
   const chefe = m.isDiretor || m.filiaisChefiadas.length > 0 || nacional;
+  const emSecretaria = await db.classMembership.count({ where: { memberId: m.id, classGroup: { tipo: "SEC", arquivadoEm: null } } });
   const tem = (a: AreaFilial) => areas.includes(a);
   // Pedidos aguardando quem tem a área (pedido do usuário 2026-10-19): alterações de cadastro (Escolástica)
   // e pedidos de diminuir/remover itens da contribuição (Economia).
@@ -69,7 +70,7 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
   const d: (Destino | false)[] = [
     { href: "/voluntario", rotulo: "Início", descricao: "Seus grupos, secretarias e encontros", icone: "inicio", secao: "Meu trabalho" },
     // Grupos num lugar só (pedido do usuário 2026-10-25): ver, criar e coordenar.
-    (acesso || fv || temGrupo > 0 || administra.length > 0) && { href: "/grupos", rotulo: "Grupos", descricao: "Secretarias, GAF, grupos de FV e GDVE", icone: "grupos", secao: "Meu trabalho" },
+    (acesso || fv || temGrupo > 0 || administra.length > 0) && { href: "/grupos", rotulo: "Grupos", descricao: "GAF, estudos e leituras, grupos de FV e GDVE", icone: "grupos", secao: "Meu trabalho" },
     (m.isPedagogo || lideraFV > 0) && {
       href: "/professor",
       rotulo: m.isPedagogo ? "Instrutor" : "Avisos dos grupos",
@@ -85,6 +86,8 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       secao: "Meu trabalho",
     },
     { href: "/voluntario/termo", rotulo: "Termo de voluntariado", descricao: "Assinatura do termo", icone: "termo", secao: "Meu trabalho" },
+    // Secretarias da filial, à parte de Grupos (pedido do usuário 2026-10-25).
+    (administra.length > 0 || emSecretaria > 0) && { href: "/secretarias", rotulo: "Secretarias da filial", descricao: "Responsáveis, equipes e atividades de cada secretaria", icone: "secretarias", secao: "Secretarias" },
     tem("escolastica") && {
       href: "/escolastica",
       rotulo: "Escolástica",

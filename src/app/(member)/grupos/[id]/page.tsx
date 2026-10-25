@@ -50,7 +50,7 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
     );
   }
   return (
-    <ShellTrabalho ativo="/grupos">
+    <ShellTrabalho ativo={dados.grupo.tipo === "SEC" ? "/secretarias" : "/grupos"}>
       {painel}
     </ShellTrabalho>
   );

@@ -1,4 +1,4 @@
-import { CartaoGrupo, EstudosAdmin, GafAdmin, SecretariasAdmin } from "@/components/admin/grupos-admin";
+import { CartaoGrupo, EstudosAdmin, GafAdmin } from "@/components/admin/grupos-admin";
 import { CriarGdve } from "@/components/member/volunteer/criar-gdve";
 import { AbasArea } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
@@ -17,7 +17,6 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 const SECOES: { titulo: string; tipos: ResumoGrupo["tipo"][] }[] = [
-  { titulo: "Secretarias", tipos: ["SEC"] },
   { titulo: "GAF", tipos: ["GAF"] },
   { titulo: "Grupos de estudo e leituras", tipos: ["ESTUDO", "LEITURA"] },
   { titulo: "Grupos de FV", tipos: ["BF", "BM", "CS"] },
@@ -26,8 +25,9 @@ const SECOES: { titulo: string; tipos: ResumoGrupo["tipo"][] }[] = [
 
 /**
  * Grupos num lugar só (pedido do usuário 2026-10-25: "a criação de grupos está em lugares diferentes").
- * "Meus grupos" para todos; a administração da filial cria e acompanha secretarias e GAF aqui (antes em
- * Administração); FV cria GDVE aqui (antes no Início). Grupos de FV e turmas vêm do Mercúrio.
+ * "Meus grupos" para todos; a administração da filial cria e acompanha GAF aqui (antes em Administração),
+ * instrutores criam estudos e leituras, FV cria GDVE (antes no Início). Grupos de FV e turmas vêm do
+ * Mercúrio. Secretarias ficam à parte, em /secretarias (pedido do usuário 2026-10-25: "divida grupos e secretarias").
  */
 export default async function GruposPage(props: { searchParams: Promise<{ aba?: string; filial?: string }> }) {
   const member = await getAuthenticatedMember();
@@ -55,7 +55,6 @@ export default async function GruposPage(props: { searchParams: Promise<{ aba?: 
     ["meus", "Meus grupos", `/grupos?aba=meus${sufixo}`],
     ...(escola
       ? ([
-          ["secretarias", "Secretarias da filial", `/grupos?aba=secretarias${sufixo}`],
           ["gaf", "GAF da filial", `/grupos?aba=gaf${sufixo}`],
         ] as AbaEscolastica[])
       : []),
@@ -67,7 +66,6 @@ export default async function GruposPage(props: { searchParams: Promise<{ aba?: 
 
   // O que a pessoa pode criar, com o caminho de cada um (um só "Criar grupo").
   const criar = [
-    escola && { rotulo: "Secretaria", href: `/grupos?aba=secretarias${sufixo}`, ajuda: "Equipe de voluntários e atividades de uma área" },
     escola && { rotulo: "GAF", href: `/grupos?aba=gaf${sufixo}`, ajuda: "Grupo de Acompanhamento Filosófico" },
     podeEstudo && { rotulo: "Grupo de estudo", href: `/grupos?aba=estudos${sufixo}`, ajuda: "Estudo de uma obra ou tema, aberto a alunos" },
     podeEstudo && { rotulo: "Leitura comentada", href: `/grupos?aba=estudos${sufixo}`, ajuda: "Leitura conduzida de um texto" },
@@ -75,9 +73,8 @@ export default async function GruposPage(props: { searchParams: Promise<{ aba?: 
   ].filter(Boolean) as { rotulo: string; href: string; ajuda: string }[];
 
   let conteudo: React.ReactNode;
-  if (aba === "secretarias" && escola) {
-    conteudo = <SecretariasAdmin key={escola.id} schoolId={escola.id} grupos={await gruposDaFilial(escola.id, "SEC")} />;
-  } else if (aba === "gaf" && escola) {
+  if (abaPedida === "secretarias") redirect(`/secretarias${escola && escolas.length > 1 ? `?filial=${escola.id}` : ""}`);
+  if (aba === "gaf" && escola) {
     const [grupos, pedidos] = await Promise.all([
       gruposDaFilial(escola.id, "GAF"),
       db.gafRequest.findMany({
@@ -148,7 +145,7 @@ export default async function GruposPage(props: { searchParams: Promise<{ aba?: 
     <ShellTrabalho>
       <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Grupos</h1>
       <AbasArea base="/grupos" atual={aba} abas={abas} />
-      {(aba === "secretarias" || aba === "gaf" || aba === "estudos") && escolas.length > 1 && (
+      {(aba === "gaf" || aba === "estudos") && escolas.length > 1 && (
         <nav className="flex flex-wrap gap-1.5" aria-label="Filial">
           {escolas.map((e) => (
             <Link

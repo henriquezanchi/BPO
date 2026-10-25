@@ -13,7 +13,7 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 const ABAS = [
-  { id: "secretarias", rotulo: "Secretarias", icone: Building2, descricao: "Abre em Grupos." },
+  { id: "secretarias", rotulo: "Secretarias", icone: Building2, descricao: "Abre em Secretarias." },
   { id: "gaf", rotulo: "GAF", icone: Sparkles, descricao: "Abre em Grupos." },
   { id: "recursos", rotulo: "Recursos e administradores", icone: Settings, descricao: "O que aparece para os alunos no Portal, quem mais administra a filial e senhas esquecidas." },
 ] as const;
@@ -35,11 +35,12 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
   const { filial, aba: abaPedida } = await props.searchParams;
   const escola = escolas.find((e) => e.id === filial) ?? escolas.find((e) => e.id === member.schoolId) ?? escolas[0];
   // Secretarias e GAF passaram para Grupos (pedido do usuário 2026-10-25: criação de grupos num lugar só).
-  if (abaPedida === "secretarias" || abaPedida === "gaf") redirect(`/grupos?aba=${abaPedida}${filial ? `&filial=${filial}` : ""}`);
+  if (abaPedida === "secretarias") redirect(`/secretarias${filial ? `?filial=${filial}` : ""}`);
+  if (abaPedida === "gaf") redirect(`/grupos?aba=gaf${filial ? `&filial=${filial}` : ""}`);
   const aba: Aba = ABAS.some((a) => a.id === abaPedida) ? (abaPedida as Aba) : "recursos";
   const abaInfo = ABAS.find((a) => a.id === aba)!;
   // Secretarias e GAF abrem em Grupos, na mesma filial.
-  const link = (a: Aba, f = escola.id) => (a === "recursos" ? `/admin?filial=${f}&aba=${a}` : `/grupos?aba=${a}&filial=${f}`);
+  const link = (a: Aba, f = escola.id) => (a === "recursos" ? `/admin?filial=${f}&aba=${a}` : a === "secretarias" ? `/secretarias?filial=${f}` : `/grupos?aba=${a}&filial=${f}`);
   const nomeEscola = (n: string) => n.replace(/^Nova Acrópole\s*-\s*/i, "");
 
   let conteudo: React.ReactNode;

@@ -200,3 +200,8 @@ Plano aprovado pelo usuário: (1) corrigir erros, (2) tela única de grupos, (3)
 - **Telas:** aba "Estudo e leitura" em `/grupos` (`EstudosAdmin` em `grupos-admin.tsx`; também no cartão "Criar grupo"); seção no Início do voluntário. No Portal do Aluno, quadrinho "Grupos de estudo" (só se houver grupo que aceita a pessoa) com `GruposEstudoPanel`: os seus e os abertos, com **"Quero participar"** (`entrarNoGrupoDeEstudo`: entra na hora, conferindo `candidatoElegivel`; pede notificações em seguida). Campo "Programa de estudos" vira "Obra e trechos" na leitura comentada.
 - Conferido com dados reais: dono e pedagogo de BGA criam; aluno comum não; aluno não entra em grupo "só membros" e entra em grupo aberto a alunos.
 - Ainda com migração pendente de autorização: pedido de GAF ligado a um GAF específico (`GafRequest.classGroupId`) e a aba Conversa (chat).
+
+## 38. Claude — Grupos e Secretarias separados (25/10/2026)
+
+- Pedido do usuário: "divida grupos e secretarias". **`/secretarias`** (novo; item "Secretarias da filial" no menu, seção Secretarias, para quem administra filial ou está numa secretaria): a administração vê e cria todas as secretarias da filial (`SecretariasAdmin`, com sugestões do Mercúrio; seletor de filial); as demais pessoas veem as suas. Cada secretaria continua abrindo em `/grupos/[id]` (menu marca "Secretarias da filial").
+- **`/grupos`** ficou com GAF, estudo e leitura, grupos de FV e GDVE; `?aba=secretarias` redireciona para `/secretarias`. Administração → Secretarias leva a `/secretarias`. `/voluntario/secretarias` (antigo) redireciona para `/secretarias`. `/secretarias/[nome]` (secretarias em rede, mandatos) não mudou.
