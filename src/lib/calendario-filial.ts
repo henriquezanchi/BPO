@@ -66,7 +66,8 @@ async function feriados(ano: number): Promise<{ data: string; nome: string }[]> 
 
 /** Todos os itens do calendário da filial entre `de` e `ate`. */
 export async function itensDoCalendario(schoolId: string, de: Date, ate: Date): Promise<ItemCalendario[]> {
-  const grupos = await db.classGroup.findMany({ where: { schoolId, tipo: { not: "turma" } }, select: { id: true, name: true, _count: { select: { memberships: true } } } });
+  // Sem grupos encerrados nem GDVE (o GDVE é visto só por FV).
+  const grupos = await db.classGroup.findMany({ where: { schoolId, tipo: { notIn: ["turma", "GDVE"] }, arquivadoEm: null }, select: { id: true, name: true, _count: { select: { memberships: true } } } });
   // Mesma geração preguiçosa das rotinas semanais usada no resto do Portal.
   await ensureGroupMeetingWindow(grupos.map((g) => g.id)).catch(() => null);
 

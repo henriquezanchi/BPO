@@ -5,10 +5,11 @@ import { getMinhasSolicitacoes, oferecerApoioVoluntario, solicitarAdesaoGaf } fr
 import { formatDateBR, whatsappHref } from "@/lib/format";
 import type { ResumoGrupo } from "@/lib/grupos-dados";
 import { CalendarClock, ChevronRight, HandHeart, Loader2 } from "lucide-react";
+import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 
-const SECRETARIAS = ["Economia", "Difusão", "Abertura de Turma", "Café Sophia", "Artes", "Manutenção", "Escolástica"];
+const SECRETARIAS = SECRETARIAS_OFERTA;
 
 /**
  * Antes só mudava um estado local do React — nada era salvo, ninguém na

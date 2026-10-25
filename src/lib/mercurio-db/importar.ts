@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { TIPOS_GRUPO, ehTipoGrupo } from "@/lib/grupos-comum";
 import { parseLogradouro } from "@/lib/mercurio/parse-logradouro";
 import type { ContributionMonthStatus } from "@prisma/client";
 import { consultarMercurio, sqlNumero, sqlTexto } from "./client";
@@ -231,6 +232,12 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const turmaIds = new Map<string, string>();
   const turmaId = async (nome: string, tipo = "turma") => {
     if (!turmaIds.has(nome)) {
+      // Grupo criado no Portal (GAF, secretaria, GDVE) com o mesmo nome de uma turma do Mercúrio: renomeia o
+      // do Portal (acrescenta o tipo) em vez de misturar alunos da turma nele.
+      const homonimo = await db.classGroup.findUnique({ where: { schoolId_name: { schoolId: school.id, name: nome } }, select: { id: true, tipo: true } });
+      if (homonimo && ehTipoGrupo(homonimo.tipo) && TIPOS_GRUPO[homonimo.tipo].doPortal) {
+        await db.classGroup.update({ where: { id: homonimo.id }, data: { name: `${nome} (${TIPOS_GRUPO[homonimo.tipo].nome})`.slice(0, 120) } });
+      }
       const cg = await db.classGroup.upsert({
         where: { schoolId_name: { schoolId: school.id, name: nome } },
         update: tipo === "turma" ? { mercurioClassId: nome } : { tipo },

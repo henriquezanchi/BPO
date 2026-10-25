@@ -24,6 +24,9 @@ export const SECRETARIAS_PADRAO = [
   "Voluntariado",
 ];
 
+/** Secretarias que o membro pode escolher ao oferecer ajuda (Portal do Aluno), com os nomes do catálogo acima. */
+export const SECRETARIAS_OFERTA = ["Economia", "Difusão e Comunicação", "Abertura de Turma", "Café", "Artes", "Técnica e Manutenção", "Escolástica"] as const;
+
 const CANONICAS: [string, RegExp][] = [
   ["Escolástica", /ESCOLAST/],
   ["Economia", /ECONOMIA|TESOURARIA|CONTABIL|PATRIMONIO|INADIMPL|FINANC/],

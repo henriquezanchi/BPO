@@ -1,5 +1,7 @@
 import { cache } from "react";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
+import { ehTipoGrupo } from "@/lib/grupos-comum";
+import { papelNoGrupo } from "@/lib/grupos-portal";
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { db } from "@/lib/db";
 import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
@@ -102,13 +104,20 @@ export async function requireTeacherOfClass(classGroupId: string) {
   const member = await getAuthenticatedMember();
   if (!member) throw new Error("Não autenticado.");
 
+  const grupo = await db.classGroup.findUnique({ where: { id: classGroupId }, select: { tipo: true } });
+  if (!grupo) throw new Error("Turma não encontrada.");
+  // Grupos (GAF, secretarias, GDVE, FV): vale a regra de quem gere o grupo (grupos-portal.ts) — a
+  // administração da filial gere o GAF sem ser integrante; o GAF não depende do acesso de voluntário.
+  if (ehTipoGrupo(grupo.tipo)) {
+    if (!(await papelNoGrupo(member, classGroupId)).podeGerir) throw new Error("Você não coordena este grupo.");
+    return member;
+  }
   const membership = await db.classMembership.findFirst({
     where: { classGroupId, memberId: member.id, role: "professor" },
   });
   if (!membership) throw new Error("Você não é professor desta turma.");
-  // Grupos de voluntários exigem acesso liberado (ver acesso-voluntario.ts).
-  const grupo = await db.classGroup.findUnique({ where: { id: classGroupId }, select: { tipo: true } });
-  if (grupo?.tipo !== "turma" && !(await temAcessoVoluntario(member))) throw new Error("Seu acesso à área de voluntários ainda não foi liberado.");
+  // Outros grupos de voluntários exigem acesso liberado (ver acesso-voluntario.ts).
+  if (grupo.tipo !== "turma" && !(await temAcessoVoluntario(member))) throw new Error("Seu acesso à área de voluntários ainda não foi liberado.");
 
   return member;
 }

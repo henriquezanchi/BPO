@@ -12,6 +12,7 @@
  * Uso: npx tsx --env-file=.env scripts/sync-teacher-classes.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
+import { TIPOS_GRUPO, ehTipoGrupo } from "../src/lib/grupos-comum";
 import { abrirEscalaProfessores, abrirSessaoMercurioComRetry, lerEscalaProfessores } from "../src/lib/mercurio/browser-session";
 
 function normalizar(s: string) {
@@ -52,6 +53,11 @@ async function main() {
   const nomesTurmas = [...new Set(escala.map((e) => e.turma))];
   const classGroupPorNome = new Map<string, { id: string }>();
   for (const nomeTurma of nomesTurmas) {
+    // Mesma proteção da importação: grupo do Portal com o nome da turma é renomeado, não misturado.
+    const homonimo = await db.classGroup.findUnique({ where: { schoolId_name: { schoolId: school.id, name: nomeTurma } }, select: { id: true, tipo: true } });
+    if (homonimo && ehTipoGrupo(homonimo.tipo) && TIPOS_GRUPO[homonimo.tipo].doPortal) {
+      await db.classGroup.update({ where: { id: homonimo.id }, data: { name: `${nomeTurma} (${TIPOS_GRUPO[homonimo.tipo].nome})`.slice(0, 120) } });
+    }
     const cg = await db.classGroup.upsert({
       where: { schoolId_name: { schoolId: school.id, name: nomeTurma } },
       update: { mercurioClassId: nomeTurma },

@@ -2,6 +2,7 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
 
 /**
  * GAF e oferta de apoio voluntário — antes só mudavam um estado local de
@@ -16,8 +17,10 @@ export async function solicitarAdesaoGaf(memberId: string) {
 
 export async function oferecerApoioVoluntario(memberId: string, secretarias: string[]) {
   await requireAuthenticatedMember(memberId);
-  if (secretarias.length === 0) throw new Error("Selecione pelo menos uma secretaria.");
-  await db.volunteerOffer.create({ data: { memberId, secretarias } });
+  // Só nomes do catálogo (lib/secretarias.ts), para a oferta casar com as secretarias da filial.
+  const validas = [...new Set(secretarias)].filter((s) => (SECRETARIAS_OFERTA as readonly string[]).includes(s));
+  if (validas.length === 0) throw new Error("Selecione pelo menos uma secretaria.");
+  await db.volunteerOffer.create({ data: { memberId, secretarias: validas } });
 }
 
 /** Marca o tour guiado do 1º login como visto — ver onboarding-tour.tsx. Chamado ao terminar ou pular. */

@@ -159,3 +159,13 @@ Revisão do Claude (25/10/2026), na integração com a master: merge sem conflit
 
 - **Agenda** (`agenda-panel.tsx`): o calendário abre sempre em hoje (antes abria no primeiro dia com evento). Cartão de evento fechado por padrão: mostra tipo, título, data, local (e "Cancelado"); cartaz, descrição, inscrição e demais detalhes abrem ao tocar (`<details>`). O "Evento compartilhado" (link `?evento=`) abre aberto. Descrições com `whitespace-pre-line` (as quebras de linha do Ulisses e dos eventos internos já vinham no banco, só não eram exibidas).
 - **Compartilhar** (`lib/compartilhar-evento.ts`): saiu a frase em primeira pessoa ("Quero dividir um evento…", `aberturaDoEvento`) e a do evento interno ("Vamos participar juntos?"). WhatsApp, Facebook, Telegram e e-mail levam a descrição inteira (`textoCompleto`, sem "…"); Instagram continua com `resumo` de 1200 por causa do limite da legenda. Testes de compartilhamento atualizados.
+
+## 32. Claude — Grupos, etapa 1: correções (25/10/2026)
+
+Plano aprovado pelo usuário: (1) corrigir erros, (2) tela única de grupos, (3) tipos "grupo de estudo" e "leitura comentada" (criados por qualquer instrutor, Chefe, Sub-Chefe, administradores da filial e secretaria de Escolástica). Correções:
+- **Avisos e enquetes de GAF** chegam aos participantes sem acesso de voluntário (`member-data.ts`: mesma regra de `gruposDaAgenda`, sem grupos encerrados; GDVE só FV).
+- **Quem gere o grupo publica** (`requireTeacherOfClass` em `auth.ts`): para GAF, secretarias, GDVE e FV vale `papelNoGrupo().podeGerir` — a administração da filial publica no GAF sem ser integrante; o responsável de GAF não precisa de acesso de voluntário. Turmas seguem exigindo vínculo de professor. A tela de avisos (`/professor/turma/[id]`) só aparece para quem tem vínculo; o acesso da administração pela tela entra na etapa 2.
+- **Calendário da filial** sem grupos encerrados e sem encontros de GDVE.
+- **Nome repetido:** criar/editar grupo avisa "Já existe uma turma/um grupo com o nome…" (antes, erro genérico do banco). A importação do Mercúrio (`importar.ts`) e `scripts/sync-teacher-classes.ts` renomeiam o grupo do Portal homônimo de uma turma ("Nome (GAF)") em vez de misturar alunos nele.
+- **Uma lista de secretarias:** a oferta de voluntariado do Portal do Aluno usa `SECRETARIAS_OFERTA` (nomes do catálogo `SECRETARIAS_PADRAO`: "Café", "Difusão e Comunicação", "Técnica e Manutenção") e o servidor só aceita esses nomes.
+- Fica para a etapa 3 (precisa de coluna nova): o pedido para participar de GAF ligado a um grupo específico.

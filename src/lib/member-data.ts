@@ -180,8 +180,11 @@ export async function getMemberDashboard(memberId: string) {
     // Quadrinho da avaliação de instrutores: só com rodada aberta e algo pendente pra este aluno.
     avaliacaoPendente(member),
   ]);
+  // Avisos e enquetes: turmas e os mesmos grupos cujos encontros a pessoa vê (GAF sempre; demais com acesso liberado; GDVE só FV).
+  const groupIds = await gruposDaAgenda({ ...member, classMemberships: member.classMemberships.filter((cm) => cm.role === "aluno" && cm.classGroup.arquivadoEm === null) });
+  const gruposVisiveis = new Set(groupIds);
   const studentClassGroupIds = member.classMemberships
-    .filter((cm) => cm.role === "aluno" && (cm.classGroup.tipo === "turma" || acessoVoluntario))
+    .filter((cm) => cm.role === "aluno" && (cm.classGroup.tipo === "turma" || gruposVisiveis.has(cm.classGroupId)))
     .map((cm) => cm.classGroupId);
 
   const [schoolEvents, classActivities, classPolls] = await Promise.all([
@@ -215,9 +218,8 @@ export async function getMemberDashboard(memberId: string) {
       : Promise.resolve([]),
   ]);
 
-  // Reuniões dos grupos em que a pessoa é integrante: grupos de FV e secretarias com acesso de voluntário,
-  // GAF sempre, GDVE só para FV (regras em grupos-portal.ts).
-  const groupIds = await gruposDaAgenda({...member,classMemberships:member.classMemberships.filter(cm=>cm.role==='aluno'&&cm.classGroup.arquivadoEm===null)});
+  // Reuniões dos grupos em que a pessoa é integrante (groupIds, acima): grupos de FV e secretarias com acesso
+  // de voluntário, GAF sempre, GDVE só para FV (regras em grupos-portal.ts).
   const [avisosGrupos,meusGafs,destinosVoluntario] = await Promise.all([avisosDosGrupos({...member,classMemberships:member.classMemberships.filter(cm=>cm.classGroup.arquivadoEm===null)}),meusGrupos(member,['GAF']),destinosDaPessoa(member)]);
   await ensureGroupMeetingWindow(groupIds);
   const meetings = groupIds.length ? await db.groupMeeting.findMany({

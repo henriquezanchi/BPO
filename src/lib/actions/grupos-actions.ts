@@ -39,6 +39,15 @@ async function exigirGestor(grupoId: string) {
   return { m, papel };
 }
 
+/** Nome é único por filial entre todos os grupos e turmas: avisa com clareza em vez do erro do banco. */
+async function exigirNomeLivre(schoolId: string, nome: string, excetoId?: string) {
+  const outro = await db.classGroup.findFirst({
+    where: { schoolId, name: { equals: nome, mode: "insensitive" }, ...(excetoId ? { id: { not: excetoId } } : {}) },
+    select: { tipo: true },
+  });
+  if (outro) throw new GrupoErro(`Já existe ${outro.tipo === "turma" ? "uma turma" : "um grupo"} com o nome “${nome}” nesta filial. Escolha outro nome.`);
+}
+
 async function administra(m: Awaited<ReturnType<typeof eu>>, schoolId: string) {
   return (await podeAdministrar(m, schoolId)) || (await ehAdministradorNacional(m));
 }
@@ -103,6 +112,7 @@ export async function criarGrupo(input: CamposGrupo & { schoolId: string; tipo: 
       if (m.schoolId !== input.schoolId || !(await ehFV(m.id)) || !(await temAcessoVoluntario(m))) throw new GrupoErro("O GDVE é criado por FV da própria filial.");
     } else if (!(await administra(m, input.schoolId))) throw new GrupoErro("Só a administração da filial cria GAF e secretarias.");
     const dados = validarCampos(input);
+    await exigirNomeLivre(input.schoolId, dados.name);
     const responsaveis = [...new Set([...(tipo === "GDVE" ? [m.id] : []), ...input.responsaveis])];
     const integrantes = [...new Set(input.integrantes)].filter((id) => !responsaveis.includes(id));
     for (const id of [...responsaveis, ...integrantes]) {
@@ -123,8 +133,10 @@ export async function criarGrupo(input: CamposGrupo & { schoolId: string; tipo: 
 
 export async function editarGrupo(grupoId: string, campos: CamposGrupo) {
   return executar(async () => {
-    await exigirGestor(grupoId);
-    await db.classGroup.update({ where: { id: grupoId }, data: validarCampos(campos) });
+    const { papel } = await exigirGestor(grupoId);
+    const dados = validarCampos(campos);
+    await exigirNomeLivre(papel.schoolId, dados.name, grupoId);
+    await db.classGroup.update({ where: { id: grupoId }, data: dados });
     atualizar(grupoId);
     return {};
   });
