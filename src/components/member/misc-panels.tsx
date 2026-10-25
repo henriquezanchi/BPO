@@ -1,6 +1,6 @@
 "use client";
 
-import { AtivarNotificacoes } from "@/components/pwa/ativar-notificacoes";
+import { AtivarNotificacoes, pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
 import { getMinhasSolicitacoes, oferecerApoioVoluntario, solicitarAdesaoGaf } from "@/lib/actions/misc-request-actions";
 import { formatDateBR, whatsappHref } from "@/lib/format";
 import type { ResumoGrupo } from "@/lib/grupos-dados";
@@ -29,6 +29,7 @@ export function GafPanel({ memberId, gafs = [] }: { memberId: string; gafs?: Res
     startTransition(async () => {
       await solicitarAdesaoGaf(memberId);
       setSolicitadoEm(new Date());
+      pedirNotificacoes("Pedido enviado. Quer ser avisado dos encontros do GAF?");
     });
   }
 

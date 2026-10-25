@@ -1,28 +1,45 @@
 "use client";
 
 import { chavePublicaPush, enviarNotificacaoTeste, removerInscricaoPush, salvarInscricaoPush } from "@/lib/actions/push-actions";
-import { Bell, BellOff, X } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import { Bell, BellOff } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
 
 /**
  * Notificações push do PWA (2026-10-21). Duas formas:
- *  - "cartao": convite na tela inicial, some depois de ativado ou dispensado;
+ *  - "cartao": convite em janela (pedido do usuário 2026-10-25) — "Sim", "Não" (só "Não" encerra o
+ *    convite neste aparelho) e "Pergunte-me depois" (volta em 7 dias). Também abre no momento certo,
+ *    por pedirNotificacoes(), depois de inscrição em evento, pedido de GAF ou resposta a encontro;
  *  - "ajustes": controle permanente (painel de Ajuda), para ativar, testar ou desligar.
  * No iPhone o Safari só permite notificação com o Portal instalado na tela de
  * início (iOS 16.4+); antes disso o banner de instalação já orienta.
  */
 type Estado = "carregando" | "indisponivel" | "sem_suporte" | "instalar_iphone" | "bloqueado" | "desativado" | "ativo";
 
-const CHAVE_DISPENSADO = "na-notificacoes-dispensado";
-const ouvintes = new Set<() => void>();
-const inscrever = (f: () => void) => (ouvintes.add(f), () => ouvintes.delete(f));
-const lerDispensado = () => {
+// Resposta ao convite neste aparelho: "nao" (não perguntar mais) ou "depois:<ms>" (perguntar de novo a partir de <ms>).
+const CHAVE_RESPOSTA = "na-notificacoes-resposta";
+const ADIAR_MS = 7 * 24 * 60 * 60 * 1000;
+const EVENTO_PEDIR = "na:pedir-notificacoes";
+
+function lerResposta(): { nao: boolean; adiadoAte: number } {
   try {
-    return localStorage.getItem(CHAVE_DISPENSADO) === "1";
+    const v = localStorage.getItem(CHAVE_RESPOSTA) ?? "";
+    return { nao: v === "nao", adiadoAte: v.startsWith("depois:") ? Number(v.slice(7)) || 0 : 0 };
   } catch {
-    return false;
+    return { nao: false, adiadoAte: 0 };
   }
-};
+}
+function gravarResposta(v: string) {
+  try {
+    localStorage.setItem(CHAVE_RESPOSTA, v);
+  } catch {
+    /* sem localStorage: só não lembra */
+  }
+}
+
+/** Abre o convite no momento certo (ex.: depois de se inscrever num evento). Não abre se a pessoa disse "Não". */
+export function pedirNotificacoes(motivo?: string) {
+  window.dispatchEvent(new CustomEvent(EVENTO_PEDIR, { detail: motivo ?? null }));
+}
 
 function base64ParaBytes(base64: string) {
   const preenchimento = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -46,17 +63,35 @@ async function estadoAtual(): Promise<Estado> {
   return "desativado";
 }
 
-export function AtivarNotificacoes({ variante = "cartao" }: { variante?: "cartao" | "ajustes" }) {
+/** `aguardar`: não abre sozinho nesta visita (ex.: durante o tour do 1º acesso); pedidos por ação continuam valendo. */
+export function AtivarNotificacoes({ variante = "cartao", aguardar = false }: { variante?: "cartao" | "ajustes"; aguardar?: boolean }) {
   const [estado, setEstado] = useState<Estado>("carregando");
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
-  const dispensado = useSyncExternalStore(inscrever, lerDispensado, () => true);
+  // Convite em janela: aberto (com o motivo, quando veio de uma ação) ou fechado.
+  const [convite, setConvite] = useState<{ motivo: string | null } | null>(null);
 
   useEffect(() => {
     estadoAtual()
       .then(setEstado)
       .catch(() => setEstado("sem_suporte"));
   }, []);
+
+  // Convite: sozinho, alguns segundos depois de abrir o Portal (fora do tour e do adiamento); ou quando uma ação pede.
+  const podeConvidar = variante === "cartao" && (estado === "desativado" || estado === "instalar_iphone");
+  useEffect(() => {
+    if (!podeConvidar) return;
+    const aoPedir = (e: Event) => {
+      if (!lerResposta().nao) setConvite({ motivo: (e as CustomEvent<string | null>).detail });
+    };
+    window.addEventListener(EVENTO_PEDIR, aoPedir);
+    const r = lerResposta();
+    const t = !aguardar && !r.nao && r.adiadoAte <= Date.now() ? setTimeout(() => setConvite({ motivo: null }), 3000) : undefined;
+    return () => {
+      window.removeEventListener(EVENTO_PEDIR, aoPedir);
+      if (t) clearTimeout(t);
+    };
+  }, [podeConvidar, aguardar]);
 
   function ativar() {
     setMensagem(null);
@@ -77,6 +112,8 @@ export function AtivarNotificacoes({ variante = "cartao" }: { variante?: "cartao
         const inscricao = (await registro.pushManager.getSubscription()) ?? (await registro.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ParaBytes(chave) }));
         await salvarInscricaoPush(inscricao.toJSON() as Parameters<typeof salvarInscricaoPush>[0], navigator.userAgent);
         setEstado("ativo");
+        gravarResposta("sim");
+        setConvite(null);
         const teste = await enviarNotificacaoTeste();
         setMensagem(teste.ok ? "Pronto. Enviamos uma notificação de teste para este aparelho." : "Ativado, mas o teste não chegou. Tente de novo em instantes.");
       } catch (e) {
@@ -106,37 +143,45 @@ export function AtivarNotificacoes({ variante = "cartao" }: { variante?: "cartao
     });
   }
 
-  function dispensar() {
-    try {
-      localStorage.setItem(CHAVE_DISPENSADO, "1");
-    } catch {
-      /* sem localStorage: só não lembra */
-    }
-    ouvintes.forEach((f) => f());
+  function responder(resposta: "nao" | "depois") {
+    gravarResposta(resposta === "nao" ? "nao" : `depois:${Date.now() + ADIAR_MS}`);
+    setConvite(null);
   }
 
   if (variante === "cartao") {
-    if (dispensado || estado !== "desativado") return mensagem ? <p className="rounded-xl bg-na-success-light p-3 text-[12px] text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">{mensagem}</p> : null;
+    if (!convite || !podeConvidar)
+      return mensagem ? <p className="rounded-xl bg-na-success-light p-3 text-[12px] text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">{mensagem}</p> : null;
+    const iphone = estado === "instalar_iphone";
     return (
-      <div className="flex items-start gap-3 rounded-2xl border border-na-green/30 bg-na-green-light p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-na-green text-white">
-          <Bell size={16} />
-        </span>
-        <div className="flex-1">
-          <p className="text-[13px] font-bold text-na-green-dark dark:text-emerald-300">Receba os avisos no celular</p>
-          <p className="mt-0.5 text-[12px] leading-relaxed text-gray-700 dark:text-gray-300">Lembrete dos encontros, atividades novas e respostas da secretaria, mesmo com o Portal fechado.</p>
-          <button
-            onClick={ativar}
-            disabled={pendente}
-            className="mt-2.5 rounded-xl bg-na-green px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
-          >
-            {pendente ? "Ativando..." : "Ativar notificações"}
-          </button>
+      <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="convite-notificacoes">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-gray-900">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-na-green text-white">
+            <Bell size={18} />
+          </span>
+          {convite.motivo && <p className="mt-3 text-[12px] font-semibold text-na-green-dark dark:text-emerald-400">{convite.motivo}</p>}
+          <h2 id="convite-notificacoes" className="mt-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">
+            Aceita receber notificações sobre eventos, contribuições e muito mais?
+          </h2>
+          <p className="mt-1 text-[12px] leading-relaxed text-gray-600 dark:text-gray-300">
+            {iphone
+              ? "No iPhone, primeiro instale o Portal: toque em compartilhar e depois em \u201cAdicionar à Tela de Início\u201d. Abra pelo ícone e responda \u201cSim\u201d aqui."
+              : "Eventos da sua escola, lembretes dos encontros e da contribuição, mesmo com o Portal fechado. Dá para desligar quando quiser em Ajuda."}
+          </p>
           {mensagem && <p className="mt-2 text-[11px] text-na-danger-dark dark:text-red-300">{mensagem}</p>}
+          <div className="mt-4 flex flex-col gap-2">
+            {!iphone && (
+              <button onClick={ativar} disabled={pendente} className="rounded-xl bg-na-green px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60">
+                {pendente ? "Ativando..." : "Sim"}
+              </button>
+            )}
+            <button onClick={() => responder("depois")} className="rounded-xl border border-gray-300 px-4 py-2.5 text-[13px] font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">
+              Pergunte-me depois
+            </button>
+            <button onClick={() => responder("nao")} className="px-4 py-2 text-[12px] font-semibold text-gray-500 dark:text-gray-400">
+              Não
+            </button>
+          </div>
         </div>
-        <button onClick={dispensar} aria-label="Agora não" className="rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-          <X size={14} />
-        </button>
       </div>
     );
   }

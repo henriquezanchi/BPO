@@ -193,7 +193,7 @@ export function MemberPortalClient({ dashboard, eventoId }: { dashboard: MemberD
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         <NudgeCard memberId={member.id} />
         <AvisosGrupos avisos={dashboard.avisosGrupos} />
-        <AtivarNotificacoes />
+        <AtivarNotificacoes aguardar={tourVisivel} />
 
         {/* Status financeiro */}
         <div

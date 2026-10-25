@@ -16,6 +16,7 @@ import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
 import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, PartyPopper, Ticket, Users, UtensilsCrossed } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
+import { pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   prova: "Prova",
@@ -143,6 +144,7 @@ function InscricaoEvento({
       try {
         const res = await inscreverEmEvento(memberId, eventId, cpfLimpo);
         if(!res.ok){setErro(res.error);return;}
+        pedirNotificacoes("Inscrição feita. Quer ser lembrado do evento?");
         setInscricao(
           res.pago
             ? { registrationId: res.registrationId ?? "", pago: true, pixPayload: null, pixQrCodeBase64: null }
