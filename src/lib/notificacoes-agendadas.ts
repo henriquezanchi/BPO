@@ -1,7 +1,7 @@
 import { comAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { db } from "@/lib/db";
-import { eventoAlcancaFilial, publicosDaPessoa } from "@/lib/event-policy";
+import { agendaUlissesBranchWhere, eventAudienceWhere, eventScopeWhere } from "@/lib/event-policy";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import { enviarPush } from "@/lib/push";
 import { Prisma } from "@prisma/client";
@@ -144,28 +144,89 @@ export async function avisosDePedidosNovos() {
 // Eventos internos (source "manual") publicados nas últimas 2 h; chega a quem pode ver e se
 // inscrever (público do evento + filiais a que foi aberto). Eventos do Ulisses não entram.
 
-export async function avisosDeEventosNovos() {
-  const agora = new Date();
-  const eventos = await db.event.findMany({
-    where: { source: "manual", status: "publicado", startsAt: { gt: agora }, createdAt: { gte: new Date(agora.getTime() - 120 * MIN) } },
-    select: { id: true, title: true, startsAt: true, schoolId: true, abertoA: true, abertoValores: true, publicos: true, school: { select: { name: true } } },
+// ───────────────────────── Eventos: novidades e resumo da semana ─────────────────────────
+// Pedido do usuário 2026-10-25: avisar de todos os eventos (do Portal e do Ulisses) para quem tem o
+// público certo — a mesma regra da Agenda (eventosQueAPessoaVe) —, sem sobrecarregar:
+//  - eventos novos chegam numa notificação só por rodada ("3 eventos novos na Agenda"), entre 8h e 21h
+//    (a importação do Ulisses é às 6h; o aviso espera o horário);
+//  - toda segunda-feira, a partir das 8h, um resumo com os eventos da semana.
+
+const camposPublico = { id: true, nivel: true, isMembroPrograma: true, isProvacionista: true, isHD: true, isDirigente: true, isFV: true, emProvacionismo: true, school: { select: { id: true, uf: true } } } as const;
+type PessoaAviso = Prisma.MemberGetPayload<{ select: typeof camposPublico }>;
+
+/** Eventos publicados que a pessoa vê na Agenda (mesmo filtro de member-data.ts). */
+function eventosQueAPessoaVe(p: PessoaAviso): Prisma.EventWhereInput {
+  return {
+    status: "publicado",
+    OR: [...(eventScopeWhere(p.school).OR ?? []), { scope: { in: ["nacional", "regional"] } }],
+    AND: [eventAudienceWhere(p), agendaUlissesBranchWhere(p.school.id)],
+  };
+}
+
+/** Partes da data/hora em Brasília. */
+function agoraEmBrasilia(agora: Date) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", hourCycle: "h23", weekday: "short" })
+      .formatToParts(agora)
+      .map((x) => [x.type, x.value]),
+  );
+  return { data: `${p.year}-${p.month}-${p.day}`, hora: Number(p.hour), segunda: p.weekday === "Mon" };
+}
+
+function linhaDoEvento(e: { title: string; startsAt: Date; allDay: boolean }) {
+  const dia = e.startsAt.toLocaleDateString("pt-BR", { timeZone: TZ, weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", "");
+  const hora = e.allDay ? "" : ` ${e.startsAt.toLocaleTimeString("pt-BR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" })}`;
+  return { quando: `${dia}${hora}`, linha: `${dia}${hora} · ${e.title}` };
+}
+
+/** Um evento: o título no topo; vários: a contagem no topo e até 3 linhas no corpo. */
+export function textoDeEventos(lista: { title: string; startsAt: Date; allDay: boolean }[], umTitulo: (t: string) => string, variosTitulo: (n: number) => string) {
+  if (lista.length === 1) return { titulo: umTitulo(lista[0].title), corpo: `${linhaDoEvento(lista[0]).quando}. Veja na Agenda.` };
+  const linhas = lista.slice(0, 3).map((e) => linhaDoEvento(e).linha);
+  if (lista.length > 3) linhas.push(`e mais ${lista.length - 3}`);
+  return { titulo: variosTitulo(lista.length), corpo: linhas.join("\n") };
+}
+
+export async function avisosDeEventosNovos(agora = new Date()) {
+  const { hora, data } = agoraEmBrasilia(agora);
+  if (hora < 8 || hora >= 21) return 0;
+  const recentes = await db.event.findMany({
+    where: { status: "publicado", startsAt: { gt: agora }, createdAt: { gte: new Date(agora.getTime() - 36 * 60 * MIN) } },
+    select: { id: true },
   });
-  const novos = [];
-  for (const e of eventos) if (await reservar(`evento:${e.id}`)) novos.push(e);
+  if (!recentes.length) return 0;
+  const avisados = new Set((await db.pushEnviado.findMany({ where: { chave: { in: recentes.map((e) => `evento:${e.id}`) } } })).map((k) => k.chave));
+  const novos: string[] = [];
+  for (const e of recentes) if (!avisados.has(`evento:${e.id}`) && (await reservar(`evento:${e.id}`))) novos.push(e.id);
   if (!novos.length) return 0;
 
-  const pessoas = await db.member.findMany({
-    where: comPush,
-    select: { id: true, nivel: true, isMembroPrograma: true, isProvacionista: true, isHD: true, isDirigente: true, isFV: true, emProvacionismo: true, school: { select: { id: true, uf: true } } },
-  });
+  const pessoas = await db.member.findMany({ where: comPush, select: camposPublico });
   let total = 0;
-  for (const e of novos) {
-    const destino = pessoas.filter((p) => eventoAlcancaFilial(e, p.school) && publicosDaPessoa(p).some((x) => e.publicos.includes(x))).map((p) => p.id);
-    const dia = e.startsAt.toLocaleDateString("pt-BR", { timeZone: TZ, day: "2-digit", month: "2-digit" });
-    const hora = e.startsAt.toLocaleTimeString("pt-BR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
-    const filial = e.school?.name.replace(/^Nova Acrópole - /, "");
-    const r = await enviarPush(destino, { titulo: `Evento novo: ${e.title}`, corpo: `${dia} às ${hora}${filial ? ` · ${filial}` : ""}. Veja na Agenda e inscreva-se.`, url: "/portal", etiqueta: `evento-${e.id}` });
-    total += r.pessoas;
+  for (const p of pessoas) {
+    const lista = await db.event.findMany({ where: { id: { in: novos }, ...eventosQueAPessoaVe(p) }, orderBy: { startsAt: "asc" }, select: { title: true, startsAt: true, allDay: true } });
+    if (!lista.length) continue;
+    const texto = textoDeEventos(lista, (t) => `Evento novo: ${t}`, (n) => `${n} eventos novos na Agenda`);
+    total += (await enviarPush([p.id], { ...texto, url: "/portal", etiqueta: `eventos-novos-${data}` })).pessoas;
+  }
+  return total;
+}
+
+export async function resumoDaSemana(agora = new Date()) {
+  const { segunda, hora, data } = agoraEmBrasilia(agora);
+  if (!segunda || hora < 8 || hora >= 12) return 0;
+  const fimDaSemana = new Date(new Date(`${data}T00:00:00-03:00`).getTime() + 7 * 24 * 60 * MIN);
+  const pessoas = await db.member.findMany({ where: comPush, select: camposPublico });
+  let total = 0;
+  for (const p of pessoas) {
+    if (!(await reservar(`semana:${p.id}:${data}`))) continue;
+    const lista = await db.event.findMany({
+      where: { startsAt: { gte: agora, lt: fimDaSemana }, ...eventosQueAPessoaVe(p) },
+      orderBy: { startsAt: "asc" },
+      select: { title: true, startsAt: true, allDay: true },
+    });
+    if (!lista.length) continue;
+    const texto = textoDeEventos(lista, (t) => `Esta semana: ${t}`, (n) => `${n} eventos nesta semana`);
+    total += (await enviarPush([p.id], { ...texto, url: "/portal", etiqueta: `semana-${data}` })).pessoas;
   }
   return total;
 }

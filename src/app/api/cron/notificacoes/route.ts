@@ -1,5 +1,5 @@
 import { processarListaDeEspera } from "@/lib/event-waitlist";
-import { avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento } from "@/lib/notificacoes-agendadas";
+import { avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
 import { pushConfigurado } from "@/lib/push";
 import crypto from "node:crypto";
 
@@ -35,7 +35,8 @@ export async function GET(req: Request) {
   const resultado = {
     encontros: await rodar("encontros", avisosDeEncontros),
     pedidos: await rodar("pedidos", avisosDePedidosNovos),
-    eventos: await rodar("eventos", avisosDeEventosNovos),
+    eventos: await rodar("eventos", () => avisosDeEventosNovos()),
+    semana: await rodar("semana", () => resumoDaSemana()),
     vencimento: await rodar("vencimento", avisosDeVencimento),
     inscritos: await rodar("inscritos", avisosDeEventosInscritos),
     listaDeEspera: await rodar("lista de espera", () => processarListaDeEspera()),
