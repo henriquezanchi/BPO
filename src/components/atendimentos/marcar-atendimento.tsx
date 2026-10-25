@@ -135,7 +135,7 @@ function MinhaConversa({ m, fuso, pendente, cancelar }: { m: Minha; fuso: string
   const [cancelando, setCancelando] = useState(false);
   const [motivo, setMotivo] = useState("");
   return (
-    <article className={`${CARTAO} flex flex-col gap-1.5 border-l-4 !border-l-na-green`}>
+    <article className={`${CARTAO} flex flex-col gap-1.5 !border-na-green/40`}>
       <p className="flex items-center gap-1.5 text-[14px] font-bold text-gray-900 dark:text-gray-100">
         <CalendarClock size={15} className="text-na-green" /> {rotuloDia(m.inicio, fuso)} às {horaDe(m.inicio, fuso)}
       </p>

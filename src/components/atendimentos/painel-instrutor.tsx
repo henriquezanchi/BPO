@@ -190,7 +190,7 @@ function CartaoConversa({ c, fuso, pendente, cancelar }: { c: Conversa; fuso: st
   const [cancelando, setCancelando] = useState(false);
   const [motivo, setMotivo] = useState("");
   return (
-    <article className={`${CARTAO} flex flex-col gap-2 border-l-4 !border-l-na-green`}>
+    <article className={`${CARTAO} flex flex-col gap-2 !border-na-green/40`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">{c.aluno}</p>

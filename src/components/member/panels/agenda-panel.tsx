@@ -511,7 +511,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
 function CartaoAtendimento({ item }: { item: Extract<AgendaItem, { kind: "atendimento" }> }) {
   const MODALIDADE: Record<string, string> = { presencial: "Presencial", online: "Online" };
   return (
-    <div className="flex flex-col gap-1.5 rounded-xl border border-na-green/40 border-l-4 border-l-na-green-dark bg-white p-3 dark:bg-gray-900">
+    <div className="flex flex-col gap-1.5 rounded-xl border border-na-green/40 bg-white p-3 dark:bg-gray-900">
       <p className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
         <MessagesSquare size={11} /> Conversa individual
       </p>
