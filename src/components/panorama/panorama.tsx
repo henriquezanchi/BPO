@@ -17,10 +17,28 @@ const COR_SAIDA = "bg-[#9a6b00] dark:bg-[#b8862a]";
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
 const quando = (ms: number) => new Date(ms).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(",", " às");
 
-function Numero({ valor, rotulo, destaque }: { valor: string | number; rotulo: string; destaque?: "alerta" }) {
+/**
+ * De onde vem cada número (pedido do usuário 2026-10-25): o Mercúrio é o cadastro oficial da escola inteira; o
+ * Portal só tem o que foi cadastrado ou liberado nele (ex.: 50 voluntários na escola, 5 liberados no Portal).
+ */
+type Fonte = "mercurio" | "portal" | "interessados";
+const FONTE: Record<Fonte, [string, string]> = {
+  mercurio: ["Mercúrio", "border-gray-300 text-gray-500 dark:border-gray-600 dark:text-gray-400"],
+  portal: ["Portal", "border-na-gold/60 text-na-gold-dark dark:border-amber-700 dark:text-amber-300"],
+  interessados: ["Interessados", "border-sky-300 text-sky-700 dark:border-sky-800 dark:text-sky-300"],
+};
+function Etiqueta({ fonte }: { fonte: Fonte }) {
+  const [rotulo, cor] = FONTE[fonte];
+  return <span className={`ml-1.5 inline-block rounded border px-1 align-middle text-[9px] font-bold tracking-wide uppercase ${cor}`}>{rotulo}</span>;
+}
+
+function Numero({ valor, rotulo, destaque, fonte }: { valor: string | number; rotulo: string; destaque?: "alerta"; fonte: Fonte }) {
   return (
     <div className="min-w-0">
-      <p className={`text-2xl font-black tabular-nums ${destaque === "alerta" ? "text-na-danger-dark dark:text-red-300" : "text-gray-900 dark:text-gray-100"}`}>{valor}</p>
+      <p className={`text-2xl font-black tabular-nums ${destaque === "alerta" ? "text-na-danger-dark dark:text-red-300" : "text-gray-900 dark:text-gray-100"}`}>
+        {valor}
+        <Etiqueta fonte={fonte} />
+      </p>
       <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">{rotulo}</p>
     </div>
   );
@@ -66,6 +84,17 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
 
   return (
     <div className="flex flex-col gap-5">
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
+        <span>
+          <Etiqueta fonte="mercurio" /> cadastro oficial da escola inteira
+        </span>
+        <span>
+          <Etiqueta fonte="portal" /> só o que foi cadastrado ou liberado no Portal
+        </span>
+        <span>
+          <Etiqueta fonte="interessados" /> base de interessados das aberturas
+        </span>
+      </p>
       {/* Data da atualização sempre visível (pedido do usuário 2026-10-25). */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-na-green-light px-3 py-1 text-[12px] font-bold text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -140,9 +169,9 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
           }
         >
           <div className="grid grid-cols-3 gap-3">
-            <Numero valor={m.pessoas.ativos} rotulo="ativos" />
-            <Numero valor={m.pessoas.membros} rotulo="membros (2º nível+)" />
-            <Numero valor={mesAtual ? `${mesAtual.entradas - mesAtual.saidas >= 0 ? "+" : ""}${mesAtual.entradas - mesAtual.saidas}` : "—"} rotulo={mesAtual ? `${mesAtual.entradas} entradas · ${mesAtual.saidas} saídas no mês` : "saldo do mês"} />
+            <Numero fonte="mercurio" valor={m.pessoas.ativos} rotulo="ativos" />
+            <Numero fonte="mercurio" valor={m.pessoas.membros} rotulo="membros (2º nível+)" />
+            <Numero fonte="mercurio" valor={mesAtual ? `${mesAtual.entradas - mesAtual.saidas >= 0 ? "+" : ""}${mesAtual.entradas - mesAtual.saidas}` : "—"} rotulo={mesAtual ? `${mesAtual.entradas} entradas · ${mesAtual.saidas} saídas no mês` : "saldo do mês"} />
           </div>
           <div>
             <div className="flex h-20 items-end gap-1 border-b border-gray-200 dark:border-gray-700" role="img" aria-label="Entradas e saídas nos últimos 12 meses">
@@ -178,17 +207,17 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
           </div>
           <ul className="flex flex-col gap-1 text-[12px] text-gray-700 dark:text-gray-300">
             <li className="flex justify-between gap-3">
-              <span>Turmas no Mercúrio</span>
+              <span>Turmas <Etiqueta fonte="mercurio" /></span>
               <strong className="tabular-nums">
                 {m.turmas.total} · {m.turmas.alunos} alunos
               </strong>
             </li>
             <li className="flex justify-between gap-3">
-              <span>Turmas sem instrutor</span>
+              <span>Turmas sem instrutor <Etiqueta fonte="mercurio" /></span>
               <strong className={`tabular-nums ${m.turmas.semInstrutor ? "text-na-danger-dark dark:text-red-300" : ""}`}>{m.turmas.semInstrutor}</strong>
             </li>
             <li className="flex justify-between gap-3">
-              <span>Pedidos de cadastro e pendências</span>
+              <span>Pedidos de cadastro e pendências <Etiqueta fonte="portal" /></span>
               <strong className="tabular-nums">{p.portal.pedidosCadastro + p.portal.pendencias}</strong>
             </li>
             {p.detalhes?.avaliacao && (
@@ -205,9 +234,9 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
         <div className="flex min-w-0 flex-col gap-5">
           <Area titulo="Eventos" icone={CalendarDays} href={link("/voluntario/eventos")}>
             <div className="grid grid-cols-3 gap-3">
-              <Numero valor={p.eventos.proximos} rotulo="nos próximos 30 dias" />
-              <Numero valor={p.eventos.inscritosProximos} rotulo="inscritos pelo Portal" />
-              <Numero valor={p.eventos.inscritosPassados ? `${pct(p.eventos.presencaPassados, p.eventos.inscritosPassados)}%` : "—"} rotulo="presença (últimos 30 dias)" />
+              <Numero fonte="portal" valor={p.eventos.proximos} rotulo="no Portal nos próximos 30 dias (inclui os do Ulisses)" />
+              <Numero fonte="portal" valor={p.eventos.inscritosProximos} rotulo="inscritos pelo Portal" />
+              <Numero valor={p.eventos.inscritosPassados ? `${pct(p.eventos.presencaPassados, p.eventos.inscritosPassados)}%` : "—"} rotulo="presença conferida no Portal (últimos 30 dias)" fonte="portal" />
             </div>
             {p.eventos.lista.length > 0 && (
               <ul className="flex flex-col gap-1 text-[12px] text-gray-700 dark:text-gray-300">
@@ -226,29 +255,29 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
 
           <Area titulo="Abertura de turmas" icone={BookOpenText} href={link("/voluntario/aberturas")}>
             <div className="grid grid-cols-3 gap-3">
-              <Numero valor={p.aberturas.ativas} rotulo="aberturas planejadas ou em curso" />
-              <Numero valor={p.aberturas.interessados.toLocaleString("pt-BR")} rotulo="na base de interessados (desde o início)" />
-              <Numero valor={p.aberturas.matriculas.toLocaleString("pt-BR")} rotulo="matrículas vindas de interessados" />
+              <Numero fonte="portal" valor={p.aberturas.ativas} rotulo="aberturas planejadas ou em curso no Portal" />
+              <Numero fonte="interessados" valor={p.aberturas.interessados.toLocaleString("pt-BR")} rotulo="na base de interessados (desde o início)" />
+              <Numero fonte="interessados" valor={p.aberturas.matriculas.toLocaleString("pt-BR")} rotulo="matrículas vindas de interessados" />
             </div>
           </Area>
         </div>
 
         <Area titulo="Voluntariado e grupos" icone={HandHeart} href={link("/grupos")}>
           <div className="grid grid-cols-3 gap-3">
-            <Numero valor={p.voluntariado.acessos} rotulo="voluntários com acesso liberado" />
-            <Numero valor={p.voluntariado.secretarias} rotulo="secretarias no Portal" />
-            <Numero valor={p.voluntariado.gaf + p.voluntariado.estudos} rotulo="GAF, estudos e leituras" />
+            <Numero fonte="portal" valor={p.voluntariado.acessos} rotulo="voluntários com acesso liberado no Portal" />
+            <Numero fonte="portal" valor={p.voluntariado.secretarias} rotulo="secretarias cadastradas no Portal" />
+            <Numero fonte="portal" valor={p.voluntariado.gaf + p.voluntariado.estudos} rotulo="GAF, estudos e leituras cadastrados no Portal" />
           </div>
           <p className="text-[12px] text-gray-600 dark:text-gray-400">
-            {p.voluntariado.gaf} GAF · {p.voluntariado.estudos} grupos de estudo e leituras · {p.voluntariado.fv} grupos de FV · {p.voluntariado.gdve} GDVE
+            No Portal: {p.voluntariado.gaf} GAF · {p.voluntariado.estudos} grupos de estudo e leituras · {p.voluntariado.fv} grupos de FV · {p.voluntariado.gdve} GDVE. No Mercúrio: {m.pessoas.fv} FV.
           </p>
         </Area>
 
         <Area titulo="Portal e comunicação" icone={Smartphone} href={link("/voluntario/acessos")}>
           <div className="grid grid-cols-3 gap-3">
-            <Numero valor={p.portal.entraram} rotulo={`já entraram no Portal (${pct(p.portal.entraram, m.pessoas.ativos)}% dos ativos)`} />
-            <Numero valor={p.portal.notificacoes} rotulo="com notificações ativas" />
-            <Numero valor={p.portal.contas} rotulo="contas criadas" />
+            <Numero fonte="portal" valor={p.portal.entraram} rotulo={`já entraram no Portal (${pct(p.portal.entraram, m.pessoas.ativos)}% dos ativos)`} />
+            <Numero fonte="portal" valor={p.portal.notificacoes} rotulo="com notificações ativas" />
+            <Numero fonte="portal" valor={p.portal.contas} rotulo="contas criadas no Portal" />
           </div>
           {p.portal.falhas > 0 && <p className="text-[12px] text-na-danger-dark dark:text-red-300">{p.portal.falhas} envio(s) ao Mercúrio com falha.</p>}
           <Link href={`/voluntario/filial/uso${alcance.chave.includes(",") ? `?filiais=${alcance.chave}` : `?alcance=${alcance.chave}`}`} className="flex w-fit items-center gap-0.5 text-[12px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
@@ -264,9 +293,9 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
           detalhes={financeiro}
         >
           <div className="grid grid-cols-3 gap-3">
-            <Numero valor={`${pct(c.paga, fichas)}%`} rotulo={`contribuições pagas no mês (${c.paga} de ${fichas})`} />
-            <Numero valor={c.pessoasComAtraso} rotulo="pessoas com atraso no ano" destaque={c.pessoasComAtraso ? "alerta" : undefined} />
-            <Numero valor={formatBRL(recAtual?.valor ?? 0)} rotulo={recAnt ? `recebido no mês (anterior: ${formatBRL(recAnt.valor)})` : "recebido no mês"} />
+            <Numero fonte="mercurio" valor={`${pct(c.paga, fichas)}%`} rotulo={`contribuições pagas no mês (${c.paga} de ${fichas})`} />
+            <Numero fonte="mercurio" valor={c.pessoasComAtraso} rotulo="pessoas com atraso no ano" destaque={c.pessoasComAtraso ? "alerta" : undefined} />
+            <Numero fonte="mercurio" valor={formatBRL(recAtual?.valor ?? 0)} rotulo={recAnt ? `recebido no mês (anterior: ${formatBRL(recAnt.valor)})` : "recebido no mês"} />
           </div>
           <div className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full" role="img" aria-label="Situação das contribuições do mês">
             {[
@@ -304,9 +333,26 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
             <table className="w-full min-w-[640px] text-left text-[12px]">
               <thead className="text-[10px] text-gray-500 uppercase dark:text-gray-400">
                 <tr>
-                  {["Filial", "Ativos", "Entradas/saídas no mês", "Pagas no mês", "Eventos (30 dias)", "Aberturas", "Grupos", "Voluntários", "Entraram no Portal"].map((h, i) => (
+                  {(
+                    [
+                      ["Filial", null],
+                      ["Ativos", "mercurio"],
+                      ["Entradas/saídas no mês", "mercurio"],
+                      ["Pagas no mês", "mercurio"],
+                      ["Eventos (30 dias)", "portal"],
+                      ["Aberturas", "portal"],
+                      ["Grupos", "portal"],
+                      ["Voluntários liberados", "portal"],
+                      ["Entraram no Portal", "portal"],
+                    ] as [string, Fonte | null][]
+                  ).map(([h, f], i) => (
                     <th key={h} className={`py-1.5 pr-3 font-semibold ${i ? "text-right" : ""}`}>
                       {h}
+                      {f && (
+                        <span className="block">
+                          <Etiqueta fonte={f} />
+                        </span>
+                      )}
                     </th>
                   ))}
                 </tr>
