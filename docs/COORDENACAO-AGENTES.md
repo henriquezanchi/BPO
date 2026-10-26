@@ -336,3 +336,8 @@ Pedido do usuário: as turmas de pedagogos têm encontros semanais de duração 
 - `/professor`: cartão "Sua apresentação na turma de pedagogos" com data, tema e situação do plano.
 - Disciplinas disponíveis = as do catálogo (`TEMAS_POR_MATERIA`: NET, NSC, NFH, IS1, PSI); novas entram com as listas de temas.
 - Arte do WhatsApp (Compartilhar no WhatsApp): formato próprio `whatsapp` 1080×1080 em `lib/arte-evento.ts` (antes usava o feed 4:5, que o chat corta). Com cartaz: cartaz inteiro sobre o fundo desfocado e a faixa verde (data, local, inscrição) embaixo, sem cobrir o cartaz; sem cartaz: arte da marca em versão quadrada. Instagram continua com story e feed.
+
+## 55. Claude — Mercúrio: colunas de volta na view `cadastro` (26/10/2026)
+
+- `cad_dirigente` ("S"/"N"), `cad_empresa`, `cad_recuperado` e o pedagogo voltaram; o pedagogo veio como `cad_cad_pedagogo` e `sincronizarUnidade` copia para `cad_pedagogo` quando só o nome errado existe. `cad_contribuicao` não volta. `cad_recuperado` ainda não é usado pelo Portal.
+- Reimportação completa das 8 filiais com unidade + resumos e profissões (agora com `cad_empresa`).

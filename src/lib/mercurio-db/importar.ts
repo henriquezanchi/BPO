@@ -115,12 +115,14 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   // Desde 19/10/2026 o banco de consulta traz também os desligados (cad_situacao='INA'):
   // toda leitura de cadastro precisa filtrar cad_situacao='ATI'.
   const cadastros = await consultarTudo(`SELECT * FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${sqlTexto(uniId)}${filtroMatr} ORDER BY cad_matr`);
+  // 25/10/2026: a view devolveu cad_pedagogo com o nome "cad_cad_pedagogo" (digitação); aceita os dois.
+  for (const c of cadastros) if (!("cad_pedagogo" in c) && "cad_cad_pedagogo" in c) c.cad_pedagogo = c.cad_cad_pedagogo;
   // Desde 24/10/2026 `cadastro` é uma view com só as colunas pedidas (João Guilherme). Coluna que
   // sumir da view viraria "vazio" e apagaria dado bom (ex.: todos deixariam de ser dirigentes):
   // sem todas as colunas usadas abaixo, a sincronização para em vez de gravar.
   const faltando = cadastros.length ? COLUNAS_CADASTRO.filter((c) => !(c in cadastros[0])) : [];
   if (faltando.length) throw new Error(`A view "cadastro" do Mercúrio está sem as colunas ${faltando.join(", ")}. Peça ao João Guilherme para incluí-las; nada foi gravado.`);
-  // cad_dirigente e cad_pedagogo ficaram fora da view de 24/10/2026: sem elas, o Portal mantém o
+  // cad_dirigente ("S"/"N") e cad_pedagogo (FOR, INS, HC, HO, HP; "???" = não) voltaram à view em 25/10/2026. Se sumirem, o Portal mantém o
   // que já tinha (dirigente) ou só acrescenta (instrutor de turma ativa), sem apagar.
   const temDirigente = !cadastros.length || "cad_dirigente" in cadastros[0];
   const temPedagogo = !cadastros.length || "cad_pedagogo" in cadastros[0];
