@@ -172,3 +172,9 @@ Cada abertura tem um link público `/matricula/<token>` (Fase 1, bloco 48 da COO
 ## Atendimentos individuais com o instrutor (25/10/2026)
 
 Instrutor: Instrutor → "Atendimentos individuais" (`/professor/atendimentos`) abre faixas de horário. Aluno: Agenda → "Conversar com meu instrutor" (`/atendimentos`). Direção/Escolástica/nacional: Escolástica → "Atendimentos dos instrutores". Horários no fuso da filial (UF). Detalhes, tabelas e regras no bloco 50 da COORDENACAO. Para rodar os testes e comparar com a linha de base: `npx tsx --experimental-test-module-mocks --test tests/*.test.ts tests/*.test.mjs` (30 falhas antigas).
+
+## Asaas — subconta de Barra do Garças (25/10/2026)
+
+- Subconta "ORGANIZACAO NOVA ACROPOLE" (tipo associação) é a wallet de BGA (`School.asaasWalletId`). Link de ativação/senha reenviado pela API (`POST /v3/accounts/{id}/resendActivationLink`, a pedido do usuário). **Só pode ser reenviado uma vez**; não repetir.
+- Próximo passo: o usuário entra na subconta, gera a chave em Integrações → Chaves de API e a chave é gravada em `School.asaasSubaccountApiKey` por stdin (nunca no chat). Aí o site de matrículas passa a cobrar.
+- Não ligar whitelist de IP na conta principal (a Vercel não tem IP fixo; quebraria a cobrança dos eventos). Criar subcontas pela API inicia o "período de avaliação" do Asaas (limite de R$ 2.000 por subconta até a homologação regulatória). A conta principal é a empresa do usuário; cobrança por split mostraria esse nome.
