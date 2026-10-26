@@ -1,8 +1,9 @@
-import {test,mock} from 'node:test';import assert from 'node:assert/strict';
+import {mockModule} from './helpers/mock-module.mjs';
+import {test} from 'node:test';import assert from 'node:assert/strict';
 let actor=null,publicBucket=false;const uploads=[];
-mock.module(new URL('../src/lib/auth.ts',import.meta.url).href,{exports:{getAuthenticatedMember:async()=>actor}});
-mock.module(new URL('../src/lib/supabase/admin.ts',import.meta.url).href,{exports:{supabaseAdmin:{storage:{getBucket:async()=>({data:{public:publicBucket}}),from:()=>({upload:async(path,bytes)=>{uploads.push({path,bytes});return {error:null};}})}}}});
-mock.module(new URL('../src/lib/event-posters.ts',import.meta.url).href,{exports:{EVENT_POSTERS_BUCKET:'event-posters',eventPosterUrl:async()=>'https://test.invalid/signed-poster'}});
+mockModule(new URL('../src/lib/auth.ts',import.meta.url).href,{exports:{getAuthenticatedMember:async()=>actor}});
+mockModule(new URL('../src/lib/supabase/admin.ts',import.meta.url).href,{exports:{supabaseAdmin:{storage:{getBucket:async()=>({data:{public:publicBucket}}),from:()=>({upload:async(path,bytes)=>{uploads.push({path,bytes});return {error:null};}})}}}});
+mockModule(new URL('../src/lib/event-posters.ts',import.meta.url).href,{exports:{EVENT_POSTERS_BUCKET:'event-posters',eventPosterUrl:async()=>'https://test.invalid/signed-poster'}});
 const{POST}=await import('../src/app/api/eventos/cartaz/route.ts');
 function request(type='image/png',bytes=new Uint8Array([137,80,78,71,13,10,26,10]),origin='http://localhost'){
  const body=new FormData();body.set('file',new File([bytes],'poster.png',{type}));body.set('schoolId','other-school');return new Request('http://localhost/api/eventos/cartaz',{method:'POST',headers:{origin},body});

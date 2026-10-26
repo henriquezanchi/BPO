@@ -1,5 +1,6 @@
-import {test,mock} from 'node:test';import assert from 'node:assert/strict';
-mock.module(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{}}});
+import {mockModule} from './helpers/mock-module.mjs';
+import {test} from 'node:test';import assert from 'node:assert/strict';
+mockModule(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{}}});
 const{materializeMeetingSeries}=await import('../src/lib/meeting-series.ts');
 test('geração em lote não ressuscita cancelamento nem duplica reunião com horário alterado',async()=>{
  const series={id:'series',classGroupId:'group',createdById:'chief',startsLocal:'2026-11-01T19:00',endsLocal:'2026-11-01T20:00',timeZone:'America/Sao_Paulo',template:{title:'Reunião',publicDetails:'Oficina',internalDetails:'Reservado',fullUniform:false},changes:[],untilSlot:null};

@@ -1,10 +1,11 @@
-import {test,mock} from 'node:test';import assert from 'node:assert/strict';
+import {mockModule} from './helpers/mock-module.mjs';
+import {test} from 'node:test';import assert from 'node:assert/strict';
 let confirmed=0,value=50;
-mock.module(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{paymentCharge:{findUnique:async()=>null},matriculaOnline:{findUnique:async()=>null},fortunaTopUpCharge:{findUnique:async()=>null},eventRegistration:{findUnique:async()=>({id:'registration',amount:50})}}}});
-mock.module(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasGetPaymentStatus:async()=>({status:'CONFIRMED',value})}});
-mock.module(new URL('../src/lib/event-payments.ts',import.meta.url).href,{exports:{confirmEventPayment:async()=>{confirmed++;}}});
-mock.module(new URL('../src/lib/asaas/confirm-payment.ts',import.meta.url).href,{exports:{confirmarPagamento:async()=>{throw Error('unexpected contribution payment');}}});
-mock.module(new URL('../src/lib/event-refunds.ts',import.meta.url).href,{exports:{processEventRefund:async()=>{}}});
+mockModule(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{paymentCharge:{findUnique:async()=>null},matriculaOnline:{findUnique:async()=>null},fortunaTopUpCharge:{findUnique:async()=>null},eventRegistration:{findUnique:async()=>({id:'registration',amount:50,event:{schoolId:'school'}})},school:{findUnique:async args=>{assert.equal(args.where.id,'school');return {asaasSubaccountApiKey:'subconta-key'};}}}}});
+mockModule(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasGetPaymentStatus:async(id,conta)=>{assert.equal(id,'payment');assert.deepEqual(conta,{apiKey:'subconta-key'});return {status:'CONFIRMED',value};}}});
+mockModule(new URL('../src/lib/event-payments.ts',import.meta.url).href,{exports:{confirmEventPayment:async()=>{confirmed++;}}});
+mockModule(new URL('../src/lib/asaas/confirm-payment.ts',import.meta.url).href,{exports:{confirmarPagamento:async()=>{throw Error('unexpected contribution payment');}}});
+mockModule(new URL('../src/lib/event-refunds.ts',import.meta.url).href,{exports:{processEventRefund:async()=>{}}});
 const {POST}=await import('../src/app/api/webhooks/asaas/route.ts');
 function request(token){return new Request('http://localhost/api/webhooks/asaas',{method:'POST',headers:{'content-type':'application/json',...(token?{'asaas-access-token':token}:{})},body:JSON.stringify({event:'PAYMENT_CONFIRMED',payment:{id:'payment'}})});}
 test('webhook sem configuração ou sem autenticação nunca confirma inscrição',async()=>{
