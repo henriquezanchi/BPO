@@ -319,3 +319,4 @@ Regra do usuário: "temos que cobrar SEMPRE pela subconta de cada filial, para a
 
 - Disponibilidade dos professores (Aberturas → Equipe e horários): o campo "Impedimentos (JSON)" virou "Datas em que não pode" (`components/aberturas/campo-impedimentos.tsx`): lista de datas com "Dia inteiro" ou faixa de horário; envia o mesmo JSON `[{data, inicioMinuto, fimMinuto}]` (dia inteiro = 0–1440), sem mudança no servidor.
 - Calendário da filial: reunião de grupo mostra o nome do grupo como título (ex.: "GAF Online") e o nome da reunião no detalhe; conflito diz "Reunião de <grupo>".
+- Encontrar uma data (novo evento): campo "Turno mais adequado" (qualquer, manhã 9h/10h, tarde 14h/15h/16h, noite 19h/19h30/20h) define os horários testados; o formato continua definindo os dias.

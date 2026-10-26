@@ -12,6 +12,13 @@ const FORMATOS = {
   oficina: { label: "Oficina", dias: [0, 6], horarios: ["09:00", "15:00"] },
   convivencia: { label: "Confraternização", dias: [0, 5, 6], horarios: ["12:00", "19:30"] },
 };
+// Turno escolhido (pedido do usuário 2026-10-25) define os horários testados; "qualquer" usa os do formato.
+const TURNOS = {
+  qualquer: { label: "Qualquer", horarios: null },
+  manha: { label: "Manhã", horarios: ["09:00", "10:00"] },
+  tarde: { label: "Tarde", horarios: ["14:00", "15:00", "16:00"] },
+  noite: { label: "Noite", horarios: ["19:00", "19:30", "20:00"] },
+} as const;
 const campo = "min-w-0 rounded-lg border border-gray-300 bg-transparent p-2 text-xs dark:border-gray-700";
 const dataLocal = (iso: string) => {
   const d = new Date(iso);
@@ -25,6 +32,7 @@ export function EventDateSuggestions({ schoolId }: { schoolId: string }) {
   const [aberto, setAberto] = useState(false);
   const [publicoKey, setPublicoKey] = useState("");
   const [formato, setFormato] = useState<keyof typeof FORMATOS>("livre");
+  const [turno, setTurno] = useState<keyof typeof TURNOS>("qualquer");
   const [duracao, setDuracao] = useState(120);
   const [semanas, setSemanas] = useState(8);
   const [sugestoes, setSugestoes] = useState<Sugestao[] | null>(null);
@@ -76,14 +84,14 @@ export function EventDateSuggestions({ schoolId }: { schoolId: string }) {
     setMensagem("");
     setSugestoes(null);
     try {
-      const result = await sugerirDatas(schoolId, { publicos: publicosDeAudiencia(publicos), duracaoMin: duracao, semanas, ...FORMATOS[formato] });
+      const result = await sugerirDatas(schoolId, { publicos: publicosDeAudiencia(publicos), duracaoMin: duracao, semanas, dias: FORMATOS[formato].dias, horarios: [...(TURNOS[turno].horarios ?? FORMATOS[formato].horarios)] });
       if (request.current === id) setSugestoes(result);
     } catch {
       if (request.current === id) setMensagem("Não foi possível buscar datas. Tente novamente.");
     } finally {
       if (request.current === id) setCarregando(false);
     }
-  }, [duracao, semanas, formato, schoolId]);
+  }, [duracao, semanas, formato, turno, schoolId]);
 
   useEffect(() => {
     if (!aberto) return;
@@ -117,12 +125,13 @@ export function EventDateSuggestions({ schoolId }: { schoolId: string }) {
     <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-na-green-dark focus-visible:outline-2 focus-visible:outline-na-green dark:text-emerald-400"><Sparkles size={12} className="mr-1.5 inline" />Encontrar uma data</summary>
     <div className="space-y-3 border-t border-gray-100 p-3 dark:border-gray-800">
       <p className="text-[11px] text-gray-500 dark:text-gray-400">Sugestões para o público escolhido, considerando o calendário da filial.</p>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs">Formato para planejar<select value={formato} onChange={e => { setFormato(e.target.value as keyof typeof FORMATOS); invalidar(); }} className={campo}>{Object.entries(FORMATOS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select></label>
+        <label className="flex flex-col gap-1 text-xs">Turno mais adequado<select value={turno} onChange={e => { setTurno(e.target.value as keyof typeof TURNOS); invalidar(); }} className={campo}>{Object.entries(TURNOS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select></label>
         <label className="flex flex-col gap-1 text-xs">Duração (min)<input type="text" inputMode="numeric" value={duracao || ""} onChange={e => { setDuracao(Number(e.target.value)); invalidar(); }} className={campo} /></label>
         <label className="flex flex-col gap-1 text-xs">Buscar nas próximas<select value={semanas} onChange={e => { setSemanas(Number(e.target.value)); invalidar(); }} className={campo}>{[4, 8, 12, 16].map(n => <option key={n} value={n}>{n} semanas</option>)}</select></label>
       </div>
-      <p className="text-[11px] text-gray-500 dark:text-gray-400">O formato orienta os dias e horários da busca; não é salvo no evento. A busca considera horários de Brasília e converte a data escolhida para o fuso do seu dispositivo.</p>
+      <p className="text-[11px] text-gray-500 dark:text-gray-400">O formato orienta os dias e o turno, os horários; nada disso é salvo no evento. A busca considera horários de Brasília e converte a data escolhida para o fuso do seu dispositivo.</p>
       <button type="button" disabled={carregando} onClick={buscar} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-na-green-dark hover:bg-na-green/10 disabled:opacity-50 dark:text-emerald-400">{carregando ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}{carregando ? "Consultando calendário…" : "Sugerir datas"}</button>
       <div aria-live="polite">
         {mensagem && <p className="text-xs text-gray-600 dark:text-gray-300">{mensagem}</p>}
