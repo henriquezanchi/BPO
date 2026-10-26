@@ -1,3 +1,4 @@
+import { fetchAcropole, ponteConfigurada } from "@/lib/ponte";
 /**
  * Cliente da API REST real do Fortuna (carteira digital da lanchonete,
  * oinabnfortunaback.acropolebrasil.com.br/api) — diferente do Mercúrio,
@@ -21,7 +22,9 @@ const BASE_URL = "https://oinabnfortunaback.acropolebrasil.com.br/api";
 // um endpoint interno que roda no Railway (src/app/api/internal/fortuna-proxy/route.ts),
 // que aí sim fala com o Fortuna direto.
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
-const PROXY_URL = process.env.FORTUNA_PROXY_URL;
+// 25/10/2026: o proxy do Railway saiu do ar ("Application not found"). Com a ponte da Cloudflare configurada
+// (lib/ponte.ts, a mesma do Ulisses), o Fortuna é chamado por ela e o proxy deixa de ser usado.
+const PROXY_URL = ponteConfigurada() ? undefined : process.env.FORTUNA_PROXY_URL;
 const PROXY_SECRET = process.env.FORTUNA_PROXY_SECRET;
 
 async function chamarProxy<T>(fn: string, args: unknown[]): Promise<T> {
@@ -74,7 +77,7 @@ async function obterToken(): Promise<string> {
   const senha = process.env.FORTUNA_SENHA;
   if (!inscricao || !senha) throw new Error("FORTUNA_INSCRICAO/FORTUNA_SENHA não configurados.");
 
-  const res = await fetch(`${BASE_URL}/auth/login`, {
+  const res = await fetchAcropole(`${BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
     body: JSON.stringify({ id: inscricao, password: senha, accountType: "user" }),
@@ -90,7 +93,7 @@ async function obterToken(): Promise<string> {
 
 async function chamarApi<T>(path: string): Promise<T> {
   const token = await obterToken();
-  const res = await fetch(`${BASE_URL}${path}`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": USER_AGENT } });
+  const res = await fetchAcropole(`${BASE_URL}${path}`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Fortuna API ${path} -> HTTP ${res.status} - ${(await res.text()).slice(0, 200)}`);
   return res.json() as Promise<T>;
 }
@@ -137,7 +140,7 @@ export async function fortunaCreditarSaldo(clientId: number, branchId: number, a
   const saldoAtual = Number(cliente.balance.find((b) => b.branchId === branchId)?.amount ?? 0);
   const novoSaldo = Math.round((saldoAtual + amount) * 100) / 100;
 
-  const res = await fetch(`${BASE_URL}/balance/with-receipt`, {
+  const res = await fetchAcropole(`${BASE_URL}/balance/with-receipt`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": USER_AGENT },
     body: JSON.stringify({ clientId, branchId, balance: novoSaldo, amount, method, operatorId }),

@@ -603,16 +603,18 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
           : `${ACTIVITY_LABEL[item.type] ?? item.type} · ${item.className}`;
   const semHora = item.kind === "evento" && item.allDay;
   const cancelado = (item.kind === "evento" && item.status === "cancelado") || (item.kind === "reuniao" && item.status === "cancelada");
+  // Cor por categoria (pedido do usuário 2026-10-25: "eventos futuros um pouco sem graça").
+  const cor = cancelado ? COR_PROXIMO.cancelado : COR_PROXIMO[categoriaProximo(item)];
   return (
     <li>
-      <button onClick={onAbrir} className="flex w-full items-center gap-3 rounded-xl border border-gray-200 p-2.5 text-left transition hover:border-na-green/50 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/60">
-        <span className="flex w-11 shrink-0 flex-col items-center rounded-lg bg-gray-100 py-1 leading-tight dark:bg-gray-800">
-          <span className="text-[9px] font-semibold text-gray-500 uppercase dark:text-gray-400">{DIAS_CURTOS[item.date.getDay()]}</span>
-          <span className="text-base font-black text-gray-900 dark:text-gray-100">{item.date.getDate()}</span>
-          <span className="text-[9px] font-semibold text-gray-500 uppercase dark:text-gray-400">{MESES_CURTOS[item.date.getMonth()]}</span>
+      <button onClick={onAbrir} className={`flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition ${cor.cartao}`}>
+        <span className={`flex w-12 shrink-0 flex-col items-center rounded-xl py-1.5 leading-tight shadow-sm ${cor.data}`}>
+          <span className="text-[9px] font-bold uppercase opacity-85">{DIAS_CURTOS[item.date.getDay()]}</span>
+          <span className="text-lg font-black">{item.date.getDate()}</span>
+          <span className="text-[9px] font-bold uppercase opacity-85">{MESES_CURTOS[item.date.getMonth()]}</span>
         </span>
         <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+          <span className={`flex items-center gap-1 text-[10px] font-bold tracking-wide uppercase ${cor.rotulo}`}>
             <Icone size={11} className="shrink-0" /> <span className="truncate">{tipo}</span>
           </span>
           <span className={`block truncate text-[13px] font-semibold ${cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</span>
@@ -627,11 +629,66 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
             {!cancelado && item.kind === "evento" && item.lancheCompartilhado && <span className="font-semibold text-na-gold-dark dark:text-amber-300">· Lanche compartilhado</span>}
           </span>
         </span>
-        <ChevronRight size={14} className="shrink-0 text-gray-400" />
+        <ChevronRight size={14} className={`shrink-0 ${cor.seta}`} />
       </button>
     </li>
   );
 }
+
+type CategoriaProximo = "escola" | "rede" | "outraFilial" | "grupo" | "turma" | "atendimento" | "cancelado";
+
+function categoriaProximo(item: Exclude<AgendaItem, { kind: "enquete" }>): Exclude<CategoriaProximo, "cancelado"> {
+  if (item.kind === "evento") return item.filialOrigem ? "outraFilial" : item.scope === "filial" ? "escola" : "rede";
+  if (item.kind === "reuniao") return "grupo";
+  if (item.kind === "atendimento") return "atendimento";
+  return "turma";
+}
+
+/** Cores dos próximos compromissos: dourado (escola), turquesa (nacional/regional), laranja (outra filial), verdes (grupos, turma, conversa). */
+const COR_PROXIMO: Record<CategoriaProximo, { cartao: string; data: string; rotulo: string; seta: string }> = {
+  escola: {
+    cartao: "border-na-gold/40 bg-na-gold/10 hover:border-na-gold dark:border-amber-800/60 dark:bg-amber-950/25 dark:hover:border-amber-600",
+    data: "bg-na-gold text-gray-900",
+    rotulo: "text-na-gold-dark dark:text-amber-300",
+    seta: "text-na-gold-dark dark:text-amber-400",
+  },
+  rede: {
+    cartao: "border-na-turquesa/40 bg-na-turquesa/10 hover:border-na-turquesa dark:border-cyan-800/60 dark:bg-cyan-950/25 dark:hover:border-cyan-600",
+    data: "bg-na-turquesa text-white",
+    rotulo: "text-cyan-800 dark:text-cyan-300",
+    seta: "text-cyan-700 dark:text-cyan-400",
+  },
+  outraFilial: {
+    cartao: "border-na-laranja/40 bg-na-laranja/10 hover:border-na-laranja dark:border-orange-800/60 dark:bg-orange-950/25 dark:hover:border-orange-600",
+    data: "bg-na-laranja text-white",
+    rotulo: "text-orange-800 dark:text-orange-300",
+    seta: "text-orange-700 dark:text-orange-400",
+  },
+  grupo: {
+    cartao: "border-na-green/40 bg-na-green-light/40 hover:border-na-green dark:border-emerald-800/60 dark:bg-emerald-950/25 dark:hover:border-emerald-600",
+    data: "bg-na-green text-white",
+    rotulo: "text-na-green-dark dark:text-emerald-300",
+    seta: "text-na-green-dark dark:text-emerald-400",
+  },
+  turma: {
+    cartao: "border-na-green-dark/30 bg-na-green-light/30 hover:border-na-green-dark dark:border-teal-800/60 dark:bg-teal-950/25 dark:hover:border-teal-600",
+    data: "bg-na-green-dark text-white",
+    rotulo: "text-na-green-dark dark:text-teal-300",
+    seta: "text-na-green-dark dark:text-teal-400",
+  },
+  atendimento: {
+    cartao: "border-na-green/40 bg-na-green-light/40 hover:border-na-green dark:border-emerald-800/60 dark:bg-emerald-950/25 dark:hover:border-emerald-600",
+    data: "bg-gradient-to-b from-na-green to-na-green-dark text-white",
+    rotulo: "text-na-green-dark dark:text-emerald-300",
+    seta: "text-na-green-dark dark:text-emerald-400",
+  },
+  cancelado: {
+    cartao: "border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900/60",
+    data: "bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+    rotulo: "text-gray-500 dark:text-gray-400",
+    seta: "text-gray-400",
+  },
+};
 
 export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoId, podeMarcarAtendimento }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string; podeMarcarAtendimento?: boolean }) {
   const eventoCompartilhado = items.find((item) => item.kind === "evento" && item.id === eventoId);
@@ -794,7 +851,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
       <div className="flex flex-col gap-3">
         {itensDoDiaSelecionado.length === 0 ? (
           <p className="py-4 text-center text-[12px] text-gray-500 dark:text-gray-400">
-            Nada agendado para {formatDateBR(diaSelecionado)}.
+            Nada agendado para {diaSelecionado.toLocaleDateString("pt-BR")}.
           </p>
         ) : (
           itensDoDiaSelecionado.filter((item) => item !== eventoCompartilhado).map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} somenteConsulta={somenteConsulta} emBreve={emBreve} />)

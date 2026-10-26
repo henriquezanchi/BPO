@@ -1,7 +1,7 @@
 /**
  * Ponte na Cloudflare (2026-10-22). O Cloudflare da Nova Acrópole desafia
  * (cf-mitigated: challenge) toda chamada vinda dos servidores da Vercel para
- * *.acropolebrasil.com.br — Ulisses, Ágora e o login unificado. Este Worker
+ * *.acropolebrasil.com.br — Ulisses, Ágora, o login unificado e o Fortuna. Este Worker
  * roda dentro da rede da Cloudflare e repassa ao Portal só chamadas a esses
  * endereços.
  *
@@ -16,11 +16,13 @@ export interface Env {
   PONTE_CHAVE: string;
 }
 
-const ALLOWED = ["api.acropolebrasil.com.br", "eventos.acropolebrasil.com.br", "auth.acropolebrasil.com.br"];
+// Fortuna (carteira do Café) entrou em 25/10/2026: o proxy antigo no Railway saiu do ar.
+const ALLOWED = ["api.acropolebrasil.com.br", "eventos.acropolebrasil.com.br", "auth.acropolebrasil.com.br", "oinabnfortunaback.acropolebrasil.com.br"];
 const DIAGNOSTICO = [
   "https://api.acropolebrasil.com.br/eventos/7",
   "https://eventos.acropolebrasil.com.br/api/versao",
   "https://auth.acropolebrasil.com.br/as/realms/oinabnb/.well-known/openid-configuration",
+  "https://oinabnfortunaback.acropolebrasil.com.br/api/branch",
 ];
 const UA = "PortalNovaAcropole/1.0 (ponte)";
 
