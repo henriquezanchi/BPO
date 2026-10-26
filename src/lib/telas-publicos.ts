@@ -22,9 +22,11 @@ export const CONTEUDOS_TELA = {
   redes: "Instagram e Acrópole Play",
   programacao: "Programação da semana",
   aniversariantes: "Aniversariantes do mês",
+  // QR de primeiro acesso ao Portal (26/10/2026, adoção): só em TV interna.
+  portal: "Acesso ao Portal do Membro",
 } as const;
 export type ConteudoTela = keyof typeof CONTEUDOS_TELA;
-export const CONTEUDOS_PADRAO: ConteudoTela[] = ["matriculas", "frase", "avisos"];
+export const CONTEUDOS_PADRAO: ConteudoTela[] = ["matriculas", "frase", "avisos", "portal"];
 
 /** Aniversariantes nunca numa TV aberta ao público (privacidade). */
 export function validarConteudosTela(conteudos: string[], publicos: string[]): ConteudoTela[] {

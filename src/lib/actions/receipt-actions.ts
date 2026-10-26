@@ -8,7 +8,7 @@ import { enqueueMercurioReceiptFetch } from "@/lib/mercurio/sync-queue";
  * Busca o conteúdo (documento) de um recibo específico do membro. Primeira
  * vez: só enfileira — quem processa de verdade (sessão real no Mercúrio) é
  * o worker (scripts/process-mercurio-queue.ts, já roda a cada 10min no
- * Railway), não mais esta action (precisou virar assíncrono pra rodar no
+ * Railway, hoje rotina /api/cron/fila-mercurio da Vercel), não mais esta action (precisou virar assíncrono pra rodar no
  * Vercel, que não tem Chromium/Playwright em serverless). Depois de
  * processado, o conteúdo fica cacheado pra sempre em
  * ContributionReceipt.rawText (documento histórico imutável, só é

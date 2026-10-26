@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
       "./public/na-logo.png",
       "./node_modules/@sparticuz/chromium/bin/**/*",
     ],
+    // Fila de escrita no Mercúrio (navegador automatizado), rotina da Vercel desde 26/10/2026.
+    "/api/cron/fila-mercurio": ["./node_modules/@sparticuz/chromium/bin/**/*"],
   },
   // Service worker do PWA: sempre a versão mais nova (sem cache), só scripts do próprio site.
   async headers() {

@@ -1,50 +1,30 @@
 import { processarListaDeEspera } from "@/lib/event-waitlist";
 import { avisosDeAtendimentos, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
-import { conferirMatriculasPendentes } from "@/lib/matricula-online";
 import { pushConfigurado } from "@/lib/push";
-import crypto from "node:crypto";
+import { autorizadoCron, executarRotina } from "@/lib/rotinas";
 
 /**
- * Avisos push agendados (vercel.json, a cada 5 minutos): encontros dos
- * grupos, pedidos novos para a Escolástica e a Economia, evento novo,
- * vencimento da contribuição, avisos de quem se inscreveu em evento e lista de espera. Cada tipo roda isolado: uma falha num não
- * impede os outros. A Vercel chama com "Authorization: Bearer $CRON_SECRET".
+ * Avisos push agendados (vercel.json, a cada 5 minutos): encontros dos grupos, atendimentos, planos de aula, pedidos
+ * novos para a Escolástica e a Economia, evento novo, resumo da semana, vencimento da contribuição, avisos de quem se
+ * inscreveu em evento. A lista de espera roda sempre; os avisos só com as chaves VAPID (antes, sem elas, a rota parava
+ * logo no início e deixava de rodar o que não era push). A conferência das matrículas foi para /api/cron/financeiro.
  */
 export const maxDuration = 120;
 
-function autorizado(req: Request) {
-  const segredo = process.env.CRON_SECRET;
-  if (!segredo) return false;
-  const recebido = Buffer.from(req.headers.get("authorization") ?? "");
-  const esperado = Buffer.from(`Bearer ${segredo}`);
-  return recebido.length === esperado.length && crypto.timingSafeEqual(recebido, esperado);
-}
-
-async function rodar<T>(nome: string, tarefa: () => Promise<T>) {
-  try {
-    return await tarefa();
-  } catch (e) {
-    console.error(`Avisos agendados (${nome}) falharam:`, e);
-    return { erro: e instanceof Error ? e.message : String(e) };
-  }
-}
-
 export async function GET(req: Request) {
-  if (!autorizado(req)) return Response.json({ erro: "Não autorizado." }, { status: 401 });
-  if (!pushConfigurado()) return Response.json({ ok: true, aviso: "Chaves VAPID não configuradas; nada enviado." });
-
-  const resultado = {
-    encontros: await rodar("encontros", avisosDeEncontros),
-    atendimentos: await rodar("atendimentos", avisosDeAtendimentos),
-    planosDeAula: await rodar("planos de aula", avisosDePlanosDeAula),
-    pedidos: await rodar("pedidos", avisosDePedidosNovos),
-    eventos: await rodar("eventos", () => avisosDeEventosNovos()),
-    semana: await rodar("semana", () => resumoDaSemana()),
-    matriculas: await rodar("matrículas", () => conferirMatriculasPendentes()),
-    vencimento: await rodar("vencimento", avisosDeVencimento),
-    inscritos: await rodar("inscritos", avisosDeEventosInscritos),
-    listaDeEspera: await rodar("lista de espera", () => processarListaDeEspera()),
-  };
-  console.log(JSON.stringify({ notificacoes: resultado }));
-  return Response.json({ ok: true, ...resultado });
+  if (!autorizadoCron(req)) return Response.json({ erro: "Não autorizado." }, { status: 401 });
+  const avisos: Record<string, () => Promise<unknown>> = pushConfigurado()
+    ? {
+        encontros: avisosDeEncontros,
+        atendimentos: avisosDeAtendimentos,
+        planosDeAula: avisosDePlanosDeAula,
+        pedidos: avisosDePedidosNovos,
+        eventos: () => avisosDeEventosNovos(),
+        semana: () => resumoDaSemana(),
+        vencimento: avisosDeVencimento,
+        inscritos: avisosDeEventosInscritos,
+      }
+    : { push: async () => ({ aviso: "Chaves VAPID não configuradas; avisos no celular não enviados." }) };
+  const r = await executarRotina("notificacoes", { ...avisos, listaDeEspera: () => processarListaDeEspera() });
+  return Response.json(r);
 }

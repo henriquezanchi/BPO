@@ -41,7 +41,7 @@ export type SlideEvento = Quando & {
   inscricaoNoPortal: boolean;
 };
 
-export type IconeCartao = TipoCartao;
+export type IconeCartao = TipoCartao | "portal";
 
 export type SlideCartao = {
   tipo: "cartao";
@@ -222,11 +222,30 @@ async function conteudosDaTela(tela: TelaParaSlides, eventos: EventoDb[]): Promi
     const semana = slideProgramacao(eventos);
     if (semana) extras.push(semana);
   }
+  // QR de primeiro acesso ao Portal: só em TV com público interno (quem é da escola).
+  if (quer.has("portal") && tela.publicos.some((p) => p !== "aberto_publico")) extras.push(await slidePortal());
   // Nunca em TV aberta ao público (também barrado ao salvar a tela).
   if (quer.has("aniversariantes") && !tela.publicos.includes("aberto_publico")) {
     extras.push(...(await slidesAniversariantes(tela.school.id)));
   }
   return extras;
+}
+
+/** Convite ao Portal do Membro com QR para o login (26/10/2026: só 13 de quase 8 mil ativos usavam o Portal). */
+async function slidePortal(): Promise<SlideCartao> {
+  const destino = `${process.env.PORTAL_URL ?? "https://portal-na-one.vercel.app"}/login`;
+  return {
+    tipo: "cartao",
+    id: "portal",
+    icone: "portal",
+    rotulo: "Portal do Membro",
+    titulo: "Sua escola no celular",
+    texto: "Agenda, inscrições nos eventos, contribuição e avisos da filial. Entre com a sua conta Nova Acrópole.",
+    quando: null,
+    qrSvg: await qrSvg(destino),
+    linkVisivel: linkVisivel(destino),
+    chamada: "Aponte a câmera do celular",
+  };
 }
 
 /** Turmas planejadas ou em curso com inscrição aberta (Aberturas de turma). */

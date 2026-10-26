@@ -1,6 +1,6 @@
 "use server";
 
-import { conferirPagamento, criarMatricula } from "@/lib/matricula-online";
+import { conferirPagamentoDaTela, criarMatricula } from "@/lib/matricula-online";
 import { db } from "@/lib/db";
 import { ZodError } from "zod";
 
@@ -19,5 +19,5 @@ export async function enviarMatricula(token: string, dados: unknown) {
 export async function situacaoMatricula(token: string, id: string) {
   const m = await db.matriculaOnline.findFirst({ where: { id, abertura: { matriculaToken: token } }, select: { id: true } });
   if (!m) return { status: "nao_encontrada" };
-  return { status: (await conferirPagamento(m.id).catch(() => null)) ?? "aguardando_pagamento" };
+  return { status: (await conferirPagamentoDaTela(m.id).catch(() => null)) ?? "aguardando_pagamento" };
 }

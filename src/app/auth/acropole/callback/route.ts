@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { COOKIE_OIDC, trocarCodigo } from "@/lib/login-acropole";
+import { importarPorEmail } from "@/lib/mercurio-db/primeiro-acesso";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import crypto from "node:crypto";
@@ -76,13 +77,26 @@ export async function GET(req: Request) {
   });
   if (link.error) {
     // 2) Sem conta no Portal: cadastro ativo com esse e-mail e ainda sem login ganha um login agora.
-    const membros = await db.member.findMany({
-      where: {
-        email: { equals: pessoa.email, mode: "insensitive" },
-        mercurioAtivo: true,
-        authUserId: null,
-      },
-    });
+    const buscar = () =>
+      db.member.findMany({
+        where: {
+          email: { equals: pessoa.email, mode: "insensitive" },
+          mercurioAtivo: true,
+          authUserId: null,
+        },
+      });
+    let membros = await buscar();
+    // 3) Ninguém no Portal com esse e-mail: procura no Mercúrio e importa na hora (26/10/2026), se a unidade da
+    //    pessoa já tem escola no Portal. Antes, quem não tinha sido importado não conseguia entrar.
+    if (!membros.length) {
+      const importado = await importarPorEmail(pessoa.email).catch((e) => {
+        console.error("Login Nova Acrópole: importação no primeiro acesso falhou:", e);
+        return { situacao: "erro" as const };
+      });
+      if (importado.situacao === "fora_do_portal")
+        return erro(url.origin, "O Portal do Membro ainda não chegou à sua escola. Assim que chegar, você poderá entrar com esta mesma conta.");
+      if (importado.situacao === "importado") membros = await buscar();
+    }
     if (membros.length !== 1) {
       return erro(
         url.origin,

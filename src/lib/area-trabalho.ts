@@ -113,6 +113,8 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     administra.length > 0 && { href: "/admin", rotulo: "Administração", descricao: "Recursos do Portal, administradores, senhas e liberar acessos", icone: "admin", secao: "Gestão da filial" },
     // Quem administra a filial libera acessos pela Administração (aba); responsáveis de grupo, por aqui.
     !(administra.length && (chefe || m.isSubChefe)) && (chefe || m.isSubChefe || lideraFV > 0) && { href: "/voluntario/acessos", rotulo: "Liberar acessos", descricao: "Quem vê a área de voluntários", icone: "acessos", secao: "Gestão da filial" },
+    // Saúde do Portal (26/10/2026): rotinas agendadas e serviços externos.
+    nacional && { href: "/admin/saude", rotulo: "Saúde do Portal", descricao: "Rotinas agendadas e serviços externos", icone: "admin", secao: "Nacional" },
   ];
   const lista = d.filter(Boolean) as Destino[];
   const nomes=new Map(mandatos.map(m=>[chaveSecretaria(m.secretaria),m.secretaria]));

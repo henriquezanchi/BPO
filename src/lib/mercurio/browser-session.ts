@@ -117,6 +117,17 @@ export interface SessaoMercurio {
  * agendado em andamento, pra nunca logar 2x ao mesmo tempo (risco real de
  * corromper dado entre filiais).
  */
+/**
+ * Na Vercel, o Chromium próprio para servidor (@sparticuz/chromium), como a Tesouraria (tesouraria/lib/mercurioAuth.js);
+ * no computador, o do Playwright. Permite rodar a fila do Mercúrio na rotina /api/cron/fila-mercurio (26/10/2026).
+ */
+async function lancarNavegador(): Promise<Browser> {
+  if (!process.env.VERCEL) return chromium.launch({ headless: true });
+  const { default: chromiumServerless } = await import("@sparticuz/chromium");
+  chromiumServerless.setGraphicsMode = false;
+  return chromium.launch({ executablePath: await chromiumServerless.executablePath(), args: chromiumServerless.args, headless: true });
+}
+
 export async function abrirSessaoMercurio(): Promise<SessaoMercurio> {
   const rodadaAtiva = await verificarRodadaJaEmAndamento();
   if (rodadaAtiva) {
@@ -128,7 +139,7 @@ export async function abrirSessaoMercurio(): Promise<SessaoMercurio> {
   const httpAuth = await lerCredencialMercurio("mercurio_http");
   const { usuario: matricula, senha } = await lerCredencialMercurio("mercurio");
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await lancarNavegador();
   const context = await browser.newContext({ httpCredentials: { username: httpAuth.usuario, password: httpAuth.senha } });
   const page = await context.newPage();
   await loginMercurio(page, matricula, senha);

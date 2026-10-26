@@ -3,6 +3,7 @@ import {confirmEventPayment} from "@/lib/event-payments";
 import {asaasGetPaymentStatus} from "@/lib/asaas/client";
 import { contaDeLeituraId } from "@/lib/asaas/conta-escola";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
+import { confirmarRecargaFortuna } from "@/lib/fortuna/confirmar-recarga";
 import { db } from "@/lib/db";
 
 // Espelha diretamente o enum de status da autorização no Asaas (ver
@@ -49,6 +50,9 @@ export async function POST(req: Request) {
     // Matrícula pelo site: confere na subconta e avisa a Escolástica.
     const matricula=await db.matriculaOnline.findUnique({where:{asaasPaymentId:body.payment.id},select:{id:true}});
     if(matricula)await (await import("@/lib/matricula-online")).conferirPagamento(matricula.id);
+    // Recarga do Fortuna (26/10/2026): antes só a tela do aluno confirmava.
+    const recarga=await db.fortunaTopUpCharge.findUnique({where:{asaasPaymentId:body.payment.id},select:{id:true}});
+    if(recarga)await confirmarRecargaFortuna(recarga.id);
     const registration=await db.eventRegistration.findUnique({where:{asaasPaymentId:body.payment.id},include:{event:{select:{schoolId:true}}}});
     if(registration){
       const payment=await asaasGetPaymentStatus(body.payment.id,await contaDeLeituraId(registration.event.schoolId));

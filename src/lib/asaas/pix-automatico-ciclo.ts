@@ -1,0 +1,136 @@
+import { requireContributionOrder } from "@/lib/contribution-payment-policy";
+import { asaasCreatePixAutomaticCharge, asaasGetPaymentStatus } from "@/lib/asaas/client";
+import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
+import { contaDaEscola, contaDeLeitura, escolaCobraOnline } from "@/lib/asaas/conta-escola";
+import { splitDoBpo } from "@/lib/asaas/split";
+import { db } from "@/lib/db";
+import { OVERDUE_STATUSES } from "@/lib/member-data";
+
+/**
+ * Pix Automático (Asaas) e conferência das contribuições pendentes. Saiu de scripts/process-pix-automatico.ts
+ * (rodava no Railway, fora do ar) para a rotina /api/cron/financeiro da Vercel em 26/10/2026. Dois trabalhos:
+ * 1. Confirma cobranças de contribuição pendentes cujo pagamento não chegou pelo webhook (automáticas e, dos
+ *    últimos 3 dias, as avulsas, em que o aluno pode ter fechado a tela).
+ * 2. Cria a cobrança do próximo ciclo para cada membro com autorização ATIVA, dentro da janela do Asaas (2 a 10 dias
+ *    úteis antes do vencimento), idempotente pela cobrança já existente no mês.
+ */
+const DIA_VENCIMENTO = 10;
+const JANELA_MIN_DIAS_UTEIS = 2;
+const JANELA_MAX_DIAS_UTEIS = 10;
+
+function diasUteisAte(hoje: Date, alvo: Date): number {
+  const cursor = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate()));
+  const fim = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth(), alvo.getUTCDate()));
+  let dias = 0;
+  while (cursor < fim) {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    const diaSemana = cursor.getUTCDay();
+    if (diaSemana !== 0 && diaSemana !== 6) dias++;
+  }
+  return dias;
+}
+
+/** Próximo dia 10 a partir de hoje (hoje incluso, se ainda não passou do dia 10). */
+function proximoVencimento(hoje: Date): { year: number; month: number; data: Date } {
+  const y = hoje.getUTCFullYear();
+  const m = hoje.getUTCMonth() + 1;
+  if (hoje.getUTCDate() <= DIA_VENCIMENTO) {
+    return { year: y, month: m, data: new Date(Date.UTC(y, m - 1, DIA_VENCIMENTO)) };
+  }
+  const proximoMes = m === 12 ? 1 : m + 1;
+  const proximoAno = m === 12 ? y + 1 : y;
+  return { year: proximoAno, month: proximoMes, data: new Date(Date.UTC(proximoAno, proximoMes - 1, DIA_VENCIMENTO)) };
+}
+
+export async function confirmarContribuicoesPendentes() {
+  const pendentes = await db.paymentCharge.findMany({
+    where: { status: "pendente", OR: [{ autoDebito: true }, { createdAt: { gte: new Date(Date.now() - 3 * 864e5) } }] },
+    take: 100,
+  });
+  let pagas = 0;
+  for (const charge of pendentes) {
+    try {
+      const membro = await db.member.findUnique({ where: { id: charge.memberId }, select: { school: { select: { asaasSubaccountApiKey: true } } } });
+      const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, contaDeLeitura(membro?.school));
+      if (pagamento.status === "RECEIVED" || pagamento.status === "CONFIRMED") {
+        await confirmarPagamento(charge.id);
+        pagas++;
+      }
+    } catch (e) {
+      console.error(`Falha ao checar a cobrança ${charge.id}: ${(e as Error).message}`);
+    }
+  }
+  return { conferidas: pendentes.length, pagas };
+}
+
+export async function criarCicloPixAutomatico() {
+  const hoje = new Date();
+  const { year, month, data: vencimento } = proximoVencimento(hoje);
+  const diasUteis = diasUteisAte(hoje, vencimento);
+
+  if (diasUteis < JANELA_MIN_DIAS_UTEIS || diasUteis > JANELA_MAX_DIAS_UTEIS) {
+    return { criadas: 0, foraDaJanela: true };
+  }
+
+  const membros = await db.member.findMany({
+    where: { pixAutomaticStatus: "ACTIVE", pixAutomaticAuthorizationId: { not: null }, asaasCustomerId: { not: null } },
+    include: { school: { omit: { asaasSubaccountApiKey: false } } },
+  });
+  console.log(`Membros com Pix Automático ativo: ${membros.length} — vencimento alvo ${vencimento.toISOString().slice(0, 10)} (${diasUteis} dias úteis)`);
+
+  let criadas = 0;
+  for (const membro of membros) {
+    if (!membro.mercurioAtivo) continue;
+    try { await requireContributionOrder(membro.id,year,month); } catch { console.log(`Membro ${membro.id}: ciclo não elegível; há contribuição anterior aberta ou mês já liquidado.`); continue; }
+    const existente = await db.paymentCharge.findFirst({ where: { memberId: membro.id, referenceYear: year, referenceMonth: month } });
+    if (existente) continue; // já paga/pendente pro mês (manual ou automática) — não duplica
+
+    const itens = await db.contributionCompositionItem.findMany({ where: { memberId: membro.id } });
+    const valor = itens.reduce((soma, i) => soma + Number(i.amount), 0);
+    if (valor <= 0) continue;
+
+    // Crédito Fortuna recorrente (ver nudge-actions.ts) — mesmo "gross-up" do
+    // fluxo avulso em createContributionCharge: soma no valor cobrado, mas
+    // amount/fortunaTopUpAmount ficam separados no registro pra
+    // confirmarPagamento creditar o Fortuna automaticamente na confirmação.
+    const fortunaTopUpAmount = membro.fortunaTopUpRecorrente ? Number(membro.fortunaTopUpRecorrente) : 0;
+    const valorBase = valor + fortunaTopUpAmount;
+
+    try {
+      const nomeMes = vencimento.toLocaleDateString("pt-BR", { month: "long", timeZone: "UTC" });
+      // Sempre pela subconta da filial (regra do usuário 2026-10-25); sem ela, não cobra.
+      if (!escolaCobraOnline(membro.school)) { console.log(`Membro ${membro.id}: filial sem subconta Asaas; ciclo não criado.`); continue; }
+      const conta = contaDaEscola(membro.school);
+      const split = await splitDoBpo(valorBase, conta);
+      const pagamento = await asaasCreatePixAutomaticCharge(
+        membro.asaasCustomerId!,
+        membro.pixAutomaticAuthorizationId!,
+        valorBase,
+        `Contribuição ${nomeMes}/${year} — ${membro.name}`,
+        vencimento.toISOString().slice(0, 10),
+        split,
+        conta,
+      );
+      await db.paymentCharge.create({
+        data: {
+          memberId: membro.id,
+          referenceYear: year,
+          referenceMonth: month,
+          amount: valor,
+          billingType: "PIX",
+          autoDebito: true,
+          fortunaTopUpAmount: fortunaTopUpAmount > 0 ? fortunaTopUpAmount : null,
+          asaasCustomerId: membro.asaasCustomerId!,
+          asaasPaymentId: pagamento.id,
+          memberWasOverdue: OVERDUE_STATUSES.has(membro.status),
+        },
+      });
+      criadas++;
+    } catch (e) {
+      console.error(`${membro.name}: falha ao criar cobrança automática — ${(e as Error).message}`);
+    }
+  }
+
+  return { criadas, foraDaJanela: false };
+}
+

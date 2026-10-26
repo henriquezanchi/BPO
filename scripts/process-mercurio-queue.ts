@@ -5,13 +5,9 @@
  * pra não segurar a resposta HTTP pelos ~5-10s de uma sessão de navegador
  * (bug real relatado pelo usuário: cadastro lento no Portal).
  *
- * Pensado pra rodar periodicamente via Windows Task Scheduler (mesmo
- * padrão externo já usado pelo "scraper agendado" — ver comentário em
- * scraper-credentials.ts sobre a trava scraper_progresso, respeitada
- * automaticamente aqui via abrirSessaoMercurio). Sugestão: a cada 5-10min.
- * Enquanto isso não está agendado, o Portal já avisa o membro que a
- * alteração pode levar até 24h pra ser confirmada no Mercúrio — rodar este
- * script manualmente também resolve a fila na hora.
+ * Em produção roda sozinho na rotina /api/cron/fila-mercurio da Vercel (a cada 10 min, desde 26/10/2026); este
+ * script é para rodar a fila à mão no computador. A trava scraper_progresso (scraper-credentials.ts) é respeitada
+ * via abrirSessaoMercurio.
  *
  * Uso: npx tsx scripts/process-mercurio-queue.ts
  */

@@ -22,13 +22,13 @@ export function FormMatricula({ token, vagas, valorCentavos }: { token: string; 
   const [copiado, setCopiado] = useState(false);
   const [endereco, setEndereco] = useState({ logradouro: "", bairro: "", cidade: "", uf: "" });
 
-  // Confere o pagamento a cada 5 s enquanto a tela do Pix estiver aberta.
+  // Confere o pagamento a cada 8 s enquanto a tela do Pix estiver aberta (o servidor vai ao Asaas no máximo a cada 15 s).
   useEffect(() => {
     if (!feito?.pagamento || pago) return;
     const t = setInterval(async () => {
       const r = await situacaoMatricula(token, feito.id).catch(() => null);
       if (r?.status === "paga" || r?.status === "lancada") setPago(true);
-    }, 5000);
+    }, 8000);
     return () => clearInterval(t);
   }, [feito, pago, token]);
 
@@ -111,6 +111,8 @@ export function FormMatricula({ token, vagas, valorCentavos }: { token: string; 
 
   return (
     <form onSubmit={enviar} className="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 dark:border-gray-800 dark:bg-gray-900">
+      {/* Campo-isca contra robôs: fora da tela e da navegação; pessoas não veem nem preenchem. */}
+      <input type="text" name="site" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <p className="rounded-xl bg-na-green-light px-3 py-2 text-[13px] text-na-green-dark dark:bg-emerald-950/30 dark:text-emerald-300">
         {vagas} vaga{vagas === 1 ? "" : "s"} · {valorCentavos ? `1ª contribuição de ${reais(valorCentavos)}, paga ao final` : "a escola combina a 1ª contribuição com você"}
       </p>

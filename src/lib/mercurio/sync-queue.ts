@@ -5,7 +5,7 @@
 // pacote "playwright" inteiro pro bundle da action e quebraria em runtime
 // com "Cannot find module .../playwright-core/browsers.json" (bug real
 // encontrado ao vivo em 2026-09-21 — ver sync-worker.ts, que tem essa mesma
-// trava documentada e SÓ pode ser importado pelo worker do Railway).
+// trava documentada e SÓ pode ser importado pelo worker: script ou rotina /api/cron/fila-mercurio).
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import type { MercurioContactChanges, MercurioPersonalChanges } from "./adapter";

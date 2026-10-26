@@ -2,7 +2,7 @@
 
 import type { IconeCartao, SlideCartao, SlideEvento, SlideFrase, SlideLista, SlideTela } from "@/lib/telas-eventos";
 import type { FraseDaTela } from "@/lib/telas-frases";
-import { CalendarDays, Cake, Camera, CircleFadingPlus, CirclePlay, GraduationCap, MapPin, Megaphone, Ticket, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { CalendarDays, Cake, Camera, CircleFadingPlus, CirclePlay, GraduationCap, MapPin, Megaphone, Smartphone, Ticket, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { lembrarTela } from "./parear-tv";
@@ -18,6 +18,7 @@ const ICONES: Record<IconeCartao | SlideLista["icone"], LucideIcon> = {
   aviso: Megaphone,
   instagram: Camera,
   play: CirclePlay,
+  portal: Smartphone,
   programacao: CalendarDays,
   aniversariantes: Cake,
 };

@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
  * Só marca o pedido — quem processa de verdade (abre sessão real do
  * Mercúrio, lê as Rubricas de Pagamento, atualiza SchoolPaymentRubrica) é
  * o worker (scripts/process-mercurio-queue.ts, já roda a cada 10min no
- * Railway). Precisou virar assíncrono pra rodar no Vercel (serverless não
+ * Railway, hoje rotina /api/cron/fila-mercurio da Vercel). Precisou virar assíncrono pra rodar no Vercel (serverless não
  * tem Chromium/Playwright) — antes disso essa action abria a sessão do
  * Mercúrio direto, na hora.
  */

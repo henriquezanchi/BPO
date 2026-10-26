@@ -109,7 +109,12 @@ export async function garantirEscola(uniId: string, opcoes: { portalAberto?: boo
 /** Colunas de `cadastro` que a sincronização lê (conferidas antes de gravar). */
 const COLUNAS_CADASTRO = ["cad_2o_nivel", "cad_cel_ddd", "cad_cel_fone", "cad_email", "cad_escolaridade", "cad_estado_civil", "cad_ingresso", "cad_machado", "cad_matr", "cad_nascimento", "cad_naturalidade", "cad_nivel", "cad_nome", "cad_orgao_expedidor", "cad_profissao", "cad_raio_fv", "cad_res_bairro", "cad_res_cep", "cad_res_cidade", "cad_res_ddd", "cad_res_fone", "cad_res_logradouro", "cad_res_uf", "cad_rg", "cad_rg_emissao", "cad_situacao", "cad_situacao_fv", "cad_tur_unidade", "cad_turma", "cad_unidade"];
 
-export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: string[]; ano?: number } = {}) {
+/**
+ * Sincroniza membros de uma unidade. Sem `matriculas`, a filial inteira (membros já conhecidos) e depois o
+ * fechamento (quem saiu, matérias das turmas, grupos, catálogo). A rotina /api/cron/mercurio divide a filial em
+ * lotes (`matriculas`) e roda o fechamento à parte (`apenasFechamento`), para caber no tempo da Vercel (26/10/2026).
+ */
+export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: string[]; ano?: number; apenasFechamento?: boolean } = {}) {
   const school = await garantirEscola(uniId);
   const ano = opcoes.ano ?? new Date().getFullYear();
   // WhatsApp do financeiro (2026-10-26): recibo que aparece pela primeira vez nesta rodada, emitido há até 3 dias.
@@ -135,19 +140,21 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const conhecidos = new Set(
     (await db.member.findMany({ where: { mercurioId: { in: cadastros.map((c) => c.cad_matr!) } }, select: { mercurioId: true } })).map((m) => m.mercurioId),
   );
-  const alvo = opcoes.matriculas?.length ? cadastros : cadastros.filter((c) => conhecidos.has(c.cad_matr));
-  if (!alvo.length) return { school, importados: 0 };
+  const alvo = opcoes.apenasFechamento ? [] : opcoes.matriculas?.length ? cadastros : cadastros.filter((c) => conhecidos.has(c.cad_matr));
+  if (!alvo.length && !opcoes.apenasFechamento) return { school, importados: 0 };
 
   const lista = alvo.map((c) => sqlNumero(c.cad_matr!)).join(",");
+  // Consultas por matrícula: no fechamento (sem alvo) não há o que buscar, e "IN ()" seria SQL inválido.
+  const daLista = (sql: string) => (alvo.length ? consultarTudo(sql) : Promise.resolve([] as Linha[]));
   const [unidade] = await consultarMercurio(`SELECT uni_diretor, uni_subchefe FROM unidades WHERE uni_id=${sqlTexto(uniId)}`);
-  const fichasCopia = await consultarTudo(`SELECT fic_matr, fic_mes, fic_status, fic_recibo, fic_datapg FROM fichas WHERE fic_ano=${sqlNumero(ano)} AND fic_matr IN (${lista}) ORDER BY fic_matr, fic_mes`);
-  const composicao = await consultarTudo(
+  const fichasCopia = await daLista(`SELECT fic_matr, fic_mes, fic_status, fic_recibo, fic_datapg FROM fichas WHERE fic_ano=${sqlNumero(ano)} AND fic_matr IN (${lista}) ORDER BY fic_matr, fic_mes`);
+  const composicao = await daLista(
     `SELECT c.cal_matr, c.cal_grupo, c.cal_valor, p.pro_descricao FROM compaluno c LEFT JOIN produtos p ON p.pro_cod=c.cal_grupo WHERE c.cal_unidade=${sqlTexto(uniId)} AND c.cal_matr IN (${lista}) ORDER BY c.cal_matr`,
   );
   // `fichas` ainda é cópia (última carga em 17/10/2026), mas reciboc/reciboi viraram views online
   // em 24/10/2026: mês com recibo válido de item da composição conta como pago, mesmo que a cópia
   // ainda diga "em branco" (sem isso, a sincronização de 25/10 desfez pagamentos de outubro).
-  const recibosOnline = await consultarTudo(
+  const recibosOnline = await daLista(
     `SELECT i.rei_matr, i.rei_mes, i.rei_produto, r.rec_id, r.rec_data, p.pro_descricao FROM reciboi i JOIN reciboc r ON r.rec_id=i.rei_id LEFT JOIN produtos p ON p.pro_cod=i.rei_produto WHERE i.rei_ano=${sqlNumero(ano)} AND i.rei_matr IN (${lista}) AND r.rec_status<>'CAN' AND (r.rec_data_cancel IS NULL OR r.rec_data_cancel < '1900-01-01') ORDER BY r.rec_data, r.rec_id`,
   );
   const composicaoDe = new Map<string, Set<string>>();
@@ -164,10 +171,10 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const naCopia = new Set(fichas.map((f) => `${f.fic_matr}-${Number(f.fic_mes)}`));
   for (const [chave, r] of pagoOnline)
     if (!naCopia.has(chave)) fichas.push({ fic_matr: r.rei_matr, fic_mes: String(Number(r.rei_mes)), fic_status: "PAG", fic_recibo: r.rec_id, fic_datapg: r.rec_data });
-  const funcoes = await consultarTudo(`SELECT dfn_matr, dfn_funcao, dfn_descricao FROM dirigente_funcoes WHERE dfn_atual='S' AND dfn_matr IN (${lista}) ORDER BY dfn_matr`);
+  const funcoes = await daLista(`SELECT dfn_matr, dfn_funcao, dfn_descricao FROM dirigente_funcoes WHERE dfn_atual='S' AND dfn_matr IN (${lista}) ORDER BY dfn_matr`);
   // Filiais que cada pessoa chefia (pode ser mais de uma, e de outra unidade).
   const chefiadasPor = new Map<string, string[]>();
-  for (const u of await consultarMercurio(`SELECT uni_id, uni_diretor FROM unidades WHERE uni_ativa='S' AND uni_diretor IN (${lista})`)) {
+  for (const u of alvo.length ? await consultarMercurio(`SELECT uni_id, uni_diretor FROM unidades WHERE uni_ativa='S' AND uni_diretor IN (${lista})`) : []) {
     chefiadasPor.set(u.uni_diretor!, [...(chefiadasPor.get(u.uni_diretor!) ?? []), u.uni_id!]);
   }
   // Turmas em que a pessoa dá aula (qualquer matéria) — só turmas que
@@ -182,10 +189,10 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const raiosAtivos = new Set(
     (await consultarMercurio(`SELECT DISTINCT cad_raio_fv FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${sqlTexto(uniId)} AND cad_situacao_fv IN ('BRG','PRO')`)).map((r) => r.cad_raio_fv ?? ""),
   );
-  const cursos = await consultarTudo(
+  const cursos = await daLista(
     `SELECT p.dcr_matr, p.dcr_data, s.sdu_descricao, s.sdu_instrutor FROM cursos_integra_participa p LEFT JOIN sig_cursos_integra s ON s.sdu_id=p.dcr_curso_id WHERE p.dcr_matr IN (${lista}) ORDER BY p.dcr_matr, p.dcr_data`,
   );
-  const aulas = await consultarTudo(
+  const aulas = await daLista(
     `SELECT DISTINCT tm.tma_instrutor, tm.tma_turma FROM turmas_materias tm WHERE tm.tma_unidade=${sqlTexto(uniId)} AND tm.tma_instrutor IN (${lista}) AND EXISTS (SELECT 1 FROM cadastro c WHERE c.cad_situacao='ATI' AND c.cad_tur_unidade=tm.tma_unidade AND c.cad_turma=tm.tma_turma) ORDER BY tm.tma_instrutor`,
   );
 
@@ -463,7 +470,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   }
 
   if (!opcoes.matriculas?.length) {
-    // Rodada da filial inteira: quem tinha Member local e sumiu do cadastro saiu da escola.
+    // Rodada da filial inteira (ou só o fechamento): quem tinha Member local e sumiu do cadastro saiu da escola.
     const ativos = new Set(cadastros.map((c) => c.cad_matr));
     const locais = await db.member.findMany({ where: { schoolId: school.id, mercurioAtivo: true, mercurioId: { not: null } }, select: { id: true, mercurioId: true } });
     const ausentes = locais.filter((m) => !ativos.has(m.mercurioId!));

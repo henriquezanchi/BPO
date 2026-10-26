@@ -77,12 +77,33 @@ export type DadosMatricula = z.input<typeof dadosMatricula>;
 
 /** Grava a matrícula e, se a filial cobra pelo site, cria a cobrança na subconta. */
 export async function criarMatricula(token: string, entrada: unknown) {
+  // Campo-isca invisível (26/10/2026): só robô preenche. Resposta genérica, sem dizer o motivo.
+  if (entrada && typeof entrada === "object" && String((entrada as Record<string, unknown>).site ?? "").trim()) throw new Error("Não foi possível concluir agora. Tente de novo em instantes.");
   const a = await aberturaPorToken(token);
   if (!a || !a.disponivel) throw new Error("As matrículas desta turma não estão abertas.");
   if (a.lotada) throw new Error("As vagas desta turma estão preenchidas.");
   const d = dadosMatricula.parse(entrada);
   const jaPaga = await db.matriculaOnline.findFirst({ where: { aberturaId: a.id, cpfInicio: d.cpf.slice(0, 6), email: d.email, status: { in: ["paga", "lancada"] } }, select: { id: true } });
   if (jaPaga) throw new Error("Já existe uma matrícula paga com estes dados nesta turma.");
+  // Mesma pessoa reenviando (voltou, fechou a tela): reaproveita a cobrança em aberto em vez de criar outra.
+  const pendente = await db.matriculaOnline.findFirst({
+    where: { aberturaId: a.id, cpfInicio: d.cpf.slice(0, 6), email: d.email, status: "aguardando_pagamento", asaasPaymentId: { not: null }, createdAt: { gte: new Date(Date.now() - 3 * 864e5) } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, asaasPaymentId: true },
+  });
+  if (pendente && a.cobraOnline) {
+    const apiKey = a.school.asaasSubaccountApiKey!;
+    const [cobranca, pix] = await Promise.all([situacaoDaCobranca(apiKey, pendente.asaasPaymentId!), pixDaCobranca(apiKey, pendente.asaasPaymentId!).catch(() => null)]);
+    if (!PAGO.has(cobranca.status) && cobranca.status !== "DELETED")
+      return { id: pendente.id, pagamento: { invoiceUrl: cobranca.invoiceUrl, pixPayload: pix?.payload ?? null, pixImagem: pix?.encodedImage ?? null } };
+  }
+  // Limites contra envio em massa: cada envio cria cliente e cobrança na subconta da filial.
+  const umaHora = new Date(Date.now() - 60 * 60 * 1000);
+  const [naTurma, doEmail] = await Promise.all([
+    db.matriculaOnline.count({ where: { aberturaId: a.id, createdAt: { gte: umaHora } } }),
+    db.matriculaOnline.count({ where: { email: d.email, createdAt: { gte: umaHora } } }),
+  ]);
+  if (naTurma >= 30 || doEmail >= 3) throw new Error("Recebemos muitos envios em pouco tempo. Tente de novo daqui a alguns minutos ou fale com a secretaria.");
   const valorCentavos = a.valorContribuicaoCentavos ?? 0;
   const m = await db.matriculaOnline.create({
     data: {
@@ -137,6 +158,20 @@ async function pendenciaEscolastica(matriculaId: string, motivo: string) {
 }
 
 /** Confere uma cobrança no Asaas e, se paga, marca a matrícula e avisa a Escolástica. Devolve o status atual. */
+const ULTIMA_CONSULTA = new Map<string, number>();
+const INTERVALO_CONSULTA_MS = 15_000;
+
+/** Consulta pela tela pública: no máximo uma ida ao Asaas a cada 15 s por matrícula (a tela pergunta a cada 8 s). */
+export async function conferirPagamentoDaTela(matriculaId: string) {
+  const ultima = ULTIMA_CONSULTA.get(matriculaId) ?? 0;
+  if (Date.now() - ultima < INTERVALO_CONSULTA_MS) {
+    return (await db.matriculaOnline.findUnique({ where: { id: matriculaId }, select: { status: true } }))?.status ?? null;
+  }
+  ULTIMA_CONSULTA.set(matriculaId, Date.now());
+  if (ULTIMA_CONSULTA.size > 5000) ULTIMA_CONSULTA.clear();
+  return conferirPagamento(matriculaId);
+}
+
 export async function conferirPagamento(matriculaId: string) {
   const m = await db.matriculaOnline.findUnique({ where: { id: matriculaId }, select: { status: true, asaasPaymentId: true, school: { select: { asaasSubaccountApiKey: true } } } });
   if (!m) return null;

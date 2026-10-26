@@ -1,13 +1,12 @@
 "use server";
 
 import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
-import { asaasCreatePixCharge, asaasFindOrCreateCustomer, asaasGetPaymentStatus, asaasGetPixQrCode } from "@/lib/asaas/client";
-import { contaDaEscolaId, contaDeLeituraId } from "@/lib/asaas/conta-escola";
+import { asaasCreatePixCharge, asaasFindOrCreateCustomer, asaasGetPixQrCode } from "@/lib/asaas/client";
+import { contaDaEscolaId } from "@/lib/asaas/conta-escola";
 import { splitDoBpo } from "@/lib/asaas/split";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { notificarErroSuporte } from "@/lib/error-notify";
-import { fortunaCreditarSaldo } from "@/lib/fortuna/client";
+import { confirmarRecargaFortuna } from "@/lib/fortuna/confirmar-recarga";
 
 const VALOR_MINIMO = 5;
 const VALOR_MAXIMO = 1000;
@@ -61,39 +60,10 @@ export async function createFortunaTopUpCharge(memberId: string, valor: number, 
   return { chargeId: charge.id, pixPayload: qrcode.payload, pixQrCodeBase64: qrcode.encodedImage, amount: valor };
 }
 
-/**
- * Checa o status real no Asaas; ao detectar pagamento, credita automaticamente
- * no Fortuna (PUT /balance/with-receipt). Se o crédito automático falhar
- * (membro desvinculado, API fora do ar etc.), a cobrança fica marcada como
- * paga mas SEM `launchedAt` — cai na fila de exceção da FortunaTab pra
- * lançamento manual, com o erro salvo em `autoCreditError` pra diagnóstico.
- */
+/** Tela do aluno: confere a recarga (mesma função do webhook e da rotina, ver fortuna/confirmar-recarga.ts). */
 export async function checkFortunaTopUpStatus(memberId: string, chargeId: string) {
-  const member = await requireAuthenticatedMember(memberId);
-
-  const charge = await db.fortunaTopUpCharge.findUniqueOrThrow({ where: { id: chargeId } });
+  await requireAuthenticatedMember(memberId);
+  const charge = await db.fortunaTopUpCharge.findUniqueOrThrow({ where: { id: chargeId }, select: { memberId: true } });
   if (charge.memberId !== memberId) throw new Error("Cobrança não pertence a este membro.");
-  if (charge.status === "pago") return { status: "pago" as const };
-
-  const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, await contaDeLeituraId(member.schoolId));
-  if (pagamento.status !== "RECEIVED" && pagamento.status !== "CONFIRMED") {
-    return { status: "pendente" as const };
-  }
-
-  await db.fortunaTopUpCharge.update({ where: { id: chargeId }, data: { status: "pago", paidAt: new Date() } });
-
-  try {
-    if (!member.fortunaClientId) throw new Error("Membro sem fortunaClientId vinculado.");
-    await fortunaCreditarSaldo(member.fortunaClientId, charge.branchId, Number(charge.amount));
-    await db.fortunaTopUpCharge.update({
-      where: { id: chargeId },
-      data: { launchedAt: new Date(), launchedBy: "Automático (Asaas → Fortuna)" },
-    });
-  } catch (e) {
-    const message = (e as Error).message;
-    await db.fortunaTopUpCharge.update({ where: { id: chargeId }, data: { autoCreditError: message } });
-    await notificarErroSuporte({ message: `Falha ao creditar recarga Fortuna dedicada (charge ${chargeId}): ${message}`, path: "checkFortunaTopUpStatus" });
-  }
-
-  return { status: "pago" as const };
+  return { status: await confirmarRecargaFortuna(chargeId) };
 }

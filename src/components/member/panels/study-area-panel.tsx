@@ -1,20 +1,18 @@
 "use client";
 
-import { BookOpen, BookOpenText, Clapperboard, FileText, PlaySquare } from "lucide-react";
-import { useState } from "react";
+import { BookOpen, BookOpenText, Clapperboard, PlaySquare } from "lucide-react";
 
 /** Acrópole Play e Apostilas só aparecem se a filial liberou (ver recursos-filial.ts). */
 export function StudyAreaPanel({
   mostrarAcropolePlay = false,
-  mostrarApostilas = false,
   mostrarBiblioteca = false,
 }: {
   mostrarAcropolePlay?: boolean;
+  /** Apostilas: aceito e ignorado até haver conteúdo (o botão foi escondido em 26/10/2026). */
   mostrarApostilas?: boolean;
   /** Só membros (2º nível em diante); N1 e programa complementar não veem. */
   mostrarBiblioteca?: boolean;
 }) {
-  const [apostilasAvisoAtivo, setApostilasAvisoAtivo] = useState(false);
 
   return (
     <div className="flex flex-col items-center gap-5 py-2 text-center">
@@ -45,19 +43,7 @@ export function StudyAreaPanel({
             <BookOpenText size={16} /> Acessar Biblioteca
           </a>
         )}
-        {mostrarApostilas && (
-          <>
-        <button
-          onClick={() => setApostilasAvisoAtivo(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-        >
-          <FileText size={16} /> Acessar Apostilas
-        </button>
-        {apostilasAvisoAtivo && (
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">As apostilas ainda não estão disponíveis por aqui — em breve.</p>
-        )}
-          </>
-        )}
+        {/* Apostilas: botão escondido até haver conteúdo (26/10/2026; antes só dizia "em breve"). `mostrarApostilas` fica para quando houver. */}
         <a
           href="https://www.youtube.com/novaacropole"
           target="_blank"
