@@ -116,7 +116,8 @@ export async function itensDoCalendario(schoolId: string, de: Date, ate: Date): 
   const nomeGrupo = new Map(grupos.map((g) => [g.id, g]));
   for (const r of reunioes) {
     const g = nomeGrupo.get(r.classGroupId);
-    itens.push({ id: `reuniao-${r.id}`, camada: "reuniao_grupo", titulo: r.title, inicio: r.startsAt.toISOString(), fim: r.endsAt.toISOString(), diaInteiro: false, detalhe: g?.name ?? null, publicos: ["fv"], pessoas: g?._count.memberships ?? null });
+    // Nome do grupo no título (pedido do usuário 2026-10-25: "GAF Online", não "Reunião semanal"); o nome da reunião vai no detalhe.
+    itens.push({ id: `reuniao-${r.id}`, camada: "reuniao_grupo", titulo: g?.name ?? r.title, inicio: r.startsAt.toISOString(), fim: r.endsAt.toISOString(), diaInteiro: false, detalhe: g?.name ? r.title : null, publicos: ["fv"], pessoas: g?._count.memberships ?? null });
   }
   for (const e of eventosFilial) {
     itens.push({ id: `evento-${e.id}`, adminHref: `/voluntario/eventos?aba=eventos#evento-${e.id}`, camada: "evento_filial", titulo: e.title, inicio: e.startsAt.toISOString(), fim: e.endsAt?.toISOString() ?? null, diaInteiro: e.allDay, detalhe: e.location, publicos: publicosDoEvento(e.publicos, e.audience), pessoas: null });
@@ -158,7 +159,7 @@ export function conflitosDoHorario(itens: ItemCalendario[], inicio: Date, fim: D
     else if (item.camada === "evento_externo" && mesmoDia) conflitos.push({ item, gravidade: "alta", motivo: `${item.detalhe} no mesmo dia — o público e você podem estar nele` });
     else if (item.camada === "evento_filial" && (sobrepoe || (mesmoDia && atingePublico))) conflitos.push({ item, gravidade: sobrepoe ? "alta" : "media", motivo: sobrepoe ? "Outro evento da filial no mesmo horário" : "Outro evento da filial no mesmo dia, para o mesmo público" });
     else if (item.camada === "aula" && sobrepoe && atingePublico) conflitos.push({ item, gravidade: "alta", motivo: `${item.detalhe} em aula neste horário` });
-    else if (item.camada === "reuniao_grupo" && sobrepoe && atingePublico) conflitos.push({ item, gravidade: "media", motivo: `Reunião de ${item.detalhe ?? "grupo"} neste horário` });
+    else if (item.camada === "reuniao_grupo" && sobrepoe && atingePublico) conflitos.push({ item, gravidade: "media", motivo: `Reunião de ${item.titulo} neste horário` });
   }
   return conflitos;
 }

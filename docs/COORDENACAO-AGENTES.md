@@ -318,3 +318,4 @@ Regra do usuário: "temos que cobrar SEMPRE pela subconta de cada filial, para a
 - Orçamento da abertura (detalhado por item): nome do item acima do valor, em duas colunas (antes o campo esmagava o nome).
 
 - Disponibilidade dos professores (Aberturas → Equipe e horários): o campo "Impedimentos (JSON)" virou "Datas em que não pode" (`components/aberturas/campo-impedimentos.tsx`): lista de datas com "Dia inteiro" ou faixa de horário; envia o mesmo JSON `[{data, inicioMinuto, fimMinuto}]` (dia inteiro = 0–1440), sem mudança no servidor.
+- Calendário da filial: reunião de grupo mostra o nome do grupo como título (ex.: "GAF Online") e o nome da reunião no detalhe; conflito diz "Reunião de <grupo>".
