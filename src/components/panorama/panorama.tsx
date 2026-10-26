@@ -176,7 +176,7 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
           <div>
             <div className="flex h-20 items-end gap-1 border-b border-gray-200 dark:border-gray-700" role="img" aria-label="Entradas e saídas nos últimos 12 meses">
               {m.meses.map((x) => (
-                <div key={x.mes} className="flex h-full flex-1 items-end justify-center gap-[2px]" title={`${rotuloMes(x.mes)}: ${x.entradas} entradas, ${x.saidas} saídas`}>
+                <div key={x.mes} className="flex h-full flex-1 items-end justify-center gap-[2px]" title={`${rotuloMes(x.mes)}: ${x.entradas} entradas, ${x.saidas} saídas${x.recuperados ? `, ${x.recuperados} recuperados` : ""}`}>
                   <div className={`w-1/2 max-w-3 rounded-t ${COR_ENTRADA}`} style={{ height: `${(x.entradas / maxMov) * 100}%`, minHeight: x.entradas ? 2 : 0 }} />
                   <div className={`w-1/2 max-w-3 rounded-t ${COR_SAIDA}`} style={{ height: `${(x.saidas / maxMov) * 100}%`, minHeight: x.saidas ? 2 : 0 }} />
                 </div>
@@ -206,6 +206,17 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
             ))}
           </div>
           <ul className="flex flex-col gap-1 text-[12px] text-gray-700 dark:text-gray-300">
+            {/* Recuperados (pedido do usuário 2026-10-26): quem tinha saído e voltou (cad_recuperado / cad_reingresso no Mercúrio). */}
+            {m.pessoas.recuperados > 0 || m.meses.some((x) => x.recuperados > 0) ? (
+              <li className="flex justify-between gap-3" title="Pessoas que tinham saído da escola e voltaram">
+                <span>Recuperados ativos <Etiqueta fonte="mercurio" /></span>
+                <strong className="tabular-nums">
+                  {m.pessoas.recuperados}
+                  {m.pessoas.ativos ? ` (${Math.round((m.pessoas.recuperados / m.pessoas.ativos) * 100)}%)` : ""} · {m.meses.reduce((s, x) => s + x.recuperados, 0)} voltaram em 12 meses
+                  {mesAtual?.recuperados ? `, ${mesAtual.recuperados} no mês` : ""}
+                </strong>
+              </li>
+            ) : null}
             <li className="flex justify-between gap-3">
               <span>Turmas <Etiqueta fonte="mercurio" /></span>
               <strong className="tabular-nums">

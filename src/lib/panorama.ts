@@ -84,29 +84,30 @@ export function escolherAlcance(alcances: Alcance[], escolas: Escola[], params: 
 // ---------- soma dos resumos do Mercúrio ----------
 function somarResumos(lista: ResumoFilialDados[]) {
   const porNivel = new Map<string, { nivel: string; rotulo: string; total: number }>();
-  const meses = new Map<string, { mes: string; entradas: number; saidas: number; segundoNivel: number }>();
+  const meses = new Map<string, { mes: string; entradas: number; saidas: number; segundoNivel: number; recuperados: number }>();
   const motivos = new Map<string, number>();
   const receita = new Map<string, { mes: string; valor: number; recibos: number }>();
   const soma = {
     atualizacaoMercurio: null as string | null,
-    pessoas: { ativos: 0, membros: 0, fv: 0, provacionistas: 0, hd: 0, dirigentes: 0 },
+    pessoas: { ativos: 0, membros: 0, fv: 0, provacionistas: 0, hd: 0, dirigentes: 0, recuperados: 0 },
     contribuicao: { paga: 0, emBranco: 0, atrasada: 0, isenta: 0, pessoasComAtraso: 0, mesesEmAtraso: 0 },
     turmas: { total: 0, semInstrutor: 0, alunos: 0 },
     aniversariantes: 0,
   };
   for (const d of lista) {
     if (d.atualizacaoMercurio && (!soma.atualizacaoMercurio || d.atualizacaoMercurio < soma.atualizacaoMercurio)) soma.atualizacaoMercurio = d.atualizacaoMercurio;
-    for (const k of ["ativos", "membros", "fv", "provacionistas", "hd", "dirigentes"] as const) soma.pessoas[k] += d.pessoas[k] ?? 0;
+    for (const k of ["ativos", "membros", "fv", "provacionistas", "hd", "dirigentes", "recuperados"] as const) soma.pessoas[k] += d.pessoas[k] ?? 0;
     for (const p of d.pessoas.porNivel) {
       const x = porNivel.get(p.nivel) ?? { ...p, total: 0 };
       x.total += p.total;
       porNivel.set(p.nivel, x);
     }
     for (const mm of d.movimento.meses) {
-      const x = meses.get(mm.mes) ?? { mes: mm.mes, entradas: 0, saidas: 0, segundoNivel: 0 };
+      const x = meses.get(mm.mes) ?? { mes: mm.mes, entradas: 0, saidas: 0, segundoNivel: 0, recuperados: 0 };
       x.entradas += mm.entradas;
       x.saidas += mm.saidas;
       x.segundoNivel += mm.segundoNivel;
+      x.recuperados += mm.recuperados ?? 0;
       meses.set(mm.mes, x);
     }
     for (const mo of d.movimento.motivosSaida) motivos.set(mo.motivo, (motivos.get(mo.motivo) ?? 0) + mo.total);

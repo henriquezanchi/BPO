@@ -31,9 +31,12 @@ export interface ResumoFilialDados {
     provacionistas: number;
     hd: number;
     dirigentes: number;
+    /** Ativos que tinham saído e voltaram (cad_recuperado='S', 26/10/2026). Ausente em resumos antigos. */
+    recuperados?: number;
   };
   movimento: {
-    meses: { mes: string; entradas: number; saidas: number; segundoNivel: number }[]; // últimos 12, do mais antigo ao atual
+    // últimos 12, do mais antigo ao atual; recuperados = reingressos no mês (quem saiu e voltou, fora quem só entrou)
+    meses: { mes: string; entradas: number; saidas: number; segundoNivel: number; recuperados?: number }[];
     motivosSaida: { motivo: string; total: number }[]; // últimos 3 meses
   };
   aniversariantes: { matricula: string; nome: string; dia: number; nivel: string }[];
@@ -75,9 +78,11 @@ export async function gerarResumoFilial(uniId: string, schoolId: string | null, 
   const inicio12 = new Date(Date.UTC(ano, mes - 12, 1)).toISOString().slice(0, 10);
   const mesAnterior = mes === 1 ? mesStr(ano - 1, 12) : mesStr(ano, mes - 1);
   // Sem cad_dirigente na view (desde 24/10/2026), conta os dirigentes que o Portal já conhece.
-  const dirigentesNoMercurio = (await colunasDoCadastro()).has("cad_dirigente");
+  const colunas = await colunasDoCadastro();
+  const dirigentesNoMercurio = colunas.has("cad_dirigente");
+  const recuperadosNoMercurio = colunas.has("cad_recuperado");
 
-  const [atualizacao, niveis, fvPro, hdDir, entradas, saidas, segundo, motivos, aniversariantes, fichasMes, atrasosFicha, receita, turmas, recibosOnline] = await Promise.all([
+  const [atualizacao, niveis, fvPro, hdDir, entradas, saidas, segundo, motivos, aniversariantes, fichasMes, atrasosFicha, receita, turmas, recibosOnline, recuperados, reingressos] = await Promise.all([
     consultarMercurio("SELECT MAX(data) d FROM `atualização`").catch(() => [{ d: null }]),
     consultarMercurio(`SELECT cad_nivel, COUNT(*) n FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u} GROUP BY cad_nivel`),
     consultarMercurio(`SELECT cad_situacao_fv, COUNT(*) n FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u} AND cad_situacao_fv IN ('BRG','PRO') GROUP BY cad_situacao_fv`),
@@ -106,6 +111,9 @@ export async function gerarResumoFilial(uniId: string, schoolId: string | null, 
     emPaginas(
       `SELECT DISTINCT i.rei_matr, i.rei_mes FROM reciboi i JOIN reciboc r ON r.rec_id=i.rei_id JOIN cadastro c ON c.cad_matr=i.rei_matr LEFT JOIN produtos p ON p.pro_cod=i.rei_produto WHERE c.cad_situacao='ATI' AND c.cad_unidade=${u} AND i.rei_ano=${ano} AND i.rei_mes<=${mes} AND r.rec_status<>'CAN' AND (r.rec_data_cancel IS NULL OR r.rec_data_cancel < '1900-01-01') AND (p.pro_descricao LIKE 'CONTRIBUI%' OR EXISTS (SELECT 1 FROM compaluno ca WHERE ca.cal_matr=i.rei_matr AND ca.cal_grupo=i.rei_produto)) ORDER BY i.rei_matr, i.rei_mes`,
     ),
+    // Recuperados (pedido do usuário 2026-10-26): ativos que saíram e voltaram; reingressos por mês (sem quem entrou e "reingressou" no mesmo dia).
+    recuperadosNoMercurio ? consultarMercurio(`SELECT SUM(cad_recuperado='S') n FROM cadastro WHERE cad_situacao='ATI' AND cad_unidade=${u}`) : Promise.resolve([{ n: null }]),
+    consultarMercurio(`SELECT DATE_FORMAT(cad_reingresso,'%Y-%m') m, COUNT(*) n FROM cadastro WHERE cad_unidade=${u} AND cad_reingresso >= '${inicio12}' AND (cad_ingresso IS NULL OR cad_reingresso <> cad_ingresso) GROUP BY m`),
   ]);
   const pagoOnline = new Set(recibosOnline.map((r) => `${r.rei_matr}-${n(r.rei_mes)}`));
   const statusMes = new Map(fichasMes.map((f) => [f.fic_matr ?? "", f.fic_status ?? ""]));
@@ -120,7 +128,7 @@ export async function gerarResumoFilial(uniId: string, schoolId: string | null, 
     return mesStr(d.getUTCFullYear(), d.getUTCMonth() + 1);
   });
   const mapa = (rows: Record<string, string | null>[]) => new Map(rows.map((r) => [r.m ?? "", n(r.n)]));
-  const [mEnt, mSai, mSeg] = [mapa(entradas), mapa(saidas), mapa(segundo)];
+  const [mEnt, mSai, mSeg, mRec] = [mapa(entradas), mapa(saidas), mapa(segundo), mapa(reingressos)];
   const rec = new Map(receita.map((r) => [r.m ?? "", r]));
 
   const dados: ResumoFilialDados = {
@@ -137,9 +145,10 @@ export async function gerarResumoFilial(uniId: string, schoolId: string | null, 
       provacionistas: n(fvPro.find((x) => x.cad_situacao_fv === "PRO")?.n),
       hd: n(hdDir[0]?.hd),
       dirigentes: dirigentesNoMercurio ? n(hdDir[0]?.dir) : schoolId ? await db.member.count({ where: { schoolId, mercurioAtivo: true, isDirigente: true } }) : 0,
+      ...(recuperadosNoMercurio ? { recuperados: n(recuperados[0]?.n) } : {}),
     },
     movimento: {
-      meses: meses.map((m) => ({ mes: m, entradas: mEnt.get(m) ?? 0, saidas: mSai.get(m) ?? 0, segundoNivel: mSeg.get(m) ?? 0 })),
+      meses: meses.map((m) => ({ mes: m, entradas: mEnt.get(m) ?? 0, saidas: mSai.get(m) ?? 0, segundoNivel: mSeg.get(m) ?? 0, recuperados: mRec.get(m) ?? 0 })),
       motivosSaida: motivos.map((x) => ({ motivo: x.motivo ?? "Não informado", total: n(x.n) })),
     },
     aniversariantes: aniversariantes.map((a) => ({ matricula: a.cad_matr ?? "", nome: (a.cad_nome ?? "").trim(), dia: n(a.dia), nivel: a.cad_nivel ?? "" })),
