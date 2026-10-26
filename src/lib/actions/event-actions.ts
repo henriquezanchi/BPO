@@ -4,7 +4,7 @@ import {asaasCreatePixCharge,asaasFindOrCreateCustomer,asaasGetPaymentStatus,asa
 import {splitDoBpo} from '@/lib/asaas/split';
 import {contaDaEscola,contaDeLeituraId,escolaCobraOnline,MENSAGEM_CONTA_PENDENTE} from '@/lib/asaas/conta-escola';
 import {requireAuthenticatedMember,requireArea} from '@/lib/auth';
-import {temAcessoVoluntario} from '@/lib/acesso-voluntario';
+import {podeLiberar,temAcessoVoluntario} from '@/lib/acesso-voluntario';
 import {db} from '@/lib/db';
 import {eventAudienceWhere,eventNoticePlan,validateInternalEvent,eventScopeWhere} from '@/lib/event-policy';
 import {requireEventReception} from '@/lib/event-data';
@@ -193,18 +193,33 @@ export async function checkStatusInscricaoEvento(memberId:string,registrationId:
  return {status:'pendente' as const};
 }
 
-export async function definirRecepcaoEmLote(schoolId:string,eventId:string,memberIds:string[]){
+/**
+ * Equipe de recepção em lote (26/10/2026): vale para eventos do Portal e do Ulisses publicados (antes só os do Portal,
+ * e a liberação falhava para todos nos eventos do Ulisses). Inclui quem já tem acesso de voluntário; quem não tem volta
+ * em `semAcesso`, com `podeLiberar` quando quem está fazendo pode liberar o acesso dessa pessoa. `liberarAcessoDe`:
+ * pessoas cujo acesso de voluntário a pessoa confirmou liberar agora (só as que ela pode liberar).
+ */
+export async function definirRecepcaoEmLote(schoolId:string,eventId:string,memberIds:string[],liberarAcessoDe:string[]=[]){
  try{
-  const actor=await requireArea(schoolId, "eventos");if(!actor.mercurioAtivo)throw Error('Cadastro inativo.');
+  const actor=await requireArea(schoolId, "eventos");if(!actor.mercurioAtivo)throw Error('Seu cadastro não está ativo.');
   const ids=[...new Set(memberIds)];
   if(!ids.length||ids.length>200||ids.some(id=>typeof id!=="string"||id.length>100))throw Error('Selecione entre 1 e 200 pessoas.');
-  await db.event.findFirstOrThrow({where:{id:eventId,schoolId,source:'manual',status:'publicado'}});
-  const members=await db.member.findMany({where:{id:{in:ids},schoolId,mercurioAtivo:true}});
-  if(members.length!==ids.length)throw Error('Todas as pessoas precisam estar ativas nesta escola.');
-  if((await Promise.all(members.map(member=>temAcessoVoluntario(member)))).some(access=>!access))throw Error('Todas as pessoas precisam ter acesso de voluntário liberado.');
-  await db.$transaction(async tx=>{
-   await tx.eventReception.createMany({data:ids.map(memberId=>({eventId,memberId})),skipDuplicates:true});
-   await tx.eventAudit.create({data:{eventId,actorId:actor.id,action:'recepcao_designada_em_lote',changes:{memberIds:ids}}});
-  });refresh(eventId);return {ok:true};
- }catch{return {ok:false,error:'Não foi possível liberar a equipe. Selecione voluntários ativos e com acesso liberado desta escola, em um evento publicado.'};}
+  const evento=await db.event.findFirst({where:{id:eventId,schoolId,source:{in:['manual','ulisses']},status:'publicado'},select:{id:true}});
+  if(!evento)throw Error('A equipe só pode ser liberada em evento publicado desta filial.');
+  const members=await db.member.findMany({where:{id:{in:ids},schoolId,mercurioAtivo:true},select:{id:true,name:true,mercurioId:true,isDiretor:true,isSubChefe:true,filiaisChefiadas:true,schoolId:true,mercurioAtivo:true}});
+  for(const id of new Set(liberarAcessoDe)){
+   if(!members.some(m=>m.id===id)||!(await podeLiberar(actor,id)))continue;
+   await db.acessoVoluntario.upsert({where:{memberId:id},update:{},create:{memberId:id,liberadoPorId:actor.id}});
+  }
+  const acesso=await Promise.all(members.map(m=>temAcessoVoluntario(m)));
+  const incluir=members.filter((_,i)=>acesso[i]);
+  const semAcesso=await Promise.all(members.filter((_,i)=>!acesso[i]).map(async m=>({id:m.id,nome:m.name,podeLiberar:await podeLiberar(actor,m.id)})));
+  if(incluir.length)await db.$transaction(async tx=>{
+   await tx.eventReception.createMany({data:incluir.map(m=>({eventId,memberId:m.id})),skipDuplicates:true});
+   await tx.eventAudit.create({data:{eventId,actorId:actor.id,action:'recepcao_designada_em_lote',changes:{memberIds:incluir.map(m=>m.id),acessoLiberado:liberarAcessoDe}}});
+  });
+  if(liberarAcessoDe.length)revalidatePath('/voluntario/acessos');
+  refresh(eventId);
+  return {ok:true as const,incluidos:incluir.map(m=>m.name),semAcesso,inativos:ids.length-members.length};
+ }catch(e){return {ok:false as const,error:e instanceof Error&&e.message?e.message:'Não foi possível liberar a equipe.'};}
 }

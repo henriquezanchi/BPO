@@ -13,7 +13,7 @@ const event={id:'event',schoolId:'school',source:'manual',revision:0,status:'pub
 let current={id:'registration',eventId:'event',memberId:'member',paid:false,paymentState:'criando',asaasPaymentId:null,pixPayload:null,amount:50,checkedIn:false};
 const tx={event:{updateMany:async()=>({count:1}),findFirstOrThrow:async()=>event},eventRegistration:{upsert:async()=>current,update:async a=>writes.push(a),findMany:async()=>[],count:async()=>0,findUnique:async()=>null},eventWaitlist:{count:async()=>0},eventAudit:{create:async a=>writes.push(a)},eventNotice:{createMany:async()=>{},updateMany:async()=>{},upsert:async()=>{}}};
 mockModule(new URL('../src/lib/auth.ts',import.meta.url).href,{exports:{requireAuthenticatedMember:async id=>{assert.equal(id,actor.id);return actor;},requireArea:async(schoolId,...areas)=>{assert.equal(schoolId,'school');assert.deepEqual(areas,['eventos']);if(!director)throw Error('Sem permissão');return actor;}}});
-mockModule(new URL('../src/lib/acesso-voluntario.ts',import.meta.url).href,{exports:{temAcessoVoluntario:async()=>true}});
+mockModule(new URL('../src/lib/acesso-voluntario.ts',import.meta.url).href,{exports:{temAcessoVoluntario:async member=>member.id!=='semAcesso',podeLiberar:async(_actor,id)=>id==='semAcesso'}});
 mockModule(new URL('../src/lib/event-data.ts',import.meta.url).href,{exports:{requireEventReception:async()=>{if(!reception)throw Error('Não designado');return {actor,event};}}});
 mockModule(new URL('../src/lib/event-payments.ts',import.meta.url).href,{exports:{confirmEventPayment:async()=>writes.push('paid')}});
 mockModule(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{event:{findFirst:async args=>{assert.equal(args.where.source,'manual');assert.equal(args.where.status,'publicado');assert.deepEqual(args.where.AND[0].publicos,{hasSome:['todos_ativos','membros']});assert.deepEqual(args.where.AND[1].OR[0],{schoolId:'school'});return eventStatus==='publicado'?event:null;}},school:{findUniqueOrThrow:async args=>{assert.equal(args.where.id,'school');return {asaasSubaccountApiKey:subconta};}},eventRegistration:{findUniqueOrThrow:async()=>({...current,paid,event:{...event,status:eventStatus}}),updateMany:async()=>({count:0}),findFirstOrThrow:async()=>({...current,event})},$transaction:async fn=>fn(tx)}}});
@@ -109,14 +109,27 @@ test('limite de vagas e fechamento inválidos são recusados',()=>{
  for(const change of [{capacity:0},{capacity:1.5},{capacity:-1},{registrationClosesAt:'2099-01-01T20:00Z'}])assert.throws(()=>validateInternalEvent({...data,...change}));
  assert.equal(validateInternalEvent({...data,capacity:30}).capacity,30);
 });
-test('recepção em lote verifica todos os voluntários antes de gravar e deduplica IDs',async()=>{
+test('recepção em lote inclui quem pode, devolve quem não tem acesso e só libera acesso com permissão',async()=>{
  const {db:store}=await import('../src/lib/db.ts');const {definirRecepcaoEmLote}=await import('../src/lib/actions/event-actions.ts');
- store.event.findFirstOrThrow=async()=>event;
+ let eventoBuscado;store.event.findFirst=async args=>{eventoBuscado=args.where;return event;};
  store.member={findMany:async()=>[{...actor,id:'one'},{...actor,id:'two'}]};
  let batch;tx.eventReception={createMany:async args=>{batch=args.data;}};
  const result=await definirRecepcaoEmLote('school','event',['one','two','one']);assert.equal(result.ok,true);assert.equal(batch.length,2);
+ // Eventos do Portal e do Ulisses publicados (antes só os do Portal, e a liberação falhava nos do Ulisses).
+ assert.deepEqual(eventoBuscado.source,{in:['manual','ulisses']});assert.equal(eventoBuscado.status,'publicado');
+ // Fora da escola ou inativo não entra; o resto segue.
  store.member.findMany=async()=>[{...actor,id:'one'}];batch=null;
- assert.equal((await definirRecepcaoEmLote('school','event',['one','outside'])).ok,false);assert.equal(batch,null);
+ const parcial=await definirRecepcaoEmLote('school','event',['one','outside']);assert.equal(parcial.ok,true);assert.equal(batch.length,1);assert.equal(parcial.inativos,1);
+ // Sem acesso de voluntário: volta para confirmação, sem gravar acesso nem recepção.
+ store.member.findMany=async()=>[{...actor,id:'semAcesso',name:'Fulana'}];batch=null;let acessos=0;
+ store.acessoVoluntario={upsert:async()=>{acessos++;}};
+ const pendente=await definirRecepcaoEmLote('school','event',['semAcesso']);
+ assert.equal(pendente.ok,true);assert.equal(batch,null);assert.equal(acessos,0);assert.deepEqual(pendente.semAcesso,[{id:'semAcesso',nome:'Fulana',podeLiberar:true}]);
+ // Com confirmação de quem pode liberar: o acesso é gravado.
+ await definirRecepcaoEmLote('school','event',['semAcesso'],['semAcesso']);assert.equal(acessos,1);
+ // Evento inexistente, de outra filial ou não publicado: nada é gravado.
+ store.event.findFirst=async()=>null;batch=null;
+ assert.equal((await definirRecepcaoEmLote('school','event',['one'])).ok,false);assert.equal(batch,null);
 });
 
 test('opção de reembolso é validada e enfileira inscrições na mesma transação do cancelamento',async()=>{

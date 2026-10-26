@@ -2,6 +2,7 @@ import { MemberPortalClient } from "@/components/member/member-portal-client";
 import { InactiveMemberNotice } from "@/components/inactive-member-notice";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { getMemberDashboard } from "@/lib/member-data";
+import { ultimaEdicaoAurora } from "@/lib/boletim-aurora";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function MemberPortalPage({ searchParams }: { searchParams:
   }
   if (!member.mercurioAtivo) return <InactiveMemberNotice schoolWhatsapp={member.school.whatsapp} />;
 
-  const dashboard = await getMemberDashboard(member.id);
+  const [dashboard, boletim] = await Promise.all([getMemberDashboard(member.id), ultimaEdicaoAurora()]);
 
-  return <MemberPortalClient key={eventoId} dashboard={dashboard} eventoId={eventoId} />;
+  return <MemberPortalClient key={eventoId} dashboard={dashboard} eventoId={eventoId} boletim={boletim} />;
 }

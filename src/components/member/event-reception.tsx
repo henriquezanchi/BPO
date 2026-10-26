@@ -19,6 +19,19 @@ export function EventReception({data}:{data:Awaited<ReturnType<typeof getEventRe
   <p className="text-xs text-gray-500">Uma resposta do aluno não substitui a conferência da recepção. O registro no Mercúrio aguarda integração com os responsáveis.</p>
   {message&&<p role="status" className="text-sm">{message}</p>}
   {!rows.length&&<p className="text-sm">Nenhuma inscrição neste filtro.</p>}
-  <ul className="space-y-2">{rows.map(r=><li key={r.id} className="space-y-2 rounded-xl border border-gray-200 p-3 dark:border-gray-700"><p className="font-semibold">{r.member.name}</p><p className="text-xs text-gray-500">Matrícula {r.member.registrationNo??'não informada'} · {r.paid?(data.price?'Pago':'Gratuito'):r.paymentState==='revisao'?'Cobrança em conferência':'Pagamento pendente'}</p><p className="text-sm">{r.checkedIn?'Presença conferida':'Presença não conferida'}{r.selfReportedAttendance&&` · Aluno declarou: ${r.selfReportedAttendance==='sim'?'compareceu':'não compareceu'}`}</p><button disabled={pending||data.status!=='publicado'||(!r.paid&&!r.checkedIn)} onClick={()=>start(async()=>{try{await marcarPresencaEvento('',r.id,!r.checkedIn);setMessage('Conferência salva no histórico do aluno.');router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Não foi possível salvar.');}})} className="rounded-lg bg-na-green px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{r.checkedIn?'Corrigir presença':'Confirmar presença'}</button></li>)}</ul>
+  {rows.length>0&&<div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+   {/* Lista compacta (26/10/2026): presença numa caixinha à direita, em vez de um botão por pessoa. */}
+   <div className="flex items-center justify-between gap-3 bg-gray-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800/60 dark:text-gray-400"><span>Inscrito</span><span>Presente</span></div>
+   <ul className="divide-y divide-gray-100 dark:divide-gray-800">{rows.map(r=>{
+    const bloqueada=pending||data.status!=='publicado'||(!r.paid&&!r.checkedIn);
+    return <li key={r.id}><label className={`flex items-center gap-3 px-3 py-2.5 ${bloqueada?'':'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40'}`}>
+     <span className="min-w-0 flex-1">
+      <span className="block truncate text-sm font-semibold">{r.member.name}</span>
+      <span className="block text-xs text-gray-500">{r.member.registrationNo??'sem matrícula'} · {r.paid?(data.price?'Pago':'Gratuito'):r.paymentState==='revisao'?'Cobrança em conferência':'Pagamento pendente'}{r.selfReportedAttendance&&` · declarou que ${r.selfReportedAttendance==='sim'?'veio':'não veio'}`}</span>
+     </span>
+     <input type="checkbox" aria-label={`Presença de ${r.member.name}`} checked={r.checkedIn} disabled={bloqueada} onChange={()=>start(async()=>{try{await marcarPresencaEvento('',r.id,!r.checkedIn);setMessage(r.checkedIn?`Presença de ${r.member.name} desmarcada.`:`Presença de ${r.member.name} conferida.`);router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Não foi possível salvar.');}})} className="size-5 shrink-0 accent-na-green disabled:opacity-40"/>
+    </label></li>;
+   })}</ul>
+  </div>}
  </div>;
 }

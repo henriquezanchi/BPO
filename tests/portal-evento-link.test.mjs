@@ -38,6 +38,7 @@ function pagina(member) {
     '@/components/inactive-member-notice': { InactiveMemberNotice: 'Inativo' },
     '@/lib/auth': { getAuthenticatedMember: async () => member },
     '@/lib/member-data': { getMemberDashboard: async (id) => ({ member: { id } }) },
+    '@/lib/boletim-aurora': { ultimaEdicaoAurora: async () => ({ titulo: 'Edição de teste', data: '2026-10-25', link: 'https://acropole.org.br/boletim-aurora/teste/', resumo: '' }) },
     'next/navigation': { redirect: (url) => { throw new Error(url); } },
   }).default;
 }
@@ -52,4 +53,5 @@ test('membro autenticado recebe o evento solicitado junto da própria agenda', a
   assert.equal(render.type, 'Portal');
   assert.equal(render.props.eventoId, 'integracao-7');
   assert.equal(render.props.dashboard.member.id, 'membro-1');
+  assert.equal(render.props.boletim.titulo, 'Edição de teste');
 });

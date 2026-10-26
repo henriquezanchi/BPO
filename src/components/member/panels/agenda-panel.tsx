@@ -391,7 +391,7 @@ function ListaDeEspera({ memberId, eventId, espera }: { memberId: string; eventI
 }
 
 function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean; emBreve?: boolean; aberto?: boolean }) {
-  if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm"><CollapsibleSection title={<h3 className="font-bold">{item.title}</h3>}>
+  if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm"><CollapsibleSection defaultOpen={aberto} title={<h3 className="font-bold">{item.title}</h3>}>
     <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><p>{item.date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</p>
     {item.status==='cancelada'?<p>Reunião cancelada: {item.cancellationReason}</p>:<><p>Comparecimento obrigatório. Se não puder participar, registre uma justificativa.</p>{item.fullUniform&&<p className="font-semibold">CRM com traje completo</p>}{item.description&&<p>{item.description}</p>}<MeetingResponse key={`${item.id}:${item.version}`} memberId={memberId} id={item.id} version={item.version} initial={item.myResponse}/></>}
   </CollapsibleSection></section>;
@@ -644,13 +644,14 @@ function categoriaProximo(item: Exclude<AgendaItem, { kind: "enquete" }>): Exclu
   return "turma";
 }
 
-/** Cores dos próximos compromissos: dourado (escola), turquesa (nacional/regional), laranja (outra filial), verdes (grupos, turma, conversa). */
+/** Cores dos próximos compromissos: verde suave (escola), turquesa (nacional/regional), laranja (outra filial), verdes (grupos, turma, conversa). */
 const COR_PROXIMO: Record<CategoriaProximo, { cartao: string; data: string; rotulo: string; seta: string }> = {
+  // Evento da escola em verde suave (pedido do usuário 2026-10-26: o dourado/laranja chamava atenção demais).
   escola: {
-    cartao: "border-na-gold/40 bg-na-gold/10 hover:border-na-gold dark:border-amber-800/60 dark:bg-amber-950/25 dark:hover:border-amber-600",
-    data: "bg-na-gold text-gray-900",
-    rotulo: "text-na-gold-dark dark:text-amber-300",
-    seta: "text-na-gold-dark dark:text-amber-400",
+    cartao: "border-na-green/20 bg-na-green-light/25 hover:border-na-green/50 dark:border-emerald-900/50 dark:bg-emerald-950/15 dark:hover:border-emerald-700/70",
+    data: "bg-na-green-light text-na-green-dark dark:bg-emerald-900/50 dark:text-emerald-200",
+    rotulo: "text-na-green-dark/80 dark:text-emerald-300/80",
+    seta: "text-na-green/70 dark:text-emerald-500/70",
   },
   rede: {
     cartao: "border-na-turquesa/40 bg-na-turquesa/10 hover:border-na-turquesa dark:border-cyan-800/60 dark:bg-cyan-950/25 dark:hover:border-cyan-600",
@@ -712,6 +713,8 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
   const [diaSelecionado, setDiaSelecionado] = useState(() => hoje);
   const [mesExibido, setMesExibido] = useState(() => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1));
   const [limiteProximos, setLimiteProximos] = useState(POR_PAGINA);
+  // Próximo evento tocado: abre o detalhe dele já expandido e rola até ele (pedido do usuário 2026-10-26).
+  const [itemAberto, setItemAberto] = useState<string | null>(null);
   const calendario = useRef<HTMLDivElement>(null);
   const topo = useRef<HTMLDivElement>(null);
 
@@ -770,8 +773,10 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
                 key={itemKey(item)}
                 item={item}
                 onAbrir={() => {
+                  const chave = itemKey(item);
+                  setItemAberto(chave);
                   selecionarDia(item.date);
-                  calendario.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  setTimeout(() => document.getElementById(`agenda-item-${chave}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
                 }}
               />
             ))}
@@ -854,7 +859,11 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
             Nada agendado para {diaSelecionado.toLocaleDateString("pt-BR")}.
           </p>
         ) : (
-          itensDoDiaSelecionado.filter((item) => item !== eventoCompartilhado).map((item) => <ItemCard key={itemKey(item)} memberId={memberId} item={item} somenteConsulta={somenteConsulta} emBreve={emBreve} />)
+          itensDoDiaSelecionado.filter((item) => item !== eventoCompartilhado).map((item) => (
+            <div key={itemKey(item)} id={`agenda-item-${itemKey(item)}`} className="scroll-mt-4">
+              <ItemCard key={`${itemKey(item)}:${itemAberto === itemKey(item)}`} memberId={memberId} item={item} somenteConsulta={somenteConsulta} emBreve={emBreve} aberto={itemAberto === itemKey(item)} />
+            </div>
+          ))
         )}
       </div>
 

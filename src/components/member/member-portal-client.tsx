@@ -7,6 +7,7 @@ import { getFortunaBalancesForMember } from "@/lib/actions/fortuna-member-action
 import { whatsappHref } from "@/lib/format";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { MemberDashboard } from "@/lib/member-data";
+import { PAGINA_BOLETIM_AURORA, type EdicaoAurora } from "@/lib/boletim-aurora";
 import {
   BookOpen,
   BookOpenText,
@@ -19,6 +20,7 @@ import {
   LifeBuoy,
   LogOut,
   MessageCircle,
+  Newspaper,
   Pencil,
   PiggyBank,
   TriangleAlert,
@@ -87,7 +89,7 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
   return { vencimento, diasRestantes, jaResolvidoEsseMes };
 }
 
-export function MemberPortalClient({ dashboard, eventoId }: { dashboard: MemberDashboard; eventoId?: string }) {
+export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard: MemberDashboard; eventoId?: string; boletim?: EdicaoAurora | null }) {
   const { member, availableToAdd } = dashboard;
   // Eventos públicos do Ulisses lidos pelo navegador (ver lib/ulisses/navegador.ts).
   const agendaItems = useAgendaComUlisses(dashboard.agendaItems, member.school.ulissesFilialId, member.schoolId);
@@ -332,6 +334,25 @@ export function MemberPortalClient({ dashboard, eventoId }: { dashboard: MemberD
             />
           )}
         </section>
+
+        {/* Boletim Aurora (pedido do usuário 2026-10-26): novidades mensais da Nova Acrópole, edição mais recente. */}
+        {member.school.language !== "en" && (
+          <a
+            href={boletim?.link ?? PAGINA_BOLETIM_AURORA}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2.5 flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 transition hover:-translate-y-0.5 hover:border-na-gold dark:border-gray-800 dark:bg-gray-900"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
+              <Newspaper size={16} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Boletim Aurora{boletim ? ` · ${boletim.titulo}` : ""}</span>
+              <span className="mt-0.5 line-clamp-2 block text-xs text-gray-700 dark:text-gray-300">{boletim?.resumo || "Novidades e ações da Nova Acrópole no Brasil, todo mês."}</span>
+              <span className="mt-1 block text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">Ler a edição →</span>
+            </span>
+          </a>
+        )}
       </main>
 
       <a

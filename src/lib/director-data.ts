@@ -178,7 +178,8 @@ export async function getDirectorDashboard(schoolId: string) {
   const activeMembers=membros.filter(m=>m.mercurioAtivo);
   const [volunteerAccess,nationalAccess]=await Promise.all([comAcessoVoluntario(activeMembers.map(m=>m.id)),db.liberadorNacional.findMany({where:{mercurioId:{in:activeMembers.flatMap(m=>m.mercurioId?[m.mercurioId]:[])}},select:{mercurioId:true}})]);
   const nationalIds=new Set(nationalAccess.map(m=>m.mercurioId));
-  const receptionCandidates=activeMembers.filter(m=>volunteerAccess.has(m.id)||(m.mercurioId&&nationalIds.has(m.mercurioId))).map(m=>({id:m.id,name:m.name}));
+  // Todos os ativos (26/10/2026): quem ainda não tem acesso de voluntário aparece marcado, e a tela pergunta se libera.
+  const receptionCandidates=activeMembers.map(m=>({id:m.id,name:m.name,comAcesso:volunteerAccess.has(m.id)||!!(m.mercurioId&&nationalIds.has(m.mercurioId))}));
   const eventos = await db.event.findMany({
     where: { schoolId },
     include: { registrations: { where: { desistenciaEm: null }, include: { member: true } }, staff: true },
