@@ -335,3 +335,4 @@ Pedido do usuário: as turmas de pedagogos têm encontros semanais de duração 
 - Avisos: escala gravada → pedagogos; plano entregue → instrutor; aprovado/devolvido → pedagogo; cron `avisosDePlanosDeAula` (8h–21h): 3 dias antes do prazo e no dia (pedagogo), dia seguinte ao prazo (instrutor e pedagogo).
 - `/professor`: cartão "Sua apresentação na turma de pedagogos" com data, tema e situação do plano.
 - Disciplinas disponíveis = as do catálogo (`TEMAS_POR_MATERIA`: NET, NSC, NFH, IS1, PSI); novas entram com as listas de temas.
+- Arte do WhatsApp (Compartilhar no WhatsApp): formato próprio `whatsapp` 1080×1080 em `lib/arte-evento.ts` (antes usava o feed 4:5, que o chat corta). Com cartaz: cartaz inteiro sobre o fundo desfocado e a faixa verde (data, local, inscrição) embaixo, sem cobrir o cartaz; sem cartaz: arte da marca em versão quadrada. Instagram continua com story e feed.

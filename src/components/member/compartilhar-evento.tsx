@@ -66,7 +66,8 @@ function Canal({
   );
 }
 
-type Artes = Record<FormatoArte, { arquivo: File; url: string }>;
+type FormatoInstagram = Exclude<FormatoArte, "whatsapp">;
+type Artes = Record<FormatoInstagram, { arquivo: File; url: string }>;
 
 function baixar(arquivo: File, url: string) {
   const a = document.createElement("a");
@@ -92,7 +93,7 @@ export function CompartilharWhatsApp({ evento, linkTexto, compacto = false }: {
     if (!aberto) return;
     let cancelado = false;
     let url: string | undefined;
-    gerarArteEvento(evento, "feed").then((blob) => {
+    gerarArteEvento(evento, "whatsapp").then((blob) => {
       if (cancelado) return;
       const arquivo = new File([blob], nomeDoArquivo(evento, "feed"), { type: "image/png" });
       url = URL.createObjectURL(arquivo);
@@ -203,7 +204,7 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
     (async () => {
       try {
         const [story, feed] = await Promise.all((["story", "feed"] as const).map((f) => gerarArteEvento(evento, f)));
-        const montar = (blob: Blob, f: FormatoArte) => {
+        const montar = (blob: Blob, f: FormatoInstagram) => {
           const arquivo = new File([blob], nomeDoArquivo(evento, f), {
             type: "image/png",
           });
@@ -248,7 +249,7 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
     );
   }
 
-  function compartilharInstagram(formato: FormatoArte) {
+  function compartilharInstagram(formato: FormatoInstagram) {
     if (!artes) return;
     const { arquivo, url } = artes[formato];
     // Story: o link vai no adesivo "Link". Feed: a legenda inteira.

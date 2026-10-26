@@ -8,12 +8,14 @@ import { diaPorExtenso, horaCurta, resumo, semEmoji, type EventoCompartilhavel }
  * o conteúdo fica fora das faixas de cima e de baixo que o Instagram cobre
  * com a barra de perfil e a de resposta.
  */
-export type FormatoArte = "story" | "feed";
+// "whatsapp" (1080×1080): quadrado, porque o chat corta imagens verticais na prévia (pedido do usuário 2026-10-26).
+export type FormatoArte = "story" | "feed" | "whatsapp";
 
 /** Medidas por formato. `topo`/`base`: faixas que o Instagram cobre no story. */
 const MEDIDAS = {
   story: { w: 1080, h: 1920, topo: 230, base: 250, logo: 300, faixa: 230, titulo: 104, linhasTitulo: 5, data: 48, local: 40 },
   feed: { w: 1080, h: 1350, topo: 90, base: 0, logo: 280, faixa: 220, titulo: 88, linhasTitulo: 4, data: 42, local: 36 },
+  whatsapp: { w: 1080, h: 1080, topo: 70, base: 0, logo: 240, faixa: 180, titulo: 76, linhasTitulo: 3, data: 38, local: 32 },
 } as const;
 
 const COR = {
@@ -143,6 +145,9 @@ function cartazComoPostagem(foto: HTMLImageElement, formato: FormatoArte, e: Eve
     const p = Math.min(1.91, Math.max(0.8, proporcao));
     canvas.width = 1080;
     canvas.height = Math.round(1080 / p);
+  } else if (formato === "whatsapp") {
+    canvas.width = 1080;
+    canvas.height = 1080;
   } else {
     canvas.width = 1080;
     canvas.height = 1920;
@@ -160,7 +165,8 @@ function cartazComoPostagem(foto: HTMLImageElement, formato: FormatoArte, e: Eve
   const topo = formato === "story" ? MEDIDAS.story.topo : 0;
   const base = formato === "story" ? MEDIDAS.story.base : 0;
   const margem = formato === "story" ? 48 : 0;
-  const faixaStory = formato === "story" ? alturaDaFaixa(linhas, 1) : 0;
+  // Story e WhatsApp: a faixa com o que falta fica abaixo do cartaz, sem cobri-lo.
+  const faixaStory = formato !== "feed" && linhas.length ? alturaDaFaixa(linhas, 1) : 0;
   const caixaW = W - margem * 2;
   const caixaH = H - topo - base - faixaStory;
   const escala = Math.min(caixaW / foto.width, caixaH / foto.height);
@@ -178,6 +184,7 @@ function cartazComoPostagem(foto: HTMLImageElement, formato: FormatoArte, e: Eve
   // O que falta no cartaz: no story, logo abaixo dele; no feed, por cima da parte de baixo.
   if (linhas.length) {
     if (formato === "story") desenharFaixa(ctx, linhas, x, y + h, w, Math.min(1, w / 1000));
+    else if (formato === "whatsapp") desenharFaixa(ctx, linhas, 0, H - faixaStory, W, 1);
     else {
       const escala = W / 1080;
       desenharFaixa(ctx, linhas, 0, H - alturaDaFaixa(linhas, escala), W, escala);
