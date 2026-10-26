@@ -3,6 +3,8 @@ import { notificarErroSuporte } from "@/lib/error-notify";
 import { fortunaCreditarSaldo, fortunaGetClient } from "@/lib/fortuna/client";
 import { enqueueMercurioContributionLaunch } from "@/lib/mercurio/sync-queue";
 import { avisarSemEsperar } from "@/lib/push";
+import { avisarFinanceiroSemEsperar, whatsappFinanceiroAtivo } from "@/lib/whatsapp/financeiro";
+import { mesPorExtenso, nomeCurtoDaFilial, primeiroNome, reais } from "@/lib/whatsapp/modelos";
 
 /**
  * Marca uma cobrança como paga e dispara o resto (status mensal + fila de
@@ -41,6 +43,19 @@ export async function confirmarPagamento(chargeId: string): Promise<void> {
     corpo: `Recebemos sua contribuição de ${MESES[charge.referenceMonth - 1]}/${charge.referenceYear}. Obrigado!`,
     url: "/portal",
     etiqueta: `pagamento-${charge.id}`,
+  });
+
+  // WhatsApp do financeiro (2026-10-26): mesma confirmação pelo número central, quando estiver ligado.
+  const membro = whatsappFinanceiroAtivo()
+    ? await db.member.findUnique({ where: { id: charge.memberId }, select: { name: true, whatsapp: true, schoolId: true, school: { select: { name: true } } } }).catch(() => null)
+    : null;
+  if (membro) await avisarFinanceiroSemEsperar({
+    schoolId: membro.schoolId,
+    memberId: charge.memberId,
+    telefone: membro.whatsapp,
+    modelo: "na_contribuicao_recebida",
+    parametros: [primeiroNome(membro.name), nomeCurtoDaFilial(membro.school.name), mesPorExtenso(charge.referenceYear, charge.referenceMonth), reais(Number(charge.amount))],
+    referencia: `cobranca:${charge.id}:paga`,
   });
 
   // Recarga Fortuna combinada na mesma cobrança (ver payment-actions.ts) —

@@ -2,6 +2,8 @@ import "server-only";
 import { PAGO, clienteNaSubconta, cobrancaNaSubconta, pixDaCobranca, situacaoDaCobranca } from "@/lib/asaas/subconta";
 import { cifrarCpf, cpfValido } from "@/lib/cpf-cifrado";
 import { db } from "@/lib/db";
+import { avisarFinanceiroSemEsperar, whatsappFinanceiroAtivo } from "@/lib/whatsapp/financeiro";
+import { nomeCurtoDaFilial, primeiroNome } from "@/lib/whatsapp/modelos";
 import { z } from "zod";
 
 /**
@@ -142,7 +144,20 @@ export async function conferirPagamento(matriculaId: string) {
   const c = await situacaoDaCobranca(m.school.asaasSubaccountApiKey, m.asaasPaymentId);
   if (!PAGO.has(c.status)) return m.status;
   const marcou = await db.matriculaOnline.updateMany({ where: { id: matriculaId, status: "aguardando_pagamento" }, data: { status: "paga", pagoEm: new Date() } });
-  if (marcou.count) await pendenciaEscolastica(matriculaId, "Matrícula paga pelo site: lançar no Mercúrio e na turma");
+  if (marcou.count) {
+    await pendenciaEscolastica(matriculaId, "Matrícula paga pelo site: lançar no Mercúrio e na turma");
+    // WhatsApp do financeiro (2026-10-26), pelo número central, quando estiver ligado.
+    const d = whatsappFinanceiroAtivo()
+      ? await db.matriculaOnline.findUnique({ where: { id: matriculaId }, select: { schoolId: true, nome: true, celular: true, abertura: { select: { titulo: true } }, school: { select: { name: true } } } })
+      : null;
+    if (d) await avisarFinanceiroSemEsperar({
+      schoolId: d.schoolId,
+      telefone: d.celular,
+      modelo: "na_matricula_confirmada",
+      parametros: [primeiroNome(d.nome), d.abertura.titulo, nomeCurtoDaFilial(d.school.name)],
+      referencia: `matricula:${matriculaId}:paga`,
+    });
+  }
   return "paga";
 }
 

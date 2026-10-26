@@ -185,3 +185,14 @@ Instrutor: Instrutor → "Atendimentos individuais" (`/professor/atendimentos`) 
 - Subconta "ORGANIZACAO NOVA ACROPOLE" (tipo associação) é a wallet de BGA (`School.asaasWalletId`). Link de ativação/senha reenviado pela API (`POST /v3/accounts/{id}/resendActivationLink`, a pedido do usuário). **Só pode ser reenviado uma vez**; não repetir.
 - Próximo passo: o usuário entra na subconta, gera a chave em Integrações → Chaves de API e a chave é gravada em `School.asaasSubaccountApiKey` por stdin (nunca no chat). Aí o site de matrículas passa a cobrar.
 - Não ligar whitelist de IP na conta principal (a Vercel não tem IP fixo; quebraria a cobrança dos eventos). Criar subcontas pela API inicia o "período de avaliação" do Asaas (limite de R$ 2.000 por subconta até a homologação regulatória). A conta principal é a empresa do usuário; cobrança por split mostraria esse nome.
+
+## WhatsApp do financeiro e Instagram opcional — Zernio (26/10/2026)
+
+Passo a passo para ligar (detalhes no bloco 56 da COORDENACAO):
+1. Aplicar a migração `20261026180000_whatsapp_financeiro_instagram` (`npx prisma db execute --file ...`, depois `npx prisma migrate resolve --applied 20261026180000_whatsapp_financeiro_instagram` e `migrate status`).
+2. Na Zernio (conta do usuário): cadastrar cartão; conectar o número central do financeiro (WhatsApp); anotar o id da conta.
+3. `.env`/Vercel: `ZERNIO_API_KEY`, `ZERNIO_WHATSAPP_ACCOUNT_ID`. Nunca `NEXT_PUBLIC_`.
+4. `npx tsx --env-file=.env scripts/whatsapp-modelos.ts --cadastrar` e repetir sem `--cadastrar` até todos aparecerem APPROVED.
+5. `npx tsx --env-file=.env.local scripts/zernio-webhook.ts` e copiar `ZERNIO_WEBHOOK_SECRET` para a Vercel.
+6. Teste: aprovar um rascunho da régua para um número de teste e conferir o quadro "WhatsApp do financeiro" na Recuperação.
+Sem `ZERNIO_WHATSAPP_ACCOUNT_ID` nada é enviado; sem `ZERNIO_API_KEY` o cartão do Instagram não aparece.

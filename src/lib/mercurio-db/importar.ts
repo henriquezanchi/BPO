@@ -3,6 +3,8 @@ import { TIPOS_GRUPO, ehTipoGrupo } from "@/lib/grupos-comum";
 import { parseLogradouro } from "@/lib/mercurio/parse-logradouro";
 import type { ContributionMonthStatus } from "@prisma/client";
 import { consultarMercurio, sqlNumero, sqlTexto } from "./client";
+import { avisarFinanceiroSemEsperar, whatsappFinanceiroAtivo } from "@/lib/whatsapp/financeiro";
+import { mesPorExtenso, nomeCurtoDaFilial, primeiroNome, reais } from "@/lib/whatsapp/modelos";
 
 /**
  * Importa/sincroniza membros a partir do banco de consulta do Mercúrio
@@ -110,6 +112,9 @@ const COLUNAS_CADASTRO = ["cad_2o_nivel", "cad_cel_ddd", "cad_cel_fone", "cad_em
 export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: string[]; ano?: number } = {}) {
   const school = await garantirEscola(uniId);
   const ano = opcoes.ano ?? new Date().getFullYear();
+  // WhatsApp do financeiro (2026-10-26): recibo que aparece pela primeira vez nesta rodada, emitido há até 3 dias.
+  const inicioImportacao = new Date();
+  const recibosNovos: { memberId: string; nome: string; telefone: string; recId: string; total: number; meses: string }[] = [];
 
   const filtroMatr = opcoes.matriculas?.length ? ` AND cad_matr IN (${opcoes.matriculas.map(sqlNumero).join(",")})` : "";
   // Desde 19/10/2026 o banco de consulta traz também os desligados (cad_situacao='INA'):
@@ -371,7 +376,11 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
       const cancelado = dataOuNull(cab.rec_data_cancel) !== null;
       const resumo = linhas.length ? `${(linhas[0].pro_descricao ?? "").trim()}${linhas.length > 1 ? ` +${linhas.length - 1} itens` : ""}` : null;
       const d = { memberId: member.id, issuedAt: emissao, amount: total, rawText, canceled: cancelado, probablyCanceled: cancelado, itemsSummary: resumo, fetchedAt: new Date() };
-      await db.contributionReceipt.upsert({ where: { mercurioRecId: recId }, update: d, create: { ...d, mercurioRecId: recId } });
+      const recibo = await db.contributionReceipt.upsert({ where: { mercurioRecId: recId }, update: d, create: { ...d, mercurioRecId: recId } });
+      if (recibo.createdAt >= inicioImportacao && !cancelado && total > 0 && emissao.getTime() >= Date.now() - 3 * 864e5) {
+        const meses = [...new Set(linhas.filter((l) => l.rei_mes && l.rei_ano).map((l) => mesPorExtenso(Number(l.rei_ano), Number(l.rei_mes))))];
+        recibosNovos.push({ memberId: member.id, nome: member.name, telefone: member.whatsapp, recId, total, meses: meses.length ? meses.join(", ") : mesPorExtenso(emissao.getUTCFullYear(), emissao.getUTCMonth() + 1) });
+      }
     }
 
     if (meses.length && member.status !== "negociando") {
@@ -516,6 +525,23 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
         where: { schoolId_mercurioGroupId: { schoolId: school.id, mercurioGroupId: item.cal_grupo! } },
         update: { label: (item.pro_descricao ?? "").trim(), syncedAt: new Date() },
         create: { schoolId: school.id, mercurioGroupId: item.cal_grupo!, label: (item.pro_descricao ?? "").trim() },
+      });
+    }
+  }
+
+  if (recibosNovos.length && whatsappFinanceiroAtivo()) {
+    // Quem pagou pelo Portal já recebeu a confirmação do pagamento: não manda de novo pelo recibo.
+    const jaAvisados = new Set(
+      (await db.whatsappEnvio.findMany({ where: { memberId: { in: recibosNovos.map((r) => r.memberId) }, referencia: { startsWith: "cobranca:" }, createdAt: { gte: new Date(Date.now() - 3 * 864e5) } }, select: { memberId: true } })).map((e) => e.memberId),
+    );
+    for (const r of recibosNovos.filter((r) => !jaAvisados.has(r.memberId))) {
+      await avisarFinanceiroSemEsperar({
+        schoolId: school.id,
+        memberId: r.memberId,
+        telefone: r.telefone,
+        modelo: "na_contribuicao_recebida",
+        parametros: [primeiroNome(r.nome), nomeCurtoDaFilial(school.name), r.meses, reais(r.total)],
+        referencia: `recibo:${r.recId}`,
       });
     }
   }

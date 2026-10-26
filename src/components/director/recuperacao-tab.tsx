@@ -4,6 +4,7 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import {
   abrirNegociacao,
   aprovarEEnviarRascunho,
+  aprovarEEnviarTodos,
   createChargeTrigger,
   createChargingRule,
   descartarRascunho,
@@ -14,6 +15,7 @@ import {
 import { CHARGE_TRIGGER_LABEL } from "@/lib/charging-labels";
 import type { DirectorDashboard, MemberRow } from "@/lib/director-data";
 import { formatBRL, formatDateBR } from "@/lib/format";
+import { MODELOS, type NomeModelo } from "@/lib/whatsapp/modelos";
 import type { ChargeTriggerType } from "@prisma/client";
 import { CircleCheck, Loader2, Send, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
@@ -37,7 +39,7 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
   const [isPending, startTransition] = useTransition();
   const [nomeRegua, setNomeRegua] = useState("");
   const [gerarResultado, setGerarResultado] = useState<string | null>(null);
-  const [rascunhosEditados, setRascunhosEditados] = useState<Record<string, string>>({});
+  const [avisoEnvio, setAvisoEnvio] = useState<string | null>(null);
   const [negMemberId, setNegMemberId] = useState("");
   const [negNota, setNegNota] = useState("");
   const [negData, setNegData] = useState("");
@@ -53,10 +55,28 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
 
   function handleCriarGatilho(chargingRuleId: string, formData: FormData) {
     const type = String(formData.get("type") ?? "");
-    const messageTemplate = String(formData.get("messageTemplate") ?? "").trim();
-    if (!type || !messageTemplate) return;
-    startTransition(() => createChargeTrigger(schoolId, chargingRuleId, type as ChargeTriggerType, messageTemplate));
+    if (!type) return;
+    startTransition(() => createChargeTrigger(schoolId, chargingRuleId, type as ChargeTriggerType));
   }
+
+  function enviar(acao: () => Promise<string>) {
+    setAvisoEnvio(null);
+    startTransition(async () => {
+      try {
+        setAvisoEnvio(await acao());
+      } catch (e) {
+        setAvisoEnvio((e as Error).message);
+      }
+    });
+  }
+
+  const STATUS_ENVIO: Record<string, string> = {
+    enviada: "Mensagem enviada.",
+    repetida: "Esta mensagem já tinha sido enviada.",
+    ignorada: "Não enviada: sem celular válido ou a pessoa pediu para sair da lista. O rascunho foi descartado.",
+    falhou: "O WhatsApp recusou o envio. Tente de novo mais tarde.",
+  };
+  const zap = data.whatsappFinanceiro;
 
   function handleGerarRascunhos() {
     startTransition(async () => {
@@ -77,6 +97,45 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
 
   return (
     <div className="flex flex-col gap-5">
+      {zap.ligado && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+          <h3 className="text-sm font-black text-na-green-dark dark:text-emerald-400">
+            WhatsApp do financeiro · {String(zap.mes).padStart(2, "0")}/{zap.ano}
+          </h3>
+          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            Confirmações de pagamento e lembretes enviados pelo número central do financeiro. O custo das mensagens entregues é abatido do
+            repasse da filial.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-6">
+            <div>
+              <p className="text-2xl font-black tabular-nums text-gray-900 dark:text-gray-100">{zap.entregues}</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">mensagens entregues</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black tabular-nums text-gray-900 dark:text-gray-100">{formatBRL(zap.centavos / 100)}</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">a abater do repasse</p>
+            </div>
+            {zap.falhas > 0 && (
+              <div>
+                <p className="text-2xl font-black tabular-nums text-gray-900 dark:text-gray-100">{zap.falhas}</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">não entregues (sem custo)</p>
+              </div>
+            )}
+          </div>
+          {zap.porModelo.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1 text-[11px] text-gray-600 dark:text-gray-300">
+              {zap.porModelo.map((m) => (
+                <li key={m.modelo} className="flex justify-between gap-3">
+                  <span>{MODELOS[m.modelo as NomeModelo]?.descricao ?? m.modelo}</span>
+                  <span className="tabular-nums">
+                    {m.entregues} de {m.enviadas}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900"><CollapsibleSection title={<h3 className="text-sm font-black text-na-green-dark dark:text-emerald-400">Réguas de Cobrança</h3>}>
         <div className="mb-4 flex items-center justify-between">
 
@@ -91,12 +150,8 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
         <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
           Gera 1 rascunho por membro × gatilho ativo. O gatilho <strong>Dia 10</strong> mira quem ainda não pagou o mês atual — inclui quem está
           &quot;Em Dia&quot; (sem atraso no histórico), não só quem já está atrasado. Os gatilhos de atraso (1 mês / 2+ meses) só miram quem já está
-          Atrasado/Em Negociação. Mensagens ficam pendentes de aprovação manual antes de enviar — nenhum disparo automático real. Placeholders no
-          modelo:{" "}
-          <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">{"{{nome}}"}</code>,{" "}
-          <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">{"{{valor}}"}</code> (valor mensal da composição),{" "}
-          <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">{"{{valorAtraso}}"}</code> (valor × meses em atraso),{" "}
-          <code className="rounded bg-gray-100 px-1 dark:bg-gray-800">{"{{mesesAtraso}}"}</code>.
+          Atrasado/Em Negociação. As mensagens ficam na fila de aprovação e saem pelo WhatsApp do financeiro, com o texto fixo aprovado
+          pela Meta para cada gatilho (nome, mês e valor preenchidos pelo Portal).
         </p>
         {gerarResultado && <p className="mb-3 text-[11px] font-medium text-na-green-dark dark:text-emerald-400">{gerarResultado}</p>}
 
@@ -112,7 +167,7 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
                     <li key={t.id} className="flex items-start justify-between gap-2 rounded bg-gray-50 p-2 text-[11px] dark:bg-gray-800">
                       <div>
                         <span className="font-semibold text-gray-800 dark:text-gray-200">{CHARGE_TRIGGER_LABEL[t.type] ?? t.type}</span>
-                        <p className="mt-0.5 text-gray-500 dark:text-gray-400">{t.messageTemplate}</p>
+                        <p className="mt-0.5 text-gray-500 dark:text-gray-400">{MODELOS[t.messageTemplate as NomeModelo]?.texto ?? t.messageTemplate}</p>
                       </div>
                       <button
                         onClick={() => startTransition(() => toggleChargeTrigger(schoolId, t.id, !t.active))}
@@ -136,11 +191,6 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
                       </option>
                     ))}
                   </select>
-                  <input
-                    name="messageTemplate"
-                    placeholder="Modelo da mensagem..."
-                    className="min-w-[220px] flex-1 rounded border border-gray-300 px-2 py-1 text-[11px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                  />
                   <button type="submit" className="rounded bg-gray-800 px-2 py-1 text-[11px] font-semibold text-white dark:bg-gray-700">
                     + Gatilho
                   </button>
@@ -166,7 +216,28 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
         <CollapsibleSection title={<h3 className="mb-1 text-sm font-black text-na-green-dark dark:text-emerald-400">Fila de Aprovação</h3>}>
-        <p className="mb-4 text-[11px] text-gray-500 dark:text-gray-400">Revise e edite antes de enviar — nada sai sem essa aprovação.</p>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            {zap.ligado
+              ? "Confira antes de enviar: nada sai sem essa aprovação. Cada mensagem entregue custa R$ 0,04, abatido do repasse da filial."
+              : "O WhatsApp do financeiro ainda não está ligado. Os rascunhos ficam aqui até lá."}
+          </p>
+          {zap.ligado && data.rascunhosPendentes.length > 1 && (
+            <button
+              onClick={() =>
+                enviar(async () => {
+                  const r = await aprovarEEnviarTodos(schoolId);
+                  return `${r.enviados} enviada(s)${r.deFora ? `; ${r.deFora} não saíram (sem celular válido, pediram para sair ou falha no envio)` : ""}.`;
+                })
+              }
+              disabled={isPending}
+              className="inline-flex items-center gap-1 rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+            >
+              <Send size={12} /> Aprovar e enviar todos ({data.rascunhosPendentes.length})
+            </button>
+          )}
+        </div>
+        {avisoEnvio && <p className="mb-3 text-[11px] font-medium text-na-green-dark dark:text-emerald-400">{avisoEnvio}</p>}
         {data.rascunhosPendentes.length === 0 ? (
           <EmptyState text="Nenhum rascunho pendente." />
         ) : (
@@ -177,12 +248,7 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
                   <span className="font-semibold text-gray-900 dark:text-gray-100">{d.memberName}</span>
                   <span className="text-gray-500 dark:text-gray-400">{CHARGE_TRIGGER_LABEL[d.triggerType] ?? d.triggerType}</span>
                 </div>
-                <textarea
-                  defaultValue={d.body}
-                  onChange={(e) => setRascunhosEditados((prev) => ({ ...prev, [d.id]: e.target.value }))}
-                  rows={2}
-                  className="w-full rounded-lg border border-gray-300 p-2 text-[13px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                />
+                <p className="rounded-lg bg-gray-50 p-2 text-[13px] text-gray-800 dark:bg-gray-800 dark:text-gray-200">{d.body}</p>
                 <div className="mt-2 flex justify-end gap-2">
                   <button
                     onClick={() => startTransition(() => descartarRascunho(schoolId, d.id))}
@@ -192,8 +258,8 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
                     <Trash2 size={12} /> Descartar
                   </button>
                   <button
-                    onClick={() => startTransition(() => aprovarEEnviarRascunho(schoolId, d.id, rascunhosEditados[d.id]))}
-                    disabled={isPending}
+                    onClick={() => enviar(async () => STATUS_ENVIO[await aprovarEEnviarRascunho(schoolId, d.id)] ?? "Pronto.")}
+                    disabled={isPending || !zap.ligado}
                     className="inline-flex items-center gap-1 rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
                   >
                     {isPending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Aprovar e Enviar

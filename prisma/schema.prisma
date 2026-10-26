@@ -189,6 +189,8 @@ model School {
   atendimentoJanelas AtendimentoJanela[]
   atendimentoReservas AtendimentoReserva[]
   apresentacoesPedagogos ApresentacaoPedagogo[]
+  whatsappEnvios WhatsappEnvio[]
+  redesSociais RedeSocialFilial[]
 }
 
 model Member {
@@ -2147,4 +2149,59 @@ model PlanoAula {
   updatedAt           DateTime             @default(now()) @updatedAt
   apresentacao        ApresentacaoPedagogo @relation(fields: [apresentacaoId], references: [id], onDelete: Cascade)
   autor               Member               @relation(fields: [autorId], references: [id], onDelete: Cascade)
+}
+
+/// WhatsApp do financeiro (pedido do usuário 2026-10-26): mensagens de utilidade que saem do número central da rede
+/// (Zernio). Cada envio fica na conta da filial (custoCentavos, contado quando a Meta entrega) e é abatido do repasse.
+/// referencia: chave de idempotência (ex.: "recibo:<rec>", "cobranca:<id>:pago"). status: pendente | enviada |
+/// entregue | lida | falhou | ignorada (sem telefone ou a pessoa saiu da lista).
+model WhatsappEnvio {
+  id              String    @id @default(cuid())
+  schoolId        String
+  memberId        String?
+  telefone        String
+  modelo          String
+  referencia      String    @unique
+  status          String    @default("pendente")
+  zernioMessageId String?
+  custoCentavos   Int       @default(0)
+  erro            String?
+  enviadaEm       DateTime?
+  entregueEm      DateTime?
+  lidaEm          DateTime?
+  createdAt       DateTime  @default(now())
+  school          School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, createdAt])
+  @@index([zernioMessageId])
+}
+
+/// Quem respondeu SAIR ao WhatsApp do financeiro: não recebe mais mensagens (telefone só com dígitos, com DDI).
+model WhatsappDescadastro {
+  telefone  String   @id
+  memberId  String?
+  createdAt DateTime @default(now())
+}
+
+/// Instagram (e futuras redes) conectado pela filial como pacote opcional pago (R$49/mês, pedido do usuário 2026-10-26).
+/// status: contratada (aguardando conectar) | conectada | desconectada | cancelada.
+model RedeSocialFilial {
+  id                  String    @id @default(cuid())
+  schoolId            String
+  rede                String
+  status              String    @default("contratada")
+  valorMensalCentavos Int
+  zernioProfileId     String?
+  zernioAccountId     String?
+  usuario             String?
+  contratadaPorId     String
+  contratadaEm        DateTime  @default(now())
+  conectadaEm         DateTime?
+  canceladaEm         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
+  school              School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, rede])
+  @@index([zernioAccountId])
 }

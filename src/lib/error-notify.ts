@@ -53,6 +53,19 @@ export async function notificarErroSuporte(erro: ErroParaNotificar): Promise<voi
   await enviarAlertaWhatsApp(erro);
 }
 
+/** Aviso ao dono do sistema pelo mesmo canal dos erros (ex.: filial contratou um pacote pago). Best-effort. */
+export async function avisarDono(texto: string): Promise<void> {
+  const phone = process.env.CALLMEBOT_PHONE;
+  const apikey = process.env.CALLMEBOT_APIKEY;
+  if (!phone || !apikey) return console.error("[error-notify] CallMeBot não configurado — aviso não enviado:", texto);
+  try {
+    const res = await fetch(`https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&apikey=${encodeURIComponent(apikey)}&text=${encodeURIComponent(texto)}`);
+    if (!res.ok) console.error(`[error-notify] CallMeBot respondeu HTTP ${res.status}`);
+  } catch (e) {
+    console.error("[error-notify] Falha ao enviar aviso ao dono:", e);
+  }
+}
+
 async function enviarAlertaWhatsApp(erro: ErroParaNotificar): Promise<void> {
   const phone = process.env.CALLMEBOT_PHONE;
   const apikey = process.env.CALLMEBOT_APIKEY;

@@ -2,6 +2,7 @@ import {comAcessoVoluntario} from "@/lib/acesso-voluntario";
 import {eventPosterUrl} from "@/lib/event-posters";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
+import { custosDoMes, whatsappFinanceiroAtivo } from "@/lib/whatsapp/financeiro";
 
 export interface MemberRow {
   id: string;
@@ -187,6 +188,9 @@ export async function getDirectorDashboard(schoolId: string) {
 
   const eventPosters=new Map(await Promise.all(eventos.map(async e=>[e.id,await eventPosterUrl(e.posterPath)] as const)));
   const regrasDeCobranca = await db.chargingRule.findMany({ where: { schoolId }, include: { triggers: true } });
+  // WhatsApp do financeiro (2026-10-26): mensagens do mês e custo abatido do repasse da filial.
+  const hojeBR = new Date(Date.now() - 3 * 3600e3);
+  const whatsappFinanceiro = { ligado: whatsappFinanceiroAtivo(), ano: hojeBR.getUTCFullYear(), mes: hojeBR.getUTCMonth() + 1, ...(whatsappFinanceiroAtivo() ? await custosDoMes(schoolId, hojeBR.getUTCFullYear(), hojeBR.getUTCMonth() + 1) : { centavos: 0, entregues: 0, falhas: 0, porModelo: [] }) };
 
   const rascunhosPendentes = await db.chargeMessageDraft.findMany({
     where: { status: "pendente_aprovacao", member: { schoolId } },
@@ -294,6 +298,7 @@ export async function getDirectorDashboard(schoolId: string) {
       presentes: e.registrations.filter((r) => r.checkedIn).length,
       registrations: e.registrations.map((r) => ({ id: r.id, memberName: r.member.name, paid: r.paid, checkedIn: r.checkedIn })),
     })),
+    whatsappFinanceiro,
     regrasDeCobranca: regrasDeCobranca.map((r) => ({
       id: r.id,
       name: r.name,

@@ -2,7 +2,8 @@
 
 import { requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
+import { enviarWhatsappFinanceiro } from "@/lib/whatsapp/financeiro";
+import { mesPorExtenso, nomeCurtoDaFilial, primeiroNome, reais, textoDoModelo, type NomeModelo } from "@/lib/whatsapp/modelos";
 import type { ChargeTriggerType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -13,13 +14,12 @@ export async function createChargingRule(schoolId: string, name: string) {
   revalidatePath("/", "layout");
 }
 
-export async function createChargeTrigger(schoolId: string, chargingRuleId: string, type: ChargeTriggerType, messageTemplate: string) {
+export async function createChargeTrigger(schoolId: string, chargingRuleId: string, type: ChargeTriggerType) {
   await requireArea(schoolId, "economia");
   const rule = await db.chargingRule.findUniqueOrThrow({ where: { id: chargingRuleId } });
   if (rule.schoolId !== schoolId) throw new Error("Régua não pertence a esta escola.");
-  if (!messageTemplate.trim()) throw new Error("Modelo de mensagem não pode ser vazio.");
-
-  await db.chargeTrigger.create({ data: { chargingRuleId, type, messageTemplate: messageTemplate.trim() } });
+  // O texto é o modelo aprovado pela Meta para o gatilho (WhatsApp do financeiro, 2026-10-26); o campo guarda o nome dele.
+  await db.chargeTrigger.create({ data: { chargingRuleId, type, messageTemplate: modeloDoGatilho(type) } });
   revalidatePath("/", "layout");
 }
 
@@ -31,12 +31,14 @@ export async function toggleChargeTrigger(schoolId: string, triggerId: string, a
   revalidatePath("/", "layout");
 }
 
-function renderizarTemplate(template: string, member: { name: string }, valores: { valor: number; valorAtraso: number; mesesAtraso: number }) {
-  return template
-    .replaceAll("{{nome}}", member.name)
-    .replaceAll("{{valor}}", valores.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }))
-    .replaceAll("{{valorAtraso}}", valores.valorAtraso.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }))
-    .replaceAll("{{mesesAtraso}}", String(valores.mesesAtraso));
+/** Gatilho da régua → modelo do WhatsApp do financeiro: o do dia 10 é lembrete; os demais, contribuição em aberto. */
+function modeloDoGatilho(type: ChargeTriggerType): NomeModelo {
+  return type === "dia_10_desconto" ? "na_contribuicao_lembrete" : "na_contribuicao_em_aberto";
+}
+
+function parametrosDoGatilho(type: ChargeTriggerType, member: { name: string }, filial: string, valores: { valor: number; valorAtraso: number; mesesAtraso: number }, agora: Date) {
+  if (modeloDoGatilho(type) === "na_contribuicao_lembrete") return [primeiroNome(member.name), filial, mesPorExtenso(agora.getFullYear(), agora.getMonth() + 1), reais(valores.valor)];
+  return [primeiroNome(member.name), filial, valores.mesesAtraso === 1 ? "1 mês" : `${valores.mesesAtraso} meses`, reais(valores.valorAtraso)];
 }
 
 /**
@@ -60,6 +62,7 @@ export async function gerarRascunhosDeCobranca(schoolId: string) {
   await requireArea(schoolId, "economia");
 
   const rules = await db.chargingRule.findMany({ where: { schoolId }, include: { triggers: { where: { active: true } } } });
+  const filial = nomeCurtoDaFilial((await db.school.findUniqueOrThrow({ where: { id: schoolId }, select: { name: true } })).name);
   const triggers = rules.flatMap((r) => r.triggers);
   if (triggers.length === 0) return { criados: 0 };
 
@@ -110,7 +113,8 @@ export async function gerarRascunhosDeCobranca(schoolId: string) {
       if (!bate) continue;
       if (existentes.has(`${membro.id}:${trigger.id}`)) continue;
 
-      const body = renderizarTemplate(trigger.messageTemplate, membro, { valor, valorAtraso, mesesAtraso });
+      if ((trigger.type === "dia_10_desconto" ? valor : valorAtraso) <= 0) continue;
+      const body = textoDoModelo(modeloDoGatilho(trigger.type), parametrosDoGatilho(trigger.type, membro, filial, { valor, valorAtraso, mesesAtraso }, agora));
       await db.chargeMessageDraft.create({ data: { memberId: membro.id, chargeTriggerId: trigger.id, cycleKey, body } });
       criados++;
     }
@@ -120,17 +124,53 @@ export async function gerarRascunhosDeCobranca(schoolId: string) {
   return { criados };
 }
 
-export async function aprovarEEnviarRascunho(schoolId: string, draftId: string, bodyEditado?: string) {
+/**
+ * Envia o rascunho pelo WhatsApp do financeiro (número central, modelo aprovado pela Meta). O texto não é editável:
+ * o WhatsApp só aceita o modelo aprovado. Valores recalculados na hora do envio.
+ */
+export async function aprovarEEnviarRascunho(schoolId: string, draftId: string) {
   await requireArea(schoolId, "economia");
-  const draft = await db.chargeMessageDraft.findUniqueOrThrow({ where: { id: draftId }, include: { member: true } });
+  const r = await enviarRascunho(schoolId, draftId);
+  revalidatePath("/", "layout");
+  return r.status;
+}
+
+/** "Aprovar e enviar todos" da fila. Devolve quantos saíram e quantos ficaram de fora (sem celular, saiu da lista, falha). */
+export async function aprovarEEnviarTodos(schoolId: string) {
+  await requireArea(schoolId, "economia");
+  const pendentes = await db.chargeMessageDraft.findMany({ where: { status: "pendente_aprovacao", member: { schoolId } }, select: { id: true } });
+  let enviados = 0;
+  let deFora = 0;
+  for (const p of pendentes) {
+    const r = await enviarRascunho(schoolId, p.id);
+    if (r.status === "enviada" || r.status === "repetida") enviados++;
+    else deFora++;
+  }
+  revalidatePath("/", "layout");
+  return { enviados, deFora };
+}
+
+async function enviarRascunho(schoolId: string, draftId: string) {
+  const draft = await db.chargeMessageDraft.findUniqueOrThrow({
+    where: { id: draftId },
+    include: { chargeTrigger: true, member: { include: { compositionItems: true, monthlyStatus: { where: { status: "atrasado" } }, school: { select: { name: true } } } } },
+  });
   if (draft.member.schoolId !== schoolId) throw new Error("Rascunho não pertence a esta escola.");
   if (draft.status !== "pendente_aprovacao") throw new Error("Este rascunho já foi decidido.");
 
-  const corpoFinal = bodyEditado?.trim() || draft.body;
-  const result = await sendWhatsAppMessage(draft.member.whatsapp, corpoFinal);
-  if(!result.ok) throw new Error(result.error ?? "Não foi possível enviar pelo WhatsApp.");
-  await db.chargeMessageDraft.update({ where: { id: draftId }, data: { status: "enviado", body: corpoFinal, decidedAt: new Date() } });
-  revalidatePath("/", "layout");
+  const valor = draft.member.compositionItems.reduce((soma, i) => soma + Number(i.amount), 0);
+  const mesesAtraso = draft.member.monthlyStatus.length;
+  const type = draft.chargeTrigger.type;
+  const modelo = modeloDoGatilho(type);
+  const parametros = parametrosDoGatilho(type, draft.member, nomeCurtoDaFilial(draft.member.school.name), { valor, valorAtraso: valor * mesesAtraso, mesesAtraso }, new Date());
+  const r = await enviarWhatsappFinanceiro({ schoolId, memberId: draft.memberId, telefone: draft.member.whatsapp, modelo, parametros, referencia: `regua:${draftId}` });
+  if (r.status === "desligado") throw new Error("O WhatsApp do financeiro ainda não está ligado.");
+  if (r.status === "falhou") return r;
+  await db.chargeMessageDraft.update({
+    where: { id: draftId },
+    data: { status: r.status === "ignorada" ? "descartado" : "enviado", body: textoDoModelo(modelo, parametros), decidedAt: new Date() },
+  });
+  return r;
 }
 
 export async function descartarRascunho(schoolId: string, draftId: string) {
