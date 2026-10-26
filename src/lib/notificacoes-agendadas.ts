@@ -3,7 +3,7 @@ import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { agendaUlissesBranchWhere, eventAudienceWhere, eventScopeWhere } from "@/lib/event-policy";
-import { TIPOS_DO_PORTAL, ehDeAlunos } from "@/lib/grupos-comum";
+import { TIPOS_DO_PORTAL, dispensaAcessoVoluntario } from "@/lib/grupos-comum";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import { enviarPush } from "@/lib/push";
 import { Prisma } from "@prisma/client";
@@ -42,7 +42,7 @@ async function integrantes(grupo: { id: string; tipo: string }, cache: Map<strin
   if (pronto) return pronto;
   const vinculos = await db.classMembership.findMany({ where: { classGroupId: grupo.id, member: { mercurioAtivo: true } }, select: { memberId: true } });
   let ids = [...new Set(vinculos.map((v) => v.memberId))];
-  if (!ehDeAlunos(grupo.tipo)) {
+  if (!dispensaAcessoVoluntario(grupo.tipo)) {
     const liberados = await comAcessoVoluntario(ids);
     ids = ids.filter((id) => liberados.has(id));
   }
@@ -372,4 +372,35 @@ export async function avisosDeAtendimentos() {
     pessoas += a.pessoas + i.pessoas;
   }
   return { conversas: proximas.length, pessoas };
+}
+
+// ───────────────────────── Planos de aula da turma de pedagogos ─────────────────────────
+// Pedido do usuário 2026-10-26: plano entregue até 7 dias antes da apresentação. Lembra o pedagogo 3 dias antes do
+// prazo e no dia do prazo; no dia seguinte ao prazo, avisa o instrutor dos pedagogos. Só entre 8h e 21h (Brasília).
+
+export async function avisosDePlanosDeAula() {
+  const hora = Number(new Date().toLocaleString("en-US", { timeZone: TZ, hour: "2-digit", hourCycle: "h23" }));
+  if (hora < 8 || hora >= 21) return { lembretes: 0, atrasos: 0 };
+  const hojeISO = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+  const soma = (iso: string, d: number) => new Date(Date.parse(`${iso}T12:00:00Z`) + d * 864e5).toISOString().slice(0, 10);
+  const abertas = await db.apresentacaoPedagogo.findMany({
+    where: { status: "agendada", data: { gte: soma(hojeISO, 5), lte: soma(hojeISO, 11) }, OR: [{ plano: null }, { plano: { status: { in: ["rascunho", "devolvido"] } } }] },
+    select: { id: true, data: true, tema: true, classGroupId: true, pedagogoId: true, pedagogo: { select: { name: true } } },
+  });
+  let lembretes = 0;
+  let atrasos = 0;
+  for (const a of abertas) {
+    const prazo = soma(a.data, -7);
+    const quando = prazo === soma(hojeISO, 3) ? "3dias" : prazo === hojeISO ? "hoje" : prazo === soma(hojeISO, -1) ? "atrasado" : null;
+    if (!quando || !(await reservar(`plano-aula:${a.id}:${quando}`))) continue;
+    const url = `/grupos/${a.classGroupId}?aba=escala`;
+    if (quando === "atrasado") {
+      const instrutores = (await db.classMembership.findMany({ where: { classGroupId: a.classGroupId, role: "professor" }, select: { memberId: true } })).map((r) => r.memberId);
+      atrasos += (await enviarPush(instrutores, { titulo: "Plano de aula atrasado", corpo: `${a.pedagogo.name.split(" ").slice(0, 2).join(" ")} ainda não entregou o plano "${a.tema}" (apresenta em ${a.data.split("-").reverse().join("/")}).`, url, etiqueta: `plano-atrasado-${a.id}` })).pessoas;
+      await enviarPush([a.pedagogoId], { titulo: "Plano de aula atrasado", corpo: `O prazo do plano "${a.tema}" era ontem. Entregue assim que puder.`, url, etiqueta: `plano-${a.id}` });
+    } else {
+      lembretes += (await enviarPush([a.pedagogoId], { titulo: quando === "hoje" ? "Plano de aula: o prazo é hoje" : "Plano de aula: faltam 3 dias", corpo: `"${a.tema}", apresentação em ${a.data.split("-").reverse().join("/")}.`, url, etiqueta: `plano-${a.id}` })).pessoas;
+    }
+  }
+  return { lembretes, atrasos };
 }

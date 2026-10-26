@@ -1,5 +1,5 @@
 import { processarListaDeEspera } from "@/lib/event-waitlist";
-import { avisosDeAtendimentos, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
+import { avisosDeAtendimentos, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
 import { conferirMatriculasPendentes } from "@/lib/matricula-online";
 import { pushConfigurado } from "@/lib/push";
 import crypto from "node:crypto";
@@ -36,6 +36,7 @@ export async function GET(req: Request) {
   const resultado = {
     encontros: await rodar("encontros", avisosDeEncontros),
     atendimentos: await rodar("atendimentos", avisosDeAtendimentos),
+    planosDeAula: await rodar("planos de aula", avisosDePlanosDeAula),
     pedidos: await rodar("pedidos", avisosDePedidosNovos),
     eventos: await rodar("eventos", () => avisosDeEventosNovos()),
     semana: await rodar("semana", () => resumoDaSemana()),

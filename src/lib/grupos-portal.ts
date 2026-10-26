@@ -15,7 +15,7 @@ import type { Member } from "@prisma/client";
  *  - BF/BM/CS: grupos de voluntários vindos do Mercúrio; aqui ganham
  *    atividades e reuniões, mas a composição continua vindo do Mercúrio.
  */
-import { TIPOS_FV, ehDeAlunos, ehTipoGrupo, type TipoGrupo } from "@/lib/grupos-comum";
+import { TIPOS_FV, dispensaAcessoVoluntario, ehDeAlunos, ehTipoGrupo, type TipoGrupo } from "@/lib/grupos-comum";
 import { areasNaFilial } from "@/lib/areas-filial";
 
 export { TIPOS_GRUPO, TIPOS_FV, TIPOS_DO_PORTAL, TIPOS_DE_ALUNOS, TIPOS_ESTUDO, ehDeAlunos, ehTipoGrupo, MODALIDADES, FREQUENCIAS, type TipoGrupo, type TipoDoPortal } from "@/lib/grupos-comum";
@@ -49,6 +49,11 @@ export async function papelNoGrupo(m: Pessoa, grupoId: string): Promise<Papel & 
       const admin = (await podeAdministrar(m, g.schoolId)) || (await ehAdministradorNacional(m)) || (await areasNaFilial(m, g.schoolId)).includes("escolastica");
       return { ...base, podeGerir: admin || responsavel, podeVer: admin || responsavel || integrante };
     }
+    case "PED": {
+      // Turma de pedagogos: gerida pela administração, Direção e Escolástica da filial e pelo instrutor dos pedagogos.
+      const admin = await podeCriarTurmaPedagogos(m, g.schoolId);
+      return { ...base, podeGerir: admin || responsavel, podeVer: admin || responsavel || integrante };
+    }
     case "SEC": {
       const admin = (await podeAdministrar(m, g.schoolId)) || (await ehAdministradorNacional(m));
       const acesso = admin || (await temAcessoVoluntario(m));
@@ -68,11 +73,13 @@ export async function papelNoGrupo(m: Pessoa, grupoId: string): Promise<Papel & 
 
 /** Quem pode entrar no grupo (reconferido no servidor ao adicionar). */
 export async function candidatoElegivel(tipo: TipoGrupo, schoolId: string, permiteAlunos: boolean, alvoId: string): Promise<string | null> {
-  const alvo = await db.member.findUnique({ where: { id: alvoId }, select: { schoolId: true, mercurioAtivo: true, isMembroPrograma: true } });
+  const alvo = await db.member.findUnique({ where: { id: alvoId }, select: { schoolId: true, mercurioAtivo: true, isMembroPrograma: true, isPedagogo: true } });
   if (!alvo || !alvo.mercurioAtivo) return "Pessoa inativa ou não encontrada.";
   if (alvo.schoolId !== schoolId) return "A pessoa é de outra filial.";
   if (ehDeAlunos(tipo) && !permiteAlunos && !alvo.isMembroPrograma) return "Este grupo é só para membros (2º nível em diante).";
   if (tipo === "GDVE" && !(await ehFV(alvoId))) return "O GDVE é só para FV.";
+  if (tipo === "PED" && !alvo.isPedagogo && !(await db.classMembership.count({ where: { memberId: alvoId, role: "professor", classGroup: { tipo: "turma" } } })))
+    return "A turma de pedagogos é só para instrutores.";
   if (TIPOS_FV.includes(tipo as (typeof TIPOS_FV)[number])) return "A composição deste grupo vem do Mercúrio.";
   return null;
 }
@@ -84,6 +91,7 @@ export function filtroCandidatos(tipo: TipoGrupo, schoolId: string, permiteAluno
     mercurioAtivo: true,
     ...(ehDeAlunos(tipo) && !permiteAlunos ? { isMembroPrograma: true } : {}),
     ...(tipo === "GDVE" ? { classMemberships: { some: { classGroup: { tipo: { in: [...TIPOS_FV] } } } } } : {}),
+    ...(tipo === "PED" ? { OR: [{ isPedagogo: true }, { classMemberships: { some: { role: "professor" as const, classGroup: { tipo: "turma" } } } }] } : {}),
   };
 }
 
@@ -96,13 +104,13 @@ export async function gruposDaAgenda(m: Pessoa & { classMemberships: { classGrou
   if (!m.mercurioAtivo) return [];
   const meus = m.classMemberships.filter((cm) => ehTipoGrupo(cm.classGroup.tipo));
   if (!meus.length) return [];
-  const precisaAcesso = meus.some((cm) => !ehDeAlunos(cm.classGroup.tipo));
+  const precisaAcesso = meus.some((cm) => !dispensaAcessoVoluntario(cm.classGroup.tipo));
   const acesso = precisaAcesso ? await temAcessoVoluntario(m) : false;
   const fv = meus.some((cm) => TIPOS_FV.includes(cm.classGroup.tipo as (typeof TIPOS_FV)[number]));
   return [
     ...new Set(
       meus
-        .filter((cm) => ehDeAlunos(cm.classGroup.tipo) || (acesso && (cm.classGroup.tipo !== "GDVE" || fv)))
+        .filter((cm) => dispensaAcessoVoluntario(cm.classGroup.tipo) || (acesso && (cm.classGroup.tipo !== "GDVE" || fv)))
         .map((cm) => cm.classGroupId),
     ),
   ];
@@ -119,4 +127,12 @@ export async function podeCriarEstudo(m: Pessoa & Pick<Member, "isPedagogo">, sc
   if (m.isPedagogo) return true;
   if ((await db.classMembership.count({ where: { memberId: m.id, role: "professor", classGroup: { schoolId, tipo: "turma" } } })) > 0) return true;
   return (await areasNaFilial(m, schoolId)).includes("escolastica");
+}
+
+/** Quem cria e gere turmas de pedagogos (pedido do usuário 2026-10-26): administração, Direção e Escolástica da filial. */
+export async function podeCriarTurmaPedagogos(m: Pessoa, schoolId: string): Promise<boolean> {
+  if ((await podeAdministrar(m, schoolId)) || (await ehAdministradorNacional(m))) return true;
+  if (!m.mercurioAtivo) return false;
+  const areas = await areasNaFilial(m, schoolId);
+  return areas.includes("escolastica") || areas.includes("direcao");
 }

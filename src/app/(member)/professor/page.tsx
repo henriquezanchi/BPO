@@ -2,6 +2,8 @@ import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { formatDateBR } from "@/lib/format";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { getTeacherClasses, lideraAlgumGrupo } from "@/lib/teacher-data";
+import { db } from "@/lib/db";
+import { prazoDoPlano } from "@/lib/escala-pedagogos";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -16,8 +18,12 @@ export default async function ProfessorPage() {
   // entra nem pela URL direta (defesa em profundidade).
   if (!member.isPedagogo && !(await lideraAlgumGrupo(member.id))) redirect("/portal");
 
-  const classes = await getTeacherClasses(member.id);
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const [classes, apresentacao] = await Promise.all([
+    getTeacherClasses(member.id),
+    // Próxima apresentação na turma de pedagogos (pedido do usuário 2026-10-26).
+    db.apresentacaoPedagogo.findFirst({ where: { pedagogoId: member.id, status: "agendada", data: { gte: today } }, orderBy: { data: "asc" }, select: { classGroupId: true, data: true, tema: true, plano: { select: { status: true } } } }),
+  ]);
 
   return (
     <ShellTrabalho largura="estreita">
@@ -38,6 +44,16 @@ export default async function ProfessorPage() {
           <a href="https://www.oinabn.com.br/orpheu" target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">Orpheu <ExternalLink size={12} /></a></div>
         )}
       </div>
+
+      {apresentacao && (
+        <Link href={`/grupos/${apresentacao.classGroupId}?aba=escala`} className="flex flex-col gap-1 rounded-2xl border border-na-gold/50 bg-na-gold/10 p-4 transition hover:border-na-gold dark:border-amber-800 dark:bg-amber-950/20">
+          <span className="text-[11px] font-bold tracking-wide text-na-gold-dark uppercase dark:text-amber-300">Sua apresentação na turma de pedagogos</span>
+          <span className="text-[15px] font-bold text-gray-900 dark:text-gray-100">{apresentacao.data.split("-").reverse().join("/")} · {apresentacao.tema}</span>
+          <span className="text-[12px] text-gray-600 dark:text-gray-300">
+            {apresentacao.plano?.status === "aprovado" ? "Plano aprovado." : apresentacao.plano?.status === "entregue" ? "Plano entregue, aguardando o instrutor." : apresentacao.plano?.status === "devolvido" ? "O instrutor pediu ajustes no plano." : `Entregue o plano de aula até ${prazoDoPlano(apresentacao.data).split("-").reverse().join("/")}.`}
+          </span>
+        </Link>
+      )}
 
       {classes.length === 0 && (
         <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma turma ou grupo vinculado a você ainda.</p>

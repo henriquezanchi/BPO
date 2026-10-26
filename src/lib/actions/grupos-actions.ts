@@ -3,7 +3,7 @@
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { candidatoElegivel, ehFV, filtroCandidatos, papelNoGrupo, podeCriarEstudo, TIPOS_DO_PORTAL, type TipoDoPortal, type TipoGrupo } from "@/lib/grupos-portal";
+import { candidatoElegivel, ehFV, filtroCandidatos, papelNoGrupo, podeCriarEstudo, podeCriarTurmaPedagogos, TIPOS_DO_PORTAL, type TipoDoPortal, type TipoGrupo } from "@/lib/grupos-portal";
 import { consultarMercurio } from "@/lib/mercurio-db/client";
 import { podeAdministrar } from "@/lib/recursos-filial";
 import { sugerirSecretarias, type FuncaoMercurio } from "@/lib/secretarias";
@@ -110,13 +110,20 @@ export async function criarGrupo(input: CamposGrupo & { schoolId: string; tipo: 
     if (!(TIPOS_DO_PORTAL as readonly string[]).includes(tipo)) throw new GrupoErro("Tipo de grupo inválido.");
     if (tipo === "ESTUDO" || tipo === "LEITURA") {
       if (!(await podeCriarEstudo(m, input.schoolId))) throw new GrupoErro("Grupo de estudo e leitura comentada são criados por instrutores, direção, administração e Escolástica da filial.");
+    } else if (tipo === "PED") {
+      if (!(await podeCriarTurmaPedagogos(m, input.schoolId))) throw new GrupoErro("A turma de pedagogos é criada pela administração, Direção ou Escolástica da filial.");
     } else if (tipo === "GDVE") {
       if (m.schoolId !== input.schoolId || !(await ehFV(m.id)) || !(await temAcessoVoluntario(m))) throw new GrupoErro("O GDVE é criado por FV da própria filial.");
     } else if (!(await administra(m, input.schoolId))) throw new GrupoErro("Só a administração da filial cria GAF e secretarias.");
     const dados = validarCampos(input);
     await exigirNomeLivre(input.schoolId, dados.name);
     const responsaveis = [...new Set([...(tipo === "GDVE" ? [m.id] : []), ...input.responsaveis])];
-    const integrantes = [...new Set(input.integrantes)].filter((id) => !responsaveis.includes(id));
+    // Turma de pedagogos sem integrantes escolhidos: entram todos os instrutores ativos da filial.
+    const pedidos =
+      tipo === "PED" && !input.integrantes.length
+        ? (await db.member.findMany({ where: { schoolId: input.schoolId, mercurioAtivo: true, isPedagogo: true }, select: { id: true } })).map((p) => p.id)
+        : input.integrantes;
+    const integrantes = [...new Set(pedidos)].filter((id) => !responsaveis.includes(id));
     for (const id of [...responsaveis, ...integrantes]) {
       const motivo = await candidatoElegivel(tipo, input.schoolId, dados.permiteAlunos, id);
       // Na secretaria e no GAF, responsável pode ser qualquer ativo da filial (instrutor, dirigente).

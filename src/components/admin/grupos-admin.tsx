@@ -226,6 +226,39 @@ export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grup
   );
 }
 
+/** Turmas de pedagogos da filial (pedido do usuário 2026-10-26): criação pela administração, Direção e Escolástica. */
+export function PedagogosAdmin({ schoolId, grupos }: { schoolId: string; grupos: ResumoGrupo[] }) {
+  const router = useRouter();
+  const [criando, setCriando] = useState(false);
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Os instrutores apresentam suas aulas (15 minutos) ao instrutor dos pedagogos, numa escala com data e tema; o plano de aula é entregue uma semana antes.
+      </p>
+      <button
+        onClick={() => setCriando(!criando)}
+        className={`flex min-h-10 w-fit items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold ${criando ? "border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-200" : "bg-na-green text-white hover:bg-na-green-dark"}`}
+      >
+        {criando ? <X size={15} /> : <Plus size={15} />} Nova turma de pedagogos
+      </button>
+      {criando && (
+        <section className="rounded-2xl border border-gray-200 bg-white p-4 lg:p-5 dark:border-gray-700 dark:bg-gray-900">
+          <FormGrupo tipo="PED" schoolId={schoolId} onSalvo={(id) => router.push(`/grupos/${id}?aba=escala`)} onCancelar={() => setCriando(false)} />
+        </section>
+      )}
+      {grupos.length === 0 ? (
+        <Vazio texto="Nenhuma turma de pedagogos ainda." />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {grupos.map((g) => (
+            <CartaoGrupo key={g.id} g={g} de="voluntario" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Grupos de estudo e leituras comentadas da filial: lista e criação (instrutores, direção, administração, Escolástica). */
 export function EstudosAdmin({ schoolId, grupos }: { schoolId: string; grupos: ResumoGrupo[] }) {
   const router = useRouter();

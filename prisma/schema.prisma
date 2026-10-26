@@ -188,6 +188,7 @@ model School {
   matriculasOnline MatriculaOnline[]
   atendimentoJanelas AtendimentoJanela[]
   atendimentoReservas AtendimentoReserva[]
+  apresentacoesPedagogos ApresentacaoPedagogo[]
 }
 
 model Member {
@@ -197,6 +198,8 @@ model Member {
   atendimentoJanelas AtendimentoJanela[] @relation("AtendimentoJanelaInstrutor")
   atendimentosComoInstrutor AtendimentoReserva[] @relation("AtendimentoReservaInstrutor")
   atendimentosComoAluno AtendimentoReserva[] @relation("AtendimentoReservaAluno")
+  apresentacoesPedagogo ApresentacaoPedagogo[]
+  planosAula PlanoAula[]
   meetingResponses GroupMeetingResponse[]
   meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
   pushSubscriptions PushSubscription[]
@@ -1175,6 +1178,7 @@ model ClassGroup {
   @@unique([schoolId, name])
   @@index([schoolId])
   gafRequests     GafRequest[]
+  apresentacoesPedagogos ApresentacaoPedagogo[]
 }
 
 model ClassMembership {
@@ -2092,4 +2096,55 @@ model AtendimentoReserva {
   @@index([instrutorId, inicio])
   @@index([alunoId, inicio])
   @@index([schoolId, inicio])
+}
+
+/// Escala de apresentações da turma de pedagogos (ClassGroup tipo "PED", pedido do usuário 2026-10-26): cada pedagogo
+/// apresenta sua aula (15 min) ao instrutor dos pedagogos numa data ("YYYY-MM-DD", fuso da filial). O tema segue a
+/// sequência do catálogo da disciplina (lib/temas-curriculo.ts). Plano de aula entregue até 7 dias antes.
+model ApresentacaoPedagogo {
+  id              String     @id @default(cuid())
+  classGroupId    String
+  schoolId        String
+  pedagogoId      String
+  data            String
+  ordem           Int        @default(1)
+  materiaSigla    String?
+  tema            String
+  topicos         String[]   @default([])
+  status          String     @default("agendada") // agendada | apresentada | faltou | cancelada
+  lembretePlanoEm DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
+  classGroup      ClassGroup @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  school          School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  pedagogo        Member     @relation(fields: [pedagogoId], references: [id], onDelete: Cascade)
+  plano           PlanoAula?
+
+  @@index([classGroupId, data])
+  @@index([pedagogoId, data])
+  @@index([schoolId, data])
+}
+
+/// Plano de aula da apresentação: arquivo (bucket privado "planos-aula") e os 4 pontos. status: rascunho | entregue |
+/// devolvido (instrutor pediu ajustes) | aprovado.
+model PlanoAula {
+  id                  String               @id @default(cuid())
+  apresentacaoId      String               @unique
+  autorId             String
+  sintese             String?
+  praticaFilosofica   String?
+  ponteParaVida       String?
+  consequencias       String?
+  arquivoPath         String?
+  arquivoNome         String?
+  arquivoTipo         String?
+  status              String               @default("rascunho")
+  entregueEm          DateTime?
+  comentarioInstrutor String?
+  revisadoEm          DateTime?
+  revisadoPorId       String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @default(now()) @updatedAt
+  apresentacao        ApresentacaoPedagogo @relation(fields: [apresentacaoId], references: [id], onDelete: Cascade)
+  autor               Member               @relation(fields: [autorId], references: [id], onDelete: Cascade)
 }

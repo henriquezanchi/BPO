@@ -37,7 +37,7 @@ const quando = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 const STATUS: Record<string, string> = { ativa: "Ativa", pausada: "Pausada", concluida: "Concluída" };
 
-export type AbaGrupo = "encontros" | "avisos" | "atividades" | "equipe" | "sobre" | "orientacoes";
+export type AbaGrupo = "escala" | "encontros" | "avisos" | "atividades" | "equipe" | "sobre" | "orientacoes";
 type Aba = AbaGrupo;
 
 /**
@@ -45,7 +45,7 @@ type Aba = AbaGrupo;
  * usuário 2026-10-25: abas (na URL, ?aba=) em qualquer tela. "Avisos e enquetes" (antes só em
  * Professor) e "Orientações" (secretarias) chegam prontos do servidor.
  */
-export function GrupoPainel({ dados, abaInicial, avisos, orientacoes }: { dados: D; abaInicial?: string; avisos?: ReactNode; orientacoes?: ReactNode }) {
+export function GrupoPainel({ dados, abaInicial, avisos, orientacoes, escala }: { dados: D; abaInicial?: string; avisos?: ReactNode; orientacoes?: ReactNode; escala?: ReactNode }) {
   const { papel, grupo } = dados;
   const router = useRouter();
   const [editando, setEditando] = useState(false);
@@ -53,6 +53,8 @@ export function GrupoPainel({ dados, abaInicial, avisos, orientacoes }: { dados:
   const recarregar = () => router.refresh();
 
   const abas = ([
+    // Turma de pedagogos (2026-10-26): a escala de apresentações é a primeira aba.
+    escala ? ["escala", "Escala de apresentações"] : null,
     ["encontros", "Encontros"],
     avisos ? ["avisos", "Avisos e enquetes"] : null,
     ["atividades", "Atividades"],
@@ -60,7 +62,7 @@ export function GrupoPainel({ dados, abaInicial, avisos, orientacoes }: { dados:
     ["sobre", "Sobre"],
     orientacoes ? ["orientacoes", "Orientações"] : null,
   ].filter(Boolean) as [Aba, string][]);
-  const [aba, setAbaEstado] = useState<Aba>(() => abas.find(([a]) => a === abaInicial)?.[0] ?? "encontros");
+  const [aba, setAbaEstado] = useState<Aba>(() => abas.find(([a]) => a === abaInicial)?.[0] ?? abas[0][0]);
   // Troca na hora e guarda na URL (voltar/compartilhar abre na mesma aba).
   const setAba = (a: Aba) => {
     setAbaEstado(a);
@@ -127,6 +129,7 @@ export function GrupoPainel({ dados, abaInicial, avisos, orientacoes }: { dados:
       </nav>
 
       <div className="flex max-w-3xl flex-col gap-4">
+        {aba === "escala" && escala}
         {aba === "encontros" && <Encontros dados={dados} recarregar={recarregar} />}
         {aba === "avisos" && avisos}
         {aba === "atividades" && <Atividades dados={dados} recarregar={recarregar} />}

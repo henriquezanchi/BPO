@@ -24,6 +24,7 @@ const TEXTOS = {
   SEC: { titulo: "Nova secretaria", nome: "Nome da secretaria", exemploNome: "Escolástica", resp: "Secretário(a) e pró-secretários", respAjuda: "Quem responde pela secretaria.", integ: "Equipe de voluntários" },
   GDVE: { titulo: "Novo GDVE", nome: "Nome do GDVE", exemploNome: "GDVE de quinta", resp: "Coordenação (além de você)", respAjuda: "Somente FV.", integ: "Participantes (somente FV)" },
   ESTUDO: { titulo: "Novo grupo de estudo", nome: "Nome do grupo", exemploNome: "Estudo do Bhagavad Gita", resp: "Coordenação", respAjuda: "Quem conduz os encontros (instrutor, dirigente).", integ: "Participantes" },
+  PED: { titulo: "Nova turma de pedagogos", nome: "Nome da turma", exemploNome: "Pedagogos de Barra do Garças", resp: "Instrutor dos pedagogos", respAjuda: "Quem recebe as apresentações e revisa os planos de aula.", integ: "Pedagogos (instrutores)" },
   LEITURA: { titulo: "Nova leitura comentada", nome: "Nome da leitura", exemploNome: "Leitura comentada de A Voz do Silêncio", resp: "Coordenação", respAjuda: "Quem conduz a leitura.", integ: "Participantes" },
 } as const;
 
@@ -153,7 +154,7 @@ export function FormGrupo({
           <SeletorPessoas rotulo={t.resp} ajuda={t.respAjuda} buscar={buscarResp} selecionados={responsaveis} onChange={setResponsaveis} />
           <SeletorPessoas
             rotulo={t.integ}
-            ajuda={ehDeAlunos(tipo) ? (permiteAlunos ? "Membros e alunos ativos da filial." : "Membros ativos da filial (2º nível em diante).") : undefined}
+            ajuda={tipo === "PED" ? "Em branco: entram todos os instrutores ativos da filial." : ehDeAlunos(tipo) ? (permiteAlunos ? "Membros e alunos ativos da filial." : "Membros ativos da filial (2º nível em diante).") : undefined}
             buscar={buscarInteg}
             selecionados={integrantes}
             onChange={setIntegrantes}

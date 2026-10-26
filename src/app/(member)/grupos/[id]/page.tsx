@@ -1,6 +1,7 @@
 import {carregarContextoSecretaria,podeAcessarSecretaria} from "@/lib/secretarias-rede/acesso";
 import { AreaSecretaria } from "@/components/secretarias-rede/area-secretaria";
 import { AvisosDoGrupo } from "@/components/grupos/avisos-do-grupo";
+import { EscalaDoGrupo } from "@/components/grupos/escala-servidor";
 import { GrupoPainel } from "@/components/grupos/grupo-painel";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -33,6 +34,7 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
       abaInicial={aba}
       avisos={dados.papel.podeGerir ? <AvisosDoGrupo grupoId={dados.grupo.id} /> : undefined}
       orientacoes={orientacoes ? <AreaSecretaria secretaria={dados.grupo.name} /> : undefined}
+      escala={dados.grupo.tipo === "PED" ? <EscalaDoGrupo grupoId={dados.grupo.id} euId={member.id} podeGerir={dados.papel.podeGerir} /> : undefined}
     />
   );
 

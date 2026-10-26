@@ -6,6 +6,8 @@ export const TIPOS_GRUPO = {
   // Pedido do usuário 2026-10-25: criados por instrutores, direção, administração e Escolástica.
   ESTUDO: { nome: "Grupo de estudo", completo: "Grupo de estudo", doPortal: true },
   LEITURA: { nome: "Leitura comentada", completo: "Leitura comentada", doPortal: true },
+  // Pedido do usuário 2026-10-26: instrutores apresentam suas aulas ao instrutor dos pedagogos (escala e planos de aula).
+  PED: { nome: "Turma de pedagogos", completo: "Turma de pedagogos", doPortal: true },
   BF: { nome: "Grupo Feminino", completo: "Grupo Feminino", doPortal: false },
   BM: { nome: "Grupo Masculino", completo: "Grupo Masculino", doPortal: false },
   CS: { nome: "Grupo de Segurança", completo: "Grupo de Segurança", doPortal: false },
@@ -13,12 +15,14 @@ export const TIPOS_GRUPO = {
 export type TipoGrupo = keyof typeof TIPOS_GRUPO;
 export const TIPOS_FV = ["BF", "BM", "CS"] as const;
 /** Grupos criados no Portal (os demais vêm do Mercúrio). */
-export const TIPOS_DO_PORTAL = ["GAF", "SEC", "GDVE", "ESTUDO", "LEITURA"] as const;
+export const TIPOS_DO_PORTAL = ["GAF", "SEC", "GDVE", "ESTUDO", "LEITURA", "PED"] as const;
 export type TipoDoPortal = (typeof TIPOS_DO_PORTAL)[number];
 /** Grupos de estudo abertos a alunos: não dependem do acesso de voluntário. */
 export const TIPOS_DE_ALUNOS = ["GAF", "ESTUDO", "LEITURA"] as const;
 export const TIPOS_ESTUDO = ["ESTUDO", "LEITURA"] as const;
 export const ehDeAlunos = (t: string) => (TIPOS_DE_ALUNOS as readonly string[]).includes(t);
+/** Grupos que não dependem do acesso de voluntário: os de alunos e a turma de pedagogos (instrutores). */
+export const dispensaAcessoVoluntario = (t: string) => ehDeAlunos(t) || t === "PED";
 export const ehTipoGrupo = (t: string): t is TipoGrupo => Object.hasOwn(TIPOS_GRUPO, t);
 
 export const MODALIDADES: Record<string, string> = { presencial: "Presencial", online: "Online", misto: "Presencial e online" };
