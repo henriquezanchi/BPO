@@ -45,10 +45,10 @@ export function CampoOrcamento({ totalCentavos, itensIniciais }: { totalCentavos
         </div>
       </div>
       {detalhado ? (
-        <div className="grid gap-2 rounded-xl border border-gray-200 p-3 sm:grid-cols-2 dark:border-gray-800">
+        <div className="grid gap-x-4 gap-y-3 rounded-xl border border-gray-200 p-3 sm:grid-cols-2 dark:border-gray-800">
           {CATEGORIAS_CUSTO.map(([k, rotulo]) => (
-            <label key={k} className="flex items-center justify-between gap-3 text-[13px] text-gray-700 dark:text-gray-300">
-              <span className="min-w-0">{rotulo}</span>
+            <label key={k} className="flex min-w-0 flex-col gap-1 text-[12px] font-semibold text-gray-700 dark:text-gray-300">
+              <span>{rotulo}</span>
               <input
                 type="number"
                 min="0"
@@ -58,7 +58,7 @@ export function CampoOrcamento({ totalCentavos, itensIniciais }: { totalCentavos
                 aria-label={`${rotulo} (R$)`}
                 value={itens[k]}
                 onChange={(e) => setItens((atual) => ({ ...atual, [k]: e.target.value }))}
-                className={`${CAMPO_CLASS} w-32 shrink-0 text-right`}
+                className={`${CAMPO_CLASS} text-right tabular-nums`}
               />
             </label>
           ))}
