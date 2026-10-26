@@ -206,3 +206,5 @@ Passo a passo para ligar (detalhes no bloco 56 da COORDENACAO):
 Sem `ZERNIO_WHATSAPP_ACCOUNT_ID` nada é enviado; sem `ZERNIO_API_KEY` o cartão do Instagram não aparece.
 
 **Atualização 26/10 (tarde):** por decisão do usuário, **nem WhatsApp nem Instagram por enquanto**. **Não aplicar** a migração `20261026180000_whatsapp_financeiro_instagram` (fica pendente no `migrate status` de propósito) e não configurar `ZERNIO_WHATSAPP_ACCOUNT_ID` (sem a migração, `custosDoMes` quebraria o painel). O usuário já tem um número com liberação da Meta (usado no CRM) que pode passar a servir também ao BPO.
+
+**Testes (26/10):** a suíte passa inteira (115/115). A linha de base deixou de ter as 30 falhas antigas: qualquer falha agora é regressão. Em mocks, usar `mockModule` de `tests/helpers/mock-module.mjs` (o Node 24 ignora `mock.module({exports})`).
