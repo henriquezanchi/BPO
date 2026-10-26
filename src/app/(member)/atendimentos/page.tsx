@@ -34,7 +34,7 @@ export default async function AtendimentosAlunoPage() {
       <header className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-white">
         <p className="text-[10px] font-semibold tracking-wide text-na-gold uppercase">Agenda</p>
         <h1 className="mt-1 text-xl font-black">Conversar com meu instrutor</h1>
-        <p className="mt-1 text-[12px] text-green-100">Escolha um horário livre. A conversa entra na sua Agenda e na do instrutor, e você recebe um aviso 2 horas antes.</p>
+        <p className="mt-1 text-[12px] text-green-100">Escolha um horário livre, com pelo menos 24 horas de antecedência. A conversa entra na sua Agenda e na do instrutor, e você recebe um aviso 2 horas antes.</p>
       </header>
       <MarcarAtendimento
         fuso={fuso}

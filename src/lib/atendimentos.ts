@@ -11,8 +11,8 @@ import type { AtendimentoJanela, AtendimentoReserva } from "@prisma/client";
 
 export const DURACOES = [20, 30, 45, 60] as const;
 export const SEMANAS_A_FRENTE = 4;
-/** Antecedência mínima para marcar (o instrutor precisa saber antes). */
-export const ANTECEDENCIA_MIN = 3 * 60;
+/** Antecedência mínima para marcar: 24 h (pedido do usuário 2026-10-25). */
+export const ANTECEDENCIA_MIN = 24 * 60;
 export const MODALIDADES = { presencial: "Presencial", online: "Online", ambos: "Presencial ou online" } as const;
 
 const FUSO_POR_UF: Record<string, string> = {
