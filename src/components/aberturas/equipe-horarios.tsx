@@ -6,6 +6,7 @@ import type { HorarioAvaliado, ResultadoComparacao } from "@/lib/aberturas/plane
 import { ArrowUpRight, CalendarClock, CheckCircle2, Clock3, Edit3, Trash2, Users, WandSparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { CampoImpedimentos } from "./campo-impedimentos";
 import { CAMPO_CLASS, Campo, Feedback, SubmitButton, hiddenAberturaFields, useFormAction } from "./form-action";
 import type { Abertura, Disponibilidade, EscalaSecretaria, PainelAberturas } from "./types";
 import { DIAS, formatarData, hora, isoDate } from "./utils";
@@ -83,7 +84,7 @@ export function EquipeHorarios({ data, abertura }: { data: PainelAberturas; aber
 
 function FormularioDisponibilidade({ data, abertura, item, aoCancelar, inicioPadrao, fimPadrao }: { data: PainelAberturas; abertura: Abertura | null; item: Disponibilidade | null; aoCancelar: () => void; inicioPadrao: string; fimPadrao: string }) {
   const action = useFormAction(salvarDisponibilidade);
-  const impedimentos = Array.isArray(item?.impedimentos) ? JSON.stringify(item.impedimentos) : "[]";
+  const impedimentos = (Array.isArray(item?.impedimentos) ? item.impedimentos : []) as { data: string; inicioMinuto: number; fimMinuto: number }[];
   const submit = (event: React.FormEvent<HTMLFormElement>) => action.submit(event, () => { if (item) aoCancelar(); });
   return <form onSubmit={submit} className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-4 ${item ? "rounded-xl border border-na-green/30 bg-na-green-light/20 p-3 dark:border-emerald-900 dark:bg-emerald-950/20" : ""}`}>
     <input type="hidden" name="schoolId" value={data.schoolId} />
@@ -94,7 +95,7 @@ function FormularioDisponibilidade({ data, abertura, item, aoCancelar, inicioPad
     <Campo label="Até"><input required type="time" name="fim" defaultValue={hora(item?.fimMinuto ?? (abertura ? abertura.inicioMinuto + abertura.duracaoMinutos : 21 * 60))} className={CAMPO_CLASS} /></Campo>
     <Campo label="Válida desde"><input required type="date" name="validaDe" defaultValue={isoDate(item?.validaDe) || inicioPadrao} className={CAMPO_CLASS} /></Campo>
     <Campo label="Válida até"><input required type="date" name="validaAte" defaultValue={isoDate(item?.validaAte) || fimPadrao} className={CAMPO_CLASS} /></Campo>
-    <Campo label="Impedimentos (JSON)" hint="Use [] se não houver. Cada item contém data, inicioMinuto e fimMinuto."><input name="impedimentos" defaultValue={impedimentos} className={CAMPO_CLASS} /></Campo>
+    <CampoImpedimentos iniciais={impedimentos} />
     <label className="flex min-h-11 items-center gap-2 text-sm text-gray-700 sm:col-span-2 lg:col-span-4 dark:text-gray-300"><input type="checkbox" name="habilitado" value="true" defaultChecked={item?.habilitado ?? false} className="accent-na-green" />A escola confirma a habilitação e disponibilidade deste professor</label>
     <div className="sm:col-span-2 lg:col-span-4"><Feedback error={action.error} success={action.success} aviso={action.aviso} /><div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{item && <button type="button" onClick={aoCancelar} className="min-h-10 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-300">Cancelar edição</button>}<SubmitButton pending={action.pending}>{item ? "Salvar alterações" : "Salvar disponibilidade"}</SubmitButton></div></div>
   </form>;
@@ -102,7 +103,7 @@ function FormularioDisponibilidade({ data, abertura, item, aoCancelar, inicioPad
 
 function DisponibilidadeLinha({ item, nome, aoEditar, schoolId }: { item: Disponibilidade; nome?: string; aoEditar: () => void; schoolId: string }) {
   const impedimentos = Array.isArray(item.impedimentos) ? item.impedimentos.length : 0;
-  return <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{nome || "Professor da escola"}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${item.habilitado ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>{item.habilitado ? "Validada pela escola" : "Sem validação da escola"}</span></div><p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{intervalo(item.diaSemana, item.inicioMinuto, item.fimMinuto)}{impedimentos ? ` · ${impedimentos} impedimento(s)` : ""}</p><DataRange inicio={item.validaDe} fim={item.validaAte} /></div><div className="flex gap-2 self-start sm:self-auto"><button type="button" onClick={aoEditar} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200"><Edit3 size={13} />Editar</button><RemoverRegistro action={removerDisponibilidade} schoolId={schoolId} id={item.id} label="disponibilidade" /></div></div>;
+  return <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{nome || "Professor da escola"}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${item.habilitado ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>{item.habilitado ? "Validada pela escola" : "Sem validação da escola"}</span></div><p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{intervalo(item.diaSemana, item.inicioMinuto, item.fimMinuto)}{impedimentos ? ` · ${impedimentos} data${impedimentos === 1 ? "" : "s"} em que não pode` : ""}</p><DataRange inicio={item.validaDe} fim={item.validaAte} /></div><div className="flex gap-2 self-start sm:self-auto"><button type="button" onClick={aoEditar} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200"><Edit3 size={13} />Editar</button><RemoverRegistro action={removerDisponibilidade} schoolId={schoolId} id={item.id} label="disponibilidade" /></div></div>;
 }
 
 function FormularioEscala({ data, escala, aoCancelar, inicioPadrao, fimPadrao }: { data: PainelAberturas; escala: EscalaSecretaria | null; aoCancelar: () => void; inicioPadrao: string; fimPadrao: string }) {
