@@ -64,7 +64,7 @@ function CamposTela({ dados, onChange }: { dados: DadosTela; onChange: (d: Dados
     <div className="space-y-4">
       <input value={dados.nome} onChange={(e) => onChange({ ...dados, nome: e.target.value })} maxLength={60} placeholder="Nome da tela (ex.: TV da recepção)" aria-label="Nome da tela" className={CAMPO} />
       <div className="space-y-2">
-        <p className="text-xs text-gray-500">Eventos que aparecem nesta TV</p>
+        <p className="text-xs text-gray-500">Quem vê esta TV. Ela mostra também os eventos dos públicos mais amplos: membros veem os eventos abertos ao público e os de todos os ativos; FV vê também os de membros.</p>
         <Chips
           opcoes={OPCOES_PUBLICO}
           valor={dados.publicos}

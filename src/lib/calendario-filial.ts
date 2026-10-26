@@ -42,11 +42,12 @@ function publicosDoEvento(publicos: string[], audience: string): Publico[] {
   const mapa: Record<string, Publico[]> = {
     todos_ativos: ["todos", "membros", "fv", "provacionistas", "hd", "dirigentes"],
     membros: ["membros", "fv", "provacionistas", "hd", "dirigentes"],
-    fv: ["fv"],
+    // FV alcança HD e dirigentes (públicos agregadores, 2026-10-25).
+    fv: ["fv", "hd", "dirigentes"],
     provacionistas: ["provacionistas"],
     hd: ["hd"],
     dirigentes: ["dirigentes"],
-    voluntarios: ["fv"],
+    voluntarios: ["fv", "hd", "dirigentes"],
     direcao: ["dirigentes"],
   };
   const lista = [...new Set((publicos.length ? publicos : [audience]).flatMap((p) => mapa[p] ?? []))];

@@ -27,7 +27,8 @@ test('membros = 2º nível em diante, incluindo FV, HD, dirigentes e provacionis
  assert.deepEqual(publicosDaPessoa({...base,nivel:'N1'}),['todos_ativos']);
  assert.deepEqual(publicosDaPessoa({...base,nivel:'N2'}),['todos_ativos','membros']);
  assert.deepEqual(publicosDaPessoa({...base,nivel:'N1',isFV:true}),['todos_ativos','membros','fv']);
- assert.deepEqual(publicosDaPessoa({...base,nivel:'N3',isHD:true,isDirigente:true}),['todos_ativos','membros','hd','dirigentes']);
+ // Públicos agregadores (2026-10-25): evento de FV vale para HD e dirigentes.
+ assert.deepEqual(publicosDaPessoa({...base,nivel:'N3',isHD:true,isDirigente:true}),['todos_ativos','membros','fv','hd','dirigentes']);
  assert.deepEqual(publicosDaPessoa({isMembroPrograma:false,isProvacionista:true,nivel:'PP'}),['todos_ativos']);
  assert.deepEqual(publicosDaPessoa({...base,nivel:'N2',emProvacionismo:true}),['todos_ativos','membros','provacionistas']);
  assert.ok(!publicosDaPessoa({...base,nivel:'N3'}).includes('fv'));

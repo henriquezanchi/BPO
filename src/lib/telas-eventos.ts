@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { semEmoji, urlDoEventoNoPortal } from "@/lib/compartilhar-evento";
-import { EVENT_AUDIENCES, agendaUlissesBranchWhere, eventScopeWhere, safeEventRegistrationUrl } from "@/lib/event-policy";
+import { EVENT_AUDIENCES, agendaUlissesBranchWhere, eventScopeWhere, publicosQueAlcancam, safeEventRegistrationUrl } from "@/lib/event-policy";
 import { eventPosterUrl } from "@/lib/event-posters";
 import { gerarResumosTela, impressaoDescricao, primeiraFrase } from "@/lib/resumo-tela";
 import { FRASES_PADRAO, type FraseDaTela } from "@/lib/telas-frases";
@@ -134,8 +134,9 @@ async function eventosDaTela(tela: TelaParaSlides) {
   const ate = new Date(agora.getTime() + DIAS_NA_TELA * 864e5);
   const internos = tela.publicos.filter((p) => p !== "aberto_publico");
   const porPublico: Prisma.EventWhereInput[] = [];
-  if (internos.length) porPublico.push({ publicos: { hasSome: internos }, source: { notIn: ["agora", "google_calendar_nacional", "ulisses"] } });
-  if (tela.publicos.includes("aberto_publico")) porPublico.push({ source: "ulisses" });
+  // Públicos agregadores (2026-10-25): a TV de membros mostra também eventos de todos os ativos e os abertos ao público.
+  if (internos.length) porPublico.push({ publicos: { hasSome: publicosQueAlcancam(internos) }, source: { notIn: ["agora", "google_calendar_nacional", "ulisses"] } });
+  if (tela.publicos.length) porPublico.push({ source: "ulisses" });
   if (!porPublico.length) return [];
 
   const eventos = await db.event.findMany({

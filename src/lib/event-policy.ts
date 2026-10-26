@@ -17,8 +17,34 @@ export type EventAudience = keyof typeof EVENT_AUDIENCES;
 
 type PessoaPublico = { nivel?: string | null; isMembroPrograma: boolean; isProvacionista: boolean; isHD?: boolean; isDirigente?: boolean; isFV?: boolean; emProvacionismo?: boolean };
 
-/** Públicos de que a pessoa faz parte. */
+/**
+ * Públicos são agregadores, não exclusivos (pedido do usuário 2026-10-25): cada público alcança também os que estão
+ * "dentro" dele. Aberto ao público (Ulisses) alcança todos; todos os ativos alcança membros e daí para baixo;
+ * membros alcança FV, provacionistas, HD e dirigentes; FV alcança HD e dirigentes.
+ */
+export const ALCANCE_PUBLICO: Record<EventAudience, EventAudience[]> = {
+  todos_ativos: ["todos_ativos", "membros", "fv", "provacionistas", "hd", "dirigentes"],
+  membros: ["membros", "fv", "provacionistas", "hd", "dirigentes"],
+  fv: ["fv", "hd", "dirigentes"],
+  provacionistas: ["provacionistas"],
+  hd: ["hd"],
+  dirigentes: ["dirigentes"],
+};
+const ORDEM_PUBLICOS = Object.keys(ALCANCE_PUBLICO) as EventAudience[];
+
+/** Públicos de evento que alcançam alguém de `alvo` (ex.: TV "membros" mostra eventos de todos os ativos e de membros). */
+export function publicosQueAlcancam(alvo: Iterable<string>): EventAudience[] {
+  const quer = new Set(alvo);
+  return ORDEM_PUBLICOS.filter((p) => ALCANCE_PUBLICO[p].some((x) => quer.has(x)));
+}
+
+/** Públicos de evento que valem para a pessoa (os dela e os que a alcançam: um evento de FV vale para HD e dirigentes). */
 export function publicosDaPessoa(m: PessoaPublico): EventAudience[] {
+  return publicosQueAlcancam(publicosProprios(m));
+}
+
+/** Públicos de que a pessoa faz parte diretamente. */
+function publicosProprios(m: PessoaPublico): EventAudience[] {
   const n = m.nivel ?? "";
   const segundoNivelOuMais = /^N[2-9]$/.test(n);
   // Todo FV, HD, dirigente e provacionista do FV é do 2º nível em diante (conferido no Mercúrio em
