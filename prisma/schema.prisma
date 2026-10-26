@@ -1430,6 +1430,8 @@ model GroupMeeting {
   // Notificações push (2026-10-21): marcam o envio para não repetir.
   lembreteEnviadoEm DateTime?
   presencaPerguntadaEm DateTime?
+  // Leitura do GAF (2026-10-26): código do texto escolhido pela coordenação ("teseu-05") ou "nenhuma"; nulo = automático.
+  leituraGaf String?
   createdAt DateTime @default(now())
   responses GroupMeetingResponse[]
   auditLog GroupMeetingAudit[]

@@ -383,3 +383,11 @@ Pedido do usuário: "faça tudo" (o que dependia só de código) e "providencie 
 - **Agenda**: tocar num próximo evento abre o detalhe dele já expandido e rola até ele (`itemAberto` em `agenda-panel.tsx`); evento da escola em verde suave em vez de dourado/laranja.
 - **Boletim Aurora** (`lib/boletim-aurora.ts`): cartão abaixo dos atalhos da página inicial do Portal (escolas em português) com a edição mais recente (API do WordPress do acropole.org.br, categoria 104, cache de 6 h); sem resposta, link para a página do boletim.
 - Ágora: o Marcos aceitou o token no cabeçalho Authorization e incluiu o id da imagem do evento (`/e/og/imagem/{id}` ou `/api/anexos/{id}/imagem`); reteste pendente do login do usuário (`scripts/testar-token-agora.mjs`).
+
+## 59. Claude — Leituras do GAF (26/10/2026)
+
+Pedido do usuário: o coordenador escolhe o texto de cada encontro do GAF pelo cronograma, ou deixa automático a partir do primeiro encontro com texto (podendo mudar); o participante toca e lê no site do GAF.
+- **Migração `20261026210000_gaf_leituras`** (autorizada pelo usuário, aplicada e resolvida): `GroupMeeting.leituraGaf` (texto escolhido, `"nenhuma"` = sem leitura, nulo = automático). A tabela já tinha RLS.
+- `lib/gaf-leituras.ts`: cronograma da Etapa Teseu (6 bimestres, 24 textos, links `gaf.oinabn.com.br/artigos/teseu/artigoNN.html`, tirados do site em 26/10); `leiturasEmSequencia` (escolha manual recomeça a sequência; "sem leitura" não avança; depois do #24 fica "a definir"). Maat e Prometeu estão "em construção" no site: entram quando o cronograma for publicado.
+- `grupos-dados.ts` (`leiturasGaf`, 4 últimos e 8 próximos encontros, sequência sobre todos), ação `definirLeituraGaf` (só quem gere o GAF), cartão "Leituras dos encontros" na aba Encontros (`components/grupos/leituras-gaf.tsx`): seletor por encontro para a coordenação, link do texto para todos. Testes em `tests/gaf-leituras.test.ts`.
+- Ágora (reteste 26/10, 19h): com o token no cabeçalho, ainda 403 em `/api/*` e também no Swagger (`/v3/api-docs`); o token do `portal-aluno` sai com `aud: account`. Pedido ao Marcos: aceitar o `portal-aluno` ou incluir `eventos` no `aud`, e informar o endereço da API externa. `scripts/testar-token-agora.mjs` agora também lê a documentação com o token.

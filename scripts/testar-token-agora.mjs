@@ -71,6 +71,38 @@ async function testar(token, rotulo) {
   }
 }
 
+// API externa do Ágora (26/10/2026, Marcos): lê a documentação OpenAPI com o token e testa os GET sem parâmetro.
+// Mostra só caminhos e códigos de resposta, nada de dados.
+async function documentacao(token) {
+  const raiz = "https://eventos.acropolebrasil.com.br";
+  const h = { authorization: `Bearer ${token}`, accept: "application/json", "user-agent": "Mozilla/5.0" };
+  console.log("\n== Documentação (Swagger) com o token");
+  let spec = null;
+  for (const c of ["/v3/api-docs", "/api/v3/api-docs", "/v3/api-docs/externa", "/api/v3/api-docs/externa", "/v3/api-docs/swagger-config"]) {
+    const r = await fetch(raiz + c, { headers: h });
+    console.log(`${r.status} ${c}`);
+    if (r.ok && !spec) {
+      const j = await r.json().catch(() => null);
+      if (j?.paths) spec = j;
+      else if (j?.urls) console.log("   grupos:", j.urls.map((u) => `${u.name} -> ${u.url}`).join("; "));
+    }
+  }
+  if (!spec) return;
+  const caminhos = Object.entries(spec.paths);
+  console.log(`\n${caminhos.length} caminhos na documentação. GET sem parâmetro:`);
+  for (const [c, ops] of caminhos) {
+    if (!ops.get) continue;
+    const temParam = c.includes("{") || (ops.get.parameters ?? []).some((p) => p.required);
+    if (temParam) { console.log(`   (com parâmetro) ${c}`); continue; }
+    const base = spec.servers?.[0]?.url?.startsWith("/") ? spec.servers[0].url : "";
+    const r = await fetch(raiz + base + c, { headers: h });
+    const txt = await r.text();
+    let resumo = `${txt.length} bytes`;
+    try { const j = JSON.parse(txt); resumo = r.ok ? chaves(j) : JSON.stringify(j).slice(0, 120); } catch {}
+    console.log(`   ${r.status} ${c} -> ${resumo}`);
+  }
+}
+
 const srv = http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://localhost:3000");
   if (u.pathname !== "/auth/acropole/callback") return res.writeHead(404).end();
@@ -94,6 +126,7 @@ const srv = http.createServer(async (req, res) => {
     const t = await r.json();
     console.log("refresh_token recebido:", Boolean(t.refresh_token), "| validade refresh (min):", Math.round((t.refresh_expires_in ?? 0) / 60));
     await testar(t.access_token, "Token do login (portal-aluno)");
+    await documentacao(t.access_token);
     if (!SEGREDO) {
       console.log("\nSem KEYCLOAK_CLIENT_SECRET: troca de token não testada (client público não pode).");
     } else {

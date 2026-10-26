@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { leiturasEmSequencia } from "@/lib/gaf-leituras";
 import { ehTipoGrupo, gruposDaAgenda, papelNoGrupo, TIPOS_DO_PORTAL, TIPOS_GRUPO, type Papel, type TipoGrupo } from "@/lib/grupos-portal";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import { linkDoCanal } from "@/lib/slack";
@@ -125,6 +126,8 @@ export async function detalheDoGrupo(m: Pessoa, grupoId: string) {
       presencas: papel.podeGerir ? { select: { memberId: true, participou: true, motivo: true, naoInformou: true } } : { where: { memberId: m.id }, select: { memberId: true, participou: true, motivo: true, naoInformou: true } },
     },
   });
+  // Leituras do GAF (2026-10-26): texto de cada encontro, escolhido ou na sequência do cronograma.
+  const leiturasGaf = g.tipo === "GAF" ? await leiturasDoGaf(grupoId) : null;
   const nomes = new Map(g.memberships.map((x) => [x.member.id, x.member.name]));
   // Pedidos feitos pelo Portal do Aluno para este GAF (só a coordenação vê).
   const pedidos =
@@ -141,6 +144,7 @@ export async function detalheDoGrupo(m: Pessoa, grupoId: string) {
     agora: Date.now(),
     papel,
     pedidos,
+    leiturasGaf,
     grupo: {
       ...g,
       tipo: g.tipo as TipoGrupo,
@@ -187,4 +191,21 @@ export async function avisosDosGrupos(m: Pick<Member, "id"> & Parameters<typeof 
     hoje: hoje.map((e) => ({ ...e, startsAt: e.startsAt.toISOString(), endsAt: e.endsAt.toISOString() })),
     perguntas: recentes.map((e) => ({ ...e, startsAt: e.startsAt.toISOString() })),
   };
+}
+
+/** Encontros do GAF com a leitura de cada um: os 4 últimos e os próximos 8 (a sequência considera todos). */
+async function leiturasDoGaf(grupoId: string) {
+  const todos = await db.groupMeeting.findMany({
+    where: { classGroupId: grupoId, status: { not: "cancelada" } },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, startsAt: true, leituraGaf: true },
+  });
+  const leituras = leiturasEmSequencia(todos);
+  const agora = Date.now();
+  const proximoIdx = todos.findIndex((e) => e.startsAt.getTime() >= agora - 3 * 60 * 60 * 1000);
+  const inicio = proximoIdx < 0 ? Math.max(0, todos.length - 4) : Math.max(0, proximoIdx - 4);
+  return todos.slice(inicio, inicio + 12).map((e) => {
+    const l = leituras.get(e.id)!;
+    return { id: e.id, startsAt: e.startsAt.toISOString(), passado: e.startsAt.getTime() < agora - 3 * 60 * 60 * 1000, origem: l.origem, texto: l.texto, escolha: e.leituraGaf };
+  });
 }

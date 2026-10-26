@@ -5,6 +5,7 @@ import { FormGrupo } from "@/components/grupos/form-grupo";
 import { SeletorPessoas, type PessoaOpcao } from "@/components/grupos/seletor-pessoas";
 import { MeetingManager } from "@/components/member/groups/meeting-manager";
 import { PerguntaPresenca } from "@/components/grupos/pergunta-presenca";
+import { LeiturasGaf } from "@/components/grupos/leituras-gaf";
 import {
   adicionarPessoas,
   arquivarGrupo,
@@ -131,6 +132,7 @@ export function GrupoPainel({ dados, abaInicial, avisos, orientacoes, escala }: 
       <div className="flex max-w-3xl flex-col gap-4">
         {aba === "escala" && escala}
         {aba === "encontros" && <Encontros dados={dados} recarregar={recarregar} />}
+        {aba === "encontros" && dados.leiturasGaf && <LeiturasGaf itens={dados.leiturasGaf} podeGerir={dados.papel.podeGerir} recarregar={recarregar} />}
         {aba === "avisos" && avisos}
         {aba === "atividades" && <Atividades dados={dados} recarregar={recarregar} />}
         {aba === "equipe" && <Equipe dados={dados} recarregar={recarregar} />}
