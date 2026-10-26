@@ -202,7 +202,8 @@ export async function getDirectorDashboard(schoolId: string) {
 
   return {
     receptionCandidates,
-    eventPaymentConfigured: Boolean(process.env.ASAAS_API_KEY),
+    // Cobrança sempre pela subconta da filial (2026-10-25).
+    eventPaymentConfigured: !!(await db.school.findUnique({ where: { id: schoolId }, select: { asaasSubaccountApiKey: true } }))?.asaasSubaccountApiKey,
     kpis: {
       receitaPrevista,
       receitaEventosMes,

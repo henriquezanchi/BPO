@@ -20,7 +20,8 @@ import "dotenv/config";
 import { requireContributionOrder } from "../src/lib/contribution-payment-policy";
 import { asaasCreatePixAutomaticCharge, asaasGetPaymentStatus } from "../src/lib/asaas/client";
 import { confirmarPagamento } from "../src/lib/asaas/confirm-payment";
-import { calcularSplitEscola } from "../src/lib/asaas/split";
+import { contaDaEscola, contaDeLeitura, escolaCobraOnline } from "../src/lib/asaas/conta-escola";
+import { splitDoBpo } from "../src/lib/asaas/split";
 import { db } from "../src/lib/db";
 import { OVERDUE_STATUSES } from "../src/lib/member-data";
 
@@ -56,7 +57,8 @@ async function confirmarPendentes() {
   const pendentes = await db.paymentCharge.findMany({ where: { status: "pendente", autoDebito: true } });
   for (const charge of pendentes) {
     try {
-      const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId);
+      const membro = await db.member.findUnique({ where: { id: charge.memberId }, select: { school: { select: { asaasSubaccountApiKey: true } } } });
+      const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, contaDeLeitura(membro?.school));
       if (pagamento.status === "RECEIVED" || pagamento.status === "CONFIRMED") {
         await confirmarPagamento(charge.id);
         console.log(`Cobrança automática ${charge.id} confirmada como paga.`);
@@ -79,7 +81,7 @@ async function criarCicloSeguinte() {
 
   const membros = await db.member.findMany({
     where: { pixAutomaticStatus: "ACTIVE", pixAutomaticAuthorizationId: { not: null }, asaasCustomerId: { not: null } },
-    include: { school: true },
+    include: { school: { omit: { asaasSubaccountApiKey: false } } },
   });
   console.log(`Membros com Pix Automático ativo: ${membros.length} — vencimento alvo ${vencimento.toISOString().slice(0, 10)} (${diasUteis} dias úteis)`);
 
@@ -103,7 +105,10 @@ async function criarCicloSeguinte() {
 
     try {
       const nomeMes = vencimento.toLocaleDateString("pt-BR", { month: "long", timeZone: "UTC" });
-      const split = membro.school.asaasWalletId ? [await calcularSplitEscola(valorBase, membro.school.asaasWalletId)] : undefined;
+      // Sempre pela subconta da filial (regra do usuário 2026-10-25); sem ela, não cobra.
+      if (!escolaCobraOnline(membro.school)) { console.log(`Membro ${membro.id}: filial sem subconta Asaas; ciclo não criado.`); continue; }
+      const conta = contaDaEscola(membro.school);
+      const split = await splitDoBpo(valorBase, conta);
       const pagamento = await asaasCreatePixAutomaticCharge(
         membro.asaasCustomerId!,
         membro.pixAutomaticAuthorizationId!,
@@ -111,6 +116,7 @@ async function criarCicloSeguinte() {
         `Contribuição ${nomeMes}/${year} — ${membro.name}`,
         vencimento.toISOString().slice(0, 10),
         split,
+        conta,
       );
       await db.paymentCharge.create({
         data: {

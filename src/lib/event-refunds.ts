@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import { asaasGetPaymentStatus,asaasRefundEventPayment,asaasDeleteEventPayment } from "@/lib/asaas/client";
+import { contaDeLeituraId } from "@/lib/asaas/conta-escola";
 import { refundErrorMessage,refundPosition } from "@/lib/event-refund-policy";
 
 /** Reembolsa quando a filial cancelou o evento com devolução ou quando o próprio aluno desistiu no prazo (2026-10-22). */
@@ -18,7 +19,8 @@ export async function processEventRefund(registrationId:string) {
   if(!r.asaasPaymentId){
    await save({refundState:'sem_pagamento',refundCheckedAt:now,refundNextAttemptAt:new Date(now.getTime()+900_000)});return;
   }
-  const payment=await asaasGetPaymentStatus(r.asaasPaymentId);
+  const conta=await contaDeLeituraId(r.event.schoolId);
+  const payment=await asaasGetPaymentStatus(r.asaasPaymentId,conta);
   if(payment.id!==r.asaasPaymentId||r.amount===null||Math.round(Number(r.amount)*100)!==Math.round(payment.value*100))throw Object.assign(Error('Pagamento divergente da inscrição.'),{code:'payment_mismatch'});
   const position=refundPosition(payment);
   if(position.done<Number(r.refundedAmount))throw Object.assign(Error('Histórico de estorno divergente.'),{code:'refund_mismatch'});
@@ -35,7 +37,7 @@ export async function processEventRefund(registrationId:string) {
   }
   if(payment.deleted){await save({refundState:'cobranca_cancelada',refundNextAttemptAt:null,refundError:null});return;}
   if(['PENDING','OVERDUE'].includes(payment.status)){
-   const deleted=await asaasDeleteEventPayment(r.asaasPaymentId);
+   const deleted=await asaasDeleteEventPayment(r.asaasPaymentId,conta);
    if(!deleted.deleted)throw Error('Exclusão não confirmada.');
    await save({refundState:'cobranca_cancelada',refundNextAttemptAt:null,refundError:null});return;
   }
@@ -44,7 +46,7 @@ export async function processEventRefund(registrationId:string) {
   const sending=await save({refundSubmittedAt:now,refundState:'processando',refundError:null});
   if(!sending.count)return;
   postAttempted=true;
-  try {await asaasRefundEventPayment(r.asaasPaymentId,position.done>0?position.remaining:undefined,r.desistenciaEm?'Desistencia da inscricao: reembolso':undefined);}
+  try {await asaasRefundEventPayment(r.asaasPaymentId,position.done>0?position.remaining:undefined,r.desistenciaEm?'Desistencia da inscricao: reembolso':undefined,conta);}
   catch(error){
    const status=(error as {status?:number})?.status;
    // Uma rejeição inequívoca permite nova tentativa, sempre com consulta anterior.

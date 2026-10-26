@@ -7,6 +7,13 @@ Atualizado em 23/10/2026. Este documento existe para que o Codex (ou outra sess�
 
 Regra de ouro: **antes de cada commit, `git pull --rebase --autostash`**. Os dois agentes publicam no mesmo `master`.
 
+> **PRIORIDADE — cobranças (regra do usuário, 25/10/2026): toda cobrança do Portal sai SEMPRE pela subconta Asaas da filial**, para o aluno ver o nome da Nova Acrópole e **nunca** o da conta principal (que é a empresa do usuário, HENRIQUE ZANCHI AUDIOVISUAL E IDIOMAS LTDA). Vale para eventos, contribuição (Pix e cartão), Pix automático, recarga do Fortuna e site de matrículas.
+> - Emitir: `contaDaEscola`/`contaDaEscolaId` (`lib/asaas/conta-escola.ts`) e passar a conta a cada função de `lib/asaas/client.ts` (último parâmetro `conta`). **Sem chave da subconta, a filial não cobra on-line**; nunca cair na conta principal. Não criar cobrança sem `conta`.
+> - Margem do BPO: `splitDoBpo`/`splitDoBpoCartao` (`lib/asaas/split.ts`) mandam só a margem (100 − `PERCENTUAL_SPLIT_ESCOLA`) para a carteira da conta principal (`walletPrincipal`, ou `ASAAS_WALLET_ID_PRINCIPAL`). A taxa do Asaas sai da subconta.
+> - Consultar, estornar ou excluir: `contaDeLeitura`/`contaDeLeituraId`; o cliente cai na conta principal só em 404 de `/payments/{id}` ou `/pix/automatic/authorizations/{id}` (cobranças antigas).
+> - A chave fica em `School.asaasSubaccountApiKey`, **omitida por padrão em todas as consultas** (`omit` global em `lib/db.ts`), porque `member.school` vai para o navegador. Para ler: `select: { asaasSubaccountApiKey: true }` ou `omit: { asaasSubaccountApiKey: false }`.
+> - Ligar uma filial: `npx tsx scripts/ligar-subconta-asaas.ts <UNIDADE>` (pede a chave sem mostrar, confere a carteira, grava e cadastra o webhook do Portal na subconta). Detalhes no bloco 51 da COORDENACAO.
+
 ---
 
 ## 1. Estado atual (o que está no ar)

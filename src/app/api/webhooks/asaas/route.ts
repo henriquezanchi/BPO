@@ -1,6 +1,7 @@
 import {processEventRefund} from "@/lib/event-refunds";
 import {confirmEventPayment} from "@/lib/event-payments";
 import {asaasGetPaymentStatus} from "@/lib/asaas/client";
+import { contaDeLeituraId } from "@/lib/asaas/conta-escola";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
 import { db } from "@/lib/db";
 
@@ -45,9 +46,12 @@ export async function POST(req: Request) {
   if ((body.event === "PAYMENT_RECEIVED" || body.event === "PAYMENT_CONFIRMED") && body.payment?.id) {
     const charge = await db.paymentCharge.findUnique({ where: { asaasPaymentId: body.payment.id } });
     if (charge) await confirmarPagamento(charge.id);
-    const registration=await db.eventRegistration.findUnique({where:{asaasPaymentId:body.payment.id}});
+    // Matrícula pelo site: confere na subconta e avisa a Escolástica.
+    const matricula=await db.matriculaOnline.findUnique({where:{asaasPaymentId:body.payment.id},select:{id:true}});
+    if(matricula)await (await import("@/lib/matricula-online")).conferirPagamento(matricula.id);
+    const registration=await db.eventRegistration.findUnique({where:{asaasPaymentId:body.payment.id},include:{event:{select:{schoolId:true}}}});
     if(registration){
-      const payment=await asaasGetPaymentStatus(body.payment.id);
+      const payment=await asaasGetPaymentStatus(body.payment.id,await contaDeLeituraId(registration.event.schoolId));
       if(!["RECEIVED","CONFIRMED"].includes(payment.status))return new Response("payment not confirmed",{status:409});
       if(registration.amount!==null&&Math.round(Number(registration.amount)*100)!==Math.round(payment.value*100))return new Response("payment amount mismatch",{status:409});
       await confirmEventPayment(registration.id);

@@ -1,38 +1,33 @@
-import { asaasGetPixFeeStatus, type AsaasSplit } from "@/lib/asaas/client";
+import { asaasGetPixFeeStatus, type AsaasSplit, type ContaAsaas } from "@/lib/asaas/client";
+import { walletPrincipal } from "@/lib/asaas/conta-escola";
 import { PERCENTUAL_SPLIT_ESCOLA } from "@/lib/billing-constants";
 
 /**
- * Split da escola usando `fixedValue` (não `percentualValue`) — decisão do
- * usuário (2026-09-21): o BPO deve ficar com a taxa do Asaas + a margem de
- * PERCENTUAL_SPLIT_ESCOLA, não com uma fatia diminuída pela taxa. Como o
- * split percentual do Asaas incide sobre o valor LÍQUIDO (já descontada a
- * taxa), usar percentualValue faria escola e BPO dividirem o custo da taxa
- * proporcionalmente — em vez disso, calculamos aqui o valor exato que a
- * escola deve receber (valor - taxa real - margem do BPO) e mandamos como
- * fixedValue; o que sobrar (margem do BPO + taxa, se houve) fica
- * automaticamente na conta que criou a cobrança.
+ * Divisão das cobranças. Desde 2026-10-25 (regra do usuário) a cobrança é EMITIDA pela subconta da filial, então o
+ * que é da escola já fica nela; o split manda só a margem do BPO (100 − PERCENTUAL_SPLIT_ESCOLA % do valor) para a
+ * conta principal, em `fixedValue`. Antes era o contrário (cobrança na principal e split da parte da escola).
+ * A taxa do Asaas é descontada da subconta que emite; a margem do BPO continua sobre o valor cheio, como antes.
  */
-export async function calcularSplitEscola(valor: number, walletId: string): Promise<AsaasSplit> {
-  const { isento, taxaFixa } = await asaasGetPixFeeStatus();
-  const taxaReal = isento ? 0 : taxaFixa;
-  const margemBpo = ((100 - PERCENTUAL_SPLIT_ESCOLA) / 100) * valor;
-  // O Asaas valida o split contra "valor − taxa" mesmo quando o PIX sai
-  // isento pelos créditos do mês (erro real em 19/10/2026: "O valor total do
-  // Split R$ 4,90 excede o valor a receber da cobrança R$ 4,01"). Em valores
-  // baixos a margem do BPO é menor que a taxa, então limita aqui.
-  const valorEscola = Math.max(0, Math.round(Math.min(valor - taxaReal - margemBpo, valor - taxaFixa) * 100) / 100);
-  return { walletId, fixedValue: valorEscola };
+const margem = (valor: number) => Math.round(((100 - PERCENTUAL_SPLIT_ESCOLA) / 100) * valor * 100) / 100;
+
+export class ValorNaoCobreCustos extends Error {
+  constructor() {
+    super("A contribuição não cobre os custos de processamento. Peça conferência à Economia.");
+  }
 }
 
-/**
- * Versão pro cartão de crédito — diferente da PIX, aqui a taxa (bem mais
- * alta, ver asaasGetCreditCardFeeStatus) já foi repassada ao aluno como
- * sobretaxa ANTES desta função ser chamada (ver payment-actions.ts: o valor
- * cobrado no cartão já é maior que `valor`) — então não precisa descontar
- * taxa nenhuma aqui, só a margem normal do BPO sobre o valor base.
- */
-export function calcularSplitEscolaCartao(valor: number, walletId: string): AsaasSplit {
-  const margemBpo = ((100 - PERCENTUAL_SPLIT_ESCOLA) / 100) * valor;
-  const valorEscola = Math.max(0, Math.round((valor - margemBpo) * 100) / 100);
-  return { walletId, fixedValue: valorEscola };
+/** Pix (e cobrança em aberto do site de matrículas): margem limitada a "valor − taxa", que é o que o Asaas valida. */
+export async function splitDoBpo(valor: number, conta: ContaAsaas): Promise<AsaasSplit[]> {
+  const { taxaFixa } = await asaasGetPixFeeStatus(conta);
+  // O Asaas valida o split contra "valor − taxa" mesmo quando o Pix sai isento (erro real em 19/10/2026).
+  const disponivel = Math.round((valor - taxaFixa) * 100) / 100;
+  if (disponivel <= 0) throw new ValorNaoCobreCustos();
+  const valorBpo = Math.min(margem(valor), disponivel);
+  return valorBpo > 0 ? [{ walletId: await walletPrincipal(), fixedValue: valorBpo }] : [];
+}
+
+/** Cartão: a taxa já foi repassada ao aluno no valor cobrado (payment-actions.ts); a margem é sobre o valor base. */
+export async function splitDoBpoCartao(valorBase: number): Promise<AsaasSplit[]> {
+  const valorBpo = margem(valorBase);
+  return valorBpo > 0 ? [{ walletId: await walletPrincipal(), fixedValue: valorBpo }] : [];
 }

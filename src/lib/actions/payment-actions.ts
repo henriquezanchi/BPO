@@ -11,7 +11,8 @@ import {
   asaasGetPixQrCode,
 } from "@/lib/asaas/client";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
-import { calcularSplitEscola, calcularSplitEscolaCartao } from "@/lib/asaas/split";
+import { contaDaEscolaId, contaDeLeituraId } from "@/lib/asaas/conta-escola";
+import { splitDoBpo, splitDoBpoCartao } from "@/lib/asaas/split";
 import { requireContributionOrder } from "@/lib/contribution-payment-policy";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -108,7 +109,9 @@ export async function createContributionCharge(
   if (valor <= 0) throw new Error("Composição da contribuição está vazia — nada a cobrar.");
   const valorBase = valor + fortunaTopUpAmount;
 
-  const cliente = await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined);
+  // Sempre pela subconta da filial (regra do usuário 2026-10-25).
+  const conta = await contaDaEscolaId(member.schoolId);
+  const cliente = await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined, conta);
 
   const vencimento = new Date();
   vencimento.setDate(vencimento.getDate() + 2);
@@ -121,13 +124,13 @@ export async function createContributionCharge(
       : `Contribuição ${nomeMes}/${year} — ${member.name}`;
 
   if (metodo === "CREDIT_CARD") {
-    const { percentual, fixo } = await asaasGetCreditCardFeeStatus();
+    const { percentual, fixo } = await asaasGetCreditCardFeeStatus(conta);
     // Repassa a taxa real do cartão ao aluno (decisão do usuário
     // 2026-09-22) — "gross-up" pra que o valor líquido recebido (depois do
     // Asaas descontar a taxa dele) bata exatamente com valorBase.
     const valorCartao = Math.round(((valorBase + fixo) / (1 - percentual / 100)) * 100) / 100;
-    const split = member.school.asaasWalletId ? [calcularSplitEscolaCartao(valorBase, member.school.asaasWalletId)] : undefined;
-    const pagamento = await asaasCreateCreditCardCharge(cliente.id, valorCartao, descricao, dueDate, split);
+    const split = await splitDoBpoCartao(valorBase);
+    const pagamento = await asaasCreateCreditCardCharge(cliente.id, valorCartao, descricao, dueDate, split, conta);
     if (!pagamento.invoiceUrl) throw new Error("Asaas não retornou o link de pagamento do cartão.");
 
     const charge = await db.paymentCharge.create({
@@ -148,9 +151,9 @@ export async function createContributionCharge(
     return { chargeId: charge.id, metodo: "CREDIT_CARD" as const, invoiceUrl: pagamento.invoiceUrl, amount: valor, fortunaTopUpAmount, totalCobrado: valorCartao };
   }
 
-  const split = member.school.asaasWalletId ? [await calcularSplitEscola(valorBase, member.school.asaasWalletId)] : undefined;
-  const pagamento = await asaasCreatePixCharge(cliente.id, valorBase, descricao, dueDate, split);
-  const qrcode = await asaasGetPixQrCode(pagamento.id);
+  const split = await splitDoBpo(valorBase, conta);
+  const pagamento = await asaasCreatePixCharge(cliente.id, valorBase, descricao, dueDate, split, conta);
+  const qrcode = await asaasGetPixQrCode(pagamento.id, conta);
 
   const charge = await db.paymentCharge.create({
     data: {
@@ -181,13 +184,13 @@ export async function createContributionCharge(
 
 /** Checa o status real no Asaas (fallback do webhook, útil enquanto o Portal não tem URL pública pra receber webhook) e confirma se já foi pago. */
 export async function checkChargeStatus(memberId: string, chargeId: string) {
-  await requireAuthenticatedMember(memberId);
+  const member = await requireAuthenticatedMember(memberId);
 
   const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: chargeId } });
   if (charge.memberId !== memberId) throw new Error("Cobrança não pertence a este membro.");
   if (charge.status === "pago") return { status: "pago" as const };
 
-  const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId);
+  const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, await contaDeLeituraId(member.schoolId));
   if (pagamento.status === "RECEIVED" || pagamento.status === "CONFIRMED") {
     await confirmarPagamento(charge.id);
     return { status: "pago" as const };
@@ -214,11 +217,11 @@ export async function getPendingContributionCharge(memberId: string, year: numbe
 
 /** Escape hatch: cancela a cobrança pendente atual (ex: aluno quer trocar de método, ou a antiga travou) pra poder gerar uma nova do zero. */
 export async function cancelarCobrancaContribuicaoPendente(memberId: string, chargeId: string) {
-  await requireAuthenticatedMember(memberId);
+  const member = await requireAuthenticatedMember(memberId);
   const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: chargeId } });
   if (charge.memberId !== memberId) throw new Error("Cobrança não pertence a este membro.");
   if (charge.status !== "pendente") throw new Error("Só é possível cancelar uma cobrança pendente.");
 
-  await asaasCancelPayment(charge.asaasPaymentId);
+  await asaasCancelPayment(charge.asaasPaymentId, await contaDeLeituraId(member.schoolId));
   await db.paymentCharge.update({ where: { id: chargeId }, data: { status: "cancelado" } });
 }

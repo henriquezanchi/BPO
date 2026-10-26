@@ -7,6 +7,7 @@ import {
   asaasFindOrCreateCustomer,
   asaasGetPixAutomaticAuthorization,
 } from "@/lib/asaas/client";
+import { contaDaEscolaId, contaDeLeituraId } from "@/lib/asaas/conta-escola";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -27,8 +28,10 @@ export async function ativarPixAutomatico(memberId: string, cpf: string) {
   const valor = itens.reduce((soma, i) => soma + Number(i.amount), 0);
   if (valor <= 0) throw new Error("Composição da contribuição está vazia — nada a cobrar.");
 
-  const cliente = await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined);
-  const autorizacao = await asaasCreatePixAutomaticAuthorization(cliente.id, memberId, valor, `Contribuição mensal — ${member.name}`);
+  // Sempre pela subconta da filial (regra do usuário 2026-10-25); a autorização fica presa a essa conta.
+  const conta = await contaDaEscolaId(member.schoolId);
+  const cliente = await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined, conta);
+  const autorizacao = await asaasCreatePixAutomaticAuthorization(cliente.id, memberId, valor, `Contribuição mensal — ${member.name}`, conta);
 
   await db.member.update({
     where: { id: memberId },
@@ -48,7 +51,7 @@ export async function checkPixAutomaticoStatus(memberId: string) {
   if (!member.pixAutomaticAuthorizationId) return { status: null };
   if (member.pixAutomaticStatus === "ACTIVE") return { status: "ACTIVE" as const };
 
-  const autorizacao = await asaasGetPixAutomaticAuthorization(member.pixAutomaticAuthorizationId);
+  const autorizacao = await asaasGetPixAutomaticAuthorization(member.pixAutomaticAuthorizationId, await contaDeLeituraId(member.schoolId));
   if (autorizacao.status !== member.pixAutomaticStatus) {
     await db.member.update({
       where: { id: memberId },
@@ -63,6 +66,6 @@ export async function desativarPixAutomatico(memberId: string) {
   const member = await requireAuthenticatedMember(memberId);
   if (!member.pixAutomaticAuthorizationId) return;
 
-  await asaasCancelPixAutomaticAuthorization(member.pixAutomaticAuthorizationId).catch(() => {});
+  await asaasCancelPixAutomaticAuthorization(member.pixAutomaticAuthorizationId, await contaDeLeituraId(member.schoolId)).catch(() => {});
   await db.member.update({ where: { id: memberId }, data: { pixAutomaticStatus: "CANCELLED" } });
 }

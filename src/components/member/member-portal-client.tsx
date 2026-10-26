@@ -127,7 +127,8 @@ export function MemberPortalClient({ dashboard, eventoId }: { dashboard: MemberD
   // Filiais em inglês (Mercury) e filiais ainda sem escrita no Mercúrio liberada (School.mercurioEscrita —
   // pedido do usuário 2026-10-19) só consultam; nas brasileiras aparece "em breve".
   const somenteConsulta = member.school.language === "en" || !member.school.mercurioEscrita;
-  const emBreve = member.school.language !== "en" && !member.school.mercurioEscrita;
+  // Pagamento pelo Portal: escrita no Mercúrio liberada E conta Asaas da filial ligada (cobrança sempre pela subconta).
+  const emBreve = member.school.language !== "en" && (!member.school.mercurioEscrita || !dashboard.cobraOnline);
 
 
   return (

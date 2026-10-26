@@ -8,6 +8,7 @@ import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-volun
 import { filiaisAdministradas, recursosDaFilial } from "@/lib/recursos-filial";
 import { avaliacaoPendente } from "@/lib/avaliacao";
 import { instrutoresParaAtendimento } from "@/lib/atendimentos";
+import { MENSAGEM_CONTA_PENDENTE } from "@/lib/asaas/conta-escola";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
@@ -305,6 +306,10 @@ export async function getMemberDashboard(memberId: string) {
     return [...contagemPorEmoji.entries()].map(([emoji, count]) => ({ emoji, count, reactedByMe: minhasReacoes.has(emoji) }));
   }
 
+  // Cobrança sempre pela subconta da filial (2026-10-25): só filiais com a conta Asaas ligada cobram on-line.
+  const escolasQueCobram = new Set(
+    (await db.school.findMany({ where: { id: { in: [...new Set([member.schoolId, ...schoolEvents.map((e) => e.schoolId).filter((id): id is string => !!id)])] }, asaasSubaccountApiKey: { not: null } }, select: { id: true } })).map((s) => s.id),
+  );
   const eventPosters=new Map(await Promise.all(schoolEvents.map(async e=>[e.id,await eventPosterUrl(e.posterPath)] as const)));
   const agendaItems: AgendaItem[] = [
     ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
@@ -330,7 +335,7 @@ export async function getMemberDashboard(memberId: string) {
         registrationClosed:Boolean(e.registrationClosesAt&&e.registrationClosesAt<=new Date()),
         participantInstructions:e.participantInstructions,
         contactInfo:e.contactInfo,
-        paymentUnavailableReason: e.source!=="manual"||Number(e.price)<=0?null:!member.school.asaasWalletId?"O recebimento deste evento ainda precisa ser configurado pela escola.":!process.env.ASAAS_API_KEY?"O pagamento on-line ainda não foi configurado. A administração precisa configurar o Asaas antes de liberar o PIX.":null,
+        paymentUnavailableReason: e.source!=="manual"||Number(e.price)<=0?null:!e.schoolId||!escolasQueCobram.has(e.schoolId)?MENSAGEM_CONTA_PENDENTE:null,
         registrationUrl: safeEventRegistrationUrl(e.registrationUrl),
         status: e.status,
         description: e.description,
@@ -404,6 +409,7 @@ export async function getMemberDashboard(memberId: string) {
     fortunaBalances,
     agendaItems,
     podeMarcarAtendimento: instrutoresDisponiveis.length > 0,
+    cobraOnline: escolasQueCobram.has(member.schoolId),
     avisosGrupos,
     // Também decide o rótulo "Portal do Membro" x "Portal do Aluno" no topo do Portal.
     // Biblioteca (bastião) só para membros — 2º nível em diante, mesma regra do público "Membros" dos eventos;

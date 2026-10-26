@@ -1,8 +1,9 @@
 /**
- * Cria a subconta Asaas de uma escola (1x por escola) — a cobrança
- * continua sendo criada pela conta do BPO (1 API key só, gerencia N
- * escolas), e o split (ver payment-actions.ts) manda a fatia da escola
- * pra esta wallet, ficando a taxa do BPO retida automaticamente.
+ * Cria a subconta Asaas de uma escola (1x por escola). Desde 2026-10-25 (regra do usuário) TODA cobrança sai
+ * pela subconta da filial, com a chave dela (School.asaasSubaccountApiKey), e o split devolve só a margem do BPO
+ * para a conta principal (asaas/split.ts, asaas/conta-escola.ts). Sem a chave, a filial não cobra on-line.
+ * Atenção: criar subcontas pela API inicia o "período de avaliação" do Asaas (limite de R$ 2.000 por subconta
+ * até a homologação regulatória). Subconta já existente: ligar com scripts/ligar-subconta-asaas.ts.
  *
  * DRY-RUN por padrão (só mostra o que seria enviado, não cria nada de
  * verdade) — passe --confirm pra criar a subconta de verdade. Isso

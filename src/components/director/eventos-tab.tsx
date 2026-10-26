@@ -39,7 +39,7 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboa
  function mutate(fn:()=>Promise<unknown>,success:string){start(async()=>{try{await fn();setMessage(success);router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Não foi possível concluir.');}});}
  return <div className="space-y-5">
   <p className="text-sm text-gray-500">Crie atividades internas, escolha quem pode participar e organize a recepção. Eventos pagos usam o split da escola; a cobrança só é liberada com a carteira configurada.</p>
-  {!data.eventPaymentConfigured&&<p role="status" className="rounded-xl border border-amber-300 p-3 text-sm text-amber-800 dark:text-amber-300">O PIX ainda não está liberado: falta configurar a credencial do Asaas no servidor do Portal. Eventos gratuitos continuam disponíveis.</p>}
+  {!data.eventPaymentConfigured&&<p role="status" className="rounded-xl border border-amber-300 p-3 text-sm text-amber-800 dark:text-amber-300">O PIX ainda não está liberado: falta ligar a conta Asaas da filial (as cobranças saem sempre pela conta da filial). Eventos gratuitos continuam disponíveis.</p>}
   <details key={editing?.id ?? "novo-evento"} open={!!editing} className="group max-w-xl rounded-2xl border border-dashed border-na-green/50 bg-white p-3.5 open:border-solid open:border-gray-200 dark:bg-gray-900 dark:open:border-gray-800">
    <summary className="flex cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-na-green text-white"><Plus size={20}/></span>

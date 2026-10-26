@@ -6,8 +6,17 @@
  */
 const BASE_URL = process.env.ASAAS_ENV === "sandbox" ? "https://sandbox.asaas.com/api/v3" : "https://api.asaas.com/v3";
 
-async function chamarApi<T>(path: string, init?: RequestInit): Promise<T> {
-  const apiKey = process.env.ASAAS_API_KEY;
+/**
+ * Conta que emite e consulta a cobrança. Regra do usuário (2026-10-25, prioridade): cobrar SEMPRE pela subconta
+ * da filial, para o aluno ver o nome da Nova Acrópole e nunca o da conta principal (empresa do BPO). Ver
+ * asaas/conta-escola.ts. Sem `conta`, a chamada usa a conta principal (só para leituras/estornos de cobranças
+ * antigas, taxas e criação de subcontas).
+ */
+export type ContaAsaas = { apiKey: string };
+
+async function chamarApi<T>(path: string, init?: RequestInit, conta?: ContaAsaas): Promise<T> {
+  const principal = process.env.ASAAS_API_KEY;
+  const apiKey = conta?.apiKey ?? principal;
   if (!apiKey) throw new Error("ASAAS_API_KEY não configurado.");
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -21,6 +30,11 @@ async function chamarApi<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   if (!res.ok) {
+    // Cobranças emitidas antes de 2026-10-25 vivem na conta principal: consulta, QR, exclusão e estorno de um
+    // recurso já existente caem nela quando a subconta não o encontra. Criação nunca cai na principal.
+    if (res.status === 404 && conta && principal && conta.apiKey !== principal && /^\/(payments|pix\/automatic\/authorizations)\/[^/?]+/.test(path)) {
+      return chamarApi<T>(path, init);
+    }
     const corpo = await res.text();
     throw Object.assign(new Error(`Asaas API ${path} -> HTTP ${res.status}: ${corpo}`), { status: res.status });
   }
@@ -46,15 +60,15 @@ export interface AsaasCustomer {
  * pro cliente. O Portal já avisa o membro por conta própria (WhatsApp,
  * status na tela) — pagar o Asaas pra mandar OUTRO aviso é custo sem uso.
  */
-export async function asaasFindOrCreateCustomer(nome: string, cpf: string, email?: string): Promise<AsaasCustomer> {
+export async function asaasFindOrCreateCustomer(nome: string, cpf: string, email?: string, conta?: ContaAsaas): Promise<AsaasCustomer> {
   const cpfLimpo = cpf.replace(/\D/g, "");
-  const existentes = await chamarApi<{ data: AsaasCustomer[] }>(`/customers?cpfCnpj=${cpfLimpo}`);
+  const existentes = await chamarApi<{ data: AsaasCustomer[] }>(`/customers?cpfCnpj=${cpfLimpo}`, undefined, conta);
   if (existentes.data.length > 0) return existentes.data[0];
 
   const cliente = await chamarApi<AsaasCustomer>("/customers", {
     method: "POST",
     body: JSON.stringify({ name: nome, cpfCnpj: cpfLimpo, email, notificationDisabled: true }),
-  });
+  }, conta);
   // `notificationDisabled: true` acima NÃO é suficiente sozinho — confirmado
   // ao vivo em 2026-09-22: mesmo com esse flag, o Asaas cria 8 regras de
   // notificação padrão pro cliente (PAYMENT_CREATED, PAYMENT_RECEIVED etc.)
@@ -62,15 +76,15 @@ export async function asaasFindOrCreateCustomer(nome: string, cpf: string, email
   // uma cobrança de teste mandou e-mail em nome da nossa empresa (não da
   // escola) pro aluno, gerando desconfiança. Desliga cada uma explicitamente
   // (best-effort — não trava a criação da cobrança se isso falhar).
-  await asaasDisableCustomerNotifications(cliente.id).catch(() => {});
+  await asaasDisableCustomerNotifications(cliente.id, conta).catch(() => {});
   return cliente;
 }
 
 /** Ver comentário em asaasFindOrCreateCustomer — desliga TODAS as notificações padrão do Asaas pra um cliente (o Portal já avisa o membro por conta própria). */
-export async function asaasDisableCustomerNotifications(customerId: string): Promise<void> {
-  const { data } = await chamarApi<{ data: { id: string; enabled: boolean }[] }>(`/customers/${customerId}/notifications`);
+export async function asaasDisableCustomerNotifications(customerId: string, conta?: ContaAsaas): Promise<void> {
+  const { data } = await chamarApi<{ data: { id: string; enabled: boolean }[] }>(`/customers/${customerId}/notifications`, undefined, conta);
   await Promise.all(
-    data.filter((n) => n.enabled).map((n) => chamarApi(`/notifications/${n.id}`, { method: "PUT", body: JSON.stringify({ enabled: false }) })),
+    data.filter((n) => n.enabled).map((n) => chamarApi(`/notifications/${n.id}`, { method: "PUT", body: JSON.stringify({ enabled: false }) }, conta)),
   );
 }
 
@@ -101,6 +115,7 @@ export async function asaasCreatePixCharge(
   descricao: string,
   vencimento: string,
   split?: AsaasSplit[],
+  conta?: ContaAsaas,
 ): Promise<AsaasPayment> {
   return chamarApi<AsaasPayment>("/payments", {
     method: "POST",
@@ -112,7 +127,7 @@ export async function asaasCreatePixCharge(
       description: descricao,
       ...(split && split.length > 0 ? { split } : {}),
     }),
-  });
+  }, conta);
 }
 
 /**
@@ -129,6 +144,7 @@ export async function asaasCreateCreditCardCharge(
   descricao: string,
   vencimento: string,
   split?: AsaasSplit[],
+  conta?: ContaAsaas,
 ): Promise<AsaasPayment> {
   return chamarApi<AsaasPayment>("/payments", {
     method: "POST",
@@ -140,7 +156,7 @@ export async function asaasCreateCreditCardCharge(
       description: descricao,
       ...(split && split.length > 0 ? { split } : {}),
     }),
-  });
+  }, conta);
 }
 
 export interface AsaasPixQrCode {
@@ -149,17 +165,17 @@ export interface AsaasPixQrCode {
   expirationDate: string;
 }
 
-export async function asaasGetPixQrCode(paymentId: string): Promise<AsaasPixQrCode> {
-  return chamarApi<AsaasPixQrCode>(`/payments/${paymentId}/pixQrCode`);
+export async function asaasGetPixQrCode(paymentId: string, conta?: ContaAsaas): Promise<AsaasPixQrCode> {
+  return chamarApi<AsaasPixQrCode>(`/payments/${paymentId}/pixQrCode`, undefined, conta);
 }
 
-export async function asaasGetPaymentStatus(paymentId: string): Promise<AsaasPayment> {
-  return chamarApi<AsaasPayment>(`/payments/${paymentId}`);
+export async function asaasGetPaymentStatus(paymentId: string, conta?: ContaAsaas): Promise<AsaasPayment> {
+  return chamarApi<AsaasPayment>(`/payments/${paymentId}`, undefined, conta);
 }
 
 /** Cancela uma cobrança (ex: aluno desistiu, ou cobrança de teste) — best-effort, não lança se já não existir mais. */
-export async function asaasCancelPayment(paymentId: string): Promise<void> {
-  await chamarApi(`/payments/${paymentId}`, { method: "DELETE" }).catch(() => {});
+export async function asaasCancelPayment(paymentId: string, conta?: ContaAsaas): Promise<void> {
+  await chamarApi(`/payments/${paymentId}`, { method: "DELETE" }, conta).catch(() => {});
 }
 
 export interface AsaasPixAutomaticAuthorization {
@@ -200,6 +216,7 @@ export async function asaasCreatePixAutomaticAuthorization(
   contractId: string,
   valorPrimeiraCobranca: number,
   descricao: string,
+  conta?: ContaAsaas,
 ): Promise<AsaasPixAutomaticAuthorization> {
   const hoje = new Date().toISOString().slice(0, 10);
   const descricaoCurta = sanitizarDescricaoPixAutomatico(descricao).slice(0, 35);
@@ -214,16 +231,16 @@ export async function asaasCreatePixAutomaticAuthorization(
       description: descricaoCurta,
       immediateQrCode: { originalValue: valorPrimeiraCobranca, expirationSeconds: 3600, description: descricaoCurta },
     }),
-  });
+  }, conta);
 }
 
-export async function asaasGetPixAutomaticAuthorization(id: string): Promise<AsaasPixAutomaticAuthorization> {
-  return chamarApi<AsaasPixAutomaticAuthorization>(`/pix/automatic/authorizations/${id}`);
+export async function asaasGetPixAutomaticAuthorization(id: string, conta?: ContaAsaas): Promise<AsaasPixAutomaticAuthorization> {
+  return chamarApi<AsaasPixAutomaticAuthorization>(`/pix/automatic/authorizations/${id}`, undefined, conta);
 }
 
 /** Cancela a autorização — sem isso, o aluno não consegue "desligar" o débito automático (ver desativarPixAutomatico). */
-export async function asaasCancelPixAutomaticAuthorization(id: string): Promise<void> {
-  await chamarApi(`/pix/automatic/authorizations/${id}`, { method: "DELETE" });
+export async function asaasCancelPixAutomaticAuthorization(id: string, conta?: ContaAsaas): Promise<void> {
+  await chamarApi(`/pix/automatic/authorizations/${id}`, { method: "DELETE" }, conta);
 }
 
 /**
@@ -239,6 +256,7 @@ export async function asaasCreatePixAutomaticCharge(
   descricao: string,
   vencimento: string,
   split?: AsaasSplit[],
+  conta?: ContaAsaas,
 ): Promise<AsaasPayment> {
   return chamarApi<AsaasPayment>("/payments", {
     method: "POST",
@@ -251,7 +269,7 @@ export async function asaasCreatePixAutomaticCharge(
       pixAutomaticAuthorizationId: authorizationId,
       ...(split && split.length > 0 ? { split } : {}),
     }),
-  });
+  }, conta);
 }
 
 export interface AsaasPixFeeStatus {
@@ -270,7 +288,7 @@ export interface AsaasPixFeeStatus {
  * criação da cobrança, não da confirmação do pagamento (que pode vir depois
  * e, em teoria, cruzar a franquia por causa de outras cobranças pagas antes).
  */
-export async function asaasGetPixFeeStatus(): Promise<AsaasPixFeeStatus> {
+export async function asaasGetPixFeeStatus(conta?: ContaAsaas): Promise<AsaasPixFeeStatus> {
   const dados = await chamarApi<{
     payment: {
       pix: {
@@ -281,7 +299,7 @@ export async function asaasGetPixFeeStatus(): Promise<AsaasPixFeeStatus> {
         creditsReceivedOfCurrentMonth: number;
       };
     };
-  }>("/myAccount/fees");
+  }>("/myAccount/fees", undefined, conta);
   const { pix } = dados.payment;
   const descontoVigente = pix.fixedFeeValueWithDiscount !== null && pix.discountExpiration !== null && new Date(pix.discountExpiration) > new Date();
   return {
@@ -303,7 +321,7 @@ export interface AsaasCreditCardFeeStatus {
  * 2026-12-18) + R$0,49 fixo por operação, além de levar 32 dias pra cair na
  * conta (vs. instantâneo no PIX). Só 1x (à vista) por ora — sem parcelamento.
  */
-export async function asaasGetCreditCardFeeStatus(): Promise<AsaasCreditCardFeeStatus> {
+export async function asaasGetCreditCardFeeStatus(conta?: ContaAsaas): Promise<AsaasCreditCardFeeStatus> {
   const dados = await chamarApi<{
     payment: {
       creditCard: {
@@ -313,7 +331,7 @@ export async function asaasGetCreditCardFeeStatus(): Promise<AsaasCreditCardFeeS
         hasValidDiscount: boolean;
       };
     };
-  }>("/myAccount/fees");
+  }>("/myAccount/fees", undefined, conta);
   const { creditCard } = dados.payment;
   const percentual =
     creditCard.hasValidDiscount && creditCard.discountOneInstallmentPercentage !== null
@@ -362,13 +380,13 @@ export interface AsaasRefund {
   transactionReceiptUrl?: string | null;
   refundedSplits?: { id: string; value: number; done: boolean }[];
 }
-export async function asaasRefundEventPayment(paymentId: string, remaining?: number, descricao = "Cancelamento do evento: reembolso das inscricoes"): Promise<AsaasPayment> {
+export async function asaasRefundEventPayment(paymentId: string, remaining?: number, descricao = "Cancelamento do evento: reembolso das inscricoes", conta?: ContaAsaas): Promise<AsaasPayment> {
   return chamarApi<AsaasPayment>(`/payments/${encodeURIComponent(paymentId)}/refund`, {
     method: "POST",
     body: JSON.stringify({ description: descricao, ...(remaining !== undefined ? { value: remaining } : {}) }),
-  });
+  }, conta);
 }
 /** Diferente do cancelamento best-effort legado, o evento exige confirmação da exclusão. */
-export async function asaasDeleteEventPayment(paymentId: string): Promise<{ id: string; deleted: boolean }> {
-  return chamarApi(`/payments/${encodeURIComponent(paymentId)}`, { method: "DELETE" });
+export async function asaasDeleteEventPayment(paymentId: string, conta?: ContaAsaas): Promise<{ id: string; deleted: boolean }> {
+  return chamarApi(`/payments/${encodeURIComponent(paymentId)}`, { method: "DELETE" }, conta);
 }

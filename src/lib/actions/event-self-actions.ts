@@ -1,6 +1,7 @@
 "use server";
 
 import { asaasDeleteEventPayment, asaasGetPaymentStatus } from "@/lib/asaas/client";
+import { contaDeLeituraId } from "@/lib/asaas/conta-escola";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { db } from "@/lib/db";
@@ -46,13 +47,14 @@ export async function cancelarMinhaInscricao(memberId: string, registrationId: s
   // PIX gerado: confere no Asaas antes de mexer — se já foi pago, a inscrição vale.
   if (r.asaasPaymentId && !r.paid) {
     try {
-      const pagamento = await asaasGetPaymentStatus(r.asaasPaymentId);
+      const conta = await contaDeLeituraId(r.event.schoolId);
+      const pagamento = await asaasGetPaymentStatus(r.asaasPaymentId, conta);
       if (["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(pagamento.status)) {
         await confirmEventPayment(r.id);
         atualizar(r.eventId);
         return { ok: false, erro: "O pagamento desta inscrição já tinha sido recebido, então ela está confirmada. Se ainda quiser desistir, toque de novo em cancelar." };
       }
-      const removida = await asaasDeleteEventPayment(r.asaasPaymentId);
+      const removida = await asaasDeleteEventPayment(r.asaasPaymentId, conta);
       if (!removida.deleted) throw new Error("Asaas não confirmou o cancelamento.");
     } catch {
       return { ok: false, erro: "Não foi possível cancelar a cobrança agora. Tente de novo em alguns minutos." };

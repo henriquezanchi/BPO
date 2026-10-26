@@ -2,7 +2,8 @@
 
 import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
 import { asaasCreatePixCharge, asaasFindOrCreateCustomer, asaasGetPaymentStatus, asaasGetPixQrCode } from "@/lib/asaas/client";
-import { calcularSplitEscola } from "@/lib/asaas/split";
+import { contaDaEscolaId, contaDeLeituraId } from "@/lib/asaas/conta-escola";
+import { splitDoBpo } from "@/lib/asaas/split";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notificarErroSuporte } from "@/lib/error-notify";
@@ -33,15 +34,17 @@ export async function createFortunaTopUpCharge(memberId: string, valor: number, 
   }
   if (!member.fortunaClientId) throw new Error("Sua conta ainda não está vinculada ao Fortuna — fale com a secretaria.");
 
-  const cliente = await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined);
+  // Sempre pela subconta da filial (regra do usuário 2026-10-25).
+  const conta = await contaDaEscolaId(member.schoolId);
+  const cliente = await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined, conta);
 
   const vencimento = new Date();
   vencimento.setDate(vencimento.getDate() + 1);
   const dueDate = vencimento.toISOString().slice(0, 10);
 
-  const split = member.school.asaasWalletId ? [await calcularSplitEscola(valor, member.school.asaasWalletId)] : undefined;
-  const pagamento = await asaasCreatePixCharge(cliente.id, valor, `Recarga Fortuna — ${member.name}`, dueDate, split);
-  const qrcode = await asaasGetPixQrCode(pagamento.id);
+  const split = await splitDoBpo(valor, conta);
+  const pagamento = await asaasCreatePixCharge(cliente.id, valor, `Recarga Fortuna — ${member.name}`, dueDate, split, conta);
+  const qrcode = await asaasGetPixQrCode(pagamento.id, conta);
 
   const charge = await db.fortunaTopUpCharge.create({
     data: {
@@ -72,7 +75,7 @@ export async function checkFortunaTopUpStatus(memberId: string, chargeId: string
   if (charge.memberId !== memberId) throw new Error("Cobrança não pertence a este membro.");
   if (charge.status === "pago") return { status: "pago" as const };
 
-  const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId);
+  const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, await contaDeLeituraId(member.schoolId));
   if (pagamento.status !== "RECEIVED" && pagamento.status !== "CONFIRMED") {
     return { status: "pendente" as const };
   }
