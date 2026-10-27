@@ -38,6 +38,8 @@ export function dataDoAgora(v: EventoAgora["data"]): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+const soData = (v: EventoAgora["data"]) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
 const semHtml = (t: string) => t.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
 
 export function agendaDoAgora(lista: EventoAgora[]): AgendaItem[] {
@@ -65,8 +67,9 @@ export function agendaDoAgora(lista: EventoAgora[]): AgendaItem[] {
         status: /cancel/i.test(e.situacao ?? "") ? "cancelado" : "publicado",
         description: e.texto ? semHtml(e.texto).slice(0, 1200) : null,
         location: local,
-        endsAt: e.duracao && e.duracao > 0 ? new Date(inicio.getTime() + e.duracao * 60_000) : null,
-        allDay: false,
+        // O Ágora manda só a data ("2026-10-31", visto em 27/10): evento de dia inteiro, sem hora inventada.
+        endsAt: !soData(e.data) && e.duracao && e.duracao > 0 ? new Date(inicio.getTime() + e.duracao * 60_000) : null,
+        allDay: soData(e.data),
       },
     ];
   });

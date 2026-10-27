@@ -39,4 +39,6 @@ test("evento do Ágora vira item da agenda com inscrição no Ágora", () => {
   assert.equal(item.description, "Texto do evento");
   assert.equal(item.endsAt?.toISOString(), "2026-11-21T00:30:00.000Z");
   assert.equal(agendaDoAgora([{ id: 78, data: "2026-11-21T19:30:00" }]).length, 0, "sem nome, fica de fora");
+  const [soDia] = agendaDoAgora([{ id: 79, nome: "Encontro Nacional GM", data: "2026-11-20", nacional: true }]);
+  assert.ok(soDia.kind === "evento" && soDia.allDay && soDia.endsAt === null, "só a data: dia inteiro");
 });
