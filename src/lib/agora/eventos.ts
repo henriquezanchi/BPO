@@ -2,8 +2,9 @@ import type { AgendaItem } from "@/lib/member-data";
 import { AGORA, chamarAgora, SemSessaoAgora } from "@/lib/agora/sessao";
 
 /**
- * Eventos do Ágora na Agenda do aluno (túnel, 2026-10-27): `GET /api/eventos/periodo` como o próprio aluno, então vêm
- * só os eventos que o Ágora libera para ele. A inscrição continua no Ágora (formulário, lotes e pagamento próprios):
+ * Eventos do Ágora na Agenda do aluno (túnel, 2026-10-27): `GET /api/eventos/acoes` como o próprio aluno — a mesma
+ * lista da página inicial do Ágora, já filtrada por ele (perfil, sede, inscrições abertas) —, completada com
+ * `/api/eventos/periodo` (data, descrição, local). A inscrição continua no Ágora (formulário, lotes e pagamento próprios):
  * o botão leva a `#/e/<slug>`. Formatos tratados com tolerância (data ISO, epoch ou lista; imagem por id ou objeto)
  * até a API externa estabilizar.
  */
@@ -75,17 +76,70 @@ export function agendaDoAgora(lista: EventoAgora[]): AgendaItem[] {
   });
 }
 
-/** Próximos 90 dias do Ágora para o aluno; [] sem sessão do login unificado ou se o Ágora não responder a tempo. */
+/** Item de `/api/eventos/acoes`: o que o aluno pode fazer em cada evento (a página inicial do Ágora é montada com ele). */
+type AcaoAgora = {
+  contexto: string; // "Nome do evento DD/MM/AAAA"
+  contextoId: string | number; // slug (INSCRICAO_NOVA) ou número da inscrição (INSCRICAO_EDITAR)
+  tipo: string; // INSCRICAO_NOVA | INSCRICAO_EDITAR | ...
+  imagemId?: number | null;
+  info?: string | null; // " Valor: R$ 360"
+  aviso?: string | null; // "Restam 2 dias Lote 3"
+  regiao?: string | null; // NAC | RCO | RNN
+  permiteSedeExterna?: boolean;
+};
+
+const normalizar = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+
+/**
+ * Agenda a partir das ações do aluno no Ágora (filtradas pelo próprio Ágora, pedido do Marcos 27/10), completadas com
+ * data, descrição e local de `/api/eventos/periodo` quando o evento estiver lá (casamento pelo slug ou pelo nome).
+ */
+export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[]): AgendaItem[] {
+  const porSlug = new Map(periodo.filter((e) => e.slug).map((e) => [e.slug!, e]));
+  const porNome = new Map(periodo.filter((e) => e.nome).map((e) => [normalizar(e.nome!), e]));
+  return acoes.flatMap((a): AgendaItem[] => {
+    if (!/^INSCRICAO_/.test(a.tipo ?? "")) return [];
+    const m = (a.contexto ?? "").match(/^(.*?)\s+(\d{2})\/(\d{2})\/(\d{4})\s*$/);
+    const nome = (m?.[1] ?? a.contexto ?? "").trim();
+    if (!nome) return [];
+    const inscrito = a.tipo === "INSCRICAO_EDITAR";
+    const evento = (typeof a.contextoId === "string" ? porSlug.get(a.contextoId) : undefined) ?? porNome.get(normalizar(nome));
+    const base = evento ? agendaDoAgora([evento])[0] : undefined;
+    const data = base?.date ?? (m ? dataDoAgora(`${m[4]}-${m[3]}-${m[2]}`) : null);
+    if (!data) return [];
+    const slug = !inscrito && typeof a.contextoId === "string" ? a.contextoId : evento?.slug;
+    const valor = (a.info ?? "").match(/Valor:\s*(R\$\s*[\d.,]+)/)?.[1] ?? null;
+    const prazo = [a.aviso, (a.info ?? "").replace(/Valor:\s*R\$\s*[\d.,]+/, "")].map((t) => (t ?? "").trim()).filter(Boolean).join(" · ") || null;
+    const item: AgendaItem = {
+      ...(base && base.kind === "evento"
+        ? base
+        : { kind: "evento" as const, id: `agora-${a.contextoId}`, title: nome, date: data, price: 0, reactions: [], minhaInscricao: null, source: "agora", status: "publicado", description: null, location: null, endsAt: null, allDay: true }),
+      title: nome,
+      date: data,
+      scope: a.regiao === "NAC" ? "nacional" : "regional",
+      filialOrigem: a.regiao === "NAC" ? null : (base?.kind === "evento" ? base.filialOrigem : null) ?? a.regiao ?? null,
+      posterUrl: a.imagemId ? `${AGORA}/e/og/imagem/${a.imagemId}` : base?.kind === "evento" ? base.posterUrl : null,
+      registrationUrl: slug ? `${AGORA}/#/e/${encodeURIComponent(slug)}` : `${AGORA}/`,
+      agora: { inscrito, valor, prazo },
+    };
+    return [item];
+  });
+}
+
+/** Eventos do Ágora para o aluno; [] sem sessão do login unificado ou se o Ágora não responder a tempo. */
 export async function eventosDoAgora(memberId: string): Promise<AgendaItem[]> {
   const d = (x: Date) => x.toISOString().slice(0, 10);
   const hoje = new Date();
-  const fim = new Date(hoje.getTime() + 90 * 864e5);
+  const fim = new Date(hoje.getTime() + 180 * 864e5);
   try {
-    const lista = await Promise.race([
-      chamarAgora<EventoAgora[]>(memberId, `/api/eventos/periodo?ini=${d(hoje)}&fim=${d(fim)}`),
+    const [acoes, periodo] = await Promise.race([
+      Promise.all([
+        chamarAgora<AcaoAgora[]>(memberId, "/api/eventos/acoes"),
+        chamarAgora<EventoAgora[]>(memberId, `/api/eventos/periodo?ini=${d(hoje)}&fim=${d(fim)}`).catch(() => [] as EventoAgora[]),
+      ]),
       new Promise<never>((_, nao) => setTimeout(() => nao(new Error("Ágora sem resposta em 6 s")), 6000)),
     ]);
-    return Array.isArray(lista) ? agendaDoAgora(lista) : [];
+    return Array.isArray(acoes) ? agendaDasAcoes(acoes, Array.isArray(periodo) ? periodo : []) : [];
   } catch (e) {
     if (!(e instanceof SemSessaoAgora)) console.error("Agenda: eventos do Ágora indisponíveis:", e instanceof Error ? e.message : e);
     return [];

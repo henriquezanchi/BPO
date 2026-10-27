@@ -92,6 +92,8 @@ export type AgendaItem =
       lancheCompartilhado?: boolean;
       postagemOficial?: string | null;
       cartazLeitura?: { data: boolean; horario: boolean; local: boolean; inscricao: boolean } | null;
+      // Evento do Ágora (túnel, 2026-10-27): já inscrito lá, valor e prazo/lote.
+      agora?: { inscrito: boolean; valor: string | null; prazo: string | null };
     }
   | {
       kind: "atividade";

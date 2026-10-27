@@ -42,3 +42,29 @@ test("evento do Ágora vira item da agenda com inscrição no Ágora", () => {
   const [soDia] = agendaDoAgora([{ id: 79, nome: "Encontro Nacional GM", data: "2026-11-20", nacional: true }]);
   assert.ok(soDia.kind === "evento" && soDia.allDay && soDia.endsAt === null, "só a data: dia inteiro");
 });
+
+test("ações do Ágora (página inicial dele) viram a agenda: nova inscrição e já inscrito", async () => {
+  const { agendaDasAcoes } = await import("../src/lib/agora/eventos");
+  const itens = agendaDasAcoes(
+    [
+      { contexto: "Encontro Nacional de GGSS 31/10/2026", contextoId: "enc-gs-ita", imagemId: 17, info: " Valor: R$ 485", aviso: "Restam 2 dias Lote 3", regiao: "NAC", tipo: "INSCRICAO_NOVA" },
+      { contexto: "Encontro Nacional GM 20/11/2026", contextoId: 15044, imagemId: 1569, info: null, aviso: null, regiao: "NAC", tipo: "INSCRICAO_EDITAR" },
+      { contexto: "Voluntariado Anápolis e Asa Norte 14/11/2026", contextoId: "vol-faz-14-11-26", imagemId: 18, info: "Restam 14 dias Lote 1 Valor: R$ 110", aviso: null, regiao: "RCO", tipo: "INSCRICAO_NOVA" },
+      { contexto: "Outra coisa", contextoId: "x", tipo: "AVISO_GERAL" },
+    ],
+    [{ id: 15, nome: "Encontro Nacional GM", data: "2026-11-20", slug: "enc-gm-faz", nacional: true, texto: "Descrição do GM" }],
+  );
+  assert.equal(itens.length, 3, "só ações de inscrição");
+  const [ggss, gm, vol] = itens.map((i) => (i.kind === "evento" ? i : null));
+  assert.equal(ggss?.title, "Encontro Nacional de GGSS");
+  assert.equal(ggss?.date.toISOString(), "2026-10-31T03:00:00.000Z");
+  assert.equal(ggss?.registrationUrl, "https://eventos.acropolebrasil.com.br/#/e/enc-gs-ita");
+  assert.deepEqual(ggss?.agora, { inscrito: false, valor: "R$ 485", prazo: "Restam 2 dias Lote 3" });
+  assert.equal(ggss?.scope, "nacional");
+  assert.equal(gm?.agora?.inscrito, true);
+  assert.equal(gm?.registrationUrl, "https://eventos.acropolebrasil.com.br/#/e/enc-gm-faz", "já inscrito: leva ao evento casado pelo nome");
+  assert.equal(gm?.description, "Descrição do GM");
+  assert.equal(vol?.scope, "regional");
+  assert.deepEqual(vol?.agora, { inscrito: false, valor: "R$ 110", prazo: "Restam 14 dias Lote 1" });
+  assert.equal(vol?.posterUrl, "https://eventos.acropolebrasil.com.br/e/og/imagem/18");
+});
