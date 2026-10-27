@@ -64,3 +64,13 @@ export function walletPrincipal(): Promise<string> {
   });
   return walletCache;
 }
+
+/**
+ * Pix Automático liberado na subconta da filial (27/10/2026): o Asaas não habilita o recurso em toda subconta (BGA
+ * respondeu "O Pix Automático não está disponível para sua conta no momento"). Lista de unidades do Mercúrio em
+ * PIX_AUTOMATICO_UNIDADES (ex.: "BGA,GYN"); sem a variável, ninguém vê a opção.
+ */
+export function pixAutomaticoLiberado(unidade: string | null | undefined) {
+  if (!unidade) return false;
+  return (process.env.PIX_AUTOMATICO_UNIDADES ?? "").split(",").map((u) => u.trim().toUpperCase()).includes(unidade.toUpperCase());
+}

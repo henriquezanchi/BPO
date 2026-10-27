@@ -399,6 +399,7 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
               compositionTotal={compositionTotal}
               fortunaBalances={fortunaBalances}
               pixAutomaticStatus={member.pixAutomaticStatus}
+              pixAutomaticoDisponivel={dashboard.pixAutomaticoDisponivel}
               somenteConsulta={somenteConsulta}
               emBreve={emBreve}
             />

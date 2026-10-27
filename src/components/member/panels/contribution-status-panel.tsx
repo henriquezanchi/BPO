@@ -53,6 +53,7 @@ export function ContributionStatusPanel({
   compositionTotal,
   fortunaBalances,
   pixAutomaticStatus,
+  pixAutomaticoDisponivel = false,
   somenteConsulta,
   emBreve,
 }: {
@@ -62,6 +63,8 @@ export function ContributionStatusPanel({
   compositionTotal: number;
   fortunaBalances: FortunaBalanceView[];
   pixAutomaticStatus: string | null;
+  /** Pix Automático liberado na subconta da filial (ver pixAutomaticoLiberado). Quem já tem autorização continua vendo. */
+  pixAutomaticoDisponivel?: boolean;
   somenteConsulta?: boolean;
   /** Filial brasileira ainda sem pagamento pelo Portal (School.mercurioEscrita). */
   emBreve?: boolean;
@@ -150,7 +153,7 @@ export function ContributionStatusPanel({
 
   return (
     <div className="text-left">
-      {!somenteConsulta && <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />}
+      {!somenteConsulta && (pixAutomaticoDisponivel || pixAutomaticStatus) && <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />}
 
       <section aria-label="Resumo das contribuições" className="my-4 space-y-2 border-y border-gray-200 py-4 text-sm dark:border-gray-700">
         {/* Mais enxuto (pedido do usuário 2026-10-25): sem repetir "nenhum atraso" nem "sem juros"; a data fica à direita do título. */}

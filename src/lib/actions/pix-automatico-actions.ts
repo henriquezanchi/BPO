@@ -7,7 +7,7 @@ import {
   asaasFindOrCreateCustomer,
   asaasGetPixAutomaticAuthorization,
 } from "@/lib/asaas/client";
-import { contaDaEscolaId, contaDeLeituraId } from "@/lib/asaas/conta-escola";
+import { contaDaEscolaId, contaDeLeituraId, pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -23,6 +23,8 @@ import { db } from "@/lib/db";
 export async function ativarPixAutomatico(memberId: string, cpf: string) {
   const member = await requireAuthenticatedMember(memberId);
   exigirEscritaMercurio(member);
+  const unidade = (await db.school.findUnique({ where: { id: member.schoolId }, select: { mercurioUnidade: true } }))?.mercurioUnidade;
+  if (!pixAutomaticoLiberado(unidade)) throw new Error("O débito automático ainda não está disponível na sua filial. Por enquanto, pague pelo Pix do mês.");
 
   const itens = await db.contributionCompositionItem.findMany({ where: { memberId } });
   const valor = itens.reduce((soma, i) => soma + Number(i.amount), 0);

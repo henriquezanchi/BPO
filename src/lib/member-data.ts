@@ -1,4 +1,5 @@
 import { eventosDoAgora } from "@/lib/agora/eventos";
+import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
 import {portalLabel} from "@/lib/display-labels";
@@ -416,6 +417,8 @@ export async function getMemberDashboard(memberId: string) {
     agendaItems,
     podeMarcarAtendimento: instrutoresDisponiveis.length > 0,
     cobraOnline: escolasQueCobram.has(member.schoolId),
+    // Pix Automático por filial (27/10/2026): a subconta de BGA ainda não tem o recurso liberado no Asaas.
+    pixAutomaticoDisponivel: pixAutomaticoLiberado(member.school.mercurioUnidade) && escolasQueCobram.has(member.schoolId),
     avisosGrupos,
     // Também decide o rótulo "Portal do Membro" x "Portal do Aluno" no topo do Portal.
     // Biblioteca (bastião) só para membros — 2º nível em diante, mesma regra do público "Membros" dos eventos;

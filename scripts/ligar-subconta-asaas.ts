@@ -9,10 +9,13 @@
  * Nunca imprime a chave nem o token.
  *
  * Uso (no terminal, para colar a chave): npx tsx scripts/ligar-subconta-asaas.ts BGA
+ *      (chave já no .env.local):          npx tsx --env-file=.env --env-file=.env.local scripts/ligar-subconta-asaas.ts BGA --da-env ASAAS_API_KEY_BG
  */
 import { loadEnvConfig } from "@next/env";
 import * as readline from "node:readline";
-loadEnvConfig(process.cwd());
+// O carregador do Next trata o "$" das chaves do Asaas ("$aact_…") como variável e as esvazia; com as variáveis já
+// carregadas (npx tsx --env-file=.env --env-file=.env.local …), ele não é chamado.
+if (!process.env.ASAAS_API_KEY) loadEnvConfig(process.cwd());
 
 const BASE = process.env.ASAAS_ENV === "sandbox" ? "https://sandbox.asaas.com/api/v3" : "https://api.asaas.com/v3";
 
@@ -53,7 +56,9 @@ async function main() {
   if (!escola.asaasWalletId) throw new Error(`${escola.name} ainda não tem subconta Asaas (asaasWalletId vazio).`);
   console.log(`Filial: ${escola.name}${escola.asaasSubaccountApiKey ? " (já tinha chave; será substituída)" : ""}`);
 
-  const chave = await perguntarOculto("Cole a chave de API da subconta e tecle Enter (não aparece na tela): ");
+  // --da-env NOME: lê a chave de uma variável do .env/.env.local (ex.: ASAAS_API_KEY_BG), sem mostrar.
+  const daEnv = process.argv.indexOf("--da-env");
+  const chave = daEnv > 0 ? (process.env[process.argv[daEnv + 1] ?? ""] ?? "").trim() : await perguntarOculto("Cole a chave de API da subconta e tecle Enter (não aparece na tela): ");
   if (!chave.startsWith("$aact_")) throw new Error("Isso não parece uma chave de API do Asaas (começa com $aact_).");
 
   // 2. A chave precisa ser da carteira da filial.
@@ -73,11 +78,22 @@ async function main() {
   if (existentes.some((w) => w.url === modelo.url)) {
     console.log("A subconta já tem o webhook do Portal.");
   } else {
-    await asaas(chave, "/webhooks", {
-      method: "POST",
-      body: JSON.stringify({ name: "Portal Nova Acrópole", url: modelo.url, email: modelo.email, enabled: true, interrupted: false, authToken: token, sendType: "NON_SEQUENTIALLY", events: modelo.events }),
-    });
-    console.log(`Webhook cadastrado na subconta (${modelo.events.length} eventos).`);
+    const cadastrar = (events: string[]) =>
+      asaas(chave, "/webhooks", {
+        method: "POST",
+        body: JSON.stringify({ name: "Portal Nova Acrópole", url: modelo.url, email: modelo.email, enabled: true, interrupted: false, authToken: token, sendType: "NON_SEQUENTIALLY", events }),
+      });
+    let eventos = modelo.events;
+    try {
+      await cadastrar(eventos);
+    } catch (e) {
+      // Subconta sem Pix Automático liberado (visto em BGA, 27/10/2026): cadastra sem esses eventos.
+      if (!/Pix Autom/i.test(String(e))) throw e;
+      eventos = eventos.filter((ev) => !ev.startsWith("PIX_AUTOMATIC"));
+      await cadastrar(eventos);
+      console.log("Pix Automático não está liberado nesta subconta: avisos de Pix Automático ficaram de fora.");
+    }
+    console.log(`Webhook cadastrado na subconta (${eventos.length} eventos).`);
   }
   console.log("Pronto: as cobranças desta filial saem pela subconta.");
   await db.$disconnect();
