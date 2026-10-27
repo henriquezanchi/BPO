@@ -23,6 +23,10 @@ export type EventoCompartilhavel = {
   postagemOficial?: string | null;
   /** O que já está escrito no cartaz (leitura por IA); null = não lido, a faixa leva tudo. */
   cartazLeitura?: { data: boolean; horario: boolean; local: boolean; inscricao: boolean } | null;
+  /** Evento do Ágora (2026-10-27): rótulo do topo da arte ("EVENTO NACIONAL"), valor em texto e chamada da inscrição. */
+  chamada?: string;
+  valorTexto?: string | null;
+  chamadaInscricao?: string;
 };
 
 export type Canal = "whatsapp" | "instagram" | "facebook" | "telegram" | "email" | "link";
@@ -43,10 +47,27 @@ type ItemDeAgenda = {
   price?: number;
   participantInstructions?: string | null;
   lancheCompartilhado?: boolean;
+  scope?: string;
+  agora?: { inscrito: boolean; valor: string | null; prazo: string | null };
 };
 
 /** Evento público do Ulisses, publicado, com link de inscrição e ainda por acontecer. */
 export function eventoCompartilhavel(item: ItemDeAgenda, agora = new Date()): EventoCompartilhavel | null {
+  // Evento do Ágora (2026-10-27): inscrição no Ágora, com o valor de lá; não é "da escola" nem "aberto ao público".
+  if (item.source === "agora" && item.status === "publicado" && item.registrationUrl && item.date.getTime() >= agora.getTime() - 12 * 60 * 60 * 1000) {
+    return {
+      title: item.title,
+      date: item.date,
+      allDay: item.allDay,
+      location: item.location,
+      description: item.description,
+      registrationUrl: item.registrationUrl,
+      imagem: item.posterUrl ?? null,
+      chamada: item.scope === "nacional" ? "EVENTO NACIONAL" : "EVENTO REGIONAL",
+      valorTexto: item.agora?.valor ? `Inscrição: ${item.agora.valor}` : null,
+      chamadaInscricao: "INSCRIÇÕES NO ÁGORA",
+    };
+  }
   if (item.source !== "ulisses" || item.status !== "publicado" || !item.registrationUrl) return null;
   if (item.date.getTime() < agora.getTime() - 12 * 60 * 60 * 1000) return null;
   return {
@@ -173,9 +194,9 @@ export function textoParaCanal(e: EventoCompartilhavel, canal: Canal): string {
       // inteira (pedido do usuário 2026-10-25: faltavam as palestras e o texto vinha cortado).
       return semEmoji(
         [
-          `*${e.title}*\n${quando}${e.location ? `\n${e.location}` : ""}`,
+          `*${e.title}*\n${quando}${e.location ? `\n${e.location}` : ""}${e.valorTexto ? `\n${e.valorTexto}` : ""}`,
           textoCompleto(e.description ? semEmoji(e.description) : null) || null,
-          `Inscrições: ${e.registrationUrl}`,
+          `${e.chamadaInscricao ? "Inscrições no Ágora" : "Inscrições"}: ${e.registrationUrl}`,
         ]
           .filter(Boolean)
           .join("\n\n"),

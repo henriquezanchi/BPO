@@ -304,7 +304,7 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
 
       {aberto && (
         <div className="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/40">
-          <p className="mb-2 text-[11px] text-gray-600 dark:text-gray-400">Evento aberto ao público. Escolha onde quer compartilhar.</p>
+          <p className="mb-2 text-[11px] text-gray-600 dark:text-gray-400">{evento.chamadaInscricao ? "Inscrições pelo Ágora." : "Evento aberto ao público."} Escolha onde quer compartilhar.</p>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <CompartilharWhatsApp evento={evento} linkTexto={linkDoCanal(evento, "whatsapp")} />

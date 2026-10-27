@@ -82,3 +82,19 @@ test("descrição do Ágora em Markdown vira texto em linhas; duração em dias;
   assert.equal(e.endsAt?.toISOString(), "2026-11-02T03:00:00.000Z");
   assert.equal(e.location, "ITACA");
 });
+
+test("compartilhar evento do Ágora: rótulo nacional, valor real e inscrição no Ágora (não 'da escola' nem 'gratuita')", async () => {
+  const { eventoCompartilhavel, textoParaCanal } = await import("../src/lib/compartilhar-evento");
+  const e = eventoCompartilhavel(
+    { id: "agora-1", title: "Encontro Nacional de GGSS", date: new Date(Date.now() + 5 * 864e5), allDay: true, location: "ITACA", description: "1) Prazos\nLote 1", source: "agora", status: "publicado", registrationUrl: "https://eventos.acropolebrasil.com.br/#/e/enc-gs-ita", scope: "nacional", agora: { inscrito: false, valor: "R$ 485", prazo: null } },
+  );
+  assert.ok(e);
+  assert.equal(e!.chamada, "EVENTO NACIONAL");
+  assert.equal(e!.valorTexto, "Inscrição: R$ 485");
+  assert.equal(e!.chamadaInscricao, "INSCRIÇÕES NO ÁGORA");
+  const zap = textoParaCanal(e!, "whatsapp");
+  assert.ok(zap.includes("Inscrição: R$ 485"));
+  assert.ok(zap.includes("Inscrições no Ágora: https://eventos.acropolebrasil.com.br/#/e/enc-gs-ita"));
+  assert.ok(zap.includes("1) Prazos\nLote 1"), "mantém as quebras da descrição");
+  assert.ok(!/gratuit|Portal/i.test(zap));
+});

@@ -233,9 +233,9 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   const linhasLocal = e.location ? quebrarLinhas(ctx, e.location, larguraUtil, 2) : [];
   const passoData = Math.round(m.data * 1.35);
   const passoLocal = Math.round(m.local * 1.45);
-  const valor = e.interno && e.price !== undefined
+  const valor = e.valorTexto ?? (e.interno && e.price !== undefined
     ? e.price === 0 ? "Entrada gratuita" : e.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-    : null;
+    : null);
   const espacoAntesData = foto ? (story ? 88 : 72) : story ? 110 : 90;
   const alturaInfo = m.data + (e.allDay ? 0 : passoData) + (linhasLocal.length + (valor ? 1 : 0)) * passoLocal;
   const folgaFaixa = story ? 90 : 70;
@@ -279,7 +279,7 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   ctx.fillStyle = COR.heliosEscuro;
   ctx.font = fonte(700, story ? 34 : 30);
   espacar(4);
-  ctx.fillText(e.interno ? "ENCONTRO DA ESCOLA" : "EVENTO ABERTO AO PÚBLICO", MARGEM, yChamada);
+  ctx.fillText(e.chamada ?? (e.interno ? "ENCONTRO DA ESCOLA" : "EVENTO ABERTO AO PÚBLICO"), MARGEM, yChamada);
   espacar(0);
 
   if (usarFoto && foto) {
@@ -347,7 +347,7 @@ export async function gerarArteEvento(e: EventoCompartilhavel, formato: FormatoA
   ctx.fillStyle = COR.helios;
   ctx.font = fonte(700, story ? 34 : 30);
   espacar(4);
-  ctx.fillText(e.interno ? "CONFIRME NO PORTAL" : "INSCRIÇÕES", MARGEM, yFaixa + (story ? 90 : 86));
+  ctx.fillText(e.chamadaInscricao ?? (e.interno ? "CONFIRME NO PORTAL" : "INSCRIÇÕES"), MARGEM, yFaixa + (story ? 90 : 86));
   espacar(0);
   ctx.fillStyle = "#ffffff";
   ctx.font = fonte(700, story ? 44 : 40);

@@ -417,9 +417,10 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
           <CompartilharWhatsApp compacto linkTexto={linkWhatsAppDoEvento(item, URL_PORTAL)} evento={{
             ...item,
             title: item.title.replace(/\*/g, "").trim(),
+            ...(eventoCompartilhavel(item) ?? {}),
             registrationUrl: eventoCompartilhavel(item)?.registrationUrl ?? urlDoEventoNoPortal(item.id, URL_PORTAL),
             imagem: item.posterUrl,
-            interno: item.source !== "ulisses",
+            interno: item.source !== "ulisses" && item.source !== "agora",
           }} />
         )}
         </div>
