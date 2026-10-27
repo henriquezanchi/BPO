@@ -9,7 +9,7 @@ import type { ContaAsaas } from "@/lib/asaas/client";
  */
 
 export const MENSAGEM_CONTA_PENDENTE =
-  "O pagamento on-line desta escola ainda não foi liberado: falta ligar a conta Asaas da filial. Fale com a Economia.";
+  "O pagamento on-line desta escola ainda não foi liberado: a conta Asaas da filial ainda não está ligada ou aprovada. Fale com a Economia.";
 
 export class ContaEscolaPendente extends Error {
   constructor() {
@@ -73,4 +73,34 @@ export function walletPrincipal(): Promise<string> {
 export function pixAutomaticoLiberado(unidade: string | null | undefined) {
   if (!unidade) return false;
   return (process.env.PIX_AUTOMATICO_UNIDADES ?? "").split(",").map((u) => u.trim().toUpperCase()).includes(unidade.toUpperCase());
+}
+
+/**
+ * Subconta aprovada pelo Asaas (27/10/2026): com a chave ligada mas a conta ainda em análise, o Asaas recusa a cobrança
+ * ("O Pix não está disponível no momento. Para utilizá-lo, sua conta precisa estar aprovada" — visto em BGA). Consulta
+ * GET /myAccount/status da subconta (`general` = APPROVED). Guarda o resultado por instância: aprovada, 6 h; em
+ * análise, 10 min. Se o Asaas não responder, não bloqueia (a cobrança é que decide).
+ */
+const aprovacao = new Map<string, { aprovada: boolean; ate: number }>();
+
+export async function subcontaAprovada(apiKey: string): Promise<boolean> {
+  const guardado = aprovacao.get(apiKey);
+  if (guardado && guardado.ate > Date.now()) return guardado.aprovada;
+  const base = process.env.ASAAS_ENV === "sandbox" ? "https://sandbox.asaas.com/api/v3" : "https://api.asaas.com/v3";
+  try {
+    const r = await fetch(`${base}/myAccount/status`, { headers: { access_token: apiKey, "User-Agent": "portal-na" }, signal: AbortSignal.timeout(4000), cache: "no-store" });
+    if (!r.ok) return true;
+    const aprovada = ((await r.json()) as { general?: string }).general === "APPROVED";
+    aprovacao.set(apiKey, { aprovada, ate: Date.now() + (aprovada ? 6 * 3600e3 : 10 * 60e3) });
+    return aprovada;
+  } catch {
+    return true;
+  }
+}
+
+/** Filiais (entre as informadas) que cobram on-line agora: subconta ligada e aprovada pelo Asaas. */
+export async function escolasQueCobramOnline(schoolIds: string[]): Promise<Set<string>> {
+  const escolas = await db.school.findMany({ where: { id: { in: [...new Set(schoolIds)] }, asaasSubaccountApiKey: { not: null } }, select: { id: true, asaasSubaccountApiKey: true } });
+  const ok = await Promise.all(escolas.map(async (e) => ((await subcontaAprovada(e.asaasSubaccountApiKey!)) ? e.id : null)));
+  return new Set(ok.filter((id): id is string => !!id));
 }

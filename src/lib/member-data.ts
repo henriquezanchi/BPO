@@ -1,5 +1,5 @@
 import { eventosDoAgora } from "@/lib/agora/eventos";
-import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
+import { escolasQueCobramOnline, pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
 import {portalLabel} from "@/lib/display-labels";
@@ -312,10 +312,8 @@ export async function getMemberDashboard(memberId: string) {
     return [...contagemPorEmoji.entries()].map(([emoji, count]) => ({ emoji, count, reactedByMe: minhasReacoes.has(emoji) }));
   }
 
-  // Cobrança sempre pela subconta da filial (2026-10-25): só filiais com a conta Asaas ligada cobram on-line.
-  const escolasQueCobram = new Set(
-    (await db.school.findMany({ where: { id: { in: [...new Set([member.schoolId, ...schoolEvents.map((e) => e.schoolId).filter((id): id is string => !!id)])] }, asaasSubaccountApiKey: { not: null } }, select: { id: true } })).map((s) => s.id),
-  );
+  // Cobrança sempre pela subconta da filial (2026-10-25): só filiais com a conta Asaas ligada e aprovada (27/10) cobram on-line.
+  const escolasQueCobram = await escolasQueCobramOnline([member.schoolId, ...schoolEvents.map((e) => e.schoolId).filter((id): id is string => !!id)]);
   const eventPosters=new Map(await Promise.all(schoolEvents.map(async e=>[e.id,await eventPosterUrl(e.posterPath)] as const)));
   const agendaItems: AgendaItem[] = [
     ...(await agendaAgora),

@@ -1,6 +1,7 @@
 import "server-only";
 import { PAGO, clienteNaSubconta, cobrancaNaSubconta, pixDaCobranca, situacaoDaCobranca } from "@/lib/asaas/subconta";
 import { cifrarCpf, cpfValido } from "@/lib/cpf-cifrado";
+import { subcontaAprovada } from "@/lib/asaas/conta-escola";
 import { db } from "@/lib/db";
 import { avisarFinanceiroSemEsperar, whatsappFinanceiroAtivo } from "@/lib/whatsapp/financeiro";
 import { nomeCurtoDaFilial, primeiroNome } from "@/lib/whatsapp/modelos";
@@ -43,7 +44,8 @@ export async function aberturaPorToken(token: string) {
     disponivel: a.matriculaAberta && !encerrada,
     pagas,
     lotada: pagas >= a.capacidade,
-    cobraOnline: !!school.asaasSubaccountApiKey && (a.valorContribuicaoCentavos ?? 0) > 0,
+    // Subconta ligada e aprovada pelo Asaas (27/10/2026); sem isso, a matrícula entra e a escola combina a 1ª contribuição.
+    cobraOnline: !!school.asaasSubaccountApiKey && (a.valorContribuicaoCentavos ?? 0) > 0 && (await subcontaAprovada(school.asaasSubaccountApiKey)),
   };
 }
 

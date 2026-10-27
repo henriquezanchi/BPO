@@ -4,6 +4,7 @@ import {
   partes,
   type Registro,
 } from "@/components/member/meus-eventos";
+import { eventosDoAgora } from "@/lib/agora/eventos";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canceladoAindaNoCalendario } from "@/lib/evento-cancelado";
@@ -11,6 +12,8 @@ import {
   ArrowLeft,
   CalendarDays,
   ChevronRight,
+  ExternalLink,
+  Globe,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
@@ -45,7 +48,9 @@ export default async function Page() {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/eventos");
   if (!member.mercurioAtivo) redirect("/portal");
-  const { registrations, reception } = await carregar(member.id);
+  const [{ registrations, reception }, doAgora] = await Promise.all([carregar(member.id), eventosDoAgora(member.id)]);
+  // Inscrições feitas no Ágora (túnel, 2026-10-27): o Portal só mostra; a inscrição é gerida lá.
+  const inscricoesAgora = doAgora.filter((i): i is Extract<typeof i, { kind: "evento" }> => i.kind === "evento" && !!i.agora?.inscrito).sort((a, b) => a.date.getTime() - b.date.getTime());
   const agora = new Date();
   const fim = (r: Registro) => r.event.endsAt ?? r.event.startsAt;
   const noFim = (r: (typeof registrations)[number]) =>
@@ -103,6 +108,42 @@ export default async function Page() {
                 </span>
                 <ChevronRight size={16} className="shrink-0 text-gray-400" />
               </Link>
+            );
+          })}
+        </section>
+      )}
+
+      {inscricoesAgora.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
+            <Globe size={14} /> Inscrições no Ágora
+          </h2>
+          {inscricoesAgora.map((e) => {
+            const d = partes(e.date);
+            return (
+              <a
+                key={e.id}
+                href={e.registrationUrl ?? "https://eventos.acropolebrasil.com.br/"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 transition hover:border-na-green/50 dark:border-gray-800 dark:bg-gray-900"
+              >
+                <span className="flex w-12 shrink-0 flex-col items-center rounded-xl bg-na-turquesa py-1.5 leading-tight text-white">
+                  <span className="text-[9px] font-bold uppercase opacity-85">{d.semana}</span>
+                  <span className="text-lg font-black">{d.dia}</span>
+                  <span className="text-[9px] font-bold uppercase opacity-85">{d.mes}</span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-bold tracking-wide text-cyan-800 uppercase dark:text-cyan-300">
+                    Evento {e.scope === "nacional" ? "nacional" : "regional"}
+                  </span>
+                  <span className="block truncate text-[14px] font-bold text-gray-900 dark:text-gray-100">{e.title}</span>
+                  <span className="mt-0.5 inline-block rounded-full bg-na-green-light px-2 py-0.5 text-[11px] font-semibold text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-300">
+                    Inscrição no Ágora
+                  </span>
+                </span>
+                <ExternalLink size={15} className="shrink-0 text-gray-400" />
+              </a>
             );
           })}
         </section>

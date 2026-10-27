@@ -12,7 +12,8 @@ const nextConfig: NextConfig = {
       "./node_modules/@sparticuz/chromium/bin/**/*",
     ],
     // Fila de escrita no Mercúrio (navegador automatizado), rotina da Vercel desde 26/10/2026.
-    "/api/cron/fila-mercurio": ["./node_modules/@sparticuz/chromium/bin/**/*"],
+    // playwright-core/browsers.json não era empacotado ("Cannot find module …/browsers.json", 27/10/2026).
+    "/api/cron/fila-mercurio": ["./node_modules/@sparticuz/chromium/bin/**/*", "./node_modules/playwright-core/**/*.json", "./node_modules/playwright/**/*.json"],
   },
   // Service worker do PWA: sempre a versão mais nova (sem cache), só scripts do próprio site.
   async headers() {
