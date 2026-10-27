@@ -41,14 +41,37 @@ export function dataDoAgora(v: EventoAgora["data"]): Date | null {
 
 const soData = (v: EventoAgora["data"]) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
-const semHtml = (t: string) => t.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+/**
+ * Descrição do Ágora (Markdown com <br>, visto em 27/10): texto em linhas, sem marcação — títulos sem "#", negrito
+ * sem "**", itens de lista com "•". O cartão da Agenda mostra com as quebras (whitespace-pre-line).
+ */
+export function textoDoAgora(t: string) {
+  return t
+    .replace(/<br\s*\/?>[ \t]*\r?\n?/gi, "\n")
+    .replace(/<\/(p|div|li|h\d)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .split("\n")
+    .map((l) => l.replace(/^\s*#{1,6}\s*/, "").replace(/^\s*[*-]\s+/, "• ").replace(/\*\*|__/g, "").replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Local: o Ágora manda a sigla da sede ("ITA"); com o nome da sede no evento, mostra o nome. */
+function localDoEvento(e: EventoAgora): string | null {
+  const local = typeof e.local === "string" ? e.local : (e.local?.nome ?? e.local?.descricao ?? e.local?.endereco ?? null);
+  const sede = nomeDe(e.sede);
+  if (local && /^[A-Z]{2,4}$/.test(local.trim()) && sede) return sede;
+  return local ?? sede;
+}
 
 export function agendaDoAgora(lista: EventoAgora[]): AgendaItem[] {
   return lista.flatMap((e): AgendaItem[] => {
     const inicio = dataDoAgora(e.data);
     if (!inicio || !e.nome) return [];
     const imagemId = e.imagem && typeof e.imagem === "object" ? e.imagem.id : e.imagem;
-    const local = typeof e.local === "string" ? e.local : (e.local?.nome ?? e.local?.descricao ?? e.local?.endereco ?? null);
     const regiao = nomeDe(e.regiao);
     return [
       {
@@ -66,10 +89,11 @@ export function agendaDoAgora(lista: EventoAgora[]): AgendaItem[] {
         posterUrl: imagemId ? `${AGORA}/e/og/imagem/${imagemId}` : null,
         registrationUrl: e.slug ? `${AGORA}/#/e/${encodeURIComponent(e.slug)}` : `${AGORA}/`,
         status: /cancel/i.test(e.situacao ?? "") ? "cancelado" : "publicado",
-        description: e.texto ? semHtml(e.texto).slice(0, 1200) : null,
-        location: local,
-        // O Ágora manda só a data ("2026-10-31", visto em 27/10): evento de dia inteiro, sem hora inventada.
-        endsAt: !soData(e.data) && e.duracao && e.duracao > 0 ? new Date(inicio.getTime() + e.duracao * 60_000) : null,
+        description: e.texto ? textoDoAgora(e.texto).slice(0, 3000) : null,
+        location: localDoEvento(e),
+        // O Ágora manda só a data ("2026-10-31") e a duração em DIAS (GGSS: 3 = 31/10 a 02/11), visto em 27/10:
+        // evento de dia inteiro, sem hora inventada; o fim é o último dia.
+        endsAt: soData(e.data) ? (e.duracao && e.duracao > 1 ? new Date(inicio.getTime() + (e.duracao - 1) * 864e5) : null) : e.duracao && e.duracao > 0 ? new Date(inicio.getTime() + e.duracao * 60_000) : null,
         allDay: soData(e.data),
       },
     ];

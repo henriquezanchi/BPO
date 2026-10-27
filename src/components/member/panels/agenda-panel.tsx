@@ -429,7 +429,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
         <span className="min-w-0">
         <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</span>
         <span className="mt-1 block text-[11px] capitalize text-gray-500 dark:text-gray-400">
-          {item.allDay ? formatDateBR(item.date) : item.date.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"})}
+          {item.allDay ? (item.endsAt && formatDateBR(item.endsAt) !== formatDateBR(item.date) ? `${formatDateBR(item.date)} a ${formatDateBR(item.endsAt)}` : formatDateBR(item.date)) : item.date.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"})}
         </span>
         {item.location && (
           <span className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">

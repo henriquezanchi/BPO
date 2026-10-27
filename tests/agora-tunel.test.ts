@@ -68,3 +68,17 @@ test("ações do Ágora (página inicial dele) viram a agenda: nova inscrição 
   assert.deepEqual(vol?.agora, { inscrito: false, valor: "R$ 110", prazo: "Restam 14 dias Lote 1" });
   assert.equal(vol?.posterUrl, "https://eventos.acropolebrasil.com.br/e/og/imagem/18");
 });
+
+test("descrição do Ágora em Markdown vira texto em linhas; duração em dias; sigla do local vira o nome da sede", async () => {
+  const { textoDoAgora, agendaDoAgora } = await import("../src/lib/agora/eventos");
+  assert.equal(
+    textoDoAgora("# Encontro Nacional de GGSS<br>\n## 31 de outubro a 2 de novembro - Ítaca\n\n**1) Prazos**<br>\nPrazo LOTE 1: 14 de outubro<br>\n* Lote 1: R$ 330,00"),
+    "Encontro Nacional de GGSS\n31 de outubro a 2 de novembro - Ítaca\n\n1) Prazos\nPrazo LOTE 1: 14 de outubro\n• Lote 1: R$ 330,00",
+  );
+  const [e] = agendaDoAgora([{ id: 1, nome: "GGSS", data: "2026-10-31", duracao: 3, local: "ITA", sede: { nome: "ITACA" } }]);
+  assert.ok(e.kind === "evento");
+  if (e.kind !== "evento") return;
+  assert.equal(e.allDay, true);
+  assert.equal(e.endsAt?.toISOString(), "2026-11-02T03:00:00.000Z");
+  assert.equal(e.location, "ITACA");
+});
