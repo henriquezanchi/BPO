@@ -202,6 +202,7 @@ model Member {
   atendimentosComoAluno AtendimentoReserva[] @relation("AtendimentoReservaAluno")
   apresentacoesPedagogo ApresentacaoPedagogo[]
   planosAula PlanoAula[]
+  sessaoAgora SessaoAgora?
   meetingResponses GroupMeetingResponse[]
   meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
   pushSubscriptions PushSubscription[]
@@ -2206,4 +2207,21 @@ model RedeSocialFilial {
 
   @@unique([schoolId, rede])
   @@index([zernioAccountId])
+}
+
+/// Túnel do Ágora (2026-10-27): sessão do aluno no login unificado (tokens do Keycloak) e cookie de sessão do Ágora,
+/// tudo cifrado (lib/agora/sessao.ts). O Portal chama o Ágora como o próprio aluno; o Ágora mostra só o que ele pode ver.
+model SessaoAgora {
+  memberId        String    @id
+  accessCifrado   String
+  refreshCifrado  String?
+  accessExpiraEm  DateTime
+  refreshExpiraEm DateTime?
+  cookieCifrado   String?
+  cookieAte       DateTime?
+  falhaEm         DateTime?
+  falha           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+  member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }

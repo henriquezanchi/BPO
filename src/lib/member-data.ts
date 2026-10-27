@@ -1,3 +1,4 @@
+import { eventosDoAgora } from "@/lib/agora/eventos";
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
 import {portalLabel} from "@/lib/display-labels";
@@ -240,6 +241,8 @@ export async function getMemberDashboard(memberId: string) {
       orderBy: { name: "asc" },
     })
   ).map((g) => ({ id: g.id, nome: g.name, tipo: g.tipo === "LEITURA" ? "Leitura comentada" : "Grupo de estudo", descricao: g.descricao, modalidade: g.modalidade, local: g.local, participo: g.memberships.length > 0 }));
+  // Túnel do Ágora (2026-10-27): eventos liberados para o aluno, em paralelo com o resto (no máximo 6 s).
+  const agendaAgora = eventosDoAgora(member.id);
   const [avisosGrupos,meusGafs,destinosVoluntario] = await Promise.all([avisosDosGrupos({...member,classMemberships:member.classMemberships.filter(cm=>cm.classGroup.arquivadoEm===null)}),meusGrupos(member,['GAF']),destinosDaPessoa(member)]);
   await ensureGroupMeetingWindow(groupIds);
   const meetings = groupIds.length ? await db.groupMeeting.findMany({
@@ -312,6 +315,7 @@ export async function getMemberDashboard(memberId: string) {
   );
   const eventPosters=new Map(await Promise.all(schoolEvents.map(async e=>[e.id,await eventPosterUrl(e.posterPath)] as const)));
   const agendaItems: AgendaItem[] = [
+    ...(await agendaAgora),
     ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
     ...schoolEvents.map(
       (e): AgendaItem => ({

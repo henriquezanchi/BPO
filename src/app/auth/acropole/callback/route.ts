@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { COOKIE_OIDC, trocarCodigo } from "@/lib/login-acropole";
 import { importarPorEmail } from "@/lib/mercurio-db/primeiro-acesso";
+import { salvarSessaoAgora } from "@/lib/agora/sessao";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import crypto from "node:crypto";
@@ -131,13 +132,10 @@ export async function GET(req: Request) {
   }
 
   const usuario = link.data.user;
-  if (
-    !usuario ||
-    !(await db.member.findFirst({
-      where: { authUserId: usuario.id },
-      select: { id: true },
-    }))
-  ) {
+  const membro = usuario
+    ? await db.member.findFirst({ where: { authUserId: usuario.id }, select: { id: true } })
+    : null;
+  if (!usuario || !membro) {
     return erro(
       url.origin,
       "Sua conta do Portal não está ligada a um cadastro. Fale com a secretaria.",
@@ -154,5 +152,10 @@ export async function GET(req: Request) {
       url.origin,
       "Não foi possível abrir sua sessão. Tente de novo.",
     );
+  // Túnel do Ágora (2026-10-27): guarda os tokens do login unificado, cifrados, para o Portal chamar o Ágora como o
+  // próprio aluno. Uma falha aqui não impede a entrada no Portal (só o Ágora não aparece).
+  await salvarSessaoAgora(membro.id, pessoa.tokens).catch((e) =>
+    console.error("Login Nova Acrópole: sessão do Ágora não gravada:", e instanceof Error ? e.message : e),
+  );
   return redirecionar(new URL(next || "/portal", url.origin).toString());
 }

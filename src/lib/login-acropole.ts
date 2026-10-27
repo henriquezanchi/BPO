@@ -63,14 +63,41 @@ function credenciaisCliente(): Record<string, string> {
     : { client_id: KEYCLOAK.clientId };
 }
 
-type Token = { access_token: string; id_token?: string };
+type Token = { access_token: string; id_token?: string; refresh_token?: string; expires_in?: number; refresh_expires_in?: number };
+/** Tokens do aluno no login unificado, guardados cifrados para o túnel do Ágora (lib/agora/sessao.ts). */
+export type TokensAcropole = { access: string; refresh: string | null; accessExpiraEm: Date; refreshExpiraEm: Date | null };
 export type PessoaAcropole = {
   sub: string;
   email: string | null;
   emailVerificado: boolean;
   nome: string | null;
   claims: string[];
+  tokens: TokensAcropole;
 };
+
+function tokensDe(t: Token): TokensAcropole {
+  const agora = Date.now();
+  return {
+    access: t.access_token,
+    refresh: t.refresh_token ?? null,
+    accessExpiraEm: new Date(agora + (t.expires_in ?? 300) * 1000),
+    // refresh_expires_in = 0 significa "sem prazo próprio" (sessão offline); tratamos como 12 h.
+    refreshExpiraEm: t.refresh_token ? new Date(agora + (t.refresh_expires_in || 12 * 3600) * 1000) : null,
+  };
+}
+
+/** Renova o token do aluno pelo refresh (túnel do Ágora). null = sessão do login unificado encerrada: precisa entrar de novo. */
+export async function renovarTokens(refresh: string): Promise<TokensAcropole | null> {
+  const r = await fetchAcropole(KEYCLOAK.token, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
+    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refresh, ...credenciaisCliente() }).toString(),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (r.status === 400 || r.status === 401) return null;
+  if (!r.ok) throw new Error(`Login da Nova Acrópole não renovou a sessão (${r.status}).`);
+  return tokensDe((await r.json()) as Token);
+}
 
 function lerJwt(jwt: string): Record<string, unknown> {
   return JSON.parse(
@@ -147,5 +174,6 @@ export async function trocarCodigo(
     nome: typeof info.name === "string" ? info.name : null,
     // Só os nomes dos campos (sem valores), para saber o que o Keycloak manda se o e-mail não bastar.
     claims: Object.keys(info),
+    tokens: tokensDe(token),
   };
 }

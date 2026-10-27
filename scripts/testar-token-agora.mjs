@@ -125,6 +125,33 @@ const srv = http.createServer(async (req, res) => {
     if (!r.ok) throw new Error(`troca do código falhou: ${r.status} ${(await r.text()).slice(0, 200)}`);
     const t = await r.json();
     console.log("refresh_token recebido:", Boolean(t.refresh_token), "| validade refresh (min):", Math.round((t.refresh_expires_in ?? 0) / 60));
+    if (process.argv.includes("--token-completo")) {
+      // Token inteiro (com assinatura) para o responsável pelo Keycloak validar do lado dele. Vale 2 h e funciona como
+      // senha temporária do usuário: vai para um arquivo, nunca para a tela.
+      const destino = process.env.TOKEN_COMPLETO ?? "token-portal-aluno.txt";
+      (await import("node:fs")).writeFileSync(destino, t.access_token);
+      console.log("Token completo gravado em:", destino, "| expira em (min):", Math.round(t.expires_in / 60));
+    }
+    if (process.argv.includes("--exemplo")) {
+      // Exemplo para o responsável pelo Keycloak (26/10/2026): só cabeçalho e conteúdo do token, SEM a assinatura —
+      // sem ela o token não serve para entrar em nada. Gravado em arquivo, não na tela.
+      const [cab, conteudo] = t.access_token.split(".");
+      const ler = (x) => JSON.parse(Buffer.from(x, "base64url").toString());
+      const destino = process.env.EXEMPLO_TOKEN ?? "exemplo-token-portal-aluno.json";
+      (await import("node:fs")).writeFileSync(destino, JSON.stringify({ observacao: "Token do client portal-aluno, sem a assinatura (não serve para acessar nada).", cabecalho: ler(cab), conteudo: ler(conteudo) }, null, 2));
+      console.log("Exemplo do token (sem assinatura) gravado em:", destino);
+    }
+    if (process.argv.includes("--amostra-evento")) {
+      // Forma de um evento do Ágora (dados do evento, não da pessoa), para o Portal montar a agenda.
+      const hoje = new Date(), fim = new Date(Date.now() + 90 * 864e5), d = (x) => x.toISOString().slice(0, 10);
+      const r = await fetch(`${AGORA}/eventos/periodo?ini=${d(hoje)}&fim=${d(fim)}`, { headers: { authorization: `Bearer ${t.access_token}`, accept: "application/json" } });
+      const lista = await r.json();
+      const corta = (v, n = 0) => v === null || typeof v !== "object" ? (typeof v === "string" ? v.slice(0, 80) : v) : n > 1 ? (Array.isArray(v) ? `[${v.length}]` : "{…}") : Array.isArray(v) ? v.slice(0, 2).map((x) => corta(x, n + 1)) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, corta(x, n + 1)]));
+      console.log(`
+== Amostra (${lista.length} eventos)`);
+      for (const e of lista.slice(0, 2)) console.log(JSON.stringify(corta(e), null, 1));
+      console.log("nacional/regional/sede dos eventos:", JSON.stringify(lista.map((e) => [e.nacional, e.regiao?.nome ?? e.regiao, e.sede?.nome ?? e.sede, e.situacao])));
+    }
     await testar(t.access_token, "Token do login (portal-aluno)");
     await documentacao(t.access_token);
     if (!SEGREDO) {

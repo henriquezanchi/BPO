@@ -445,7 +445,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
           {/* eslint-disable-next-line @next/next/no-img-element -- cartaz privado com URL assinada */}
           <img src={item.posterUrl} alt={`Cartaz de ${item.title}`} loading="lazy" className="max-h-96 w-full rounded-lg object-contain"/>
         </a>}
-        {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark">Inscreva-se</a>}
+        {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark">{item.source === "agora" ? "Inscrever-se no Ágora" : "Inscreva-se"}</a>}
         {(() => { const publico = eventoCompartilhavel(item); return publico && <CompartilharEvento evento={publico} />; })()}
         {item.description && <p className="mt-1.5 whitespace-pre-line break-words text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
         {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{(item.availableSpots??0)===1?'1 vaga disponível':`${item.availableSpots??0} vagas disponíveis`} de {item.capacity}</p>}
