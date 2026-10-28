@@ -12,7 +12,15 @@ import { useState, useTransition } from "react";
 const INPUT_CLASS =
   "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100";
 
-export function LoginClient({ next, erroInicial = null }: { next: string; erroInicial?: string | null }) {
+export function LoginClient({
+  next,
+  erroInicial = null,
+  comSenha = false,
+}: {
+  next: string;
+  erroInicial?: string | null;
+  comSenha?: boolean;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(erroInicial);
@@ -93,7 +101,68 @@ export function LoginClient({ next, erroInicial = null }: { next: string; erroIn
           </div>
         )}
 
-        {/* Login unificado da Nova Acrópole (Keycloak) em primeiro; e-mail e senha do Portal logo abaixo (de volta em 27/10/2026). */}
+        {comSenha && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-gray-800 dark:text-gray-300">
+                {t.login.email}
+              </label>
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={INPUT_CLASS}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-gray-800 dark:text-gray-300">
+                {t.login.senha}
+              </label>
+              <input
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                className={INPUT_CLASS}
+              />
+              <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+                {t.login.senhaDica}
+              </p>
+              <Link
+                href="/login/esqueci"
+                className="mt-1 self-start text-[11px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400"
+              >
+                Esqueci minha senha
+              </Link>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isPending}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
+            >
+              {isPending ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <LogIn size={14} />
+              )}
+              {isPending ? t.login.entrando : t.login.entrar}
+            </button>
+          </form>
+        )}
+
+        {/* Login unificado da Nova Acrópole (Keycloak), pedido do usuário 2026-10-22: sem senha própria do Portal. */}
+        {comSenha && (
+          <div className="my-4 flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
+            <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" /> ou{" "}
+            <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+          </div>
+        )}
         <a
           href={`/auth/acropole/login?next=${encodeURIComponent(next)}`}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark"
@@ -102,63 +171,6 @@ export function LoginClient({ next, erroInicial = null }: { next: string; erroIn
           <img src="/icon.png" alt="" className="h-5 w-5 brightness-0 invert" />
           Entrar com a conta Nova Acrópole
         </a>
-
-        <div className="my-4 flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
-          <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" /> {locale === "pt" ? "ou entre com e-mail e senha" : "or use email and password"}{" "}
-          <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-800 dark:text-gray-300">
-              {t.login.email}
-            </label>
-            <input
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={INPUT_CLASS}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-800 dark:text-gray-300">
-              {t.login.senha}
-            </label>
-            <input
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className={INPUT_CLASS}
-            />
-            <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
-              {t.login.senhaDica}
-            </p>
-            <Link
-              href="/login/esqueci"
-              className="mt-1 self-start text-[11px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400"
-            >
-              Esqueci minha senha
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isPending}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-na-green/50 px-4 py-3 text-sm font-semibold text-na-green-dark transition hover:bg-na-green-light disabled:opacity-60 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
-          >
-            {isPending ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <LogIn size={14} />
-            )}
-            {isPending ? t.login.entrando : t.login.entrar}
-          </button>
-        </form>
       </div>
     </div>
   );

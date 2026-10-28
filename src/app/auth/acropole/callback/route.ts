@@ -67,7 +67,7 @@ export async function GET(req: Request) {
     );
     return erro(
       url.origin,
-      "Sua conta Nova Acrópole não informou o e-mail. Entre com e-mail e senha (os 6 primeiros números do CPF) ou fale com a secretaria.",
+      "Sua conta Nova Acrópole não informou o e-mail. Fale com a secretaria da sua escola.",
     );
   }
 
@@ -103,7 +103,7 @@ export async function GET(req: Request) {
         url.origin,
         membros.length
           ? "Mais de um cadastro da escola usa este e-mail. Fale com a secretaria para separar os cadastros."
-          : `Não encontramos um cadastro ativo na escola com o e-mail ${pessoa.email}. Entre com o e-mail cadastrado na sua escola e a senha (os 6 primeiros números do CPF), ou fale com a secretaria.`,
+          : `Não encontramos um cadastro ativo na escola com o e-mail ${pessoa.email}. Entre com o e-mail cadastrado na sua escola ou fale com a secretaria.`,
       );
     }
     const criado = await supabaseAdmin.auth.admin.createUser({

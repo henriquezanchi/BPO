@@ -225,3 +225,9 @@ Sem `ZERNIO_WHATSAPP_ACCOUNT_ID` nada é enviado; sem `ZERNIO_API_KEY` o cartão
 4. O link exige login (redireciona com `next=/avaliacao`); quem não tem nada pendente volta ao Portal.
 5. Teste: `tests/avaliacao-whatsapp.test.ts`.
 
+## Login com e-mail e senha escondido de novo (27/10/2026, mais tarde)
+
+1. O usuário pediu para tirar de novo o acesso com os 6 primeiros números do CPF.
+2. Revertido o commit 07ff65c (login, callback e dicionário voltam ao estado de 22/10): só "Entrar com a conta Nova Acrópole"; e-mail e senha em `/login?modo=senha` para emergência.
+3. Orientação para quem não tem senha no login unificado: na tela da Nova Acrópole, "Cadastre-se" ou "Esqueceu sua senha?", com o mesmo e-mail do Mercúrio, e confirmar o e-mail.
+
