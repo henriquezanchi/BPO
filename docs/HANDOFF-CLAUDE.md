@@ -208,3 +208,12 @@ Sem `ZERNIO_WHATSAPP_ACCOUNT_ID` nada é enviado; sem `ZERNIO_API_KEY` o cartão
 **Atualização 26/10 (tarde):** por decisão do usuário, **nem WhatsApp nem Instagram por enquanto**. **Não aplicar** a migração `20261026180000_whatsapp_financeiro_instagram` (fica pendente no `migrate status` de propósito) e não configurar `ZERNIO_WHATSAPP_ACCOUNT_ID` (sem a migração, `custosDoMes` quebraria o painel). O usuário já tem um número com liberação da Meta (usado no CRM) que pode passar a servir também ao BPO.
 
 **Testes (26/10):** a suíte passa inteira (115/115). A linha de base deixou de ter as 30 falhas antigas: qualquer falha agora é regressão. Em mocks, usar `mockModule` de `tests/helpers/mock-module.mjs` (o Node 24 ignora `mock.module({exports})`).
+
+## Login com e-mail e senha de volta (27/10/2026)
+
+1. Pedido do usuário: em Barra do Garças há quem não consiga entrar pelo login unificado; liberar de novo a senha (6 primeiros números do CPF).
+2. `src/app/login/page.tsx`: sem o `?modo=senha`; `src/components/login-client.tsx` sempre mostra o botão "Entrar com a conta Nova Acrópole" (principal) e, abaixo, o formulário de e-mail e senha (botão contornado, "Esqueci minha senha").
+3. `src/app/auth/acropole/callback/route.ts`: mensagens de "sem e-mail" e "cadastro não encontrado" voltam a indicar a senha.
+4. Quem só entrou pelo login unificado tem senha aleatória no Supabase: a administração da filial usa "Esqueceu a senha?" (`voltarSenhaInicial`) para voltar à inicial. Não reprovisionar logins em lote.
+5. Quem entra com senha não tem sessão do Ágora: os eventos do Ágora não aparecem na Agenda dessa pessoa (esperado).
+
