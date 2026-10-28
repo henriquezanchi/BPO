@@ -38,4 +38,4 @@ while (linhas.at(-1) === "") linhas.pop();
 writeFileSync(".env", `${[...linhas, `ULISSES_API_CLIENT_ID=${cred.usuario}`, `ULISSES_API_CLIENT_SECRET=${cred.senha}`].join("\n")}\n`);
 console.log(".env do Portal: ULISSES_API_CLIENT_ID e ULISSES_API_CLIENT_SECRET gravadas.");
 
-spawnSync("node", ["scripts/copiar-env-vercel.mjs", "ULISSES_API_CLIENT_ID", "ULISSES_API_CLIENT_SECRET"], { stdio: "inherit", shell: true });
+spawnSync(process.execPath, ["scripts/copiar-env-vercel.mjs", "ULISSES_API_CLIENT_ID", "ULISSES_API_CLIENT_SECRET"], { stdio: "inherit" });
