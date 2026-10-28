@@ -39,15 +39,23 @@ function config() {
 
 async function requisicao(cookies: Map<string, string>, path: string, init: RequestInit = {}) {
   const { url, basic } = config();
-  const res = await fetch(url + path, {
-    ...init,
-    redirect: "manual",
-    cache: "no-store",
-    headers: {
-      Authorization: basic,
-      Cookie: [...cookies].map(([k, v]) => `${k}=${v}`).join("; "),
-      ...(init.headers ?? {}),
-    },
+  const pedir = () =>
+    fetch(url + path, {
+      ...init,
+      redirect: "manual",
+      cache: "no-store",
+      headers: {
+        Authorization: basic,
+        Cookie: [...cookies].map(([k, v]) => `${k}=${v}`).join("; "),
+        ...(init.headers ?? {}),
+      },
+    });
+  // Falha de rede passageira ("fetch failed", visto de madrugada em 28/10/2026): mais uma tentativa depois de 2 s.
+  // Só consultas (SELECT) e login passam por aqui, então repetir não tem efeito colateral.
+  const res = await pedir().catch(async (e) => {
+    if (!(e instanceof TypeError)) throw e;
+    await new Promise((ok) => setTimeout(ok, 2000));
+    return pedir();
   });
   for (const c of res.headers.getSetCookie?.() ?? []) {
     const [par] = c.split(";");

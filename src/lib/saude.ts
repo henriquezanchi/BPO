@@ -76,7 +76,13 @@ export async function verificarTudo(): Promise<ResultadoVerificacao[]> {
     Object.entries(VERIFICACOES).map(async ([chave, v]) => {
       const t = Date.now();
       try {
-        return { chave, titulo: v.titulo, ok: true, detalhe: await v.checar(), ms: Date.now() - t };
+        // Uma oscilação de um minuto não deve virar alerta (28/10/2026, Ulisses lento por um instante): falhou, tenta
+        // de novo depois de 3 s; só a segunda falha conta.
+        const detalhe = await v.checar().catch(async () => {
+          await new Promise((ok) => setTimeout(ok, 3000));
+          return v.checar();
+        });
+        return { chave, titulo: v.titulo, ok: true, detalhe, ms: Date.now() - t };
       } catch (e) {
         return { chave, titulo: v.titulo, ok: false, detalhe: e instanceof Error ? e.message : String(e), ms: Date.now() - t };
       }
