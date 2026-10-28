@@ -231,3 +231,16 @@ Sem `ZERNIO_WHATSAPP_ACCOUNT_ID` nada é enviado; sem `ZERNIO_API_KEY` o cartão
 2. Revertido o commit 07ff65c (login, callback e dicionário voltam ao estado de 22/10): só "Entrar com a conta Nova Acrópole"; e-mail e senha em `/login?modo=senha` para emergência.
 3. Orientação para quem não tem senha no login unificado: na tela da Nova Acrópole, "Cadastre-se" ou "Esqueceu sua senha?", com o mesmo e-mail do Mercúrio, e confirmar o e-mail.
 
+## Inscritos do Ulisses no Portal (27/10/2026)
+
+1. Problema: evento do Ulisses (ex.: Dia Mundial da Filosofia, BGA) aparecia sem inscritos no Portal, porque a inscrição é feita no Ulisses e o Portal só importava a parte pública.
+2. `src/lib/ulisses/inscritos.ts`:
+   - token M2M do Auth0 (`ULISSES_API_CLIENT_ID`/`ULISSES_API_CLIENT_SECRET`, a mesma credencial do CRM);
+   - `POST /facade/filtrarEmails` (eventoId e filialId vêm do `externalUid` "ulisses:{evento}:{filial}:{produto}"), com a alternância de `ligacoes` que o CRM já usa;
+   - `inscritosDaLista` filtra a inscrição deste evento (e do produto, quando vier), casa com os alunos da escola por e-mail ou celular (DDD + 8 dígitos);
+   - cache de 5 min; não guarda dados do público no banco.
+3. Recepção (`event-data.ts` + `event-reception.tsx`): evento do Ulisses lista os inscritos de lá; a presença vai para o Ulisses (`marcarPresencaUlisses` em `event-actions.ts`, mesma regra de abrir 2 h antes, auditoria em EventAudit).
+4. Painel → Eventos (`director-data.ts`, `eventos-tab.tsx`): chip "N inscrições no Ulisses" (eventos dos últimos 30 dias em diante; até 6 s, sem resposta = sem chip). Relatório da filial também conta.
+5. Para ligar: o usuário roda `node scripts/ligar-ulisses-inscritos.mjs` (lê a credencial no banco do CRM com o `.env` do scraper, confere no Auth0, grava no `.env` e manda para a Vercel). Depois, um novo deploy.
+6. Teste: `tests/ulisses-inscritos.test.ts`.
+

@@ -4,6 +4,7 @@ import { requireArea } from "@/lib/auth";
 import { relatorioCampanha } from "@/lib/avaliacao";
 import { db } from "@/lib/db";
 import type { ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
+import { contarInscritosUlisses } from "@/lib/ulisses/inscritos";
 
 /**
  * Relatório da filial no Painel do Diretor (pedido do usuário 2026-10-19):
@@ -24,7 +25,7 @@ export async function getRelatorioFilial(schoolId: string) {
     db.avaliacaoCampanha.findFirst({ where: { schoolId }, orderBy: { abertaEm: "desc" } }),
     db.event.findMany({
       where: { schoolId, startsAt: { gte: agora, lte: em30dias } },
-      select: { id: true, title: true, startsAt: true, capacity: true, status: true, _count: { select: { registrations: true } } },
+      select: { id: true, title: true, startsAt: true, capacity: true, status: true, source: true, externalUid: true, schoolId: true, _count: { select: { registrations: true } } },
       orderBy: { startsAt: "asc" },
       take: 6,
     }),
@@ -45,12 +46,15 @@ export async function getRelatorioFilial(schoolId: string) {
     };
   }
 
+  // Eventos do Ulisses (27/10/2026): inscritos contados no Ulisses, onde a inscrição é feita.
+  const doUlisses = await contarInscritosUlisses(eventos.filter((e) => e.source === "ulisses" && e.status === "publicado"));
+
   return {
     agora: agora.getTime(),
     resumo: resumo ? { geradoEm: resumo.geradoEm, dados: resumo.dados as unknown as ResumoFilialDados } : null,
     portal: { comLogin, pedidosCadastro, pendencias, falhasMercurio },
     avaliacao,
-    eventos: eventos.map((e) => ({ id: e.id, titulo: e.title, inicio: e.startsAt, vagas: e.capacity, inscritos: e._count.registrations, status: e.status })),
+    eventos: eventos.map((e) => ({ id: e.id, titulo: e.title, inicio: e.startsAt, vagas: e.capacity, inscritos: doUlisses.get(e.id) ?? e._count.registrations, status: e.status })),
   };
 }
 

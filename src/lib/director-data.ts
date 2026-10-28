@@ -1,4 +1,5 @@
 import {comAcessoVoluntario} from "@/lib/acesso-voluntario";
+import { contarInscritosUlisses } from "@/lib/ulisses/inscritos";
 import {eventPosterUrl} from "@/lib/event-posters";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
@@ -188,6 +189,8 @@ export async function getDirectorDashboard(schoolId: string) {
   });
 
   const eventPosters=new Map(await Promise.all(eventos.map(async e=>[e.id,await eventPosterUrl(e.posterPath)] as const)));
+  // Inscritos dos eventos do Ulisses (27/10/2026): contados na API do Ulisses (no máximo 6 s; sem resposta, sem número).
+  const inscritosUlisses = await contarInscritosUlisses(eventos.filter((e) => e.source === "ulisses" && e.status === "publicado" && e.startsAt.getTime() > Date.now() - 30 * 864e5));
   const regrasDeCobranca = await db.chargingRule.findMany({ where: { schoolId }, include: { triggers: true } });
   // WhatsApp do financeiro (2026-10-26): mensagens do mês e custo abatido do repasse da filial.
   const hojeBR = new Date(Date.now() - 3 * 3600e3);
@@ -296,6 +299,7 @@ export async function getDirectorDashboard(schoolId: string) {
       staff: e.staff.map(s=>s.memberId),
       price: Number(e.price),
       inscritos: e.registrations.length,
+      inscritosUlisses: inscritosUlisses.get(e.id) ?? null,
       presentes: e.registrations.filter((r) => r.checkedIn).length,
       registrations: e.registrations.map((r) => ({ id: r.id, memberName: r.member.name, paid: r.paid, checkedIn: r.checkedIn })),
     })),

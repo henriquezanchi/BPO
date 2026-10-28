@@ -135,6 +135,7 @@ function ResumoEvento({e,passado}:{e:EventView;passado:boolean}){
      :lotado?<span className={`${chip} bg-na-warning-light text-na-warning-dark dark:bg-amber-950/50 dark:text-amber-300`}>Vagas esgotadas</span>
      :<span className={`${chip} bg-na-success-light text-na-success-dark dark:bg-emerald-950/50 dark:text-emerald-300`}>Inscrições abertas</span>}
     {e.source==='manual'&&<span className={cinza}>{e.capacity!==null&&e.capacity!==undefined?`${e.inscritos}/${e.capacity} vagas`:`${e.inscritos} ${e.inscritos===1?'inscrição':'inscrições'}`}</span>}
+    {e.source==='ulisses'&&e.inscritosUlisses!==null&&<span className={cinza}>{e.inscritosUlisses} {e.inscritosUlisses===1?'inscrição':'inscrições'} no Ulisses</span>}
     {e.source==='manual'&&passado&&!cancelado&&<span className={cinza}>{e.presentes} {e.presentes===1?'presença':'presenças'}</span>}
     {e.source==='manual'&&<span className={cinza}>{e.price?formatBRL(e.price):'Gratuito'}</span>}
     {e.lancheCompartilhado&&!cancelado&&<span className={`${chip} flex items-center gap-1 bg-na-gold/15 text-na-gold-dark dark:bg-amber-950/40 dark:text-amber-300`}><UtensilsCrossed size={11}/> Lanche compartilhado</span>}

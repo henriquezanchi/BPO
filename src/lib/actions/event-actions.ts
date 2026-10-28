@@ -12,6 +12,7 @@ import {EventEnrollmentError,eventPaymentFailure} from '@/lib/event-payment-erro
 import {confirmEventPayment} from '@/lib/event-payments';
 import {processEventRefundQueue} from '@/lib/event-refunds';
 import {reservasAtivasWhere} from '@/lib/event-waitlist';
+import {inscritosDoEventoUlisses,marcarPresencaNoUlisses} from '@/lib/ulisses/inscritos';
 import {revalidatePath} from 'next/cache';
 
 export interface InternalEventInput {title:string;startsAt:string;endsAt:string;price:number;audience?:string;publicos?:string[];abertoA?:string;abertoValores?:string[];description:string;location:string;capacity?:number|null;registrationClosesAt?:string|null;participantInstructions?:string;contactInfo?:string;posterPath?:string|null;lancheCompartilhado?:boolean;prazoDesistenciaDias?:number|null}
@@ -88,6 +89,24 @@ export async function marcarPresencaEvento(_schoolId:string,registrationId:strin
   await tx.eventRegistration.update({where:{id:registrationId},data:{checkedIn:presente,checkedInAt:presente?new Date():null,checkedInBy:actor.id,mercurioStatus:'aguardando_integracao'}});
   await tx.eventAudit.create({data:{eventId:registration.eventId,actorId:actor.id,action:presente?'presenca_confirmada':'presenca_corrigida',changes:{registrationId,previous:registration.checkedIn,current:presente}}});
  });refresh(registration.eventId);
+}
+/** Presença de um inscrito do Ulisses: marcada no próprio Ulisses (27/10/2026). */
+export async function marcarPresencaUlisses(eventId:string,inscricaoId:number,presente:boolean):Promise<{ok:true}|{ok:false;error:string}>{
+ try{
+  const {event,actor}=await requireEventReception(eventId);
+  if(event.source!=='ulisses'||!event.externalUid)throw Error('Este evento não é do Ulisses.');
+  if(event.status!=='publicado')throw Error('Evento cancelado.');
+  if(new Date()<new Date(event.startsAt.getTime()-7200000))throw Error('A recepção abre duas horas antes do evento.');
+  const lista=await inscritosDoEventoUlisses(event);
+  if(!lista?.some(i=>i.id===inscricaoId))throw Error('Inscrição não encontrada neste evento.');
+  await marcarPresencaNoUlisses(event.externalUid,inscricaoId,presente);
+  await db.eventAudit.create({data:{eventId,actorId:actor.id,action:presente?'presenca_confirmada':'presenca_corrigida',changes:{ulissesInscricaoId:inscricaoId,current:presente}}});
+  refresh(eventId);
+  return {ok:true};
+ }catch(e){
+  console.error('Recepção: presença no Ulisses falhou:',e instanceof Error?e.message:e);
+  return {ok:false,error:e instanceof Error&&!/^Ulisses /.test(e.message)?e.message:'O Ulisses não registrou a presença agora. Tente de novo.'};
+ }
 }
 export async function declararComparecimento(memberId:string,registrationId:string,presente:boolean){
  await requireAuthenticatedMember(memberId);
