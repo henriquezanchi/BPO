@@ -3,6 +3,7 @@ import { TIPOS_GRUPO, ehTipoGrupo } from "@/lib/grupos-comum";
 import { parseLogradouro } from "@/lib/mercurio/parse-logradouro";
 import type { ContributionMonthStatus } from "@prisma/client";
 import { consultarMercurio, sqlNumero, sqlTexto } from "./client";
+import { apelidosDeTurma } from "./turmas";
 import { avisarFinanceiroSemEsperar, whatsappFinanceiroAtivo } from "@/lib/whatsapp/financeiro";
 import { mesPorExtenso, nomeCurtoDaFilial, primeiroNome, reais } from "@/lib/whatsapp/modelos";
 
@@ -493,8 +494,16 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     // Vínculo oficial turma → matéria → instrutor (avaliação de instrutores):
     // todas as turmas da filial com aluno ativo, inclusive instrutores sem
     // conta no Portal ou de outra filial.
+    // Turma do aluno com código que não existe no cadastro de turmas do Mercúrio (28/10/2026: os 9 alunos de BGA estão
+    // em "XESOTRIS", mas a turma e os instrutores estão em "XESOTRIS1"; em PTN, "XESOSTRIS" e "XESOSTRIS26"): se houver
+    // uma única turma da unidade com o mesmo código seguido de números, os instrutores dela valem para esses alunos.
+    const turmaDoAluno = apelidosDeTurma(
+      (await consultarMercurio(`SELECT DISTINCT a.cad_turma FROM cadastro a WHERE a.cad_situacao='ATI' AND a.cad_tur_unidade=${sqlTexto(uniId)} AND a.cad_turma<>'' AND NOT EXISTS (SELECT 1 FROM turmas t WHERE t.tur_unidade=a.cad_tur_unidade AND t.tur_turma=a.cad_turma)`)).map((r) => r.cad_turma!),
+      (await consultarMercurio(`SELECT tur_turma FROM turmas WHERE tur_unidade=${sqlTexto(uniId)}`)).map((r) => r.tur_turma!),
+    );
+    const daTurmaOficial = turmaDoAluno.size ? ` OR tm.tma_turma IN (${[...turmaDoAluno.keys()].map(sqlTexto).join(",")})` : "";
     const materias = await consultarTudo(
-      `SELECT tm.tma_turma, tm.tma_materia, s.sma_materia, tm.tma_instrutor, c.cad_nome, tm.tma_inicio FROM turmas_materias tm LEFT JOIN sig_materias s ON s.sma_sigla=tm.tma_materia LEFT JOIN cadastro c ON c.cad_matr=tm.tma_instrutor WHERE tm.tma_unidade=${sqlTexto(uniId)} AND EXISTS (SELECT 1 FROM cadastro a WHERE a.cad_situacao='ATI' AND a.cad_tur_unidade=tm.tma_unidade AND a.cad_turma=tm.tma_turma) ORDER BY tm.tma_turma, tm.tma_materia`,
+      `SELECT tm.tma_turma, tm.tma_materia, s.sma_materia, tm.tma_instrutor, c.cad_nome, tm.tma_inicio FROM turmas_materias tm LEFT JOIN sig_materias s ON s.sma_sigla=tm.tma_materia LEFT JOIN cadastro c ON c.cad_matr=tm.tma_instrutor WHERE tm.tma_unidade=${sqlTexto(uniId)} AND (EXISTS (SELECT 1 FROM cadastro a WHERE a.cad_situacao='ATI' AND a.cad_tur_unidade=tm.tma_unidade AND a.cad_turma=tm.tma_turma)${daTurmaOficial}) ORDER BY tm.tma_turma, tm.tma_materia`,
     );
     const instrutoresLocais = new Map(
       (await db.member.findMany({ where: { mercurioId: { in: [...new Set(materias.map((m) => m.tma_instrutor!).filter(Boolean))] } }, select: { id: true, mercurioId: true } })).map((m) => [m.mercurioId!, m.id]),
@@ -502,7 +511,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     const idsMaterias: string[] = [];
     for (const m of materias) {
       if (!m.tma_turma || !m.tma_materia || !m.tma_instrutor || m.tma_instrutor === "0") continue;
-      const classGroupId = await turmaId(m.tma_turma);
+      const classGroupId = await turmaId(turmaDoAluno.get(m.tma_turma) ?? m.tma_turma);
       const d = {
         schoolId: school.id,
         materiaNome: nomeProprio((m.sma_materia ?? m.tma_materia).trim()),
