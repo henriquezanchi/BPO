@@ -1,7 +1,9 @@
 "use client";
+import { IconeWhatsApp } from "@/components/member/compartilhar-evento";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { abrirCampanha, alterarStatusCampanha } from "@/lib/actions/avaliacao-actions";
+import { linkWhatsappDaAvaliacao } from "@/lib/avaliacao-comum";
 import { BarChart3, Loader2, Play, Square } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
@@ -87,6 +89,17 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
                 >
                   <BarChart3 size={12} /> Relatórios
                 </Link>
+                {c.status === "aberta" && (
+                  <a
+                    href={linkWhatsappDaAvaliacao(c.titulo)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Mandar o convite com o link da avaliação nos grupos das turmas"
+                    className="flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    <IconeWhatsApp tamanho={12} /> Compartilhar no WhatsApp
+                  </a>
+                )}
                 <button
                   onClick={() => alterar(c.id, c.status === "aberta" ? "encerrada" : "aberta")}
                   disabled={emAndamento === c.id}

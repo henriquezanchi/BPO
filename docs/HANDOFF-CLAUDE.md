@@ -217,3 +217,11 @@ Sem `ZERNIO_WHATSAPP_ACCOUNT_ID` nada é enviado; sem `ZERNIO_API_KEY` o cartão
 4. Quem só entrou pelo login unificado tem senha aleatória no Supabase: a administração da filial usa "Esqueceu a senha?" (`voltarSenhaInicial`) para voltar à inicial. Não reprovisionar logins em lote.
 5. Quem entra com senha não tem sessão do Ágora: os eventos do Ágora não aparecem na Agenda dessa pessoa (esperado).
 
+## Avaliação dos instrutores no WhatsApp (27/10/2026)
+
+1. Pedido do usuário: permitir compartilhar a avaliação dos instrutores no WhatsApp.
+2. `src/lib/avaliacao-comum.ts`: `linkWhatsappDaAvaliacao(titulo)` monta o `wa.me/?text=` com o título em negrito, o convite e o link `https://portal-na-one.vercel.app/avaliacao` (sem emojis, que chegavam como "�").
+3. `src/components/avaliacao/campanhas-panel.tsx`: botão "Compartilhar no WhatsApp" só nas rodadas abertas, ao lado de "Relatórios".
+4. O link exige login (redireciona com `next=/avaliacao`); quem não tem nada pendente volta ao Portal.
+5. Teste: `tests/avaliacao-whatsapp.test.ts`.
+
