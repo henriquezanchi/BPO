@@ -205,6 +205,8 @@ model Member {
   sessaoAgora SessaoAgora?
   diarioDias  DiarioDia[]
   diarioPraticas DiarioPratica[]
+  anotacoesAula AnotacaoAula[]
+  livrosLeitura LivroLeitura[]
   meetingResponses GroupMeetingResponse[]
   meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
   pushSubscriptions PushSubscription[]
@@ -1219,6 +1221,9 @@ model Activity {
   description  String?      @db.Text
   dueDate      DateTime
   createdAt    DateTime     @default(now())
+  // Depois que a atividade aconteceu (2026-10-29): observação só para a administração/professores e outra para os alunos.
+  observacaoInterna String? @db.Text
+  observacaoAlunos  String? @db.Text
 
   notifications ActivityNotification[]
 
@@ -2266,6 +2271,49 @@ model DiarioPratica {
   origemId    String?
   createdAt   DateTime  @default(now())
   member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, origemId])
+  @@index([memberId])
+}
+
+// Anotações das aulas (pedido do usuário 2026-10-29): uma por pessoa, matéria e tema. Compartilhada pelo Portal, vai
+// para o professor conferir; "correta" aparece aos colegas do tema; "incorreta" nunca aparece, e a pessoa não é
+// avisada da conferência. Resumo por IA (Claude Haiku 5.5). Ver src/lib/anotacoes.ts.
+model AnotacaoAula {
+  id              String    @id @default(cuid())
+  memberId        String
+  schoolId        String
+  materiaSigla    String
+  materiaNome     String?
+  tema            String
+  texto           String    @default("") @db.Text
+  compartilhada   Boolean   @default(false)
+  compartilhadaEm DateTime?
+  revisao         String    @default("pendente") // pendente | correta | incorreta
+  revisadoPorId   String?
+  revisadoEm      DateTime?
+  resumo          String?   @db.Text
+  resumoEm        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+  member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, materiaSigla, tema])
+  @@index([schoolId, materiaSigla, tema])
+}
+
+// Livros da pessoa na Área de Estudos (2026-10-29; antes no Diário Filosófico, userBooks).
+model LivroLeitura {
+  id         String   @id @default(cuid())
+  memberId   String
+  titulo     String
+  autor      String?
+  situacao   String   @default("quero_ler") // quero_ler | lendo | lido
+  observacao String?  @db.Text
+  origemId   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, origemId])
   @@index([memberId])

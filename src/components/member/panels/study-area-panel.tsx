@@ -1,6 +1,7 @@
 "use client";
 
-import { BookOpen, BookOpenText, Castle, Clapperboard, PlaySquare } from "lucide-react";
+import { BookOpen, BookOpenText, Castle, Clapperboard, Library, NotebookPen, PlaySquare } from "lucide-react";
+import Link from "next/link";
 
 /** Acrópole Play e Apostilas só aparecem se a filial liberou (ver recursos-filial.ts). */
 export function StudyAreaPanel({
@@ -23,6 +24,19 @@ export function StudyAreaPanel({
       </div>
 
       <div className="flex w-full flex-col gap-2.5">
+        {/* Ferramentas de estudo do próprio aluno (2026-10-29): anotações das aulas, livros e o diário. */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { href: "/estudos/anotacoes", icone: <NotebookPen size={18} />, rotulo: "Anotações das aulas" },
+            { href: "/estudos/livros", icone: <Library size={18} />, rotulo: "Meus livros" },
+            { href: "/diario", icone: <BookOpen size={18} />, rotulo: "Meu diário" },
+          ].map((f) => (
+            <Link key={f.href} href={f.href} className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 px-2 py-3 text-[11px] font-semibold text-gray-800 transition hover:border-na-green hover:bg-na-green-light/40 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-emerald-950/30">
+              <span className="text-na-green dark:text-emerald-400">{f.icone}</span>
+              {f.rotulo}
+            </Link>
+          ))}
+        </div>
         {mostrarAcropolePlay && (
         <a
           href="/api/portal/acropole-play/entrar"
