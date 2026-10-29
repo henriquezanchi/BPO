@@ -70,13 +70,13 @@ type Rodar = (fn: () => Promise<{ ok: boolean; error?: string }>, depois?: () =>
 
 function FogoInterno({ fogo }: { fogo: DiarioDaPessoa["fogo"] }) {
   return (
-    <section className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-4 text-white shadow-sm">
-      <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-white/20">
+    <section className="flex items-center gap-4 rounded-2xl border border-na-gold/30 bg-[radial-gradient(120%_140%_at_0%_0%,#0d4a41_0%,#06231f_45%,#020d0b_100%)] p-4 text-white shadow-sm">
+      <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl border border-na-gold/40 bg-black/30 text-na-gold">
         <Flame size={20} />
         <span className="text-lg leading-none font-black">{fogo.atual}</span>
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[10px] font-bold tracking-wide uppercase opacity-85">Fogo Interno</span>
+        <span className="block text-[10px] font-bold tracking-wide text-na-gold uppercase">Fogo Interno</span>
         <span className="block text-[16px] leading-tight font-black">{fogo.grau.titulo}</span>
         <span className="block text-[12px] opacity-90">{fogo.grau.descricao}</span>
         <span className="mt-1 block text-[11px] opacity-85">

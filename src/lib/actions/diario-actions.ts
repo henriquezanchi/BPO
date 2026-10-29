@@ -2,7 +2,7 @@
 
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { datasPermitidas, epilogoValido, fraseDoDia, type Recorrencia } from "@/lib/diario";
+import { datasPermitidas, epilogoValido, fogoInterno, fraseDoDia, somarDias, type Recorrencia } from "@/lib/diario";
 import { hojeDaPessoa } from "@/lib/diario-dados";
 import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -87,4 +87,16 @@ export async function arquivarPratica(praticaId: string): Promise<Resultado> {
     const r = await db.diarioPratica.updateMany({ where: { id: praticaId, memberId: eu.id, arquivadaEm: null }, data: { arquivadaEm: new Date() } });
     if (!r.count) throw new Error("Prática não encontrada.");
   });
+}
+
+/** Situação de hoje para o cartão do diário (Prólogo, Epílogo, Fogo Interno), sem nenhum texto do diário. */
+export async function estadoDoDiarioHoje(): Promise<{ prologo: boolean; epilogo: boolean; sequencia: number } | null> {
+  const eu = await getAuthenticatedMember();
+  if (!eu) return null;
+  const hoje = hojeDaPessoa(eu);
+  const [dia, comEpilogo] = await Promise.all([
+    db.diarioDia.findUnique({ where: { memberId_data: { memberId: eu.id, data: hoje } }, select: { prologoEm: true, epilogoEm: true } }),
+    db.diarioDia.findMany({ where: { memberId: eu.id, epilogoEm: { not: null }, data: { gte: somarDias(hoje, -400) } }, select: { data: true } }),
+  ]);
+  return { prologo: !!dia?.prologoEm, epilogo: !!dia?.epilogoEm, sequencia: fogoInterno(comEpilogo.map((d) => d.data), hoje).atual };
 }

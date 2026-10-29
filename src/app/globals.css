@@ -128,3 +128,37 @@ body {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Entrada do diário (pedido do usuário 2026-10-29): portas que se abrem para um lugar onde só a própria consciência entra. */
+@keyframes diario-fundo {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes diario-fechadura {
+  0%, 100% { filter: drop-shadow(0 0 3px rgb(255 202 0 / 0.6)); opacity: 0.85; }
+  50% { filter: drop-shadow(0 0 22px rgb(255 202 0 / 0.95)); opacity: 1; }
+}
+@keyframes diario-porta-esquerda {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(-108deg); }
+}
+@keyframes diario-porta-direita {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(108deg); }
+}
+@keyframes diario-luz {
+  0% { opacity: 0; transform: scale(0.4); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: scale(1.6); }
+}
+@keyframes diario-palavras {
+  from { opacity: 0; letter-spacing: 0.45em; }
+  to { opacity: 1; letter-spacing: 0.16em; }
+}
+@keyframes diario-chegada {
+  from { opacity: 1; }
+  to { opacity: 0; visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .diario-animado, .diario-animado * { animation: none !important; }
+}
