@@ -44,3 +44,37 @@ export async function carregarDiario(m: { id: string; school: { uf: string | nul
 }
 
 export type DiarioDaPessoa = Awaited<ReturnType<typeof carregarDiario>>;
+
+/** Histórico (2026-10-29): os registros de um mês, só leitura, do mais recente ao mais antigo. Só a própria pessoa. */
+export async function carregarHistorico(m: { id: string; school: { uf: string | null } | null }, mesPedido?: string) {
+  const hoje = hojeDaPessoa(m);
+  const comRegistro = { memberId: m.id, OR: [{ prologoEm: { not: null } }, { epilogoEm: { not: null } }] };
+  const todas = await db.diarioDia.findMany({ where: comRegistro, select: { data: true }, orderBy: { data: "desc" } });
+  const meses = [...new Set(todas.map((d) => d.data.slice(0, 7)))];
+  const mes = mesPedido && meses.includes(mesPedido) ? mesPedido : (meses[0] ?? hoje.slice(0, 7));
+  const [dias, praticas] = await Promise.all([
+    db.diarioDia.findMany({ where: { ...comRegistro, data: { startsWith: mes } }, orderBy: { data: "desc" } }),
+    db.diarioPratica.findMany({ where: { memberId: m.id }, select: { id: true, nome: true } }),
+  ]);
+  const nomes = new Map(praticas.map((p) => [p.id, p.nome]));
+  const editaveis = new Set(datasPermitidas(hoje));
+  return {
+    mes,
+    meses,
+    dias: dias.map((d) => ({
+      data: d.data,
+      editavel: editaveis.has(d.data),
+      virtude: d.virtude,
+      compromisso: d.compromisso,
+      falhei: d.falhei,
+      fizBem: d.fizBem,
+      deixeiDeFazer: d.deixeiDeFazer,
+      reflexaoLivre: d.reflexaoLivre,
+      prologo: !!d.prologoEm,
+      epilogo: !!d.epilogoEm,
+      praticas: Object.keys((d.praticas ?? {}) as Record<string, boolean>)
+        .map((id) => nomes.get(id))
+        .filter((n): n is string => !!n),
+    })),
+  };
+}

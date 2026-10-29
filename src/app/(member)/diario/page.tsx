@@ -3,7 +3,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { carregarDiario } from "@/lib/diario-dados";
 import { meusGrupos } from "@/lib/grupos-dados";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, History } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -27,9 +27,14 @@ export default async function DiarioPage(props: { searchParams: Promise<{ dia?: 
         </Link>
         <ThemeToggle />
       </div>
-      <header>
-        <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Meu diário</h1>
-        <p className="text-[12px] text-gray-500 dark:text-gray-400">Um lugar onde só a sua consciência entra.</p>
+      <header className="flex items-end justify-between gap-3">
+        <span>
+          <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Meu diário</h1>
+          <p className="text-[12px] text-gray-500 dark:text-gray-400">Um lugar onde só a sua consciência entra.</p>
+        </span>
+        <Link href="/diario/historico" className="flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+          <History size={14} /> Histórico
+        </Link>
       </header>
       <DiarioCliente d={dados} />
     </main>
