@@ -1,6 +1,7 @@
 "use server";
 
 import { podeConferir, materiasDoAluno, resumirComIA } from "@/lib/anotacoes";
+import { AVULSA, TIPOS_AVULSA } from "@/lib/anotacoes-comum";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -32,13 +33,15 @@ async function minha(id: string) {
   return { m, a };
 }
 
-export async function salvarAnotacao(entrada: { sigla: string; tema: string; texto: string }): Promise<Resultado> {
+export async function salvarAnotacao(entrada: { sigla: string; tema: string; texto: string; tipo?: string }): Promise<Resultado> {
   return executar(async () => {
     const m = await eu();
-    const materia = (await materiasDoAluno(m.id)).find((x) => x.sigla === entrada.sigla);
+    // Aula fora da turma (palestra, curso especial...): título livre; o tipo fica no nome da "matéria".
+    const tipo = (TIPOS_AVULSA as readonly string[]).find((t) => t === entrada.tipo) ?? "Outra";
+    const materia = entrada.sigla === AVULSA ? { sigla: AVULSA, nome: tipo, temas: [] as string[] } : (await materiasDoAluno(m.id)).find((x) => x.sigla === entrada.sigla);
     if (!materia) throw new Error("Escolha uma matéria da sua turma.");
     const tema = entrada.tema.trim().slice(0, 160);
-    if (!tema || (materia.temas.length && !materia.temas.includes(tema))) throw new Error("Escolha o tema da aula.");
+    if (!tema || (materia.temas.length && !materia.temas.includes(tema))) throw new Error(materia.sigla === AVULSA ? "Dê um título à aula." : "Escolha o tema da aula.");
     const texto = entrada.texto.slice(0, 20000);
     const antes = await db.anotacaoAula.findUnique({ where: { memberId_materiaSigla_tema: { memberId: m.id, materiaSigla: materia.sigla, tema } }, select: { texto: true } });
     // Texto mudou numa anotação compartilhada: volta para o professor conferir de novo.

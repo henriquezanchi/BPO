@@ -3,6 +3,7 @@
 import { IconeWhatsApp } from "@/components/member/compartilhar-evento";
 import { compartilharAnotacao, excluirAnotacao, resumirAnotacao, salvarAnotacao } from "@/lib/actions/anotacoes-actions";
 import type { DadosAnotacoes } from "@/lib/anotacoes";
+import { AVULSA, dataHora, TIPOS_AVULSA } from "@/lib/anotacoes-comum";
 import { FileDown, Loader2, Share2, Sparkles, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,11 +45,12 @@ function Partilhar({ titulo, texto, pdf }: { titulo: string; texto: string; pdf:
 }
 
 /** Anotações das aulas (2026-10-29): escolher matéria e tema, anotar, compartilhar, resumir com IA. */
-export function AnotacoesCliente({ d }: { d: DadosAnotacoes }) {
+export function AnotacoesCliente({ d, fuso }: { d: DadosAnotacoes; fuso: string }) {
   const router = useRouter();
   const [sigla, setSigla] = useState(d.escolha?.sigla ?? "");
   const materia = d.materias.find((m) => m.sigla === sigla);
   const [tema, setTema] = useState(d.escolha?.tema ?? "");
+  const [tipo, setTipo] = useState<string>(d.escolha?.sigla === AVULSA ? d.escolha.materiaNome : TIPOS_AVULSA[0]);
   const [texto, setTexto] = useState(d.atual?.texto ?? "");
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
   const [pendente, iniciar] = useTransition();
@@ -56,7 +58,7 @@ export function AnotacoesCliente({ d }: { d: DadosAnotacoes }) {
   const titulo = d.escolha ? `${d.escolha.materiaNome} · ${d.escolha.tema}` : "";
 
   const abrir = (s: string, t: string) => {
-    if (s && t) router.push(`/estudos/anotacoes?materia=${encodeURIComponent(s)}&tema=${encodeURIComponent(t)}`);
+    if (s && t) router.push(`/estudos/anotacoes?materia=${encodeURIComponent(s)}&tema=${encodeURIComponent(t)}${s === AVULSA ? `&tipo=${encodeURIComponent(tipo)}` : ""}`);
   };
   const rodar = (fn: () => Promise<{ ok: boolean; error?: string }>, ok?: string) => {
     setAviso(null);
@@ -71,8 +73,7 @@ export function AnotacoesCliente({ d }: { d: DadosAnotacoes }) {
   return (
     <div className="flex flex-col gap-4">
       <section className={CARTAO}>
-        {d.materias.length ? (
-          <>
+        <>
             <label className="flex flex-col gap-1 text-[12px] font-semibold text-gray-700 dark:text-gray-300">
               Matéria
               <select
@@ -89,8 +90,33 @@ export function AnotacoesCliente({ d }: { d: DadosAnotacoes }) {
                     {m.nome}
                   </option>
                 ))}
+                <option value={AVULSA}>Outra aula (palestra, curso especial...)</option>
               </select>
             </label>
+            {!d.materias.length && sigla !== AVULSA && (
+              <p className="text-[12px] text-gray-500 dark:text-gray-400">Sua turma ainda não tem matérias cadastradas no Mercúrio. Fale com a Escolástica. Enquanto isso, dá para anotar uma palestra ou outra aula.</p>
+            )}
+            {sigla === AVULSA && (
+              <>
+                <label className="flex flex-col gap-1 text-[12px] font-semibold text-gray-700 dark:text-gray-300">
+                  Tipo
+                  <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={CAMPO}>
+                    {TIPOS_AVULSA.map((t) => (
+                      <option key={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-[12px] font-semibold text-gray-700 dark:text-gray-300">
+                  Título
+                  <span className="flex gap-2">
+                    <input value={tema} onChange={(e) => setTema(e.target.value)} maxLength={160} placeholder="Ex.: Teseu e o Minotauro" className={CAMPO} />
+                    <button type="button" disabled={!tema.trim()} onClick={() => abrir(AVULSA, tema.trim())} className="rounded-xl bg-na-green px-3 text-[12px] font-semibold text-white disabled:opacity-50">
+                      Abrir
+                    </button>
+                  </span>
+                </label>
+              </>
+            )}
             {materia && (
               <label className="flex flex-col gap-1 text-[12px] font-semibold text-gray-700 dark:text-gray-300">
                 Tema da aula
@@ -120,19 +146,23 @@ export function AnotacoesCliente({ d }: { d: DadosAnotacoes }) {
                 )}
               </label>
             )}
-          </>
-        ) : (
-          <p className="text-[13px] text-gray-500 dark:text-gray-400">Sua turma ainda não tem matérias cadastradas no Mercúrio. Fale com a Escolástica.</p>
-        )}
+        </>
       </section>
 
       {d.escolha && (
         <>
           <section className={CARTAO}>
-            <h2 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">{titulo}</h2>
+            <div>
+              <h2 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">{titulo}</h2>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {d.atual
+                  ? `Anotação feita em ${dataHora(d.atual.createdAt, fuso)}${Date.parse(d.atual.updatedAt) - Date.parse(d.atual.createdAt) > 60_000 ? ` · atualizada em ${dataHora(d.atual.updatedAt, fuso)}` : ""}`
+                  : "A data e a hora ficam registradas quando você salvar."}
+              </p>
+            </div>
             <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={12} maxLength={20000} placeholder="Suas anotações da aula..." className={CAMPO} />
             <div className="flex flex-wrap items-center gap-2">
-              <button disabled={pendente || salvo} onClick={() => rodar(() => salvarAnotacao({ sigla: d.escolha!.sigla, tema: d.escolha!.tema, texto }), "Anotação salva.")} className="inline-flex items-center gap-2 rounded-xl bg-na-green px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              <button disabled={pendente || salvo} onClick={() => rodar(() => salvarAnotacao({ sigla: d.escolha!.sigla, tema: d.escolha!.tema, texto, tipo: d.escolha!.materiaNome }), "Anotação salva.")} className="inline-flex items-center gap-2 rounded-xl bg-na-green px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
                 {pendente && <Loader2 size={14} className="animate-spin" />} {salvo && d.atual ? "Salvo" : "Salvar"}
               </button>
               {d.atual && (
@@ -202,13 +232,13 @@ export function AnotacoesCliente({ d }: { d: DadosAnotacoes }) {
             {d.minhas.map((a) => (
               <li key={a.id}>
                 <Link
-                  href={`/estudos/anotacoes?materia=${encodeURIComponent(a.materiaSigla)}&tema=${encodeURIComponent(a.tema)}`}
+                  href={`/estudos/anotacoes?materia=${encodeURIComponent(a.materiaSigla)}&tema=${encodeURIComponent(a.tema)}${a.materiaSigla === AVULSA ? `&tipo=${encodeURIComponent(a.materiaNome ?? "")}` : ""}`}
                   className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-[12px] dark:border-gray-800 dark:bg-gray-900"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-semibold text-gray-900 dark:text-gray-100">{a.tema}</span>
                     <span className="block text-gray-500 dark:text-gray-400">
-                      {a.materiaNome ?? a.materiaSigla}
+                      {a.materiaNome ?? a.materiaSigla} · {dataHora(a.createdAt, fuso)}
                       {a.compartilhada ? " · compartilhada" : ""}
                       {a.resumo ? " · com resumo" : ""}
                     </span>

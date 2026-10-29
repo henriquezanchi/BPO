@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { areasNaFilial } from "@/lib/areas-filial";
 import { podeAdministrar } from "@/lib/recursos-filial";
 import { catalogoDaMateria } from "@/lib/temas-curriculo";
+import { AVULSA, TIPOS_AVULSA } from "@/lib/anotacoes-comum";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
@@ -22,12 +23,13 @@ export async function materiasDoAluno(memberId: string) {
   return [...porSigla].map(([sigla, nome]) => ({ sigla, nome, temas: catalogoDaMateria(sigla)?.temas.map((t) => t.titulo) ?? [] })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
-export async function carregarAnotacoes(eu: Pessoa, escolha?: { sigla?: string; tema?: string }) {
+export async function carregarAnotacoes(eu: Pessoa, escolha?: { sigla?: string; tema?: string; tipo?: string }) {
   const [materias, minhas] = await Promise.all([
     materiasDoAluno(eu.id),
-    db.anotacaoAula.findMany({ where: { memberId: eu.id }, orderBy: { updatedAt: "desc" }, select: { id: true, materiaSigla: true, materiaNome: true, tema: true, texto: true, compartilhada: true, resumo: true, updatedAt: true } }),
+    db.anotacaoAula.findMany({ where: { memberId: eu.id }, orderBy: { updatedAt: "desc" }, select: { id: true, materiaSigla: true, materiaNome: true, tema: true, texto: true, compartilhada: true, resumo: true, createdAt: true, updatedAt: true } }),
   ]);
-  const sigla = escolha?.sigla && (materias.some((m) => m.sigla === escolha.sigla) || minhas.some((a) => a.materiaSigla === escolha.sigla)) ? escolha.sigla : null;
+  // Aula fora da turma (palestra, curso especial...): sempre disponível, com título livre.
+  const sigla = escolha?.sigla && (escolha.sigla === AVULSA || materias.some((m) => m.sigla === escolha.sigla) || minhas.some((a) => a.materiaSigla === escolha.sigla)) ? escolha.sigla : null;
   const tema = sigla && escolha?.tema ? escolha.tema.slice(0, 160) : null;
   const atual = sigla && tema ? (minhas.find((a) => a.materiaSigla === sigla && a.tema === tema) ?? null) : null;
   // Dos colegas: só as conferidas como corretas pelo professor (nunca as incorretas nem as pendentes).
@@ -44,9 +46,19 @@ export async function carregarAnotacoes(eu: Pessoa, escolha?: { sigla?: string; 
       : [];
   return {
     materias,
-    minhas: minhas.map((a) => ({ ...a, updatedAt: a.updatedAt.toISOString() })),
-    escolha: sigla && tema ? { sigla, tema, materiaNome: materias.find((m) => m.sigla === sigla)?.nome ?? atual?.materiaNome ?? sigla } : null,
-    atual,
+    minhas: minhas.map((a) => ({ ...a, createdAt: a.createdAt.toISOString(), updatedAt: a.updatedAt.toISOString() })),
+    escolha:
+      sigla && tema
+        ? {
+            sigla,
+            tema,
+            materiaNome:
+              sigla === AVULSA
+                ? (atual?.materiaNome ?? (TIPOS_AVULSA as readonly string[]).find((t) => t === escolha?.tipo) ?? "Outra")
+                : (materias.find((m) => m.sigla === sigla)?.nome ?? atual?.materiaNome ?? sigla),
+          }
+        : null,
+    atual: atual && { ...atual, createdAt: atual.createdAt.toISOString(), updatedAt: atual.updatedAt.toISOString() },
     colegas,
   };
 }
