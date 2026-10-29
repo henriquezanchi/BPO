@@ -573,6 +573,7 @@ function itemKey(item: AgendaItem) {
 const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const DIAS_CURTOS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const POR_PAGINA = 6;
+const OUTROS_A_VISTA = 3;
 const URL_PORTAL = "https://portal-na-one.vercel.app/portal";
 
 /** Atalho para "Meus eventos" dentro da Agenda (pedido do usuário 2026-10-22). */
@@ -739,7 +740,8 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
   // Abre sempre em hoje (pedido do usuário 2026-10-25); os próximos de outras datas ficam na lista abaixo.
   const [diaSelecionado, setDiaSelecionado] = useState(() => hoje);
   const [mesExibido, setMesExibido] = useState(() => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1));
-  const [limiteProximos, setLimiteProximos] = useState(POR_PAGINA);
+  // Outros eventos (rede e outras filiais): 3 à vista, o resto em "Carregar mais eventos" (pedido do usuário 2026-10-29).
+  const [limiteOutros, setLimiteOutros] = useState(OUTROS_A_VISTA);
   // Próximo evento tocado: abre o detalhe dele já expandido e rola até ele (pedido do usuário 2026-10-26).
   const [itemAberto, setItemAberto] = useState<string | null>(null);
   const calendario = useRef<HTMLDivElement>(null);
@@ -772,6 +774,10 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
   const proximos = items
     .filter((i): i is Exclude<AgendaItem, { kind: "enquete" }> => i.kind !== "enquete" && i.date >= inicioDeHoje && chaveDia(i.date) !== chaveDia(diaSelecionado))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
+  // Primeiro o que é da escola no próximo mês (eventos da escola, grupos, turma, conversas); depois os demais.
+  const fimDoMes = new Date(inicioDeHoje.getTime() + 30 * 864e5);
+  const daEscola = proximos.filter((i) => !["rede", "outraFilial"].includes(categoriaProximo(i)) && i.date < fimDoMes);
+  const outros = proximos.filter((i) => !daEscola.includes(i));
 
   function mudarMes(delta: number) {
     setMesExibido(new Date(ano, mes + delta, 1));
@@ -795,26 +801,36 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
           <h3 id="proximos-eventos" className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
             Próximos eventos
           </h3>
-          <ul className="flex flex-col gap-1.5">
-            {proximos.slice(0, limiteProximos).map((item) => (
-              <LinhaProximo
-                key={itemKey(item)}
-                item={item}
-                onAbrir={() => {
-                  const chave = itemKey(item);
-                  setItemAberto(chave);
-                  selecionarDia(item.date);
-                  setTimeout(() => document.getElementById(`agenda-item-${chave}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-                }}
-              />
+          {[
+            { chave: "escola", titulo: "Na sua escola", lista: daEscola },
+            { chave: "outros", titulo: "Outros eventos", lista: outros.slice(0, limiteOutros) },
+          ]
+            .filter((g) => g.lista.length)
+            .map((g) => (
+              <div key={g.chave} className="flex flex-col gap-1.5">
+                {daEscola.length > 0 && outros.length > 0 && <h4 className="text-[10px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">{g.titulo}</h4>}
+                <ul className="flex flex-col gap-1.5">
+                  {g.lista.map((item) => (
+                    <LinhaProximo
+                      key={itemKey(item)}
+                      item={item}
+                      onAbrir={() => {
+                        const chave = itemKey(item);
+                        setItemAberto(chave);
+                        selecionarDia(item.date);
+                        setTimeout(() => document.getElementById(`agenda-item-${chave}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+                      }}
+                    />
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
-          {proximos.length > limiteProximos && (
+          {outros.length > limiteOutros && (
             <button
-              onClick={() => setLimiteProximos((n) => n + POR_PAGINA)}
+              onClick={() => setLimiteOutros((n) => n + POR_PAGINA)}
               className="mt-1 rounded-xl border border-gray-300 px-4 py-2.5 text-[12px] font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
             >
-              Carregar mais eventos
+              Carregar mais eventos ({outros.length - limiteOutros})
             </button>
           )}
         </section>
