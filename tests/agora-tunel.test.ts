@@ -108,3 +108,27 @@ test("cookie do Ágora: renova a cada uso, junta Set-Cookie novos e respeita pra
   assert.equal(cookieRenovado(null, ["SESSION=x; Expires=Thu, 29 Oct 2026 18:00:00 GMT"], agora)?.ate, Date.UTC(2026, 9, 29, 18));
   assert.equal(cookieRenovado("SESSION=x", ["SESSION=; Max-Age=0"], agora), null, "Ágora apagou o cookie");
 });
+
+test("eventos do Ágora de uma escola só aparecem para ela (sede na escola ou escolas citadas no título)", async () => {
+  const { eventoDeOutraEscola } = await import("../src/lib/agora/eventos");
+  const u = (id: string, nome: string, status = "FIL") => ({ id, nome, status });
+  const unidades = [
+    u("BLM", "BELÉM"), u("BOA", "RECIFE BOA VIAGEM"), u("DER", "RECIFE DERBY"), u("CAR", "CARUARU"), u("GUA", "GUARÁ"), u("GAM", "GAMA"),
+    u("VAL", "VALPARAISO"), u("GYN", "GOIÂNIA UNIVERSITARIO"), u("APS", "ANÁPOLIS"), u("ASN", "ASA NORTE"), u("FOR", "FORTALEZA DIONISIO TORRES"),
+    u("FSL", "FORTALEZA SUL"), u("JUA", "JUAZEIRO DO NORTE"), u("ASL", "ASA SUL"), u("BGA", "BARRA DO GARÇAS", "URB"), u("BSB", "BRASÍLIA", "CEN"),
+    u("FNA", "FAZENDA NOVA ACRÓPOLE", "INS"), u("ITA", "ITACA", "INS"),
+  ];
+  const outra = (titulo: string, sede: string | null, minha: string, nacional = false) => eventoDeOutraEscola({ titulo, sede, nacional }, minha, unidades);
+  assert.equal(outra("Curso: Música - Uma Viagem pelo Sentimento e pela Imaginação", "BLM", "BGA"), true, "evento de Belém escondido em BGA");
+  assert.equal(outra("Curso: Música - Uma Viagem pelo Sentimento e pela Imaginação", "BLM", "BLM"), false);
+  assert.equal(outra("Encontro Nacional de GGSS", "ITA", "BGA", true), false, "nacional aparece para todos");
+  assert.equal(outra("Voluntariado Guará, Gama e Valparaiso ", "FNA", "BGA"), true);
+  assert.equal(outra("Voluntariado Guará, Gama e Valparaiso ", "FNA", "GAM"), false);
+  assert.equal(outra("Voluntariado Universitário", "FNA", "GYN"), false);
+  assert.equal(outra("Voluntariado Universitário", "FNA", "BGA"), true);
+  assert.equal(outra("Voluntariado Anápolis e Asa Norte", "FNA", "ASL"), true, "Asa Sul não é Asa Norte");
+  assert.equal(outra("Voluntariado Fortaleza: Dionísio Torres, Fátima, Meireles, Sul e Juazeiro do Norte", "ITA", "FSL"), false, "Fortaleza Sul pela cidade");
+  assert.equal(outra("Voluntariado Recife Boa Viagem e Derby e Caruaru", "ITA", "DER"), false);
+  assert.equal(outra("Retiro Regional", "FNA", "BGA"), false, "centro sem escola no título: da região");
+  assert.equal(outra("Curso: Música", "BLM", "BGA") && eventoDeOutraEscola({ titulo: "x", sede: "BLM", nacional: false }, "BGA", []), false, "sem unidades, não esconde");
+});

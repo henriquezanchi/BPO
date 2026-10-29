@@ -1,5 +1,7 @@
 import type { AgendaItem } from "@/lib/member-data";
 import { AGORA, chamarAgora, SemSessaoAgora } from "@/lib/agora/sessao";
+import { db } from "@/lib/db";
+import { consultarMercurio } from "@/lib/mercurio-db/client";
 
 /**
  * Eventos do Ágora na Agenda do aluno (túnel, 2026-10-27): `GET /api/eventos/acoes` como o próprio aluno — a mesma
@@ -18,7 +20,7 @@ type EventoAgora = {
   imagem?: number | string | { id?: number | string } | null;
   nacional?: boolean;
   regiao?: string | { nome?: string } | null;
-  sede?: string | { nome?: string } | null;
+  sede?: string | { nome?: string; codigo?: string } | null;
   situacao?: string | null;
   texto?: string | null;
   gratuito?: boolean;
@@ -118,7 +120,7 @@ const normalizar = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g,
  * Agenda a partir das ações do aluno no Ágora (filtradas pelo próprio Ágora, pedido do Marcos 27/10), completadas com
  * data, descrição e local de `/api/eventos/periodo` quando o evento estiver lá (casamento pelo slug ou pelo nome).
  */
-export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[]): AgendaItem[] {
+export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[], mostrar: (e: EventoDeEscola) => boolean = () => true): AgendaItem[] {
   const porSlug = new Map(periodo.filter((e) => e.slug).map((e) => [e.slug!, e]));
   const porNome = new Map(periodo.filter((e) => e.nome).map((e) => [normalizar(e.nome!), e]));
   return acoes.flatMap((a): AgendaItem[] => {
@@ -128,6 +130,8 @@ export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[]): Agen
     if (!nome) return [];
     const inscrito = a.tipo === "INSCRICAO_EDITAR";
     const evento = (typeof a.contextoId === "string" ? porSlug.get(a.contextoId) : undefined) ?? porNome.get(normalizar(nome));
+    const sede = evento ? ((evento.sede && typeof evento.sede === "object" ? evento.sede.codigo : null) ?? (typeof evento.local === "string" ? evento.local : null)) : null;
+    if (!mostrar({ nacional: a.regiao === "NAC" || evento?.nacional === true, sede, titulo: nome })) return [];
     const base = evento ? agendaDoAgora([evento])[0] : undefined;
     const data = base?.date ?? (m ? dataDoAgora(`${m[4]}-${m[3]}-${m[2]}`) : null);
     if (!data) return [];
@@ -150,20 +154,78 @@ export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[]): Agen
   });
 }
 
+/** Unidade do Mercúrio: FIL (filial), URB (núcleo urbano) e CEN (Brasília) são escolas; INS são centros da rede (Fazenda, Ítaca...). */
+export type UnidadeRede = { id: string; nome: string; status: string };
+export type EventoDeEscola = { nacional: boolean; sede: string | null; titulo: string };
+
+const ESCOLA = new Set(["FIL", "URB", "CEN"]);
+// Cidades com mais de uma escola: "Fortaleza" no título vale para todas as de Fortaleza.
+const CIDADES = ["goiania", "fortaleza", "recife", "natal", "brasilia", "sao luis", "mossoro"];
+const GENERICOS = new Set(["sul", "norte", "ii"]);
+const palavras = (t: string) => ` ${normalizar(t).replace(/[^a-z0-9]+/g, " ").trim()} `;
+
+/** Nomes pelos quais uma escola aparece no título: o nome inteiro e, sem a cidade, o bairro ("Recife Derby" -> "derby"). */
+function nomesDaEscola(nome: string): string[] {
+  const n = palavras(nome).trim();
+  const cidade = CIDADES.find((c) => n.startsWith(`${c} `));
+  const resto = cidade ? n.slice(cidade.length + 1) : "";
+  return [n, ...(resto.length >= 4 && !GENERICOS.has(resto) ? [resto] : [])];
+}
+
+/**
+ * Evento do Ágora que é de outra escola (pedido do usuário 2026-10-29: "Curso: Música" de Belém aparecia para as demais
+ * filiais). Nacional: é de todos. Sede numa escola (o código da sede do Ágora é o da unidade no Mercúrio): só dessa
+ * escola. Sede num centro da rede (Fazenda, Ítaca): se o título cita escolas ("Voluntariado Guará, Gama e Valparaíso"),
+ * só delas; se não cita nenhuma, é da região. Sem a lista de unidades, não esconde nada.
+ */
+export function eventoDeOutraEscola(e: EventoDeEscola, minhaUnidade: string | null, unidades: UnidadeRede[]): boolean {
+  if (e.nacional || !minhaUnidade || !unidades.length) return false;
+  const escolas = unidades.filter((u) => ESCOLA.has(u.status));
+  if (e.sede && escolas.some((u) => u.id === e.sede)) return e.sede !== minhaUnidade;
+  const titulo = palavras(e.titulo);
+  const citadas = escolas.filter((u) => nomesDaEscola(u.nome).some((n) => titulo.includes(` ${n} `)));
+  if (!citadas.length || citadas.some((u) => u.id === minhaUnidade)) return false;
+  const minha = escolas.find((u) => u.id === minhaUnidade);
+  const minhaCidade = minha && CIDADES.find((c) => palavras(minha.nome).startsWith(` ${c} `));
+  return !(minhaCidade && titulo.includes(` ${minhaCidade} `));
+}
+
+let unidadesGuardadas: { ate: number; lista: UnidadeRede[] } | null = null;
+
+/** Unidades ativas do Mercúrio (guardadas 12 h por instância; se o Mercúrio não responder em 3 s, lista vazia). */
+async function unidadesDaRede(): Promise<UnidadeRede[]> {
+  if (unidadesGuardadas && unidadesGuardadas.ate > Date.now()) return unidadesGuardadas.lista;
+  try {
+    const linhas = await Promise.race([
+      consultarMercurio("SELECT uni_id, uni_nome, uni_status FROM unidades WHERE uni_ativa='S'"),
+      new Promise<never>((_, nao) => setTimeout(() => nao(new Error("Mercúrio sem resposta em 3 s")), 3000)),
+    ]);
+    const lista = linhas.map((l) => ({ id: (l.uni_id ?? "").trim(), nome: l.uni_nome ?? "", status: (l.uni_status ?? "").trim() })).filter((u) => u.id);
+    unidadesGuardadas = { ate: Date.now() + 12 * 3600e3, lista };
+    return lista;
+  } catch (e) {
+    console.warn("Agenda: unidades do Mercúrio indisponíveis (eventos do Ágora sem filtro por escola):", e instanceof Error ? e.message : e);
+    return [];
+  }
+}
+
 /** Eventos do Ágora para o aluno; [] sem sessão do login unificado ou se o Ágora não responder a tempo. */
 export async function eventosDoAgora(memberId: string): Promise<AgendaItem[]> {
   const d = (x: Date) => x.toISOString().slice(0, 10);
   const hoje = new Date();
   const fim = new Date(hoje.getTime() + 180 * 864e5);
   try {
-    const [acoes, periodo] = await Promise.race([
+    const [acoes, periodo, unidades, membro] = await Promise.race([
       Promise.all([
         chamarAgora<AcaoAgora[]>(memberId, "/api/eventos/acoes"),
         chamarAgora<EventoAgora[]>(memberId, `/api/eventos/periodo?ini=${d(hoje)}&fim=${d(fim)}`).catch(() => [] as EventoAgora[]),
+        unidadesDaRede(),
+        db.member.findUnique({ where: { id: memberId }, select: { school: { select: { mercurioUnidade: true } } } }),
       ]),
       new Promise<never>((_, nao) => setTimeout(() => nao(new Error("Ágora sem resposta em 6 s")), 6000)),
     ]);
-    return Array.isArray(acoes) ? agendaDasAcoes(acoes, Array.isArray(periodo) ? periodo : []) : [];
+    const minhaUnidade = membro?.school.mercurioUnidade ?? null;
+    return Array.isArray(acoes) ? agendaDasAcoes(acoes, Array.isArray(periodo) ? periodo : [], (e) => !eventoDeOutraEscola(e, minhaUnidade, unidades)) : [];
   } catch (e) {
     if (!(e instanceof SemSessaoAgora)) console.error("Agenda: eventos do Ágora indisponíveis:", e instanceof Error ? e.message : e);
     return [];
