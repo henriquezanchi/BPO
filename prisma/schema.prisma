@@ -203,6 +203,8 @@ model Member {
   apresentacoesPedagogo ApresentacaoPedagogo[]
   planosAula PlanoAula[]
   sessaoAgora SessaoAgora?
+  diarioDias  DiarioDia[]
+  diarioPraticas DiarioPratica[]
   meetingResponses GroupMeetingResponse[]
   meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
   pushSubscriptions PushSubscription[]
@@ -2224,4 +2226,47 @@ model SessaoAgora {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @default(now()) @updatedAt
   member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+// Diário filosófico no Portal (pedido do usuário 2026-10-29). Privado: só a própria pessoa lê, nem coordenação,
+// direção ou administração. Ver src/lib/diario.ts.
+model DiarioDia {
+  id            String    @id @default(cuid())
+  memberId      String
+  data          String // "AAAA-MM-DD", dia local da pessoa
+  virtude       String?
+  compromisso   String?
+  frase         Json? // { texto, autor } do dia, gravada no Prólogo
+  prologoEm     DateTime?
+  semPrologo    Boolean   @default(false) // "Não fiz o Prólogo hoje"
+  falhei        String?
+  fizBem        String?
+  deixeiDeFazer String?
+  reflexaoLivre String?
+  epilogoEm     DateTime?
+  praticas      Json      @default("{}") // { praticaId: true }
+  origem        String    @default("portal") // portal | firebase
+  origemId      String? // documento do Firestore (importação)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  member        Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, data])
+}
+
+model DiarioPratica {
+  id          String    @id @default(cuid())
+  memberId    String
+  nome        String
+  recorrencia String    @default("diaria") // diaria | semanal | quinzenal | mensal
+  diasSemana  Int[]     @default([]) // 0 = domingo (semanal)
+  diaMes      Int? // mensal
+  dataBase    String // "AAAA-MM-DD", início da contagem (quinzenal)
+  arquivadaEm DateTime?
+  origemId    String?
+  createdAt   DateTime  @default(now())
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, origemId])
+  @@index([memberId])
 }

@@ -1,5 +1,7 @@
 import { eventosDoAgora } from "@/lib/agora/eventos";
 import { agoraPrecisaReconectar } from "@/lib/agora/sessao";
+import { fusoDaEscola } from "@/lib/atendimentos";
+import { fraseDoDia, hojeNoFuso } from "@/lib/diario";
 import { escolasQueCobramOnline, pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
@@ -415,6 +417,8 @@ export async function getMemberDashboard(memberId: string) {
     fortunaBalances,
     agendaItems,
     podeMarcarAtendimento: instrutoresDisponiveis.length > 0,
+    // Frase do dia no fim do Portal (2026-10-29): a mesma do diário, fixa no dia.
+    fraseDoDia: fraseDoDia(hojeNoFuso(fusoDaEscola(member.school.uf))),
     // Depois de buscar a agenda (que tenta renovar a sessão): sem sessão válida do Ágora, a Agenda oferece reconectar.
     agoraReconectar: await agoraPrecisaReconectar(member.id),
     cobraOnline: escolasQueCobram.has(member.schoolId),

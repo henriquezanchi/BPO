@@ -5,7 +5,7 @@ import { meusGafsNoPortal } from "@/lib/actions/gaf-portal-actions";
 import { getMinhasSolicitacoes, oferecerApoioVoluntario, solicitarAdesaoGaf } from "@/lib/actions/misc-request-actions";
 import { formatDateBR, whatsappHref } from "@/lib/format";
 import type { GafNoPortal, ResumoGrupo } from "@/lib/grupos-dados";
-import { BookOpenText, CalendarClock, ChevronRight, HandHeart, Loader2, Settings, Users, Video } from "lucide-react";
+import { BookOpenText, CalendarClock, ChevronRight, HandHeart, Loader2, NotebookPen, Settings, Users, Video } from "lucide-react";
 import { FREQUENCIAS, MODALIDADES } from "@/lib/grupos-comum";
 import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
 import Link from "next/link";
@@ -72,6 +72,17 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
 
   return (
     <div className="flex flex-col gap-6 text-left">
+      {/* Diário filosófico dentro do Portal (pedido do usuário 2026-10-29). */}
+      <Link href="/diario" className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-3.5 text-white shadow-sm transition hover:-translate-y-0.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20">
+          <NotebookPen size={18} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-bold">Meu diário</span>
+          <span className="block text-[11px] opacity-90">Prólogo, práticas do dia e Epílogo. Só você vê.</span>
+        </span>
+        <ChevronRight size={16} className="shrink-0 opacity-80" />
+      </Link>
       {detalhes.map((g) => (
         <section key={g.id} className="flex flex-col gap-3">
           {detalhes.length > 1 && <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">{g.nome}</h3>}

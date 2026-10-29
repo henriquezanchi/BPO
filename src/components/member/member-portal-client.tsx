@@ -353,6 +353,16 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
             </span>
           </a>
         )}
+        {/* Frase do dia (pedido do usuário 2026-10-29), embaixo de tudo; a mesma do diário. */}
+        {member.school.language !== "en" && (
+          <figure className="mt-6 mb-16 px-2 text-center">
+            <blockquote className="text-[13px] leading-relaxed text-gray-600 italic dark:text-gray-400">“{dashboard.fraseDoDia.texto}”</blockquote>
+            <figcaption className="mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-500">
+              — {dashboard.fraseDoDia.autor}
+              {dashboard.fraseDoDia.obra ? `, ${dashboard.fraseDoDia.obra}` : ""}
+            </figcaption>
+          </figure>
+        )}
       </main>
 
       <a
