@@ -573,7 +573,7 @@ function itemKey(item: AgendaItem) {
 const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const DIAS_CURTOS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const POR_PAGINA = 6;
-const OUTROS_A_VISTA = 3;
+const OUTROS_A_VISTA = 4;
 const URL_PORTAL = "https://portal-na-one.vercel.app/portal";
 
 /** Atalho para "Meus eventos" dentro da Agenda (pedido do usuário 2026-10-22). */
@@ -743,7 +743,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
   // Abre sempre em hoje (pedido do usuário 2026-10-25); os próximos de outras datas ficam na lista abaixo.
   const [diaSelecionado, setDiaSelecionado] = useState(() => hoje);
   const [mesExibido, setMesExibido] = useState(() => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1));
-  // Outros eventos (rede e outras filiais): 3 à vista, o resto em "Carregar mais eventos" (pedido do usuário 2026-10-29).
+  // Outros eventos (rede e outras filiais): 4 à vista (2 linhas da grade), o resto em "Carregar mais eventos" (pedido do usuário 2026-10-29).
   const [limiteOutros, setLimiteOutros] = useState(OUTROS_A_VISTA);
   // Próximo evento tocado: abre o detalhe dele já expandido e rola até ele (pedido do usuário 2026-10-26).
   const [itemAberto, setItemAberto] = useState<string | null>(null);
