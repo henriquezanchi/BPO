@@ -98,3 +98,13 @@ test("compartilhar evento do Ágora: rótulo nacional, valor real e inscrição 
   assert.ok(zap.includes("1) Prazos\nLote 1"), "mantém as quebras da descrição");
   assert.ok(!/gratuit|Portal/i.test(zap));
 });
+
+test("cookie do Ágora: renova a cada uso, junta Set-Cookie novos e respeita prazo e remoção", async () => {
+  const { cookieRenovado } = await import("../src/lib/agora/sessao");
+  const agora = Date.UTC(2026, 9, 29, 12);
+  const dia = 24 * 3600e3;
+  assert.deepEqual(cookieRenovado("JSESSIONID=a; XSRF=b", [], agora), { cookie: "JSESSIONID=a; XSRF=b", ate: agora + dia }, "sem Set-Cookie: mais 1 dia");
+  assert.deepEqual(cookieRenovado("JSESSIONID=a; XSRF=b", ["JSESSIONID=c; Path=/; Max-Age=3600; HttpOnly"], agora), { cookie: "JSESSIONID=c; XSRF=b", ate: agora + 3600e3 });
+  assert.equal(cookieRenovado(null, ["SESSION=x; Expires=Thu, 29 Oct 2026 18:00:00 GMT"], agora)?.ate, Date.UTC(2026, 9, 29, 18));
+  assert.equal(cookieRenovado("SESSION=x", ["SESSION=; Max-Age=0"], agora), null, "Ágora apagou o cookie");
+});
