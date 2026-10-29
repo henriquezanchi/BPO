@@ -49,7 +49,7 @@ export function StudyAreaPanel({
             rel="noreferrer"
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
           >
-            <Castle size={16} /> Bastiões
+            <Castle size={16} /> Bastiões (Membros)
           </a>
         )}
         {/* Apostilas: botão escondido até haver conteúdo (26/10/2026; antes só dizia "em breve"). `mostrarApostilas` fica para quando houver. */}
