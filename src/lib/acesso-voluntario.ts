@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
+import { publicosDaPessoa } from "@/lib/event-policy";
 import type { Member } from "@prisma/client";
 
 /**
@@ -10,6 +11,8 @@ import type { Member } from "@prisma/client";
  *    da filial (foco: chefes de grupo, sub-chefes, secretários);
  *  - quem já foi liberado e é responsável por um grupo libera os
  *    integrantes desse grupo (vínculos que o sistema já conhece).
+ * Voluntariado é para membros (2º nível em diante — pedido do usuário 2026-10-29): alguém do N1 só entra por
+ * exceção aberta pelo Chefe de Filial; responsável de grupo não libera N1.
  */
 type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "filiaisChefiadas" | "mercurioId">;
 
@@ -61,13 +64,17 @@ async function gruposQueLidera(memberId: string) {
   });
 }
 
+const CAMPOS_PUBLICO = { nivel: true, isMembroPrograma: true, isProvacionista: true, isHD: true, isDirigente: true, isFV: true, emProvacionismo: true } as const;
+const ehMembro = (p: Parameters<typeof publicosDaPessoa>[0]) => publicosDaPessoa(p).includes("membros");
+
 /** Quem esta pessoa pode liberar/revogar — reconferido no servidor a cada ação. */
 export async function podeLiberar(liberador: Pessoa, alvoId: string): Promise<boolean> {
   if (alvoId === liberador.id) return false;
   if (!(await temAcessoVoluntario(liberador))) return false;
-  const alvo = await db.member.findUnique({ where: { id: alvoId }, select: { schoolId: true, isDiretor: true } });
+  const alvo = await db.member.findUnique({ where: { id: alvoId }, select: { schoolId: true, isDiretor: true, ...CAMPOS_PUBLICO } });
   if (!alvo || alvo.isDiretor) return false;
   if ((await escolasQueLibera(liberador)).includes(alvo.schoolId)) return true;
+  if (!ehMembro(alvo)) return false;
   const grupos = (await gruposQueLidera(liberador.id)).map((g) => g.classGroupId);
   if (!grupos.length) return false;
   return (await db.classMembership.count({ where: { memberId: alvoId, role: "aluno", classGroupId: { in: grupos } } })) > 0;
@@ -95,6 +102,7 @@ export async function candidatosParaLiberar(liberador: Pessoa) {
       isSecretarioEscolastica: true,
       isSecretarioEconomia: true,
       schoolId: true,
+      ...CAMPOS_PUBLICO,
       classMemberships: { where: { classGroup: { tipo: { not: "turma" } } }, select: { role: true, classGroup: { select: { name: true, tipo: true } } } },
     },
     orderBy: { name: "asc" },
@@ -105,7 +113,8 @@ export async function candidatosParaLiberar(liberador: Pessoa) {
     db.secretariaMandato.findMany({ where: { memberId: { in: ids }, ativo: true }, select: { memberId: true, secretaria: true } }),
   ]);
   const liberados = new Map(acessos.map((l) => [l.memberId, l]));
-  return pessoas.map((p) => {
+  // Responsável de grupo (sem filial chefiada) só vê membros; o Chefe de Filial vê também o N1, como exceção.
+  return pessoas.filter((p) => escolas.length > 0 || ehMembro(p)).map((p) => {
     const chefia = p.classMemberships.filter((c) => c.role === "professor").map((c) => c.classGroup.name);
     const grupos = p.classMemberships.filter((c) => c.role === "aluno").map((c) => c.classGroup.name);
     // Secretarias da pessoa: grupos de secretaria (SEC), secretário de Economia/Escolástica e mandatos na rede.
@@ -134,6 +143,8 @@ export async function candidatosParaLiberar(liberador: Pessoa) {
       // Sugeridos no topo pro Chefe de Filial: chefes de grupo, sub-chefes, secretários.
       sugerido: chefia.length > 0 || p.isSubChefe || p.isSecretarioEscolastica || p.isSecretarioEconomia,
       liberado: liberados.has(p.id),
+      // N1 ou programa complementar: liberar é uma exceção do Chefe de Filial.
+      excecao: !ehMembro(p),
       liberadoEm: liberados.get(p.id)?.liberadoEm ?? null,
     };
   });

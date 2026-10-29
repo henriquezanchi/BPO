@@ -18,6 +18,7 @@ import { MENSAGEM_CONTA_PENDENTE } from "@/lib/asaas/conta-escola";
 import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
+import { boasVindasDoVoluntario } from "@/lib/boas-vindas-voluntario";
 import { avisosDosGrupos, meusGrupos } from "@/lib/grupos-dados";
 import { gruposDaAgenda } from "@/lib/grupos-portal";
 import { PRAZO_EVENTO_CANCELADO_MS } from "@/lib/evento-cancelado";
@@ -444,6 +445,9 @@ export async function getMemberDashboard(memberId: string) {
     areaVoluntario: destinosVoluntario.length > 0,
     // Pedidos aguardando quem tem Escolástica/Economia — número no botão da Área do Voluntário.
     pendenciasVoluntario: destinosVoluntario.reduce((soma, d) => soma + (d.pendentes ?? 0), 0),
+    // Voluntariado só para membros (2026-10-29); N1 só com a exceção aberta pela Direção (acesso liberado).
+    voluntariadoVisivel: recursos.voluntariado && (publicosDaPessoa(member).includes("membros") || acessoVoluntario),
+    boasVindasVoluntario: await boasVindasDoVoluntario(member, destinosVoluntario),
     availableToAdd,
     streakMeses,
     eventHistory: eventHistory.map(r=>({title:r.event.title,date:r.event.startsAt})),

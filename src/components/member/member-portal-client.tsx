@@ -13,9 +13,11 @@ import {
   BookOpenText,
   CalendarCheck,
   CheckCircle2,
+  Coffee,
   ClipboardCheck,
   Compass,
   HandHeart,
+  Heart,
   Leaf,
   LifeBuoy,
   LogOut,
@@ -49,6 +51,8 @@ import { GruposEstudoPanel } from "./grupos-estudo-panel";
 import { useAgendaComUlisses } from "@/lib/ulisses/navegador";
 import { AvisosGrupos } from "./avisos-grupos";
 import { AtalhoFavorito, DestaqueDoDia, registrarUso, useFavorita } from "./acesso-rapido";
+import { BoasVindasVoluntario } from "./boas-vindas-voluntario";
+import { Anuncio, DestaqueDiario, DestaquePlay, Vitrine, type Destaque } from "./vitrine";
 
 type ModalKey =
   | "cadastro"
@@ -219,7 +223,7 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
   const QUADROS: Record<string, { icone: React.ReactNode; titulo: string; subtitulo: string }> = {
     agenda: { icone: <CalendarCheck size={18} />, titulo: t.tiles.agenda.title, subtitulo: agendaItems.length > 0 ? t.tiles.agenda.subtitleComItens(agendaItems.length) : t.tiles.agenda.subtitleSemItens },
     estudos: { icone: <BookOpen size={18} />, titulo: t.tiles.estudos.title, subtitulo: t.tiles.estudos.subtitle },
-    voluntariado: { icone: <HandHeart size={18} />, titulo: t.tiles.voluntariado.title, subtitulo: t.tiles.voluntariado.subtitle },
+    ...(dashboard.voluntariadoVisivel && { voluntariado: { icone: <HandHeart size={18} />, titulo: t.tiles.voluntariado.title, subtitulo: t.tiles.voluntariado.subtitle } }),
     gaf: { icone: <UsersRound size={18} />, titulo: dashboard.meusGafs.length ? dashboard.meusGafs.map((g) => g.nome).join(", ") : t.tiles.gaf.title, subtitulo: t.tiles.gaf.subtitle },
     grupos_estudo: { icone: <BookOpenText size={18} />, titulo: "Grupos de estudo", subtitulo: "Estudos e leituras comentadas" },
     jornada: { icone: <Compass size={18} />, titulo: t.tiles.jornada.title, subtitulo: t.tiles.jornada.subtitleSemStreak },
@@ -236,10 +240,120 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
     .sort((a, b) => a.data.getTime() - b.data.getTime())
     .slice(0, 3);
 
+  // Vitrine do centro (pedido do usuário 2026-10-29): um destaque por vez, trocando a cada 5 segundos.
+  const saldoFortuna = fortunaBalances.find((b) => b.isHome) ?? fortunaBalances[0];
+  const podeIncluirCrianca = !somenteConsulta && availableToAdd.some((i) => /crian[cç]a.*bem/i.test(i.label));
+  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const destaques = ([
+    contribuicaoUrgente && { id: "contribuicao", conteudo: cartaoContribuicao },
+    favorita && favorita !== "economia" && QUADROS[favorita] && {
+      id: "favorita",
+      conteudo: <Anuncio icone={QUADROS[favorita].icone} rotulo="Acesso rápido · o que você mais usa" titulo={QUADROS[favorita].titulo} texto={QUADROS[favorita].subtitulo} acao="Abrir" onClick={() => setModal(favorita as ModalKey)} />,
+    },
+    proximosEventos.length > 0 && {
+      id: "eventos",
+      conteudo: (
+        <Anuncio
+          icone={<CalendarCheck size={20} />}
+          rotulo="Próximos eventos"
+          titulo={proximosEventos[0].titulo}
+          extra={
+            <span className="mt-1 flex flex-col gap-0.5">
+              {proximosEventos.map((e) => (
+                <span key={e.id} className="flex items-baseline gap-2 text-[12px]">
+                  <span className="w-10 shrink-0 font-bold text-gray-500 tabular-nums">{e.data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
+                  <span className="truncate text-gray-700 dark:text-gray-300">{e.titulo}</span>
+                </span>
+              ))}
+            </span>
+          }
+          acao="Ver a agenda"
+          onClick={() => setModal("agenda")}
+        />
+      ),
+    },
+    dashboard.recursos.acropole_play && { id: "play", conteudo: <DestaquePlay /> },
+    dashboard.meusGafs.length > 0 && { id: "diario", conteudo: <DestaqueDiario /> },
+    saldoFortuna && {
+      id: "fortuna",
+      conteudo: (
+        <Anuncio
+          tom={favorita === "economia" ? "ouro" : "claro"}
+          icone={<Coffee size={20} />}
+          rotulo={`Fortuna · ${saldoFortuna.branchTitle}`}
+          titulo="Coloque mais crédito e evite filas!"
+          texto={
+            <>
+              Seu saldo: <strong>{brl(saldoFortuna.amount)}</strong>
+            </>
+          }
+          acao={somenteConsulta ? "Ver a carteira" : "Adicionar créditos"}
+          onClick={() => setModal(somenteConsulta ? "economia" : "fortuna_recarga")}
+        />
+      ),
+    },
+    {
+      id: "crianca",
+      conteudo: (
+        <Anuncio
+          tom="ouro"
+          icone={<Heart size={20} />}
+          rotulo="Criança para o Bem"
+          titulo="Uma doação que muda o dia de uma criança"
+          texto="Você pode ajudar com o transporte, com as oficinas e o lanche, ou apadrinhar uma criança."
+          acao={podeIncluirCrianca ? "Incluir na minha contribuição" : "Conhecer o projeto"}
+          {...(podeIncluirCrianca ? { onClick: () => setModal("contribuicao") } : { href: "https://criancaparaobem.org.br/", externo: true })}
+        />
+      ),
+    },
+    dashboard.meusGafs.length === 0 && (dashboard.recursos.gaf || dashboard.gafsDisponiveis.length > 0) && {
+      id: "gaf",
+      conteudo: (
+        <Anuncio
+          icone={<UsersRound size={20} />}
+          rotulo="Grupo de Acompanhamento Filosófico"
+          titulo="Você ainda não participa do GAF?"
+          texto="Encontros em grupo para ler e conversar sobre os textos de trabalho, levando a filosofia para a vida."
+          acao="Conhecer os grupos"
+          onClick={() => setModal("gaf")}
+        />
+      ),
+    },
+    dashboard.voluntariadoVisivel && !dashboard.areaVoluntario && {
+      id: "voluntariado",
+      conteudo: (
+        <Anuncio
+          tom="verde"
+          icone={<HandHeart size={20} />}
+          rotulo="Voluntariado"
+          titulo="Você sabia que “Voluntário” significa “aquele que faz por força da Vontade”?"
+          texto="Conheça as oportunidades de Voluntariado da sua escola, e ajude ainda mais pessoas através desse ideal!"
+          acao="Quero ajudar"
+          onClick={() => setModal("voluntariado")}
+        />
+      ),
+    },
+    !contribuicaoUrgente && {
+      id: "contribuicao",
+      conteudo: (
+        <Anuncio
+          icone={<Wallet size={20} />}
+          rotulo="Minha contribuição"
+          titulo={t.home.contribuicaoEmDia}
+          texto={proximoVencimento.diasRestantes > 0 ? t.home.proximoVencimento(proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1, proximoVencimento.diasRestantes) : undefined}
+          acao={t.home.verSituacao}
+          onClick={() => setModal("economia")}
+        />
+      ),
+    },
+  ] as (Destaque | false | null | undefined | "")[]).filter((d): d is Destaque => !!d);
+  const emPortugues = member.school.language !== "en";
+
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
       {tourVisivel && <OnboardingTour memberId={member.id} onFechar={() => setTourVisivel(false)} />}
+      {!tourVisivel && dashboard.boasVindasVoluntario && <BoasVindasVoluntario memberId={member.id} nome={member.name.split(" ")[0]} dados={dashboard.boasVindasVoluntario} />}
       <header className="relative border-b border-gray-100 bg-white px-5 pt-6 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
         <div className="absolute top-4 right-4 flex items-center gap-1">
           <ThemeToggle className="flex h-11 w-11 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
@@ -307,14 +421,18 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
 
         {/* Acesso rápido (pedido do usuário 2026-10-29): contribuição perto do vencimento, o quadro mais usado ou,
             sem nada a destacar, a frase do dia (alternando com o Acrópole Play) e os próximos eventos. */}
-        <section aria-label="Acesso rápido" className="flex flex-col gap-3">
-          {contribuicaoUrgente && cartaoContribuicao}
-          {favorita === "economia" && !contribuicaoUrgente && cartaoFortuna}
-          {favorita && favorita !== "economia" && QUADROS[favorita] && <AtalhoFavorito {...QUADROS[favorita]} onClick={() => setModal(favorita as ModalKey)} />}
-          {!contribuicaoUrgente && !favorita && (
-            <DestaqueDoDia frase={dashboard.fraseDoDia} acropolePlay={dashboard.recursos.acropole_play} eventos={proximosEventos} abrirAgenda={() => setModal("agenda")} />
-          )}
-        </section>
+        {emPortugues ? (
+          <Vitrine destaques={destaques} />
+        ) : (
+          <section aria-label="Acesso rápido" className="flex flex-col gap-3">
+            {contribuicaoUrgente && cartaoContribuicao}
+            {favorita === "economia" && !contribuicaoUrgente && cartaoFortuna}
+            {favorita && favorita !== "economia" && QUADROS[favorita] && <AtalhoFavorito {...QUADROS[favorita]} onClick={() => setModal(favorita as ModalKey)} />}
+            {!contribuicaoUrgente && !favorita && (
+              <DestaqueDoDia frase={dashboard.fraseDoDia} acropolePlay={dashboard.recursos.acropole_play} eventos={proximosEventos} abrirAgenda={() => setModal("agenda")} />
+            )}
+          </section>
+        )}
 
         {/* Grid de funcionalidades */}
         <section className="grid grid-cols-2 gap-2.5">
@@ -334,7 +452,7 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
           />
           <FeatureTile icon={<BookOpen size={16} />} title={t.tiles.estudos.title} subtitle={t.tiles.estudos.subtitle} onClick={() => setModal("estudos")} />
           {/* Voluntariado, GAF e Transparência só aparecem se a filial liberou (Administração da filial). */}
-          {dashboard.recursos.voluntariado && (
+          {dashboard.voluntariadoVisivel && (
             <FeatureTile icon={<HandHeart size={16} />} title={t.tiles.voluntariado.title} subtitle={t.tiles.voluntariado.subtitle} onClick={() => setModal("voluntariado")} />
           )}
           {(dashboard.recursos.gaf || dashboard.meusGafs.length > 0) && (
@@ -396,7 +514,8 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
           </a>
         )}
         {/* Frase do dia (pedido do usuário 2026-10-29), embaixo de tudo, quando não está no acesso rápido. */}
-        {member.school.language !== "en" && (contribuicaoUrgente || !!favorita) && (
+        {/* A frase do dia fica sempre no fim: a vitrine do centro não a mostra mais. */}
+        {emPortugues && (
           <figure className="mt-6 mb-16 px-2 text-center">
             <blockquote className="text-[13px] leading-relaxed text-gray-600 italic dark:text-gray-400">“{dashboard.fraseDoDia.texto}”</blockquote>
             <figcaption className="mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-500">

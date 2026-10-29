@@ -1,7 +1,9 @@
 "use server";
 
 import { requireAuthenticatedMember } from "@/lib/auth";
+import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { db } from "@/lib/db";
+import { publicosDaPessoa } from "@/lib/event-policy";
 import { candidatoElegivel } from "@/lib/grupos-portal";
 import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
 
@@ -30,7 +32,9 @@ export async function solicitarAdesaoGaf(memberId: string, classGroupId?: string
 }
 
 export async function oferecerApoioVoluntario(memberId: string, secretarias: string[]) {
-  await requireAuthenticatedMember(memberId);
+  const m = await requireAuthenticatedMember(memberId);
+  // Voluntariado é para membros (2026-10-29); N1 só com a exceção aberta pela Direção (acesso liberado).
+  if (!publicosDaPessoa(m).includes("membros") && !(await temAcessoVoluntario(m))) throw new Error("O voluntariado é aberto aos membros da escola.");
   // Só nomes do catálogo (lib/secretarias.ts), para a oferta casar com as secretarias da filial.
   const validas = [...new Set(secretarias)].filter((s) => (SECRETARIAS_OFERTA as readonly string[]).includes(s));
   if (validas.length === 0) throw new Error("Selecione pelo menos uma secretaria.");

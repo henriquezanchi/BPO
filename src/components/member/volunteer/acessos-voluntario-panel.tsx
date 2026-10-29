@@ -16,6 +16,7 @@ interface Pessoa {
   secretarias: string[];
   sugerido: boolean;
   liberado: boolean;
+  excecao?: boolean;
 }
 
 function normalizar(s: string) {
@@ -83,7 +84,14 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
     return (
       <li className="flex items-center justify-between gap-3 py-2.5">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{p.name}</p>
+          <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
+            <span className="truncate">{p.name}</span>
+            {p.excecao && (
+              <span title="Voluntariado é para membros. Liberar alguém do N1 é uma exceção da Direção da filial." className="shrink-0 rounded-full bg-na-gold/15 px-1.5 py-0.5 text-[9px] font-bold text-na-gold-dark dark:text-amber-300">
+                N1 · exceção
+              </span>
+            )}
+          </p>
           {(p.filial || p.papel.length > 0 || p.grupos.length > 0) && (
             <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{[...(p.filial ? [p.filial] : []), ...p.papel, ...p.grupos].join(" · ")}</p>
           )}
@@ -144,6 +152,7 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
       <p className="-mt-2 text-[11px] text-gray-500 dark:text-gray-400">
         {semFiltro ? "" : `${filtradas.length} de ${pessoas.length} na lista · `}
         {liberados.size} {liberados.size === 1 ? "pessoa liberada" : "pessoas liberadas"}. Toque de novo em “Liberado” pra retirar o acesso.
+        {pessoas.some((p) => p.excecao) && " Voluntariado é para membros; quem está marcado “N1 · exceção” só entra se a Direção decidir abrir a exceção."}
       </p>
 
       {erro && <p className="text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
