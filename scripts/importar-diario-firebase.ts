@@ -44,6 +44,8 @@ type Entrada = {
 };
 
 const RECORRENCIA: Record<string, string> = { daily: "diaria", weekly: "semanal", biweekly: "quinzenal", monthly: "mensal" };
+// Diário antigo: lido, lendo, juro (já tenho), desejo (quero comprar).
+const SITUACAO_LIVRO: Record<string, string> = { lido: "lido", lendo: "lendo", juro: "tenho", desejo: "quero" };
 const txt = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 4000) : null);
 const quando = (t: Timestamp | undefined, data: string) => (t && typeof t.toDate === "function" ? t.toDate() : new Date(`${data}T12:00:00Z`));
 
@@ -69,7 +71,7 @@ async function main() {
     porEmail.set(e, [...(porEmail.get(e) ?? []), m.id]);
   }
 
-  const c = { contas: contas.length, semEmail: 0, naoConfirmado: 0, semCadastro: 0, ambiguo: 0, pareadas: 0, comDiario: 0, dias: 0, diasVazios: 0, diasDoPortalMantidos: 0, diasGravados: 0, praticas: 0 };
+  const c = { contas: contas.length, semEmail: 0, naoConfirmado: 0, semCadastro: 0, ambiguo: 0, pareadas: 0, comDiario: 0, dias: 0, diasVazios: 0, diasDoPortalMantidos: 0, diasGravados: 0, praticas: 0, livros: 0 };
   for (const conta of contas) {
     if (!conta.email) { c.semEmail++; continue; }
     if (!conta.confirmado) { c.naoConfirmado++; continue; }
@@ -90,6 +92,16 @@ async function main() {
       const dados = { nome: txt(t.name)!.slice(0, 120), recorrencia, diasSemana: recorrencia === "semanal" ? (t.weekDays ?? []).filter((d) => d >= 0 && d <= 6) : [], diaMes: recorrencia === "mensal" ? (t.monthDay ?? null) : null, dataBase: /^\d{4}-\d{2}-\d{2}$/.test(t.baseDate ?? "") ? t.baseDate! : "2026-01-01" };
       const p = await db.diarioPratica.upsert({ where: { memberId_origemId: { memberId, origemId: t.id } }, update: dados, create: { memberId, origemId: t.id, ...dados } });
       novoId.set(t.id, p.id);
+    }
+
+    // Livros (userBooks/{uid}.books) -> LivroLeitura, na Área de Estudos (2026-10-29).
+    const livros = ((await fs.doc(`userBooks/${conta.uid}`).get()).data()?.books ?? []) as { id?: string; title?: string; author?: string; status?: string }[];
+    for (const l of livros) {
+      if (!l.id || !txt(l.title)) continue;
+      c.livros++;
+      if (!gravar) continue;
+      const dados = { titulo: txt(l.title)!.slice(0, 200), autor: txt(l.author)?.slice(0, 160) ?? null, situacao: SITUACAO_LIVRO[l.status ?? ""] ?? "quero" };
+      await db.livroLeitura.upsert({ where: { memberId_origemId: { memberId, origemId: l.id } }, update: dados, create: { memberId, origemId: l.id, ...dados } });
     }
 
     // Dias (entries com userId = uid).
