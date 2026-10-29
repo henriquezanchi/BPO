@@ -366,7 +366,7 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
       </a>
 
       {modal && (
-        <BottomSheet open onOpenChange={(open) => !open && setModal(null)} title={t.modalTitles[modal]}>
+        <BottomSheet open onOpenChange={(open) => !open && setModal(null)} title={modal === "gaf" && dashboard.meusGafs.length ? (dashboard.meusGafs.length === 1 ? dashboard.meusGafs[0].nome : "Meus GAFs") : t.modalTitles[modal]}>
           {modal === "cadastro" && (
             <ProfileEditPanel
               memberId={member.id}

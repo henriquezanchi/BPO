@@ -1,11 +1,12 @@
 "use client";
 
 import { AtivarNotificacoes, pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
+import { meusGafsNoPortal } from "@/lib/actions/gaf-portal-actions";
 import { getMinhasSolicitacoes, oferecerApoioVoluntario, solicitarAdesaoGaf } from "@/lib/actions/misc-request-actions";
 import { formatDateBR, whatsappHref } from "@/lib/format";
-import type { ResumoGrupo } from "@/lib/grupos-dados";
-import { CalendarClock, ChevronRight, HandHeart, Loader2 } from "lucide-react";
-import { MODALIDADES } from "@/lib/grupos-comum";
+import type { GafNoPortal, ResumoGrupo } from "@/lib/grupos-dados";
+import { BookOpenText, CalendarClock, ChevronRight, HandHeart, Loader2, Settings, Users, Video } from "lucide-react";
+import { FREQUENCIAS, MODALIDADES } from "@/lib/grupos-comum";
 import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
@@ -26,6 +27,123 @@ export type GafDisponivel = { id: string; nome: string; descricao: string | null
  * continua o pedido geral (a administração encaminha).
  */
 export function GafPanel({ memberId, gafs = [], disponiveis = [] }: { memberId: string; gafs?: ResumoGrupo[]; disponiveis?: GafDisponivel[] }) {
+  // Já está num GAF (pedido do usuário 2026-10-29): mostra o grupo em si, não o convite para conhecer.
+  if (gafs.length > 0) return <MeusGafs gafs={gafs} />;
+  return <ConhecerGaf memberId={memberId} disponiveis={disponiveis} />;
+}
+
+const quando = (inicio: string, fim: string) => {
+  const i = new Date(inicio);
+  const dia = i.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" });
+  const hora = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)}, ${hora(i)} às ${hora(new Date(fim))}`;
+};
+
+function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
+  const [detalhes, setDetalhes] = useState<GafNoPortal[] | null | undefined>(undefined);
+  useEffect(() => {
+    meusGafsNoPortal().then(setDetalhes, () => setDetalhes(null));
+  }, []);
+
+  if (detalhes === undefined)
+    return (
+      <div className="flex items-center justify-center gap-2 py-10 text-[12px] text-gray-500 dark:text-gray-400">
+        <Loader2 size={14} className="animate-spin" /> Carregando seu GAF...
+      </div>
+    );
+  // Falhou: ao menos o resumo de antes (nome e próximo encontro), com a página do grupo.
+  if (!detalhes?.length)
+    return (
+      <div className="flex flex-col gap-2 text-left">
+        {gafs.map((g) => (
+          <Link key={g.id} href={`/grupos/${g.id}?de=portal`} className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{g.nome}</span>
+              <span className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                <CalendarClock size={11} />
+                {g.proximoEncontro ? new Date(g.proximoEncontro).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "sem encontro marcado"}
+              </span>
+            </span>
+            <ChevronRight size={16} className="shrink-0 text-gray-300" />
+          </Link>
+        ))}
+      </div>
+    );
+
+  return (
+    <div className="flex flex-col gap-6 text-left">
+      {detalhes.map((g) => (
+        <section key={g.id} className="flex flex-col gap-3">
+          {detalhes.length > 1 && <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">{g.nome}</h3>}
+          {(g.modalidade || g.frequencia) && (
+            <p className="-mt-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+              {[g.modalidade && MODALIDADES[g.modalidade], g.frequencia && FREQUENCIAS[g.frequencia]].filter(Boolean).join(" · ")}
+            </p>
+          )}
+
+          <div className="flex flex-col gap-2 rounded-2xl border border-na-green/30 bg-na-green-light/30 p-3.5 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+            <p className="text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Próximo encontro</p>
+            {g.proximo ? (
+              <>
+                <p className={`flex items-center gap-1.5 text-[14px] font-semibold ${g.proximo.cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>
+                  <CalendarClock size={15} className="shrink-0" /> {quando(g.proximo.inicio, g.proximo.fim)}
+                </p>
+                {g.proximo.cancelado && <p className="text-[12px] font-semibold text-na-danger-dark dark:text-red-300">Cancelado{g.proximo.motivo ? `: ${g.proximo.motivo}` : ""}</p>}
+                {g.proximo.detalhes && !g.proximo.cancelado && <p className="text-[12px] whitespace-pre-line text-gray-600 dark:text-gray-300">{g.proximo.detalhes}</p>}
+                {g.link && !g.proximo.cancelado && (
+                  <a href={g.link} target="_blank" rel="noreferrer" className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-na-green-dark">
+                    <Video size={15} /> Entrar no encontro online
+                  </a>
+                )}
+              </>
+            ) : (
+              <p className="text-[13px] text-gray-500 dark:text-gray-400">Nenhum encontro marcado ainda.</p>
+            )}
+          </div>
+
+          {g.proximo && !g.proximo.cancelado && g.leitura && (
+            "semLeitura" in g.leitura ? (
+              <p className="text-[12px] text-gray-500 dark:text-gray-400">Sem leitura para este encontro.</p>
+            ) : (
+              <a href={g.leitura.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-2xl border border-gray-200 p-3 transition hover:border-na-green/60 dark:border-gray-700">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-na-gold/20 text-na-gold-dark dark:text-amber-300">
+                  <BookOpenText size={17} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Texto para ler · nº {g.leitura.numero}</span>
+                  <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{g.leitura.titulo}</span>
+                </span>
+                <ChevronRight size={16} className="shrink-0 text-gray-400" />
+              </a>
+            )
+          )}
+
+          <div className="flex flex-col gap-2">
+            <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+              <Users size={12} /> Participantes ({g.responsaveis.length + g.integrantes.length})
+            </p>
+            <ul className="flex flex-wrap gap-1.5">
+              {g.responsaveis.map((n) => (
+                <li key={`r-${n}`} className="rounded-full bg-na-green px-2.5 py-1 text-[11px] font-semibold text-white">{n} · coordenação</li>
+              ))}
+              {g.integrantes.map((n) => (
+                <li key={`i-${n}`} className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">{n}</li>
+              ))}
+            </ul>
+          </div>
+
+          {g.podeGerir && (
+            <Link href={`/grupos/${g.id}`} className="flex items-center gap-2 self-start text-[12px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
+              <Settings size={13} /> Administrar o grupo (Portal do Voluntário)
+            </Link>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function ConhecerGaf({ memberId, disponiveis }: { memberId: string; disponiveis: GafDisponivel[] }) {
   const [solicitadoEm, setSolicitadoEm] = useState<Date | null | undefined>(undefined);
   const [pedidos, setPedidos] = useState<Record<string, string>>(() => Object.fromEntries(disponiveis.filter((g) => g.pedidoEm).map((g) => [g.id, g.pedidoEm!])));
   const [escolhido, setEscolhido] = useState<string | null>(null);
@@ -50,25 +168,6 @@ export function GafPanel({ memberId, gafs = [], disponiveis = [] }: { memberId: 
 
   return (
     <div className="text-left">
-      {gafs.length > 0 && (
-        <div className="mb-4 flex flex-col gap-2">
-          <p className="text-[11px] font-bold text-gray-500 uppercase dark:text-gray-400">Seus GAFs</p>
-          {gafs.map((g) => (
-            <Link key={g.id} href={`/grupos/${g.id}?de=portal`} className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{g.nome}</span>
-                <span className="flex items-center gap-1 text-[11px] text-gray-500 capitalize dark:text-gray-400">
-                  <CalendarClock size={11} />
-                  {g.proximoEncontro
-                    ? new Date(g.proximoEncontro).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
-                    : "sem encontro marcado"}
-                </span>
-              </span>
-              <ChevronRight size={16} className="shrink-0 text-gray-300" />
-            </Link>
-          ))}
-        </div>
-      )}
       <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">
         O <strong>Grupo de Acompanhamento Filosófico (GAF)</strong> é um espaço criado para apoiar o aluno em sua
         jornada de vivência prática da filosofia, com encontros periódicos e acompanhamento próximo por instrutores.

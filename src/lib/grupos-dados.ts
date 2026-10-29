@@ -209,3 +209,31 @@ async function leiturasDoGaf(grupoId: string) {
     return { id: e.id, startsAt: e.startsAt.toISOString(), passado: e.startsAt.getTime() < agora - 3 * 60 * 60 * 1000, origem: l.origem, texto: l.texto, escolha: e.leituraGaf };
   });
 }
+
+/**
+ * O GAF como o integrante vê no Portal (pedido do usuário 2026-10-29: em vez de "Conhecer o GAF", o grupo em si):
+ * participantes, próximo encontro, link (só se for online), texto para ler. A administração continua na página do
+ * grupo (Portal do Voluntário). null quando a pessoa não pode ver.
+ */
+export async function gafNoPortal(m: Pessoa, grupoId: string) {
+  const d = await detalheDoGrupo(m, grupoId);
+  if (!d || d.grupo.tipo !== "GAF") return null;
+  const agora = Date.now();
+  const proximo = d.encontros.find((e) => new Date(e.endsAt).getTime() >= agora) ?? null;
+  const leitura = proximo ? d.leiturasGaf?.find((l) => l.id === proximo.id) : null;
+  const online = d.grupo.modalidade === "online" || d.grupo.modalidade === "misto";
+  return {
+    id: d.grupo.id,
+    nome: d.grupo.name,
+    descricao: d.grupo.descricao,
+    modalidade: d.grupo.modalidade,
+    frequencia: d.grupo.frequencia,
+    link: online ? d.grupo.linkOnline : null,
+    podeGerir: d.papel.podeGerir,
+    responsaveis: d.grupo.responsaveis.map((p) => p.name),
+    integrantes: d.grupo.integrantes.map((p) => p.name),
+    proximo: proximo && { inicio: proximo.startsAt, fim: proximo.endsAt, titulo: proximo.title, cancelado: proximo.status === "cancelada", motivo: proximo.cancellationReason, detalhes: proximo.publicDetails },
+    leitura: leitura?.texto ? { titulo: leitura.texto.titulo, numero: leitura.texto.numero, url: leitura.texto.url } : leitura?.origem === "sem_leitura" ? { semLeitura: true as const } : null,
+  };
+}
+export type GafNoPortal = NonNullable<Awaited<ReturnType<typeof gafNoPortal>>>;
