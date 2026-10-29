@@ -20,6 +20,7 @@ import { db } from "@/lib/db";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
 import { boasVindasDoVoluntario } from "@/lib/boas-vindas-voluntario";
 import { destaqueDeOportunidades } from "@/lib/oportunidades";
+import { minhaTurmaDePedagogos } from "@/lib/escala-pedagogos";
 import { avisosDosGrupos, meusGrupos } from "@/lib/grupos-dados";
 import { gruposDaAgenda } from "@/lib/grupos-portal";
 import { PRAZO_EVENTO_CANCELADO_MS } from "@/lib/evento-cancelado";
@@ -441,6 +442,8 @@ export async function getMemberDashboard(memberId: string) {
     bibliotecaLiberada: publicosDaPessoa(member).includes("membros"),
     meusGafs,
     gruposDeEstudo,
+    // Turma de pedagogos e a próxima apresentação (2026-10-29): também para quem ainda não é instrutor no Mercúrio.
+    pedagogos: await minhaTurmaDePedagogos(member.id, fusoDaEscola(member.school.uf)),
     gafsDisponiveis,
     // Um atalho só para a Área do Voluntário, quando a pessoa tem algo lá (mesma regra do menu).
     areaVoluntario: destinosVoluntario.length > 0,

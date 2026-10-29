@@ -18,6 +18,7 @@ import {
   Compass,
   HandHeart,
   Heart,
+  Presentation,
   Leaf,
   LifeBuoy,
   LogOut,
@@ -71,6 +72,8 @@ type ModalKey =
   | "economia";
 
 const DIA_VENCIMENTO = 10;
+/** "04/11" a partir de "2026-11-04". */
+const dataCurta = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 /**
  * Resumo do próximo vencimento (dia 10, mesma convenção já usada pelo
@@ -247,6 +250,28 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const destaques = ([
     contribuicaoUrgente && { id: "contribuicao", conteudo: cartaoContribuicao },
+    // Pedagogo com apresentação marcada e plano ainda por entregar (2026-10-29).
+    dashboard.pedagogos?.proxima &&
+      ["no_prazo", "atrasado", "devolvido"].includes(dashboard.pedagogos.proxima.situacao) && {
+        id: "pedagogos",
+        conteudo: (
+          <Anuncio
+            tom={dashboard.pedagogos.proxima.situacao === "no_prazo" ? "ouro" : "claro"}
+            icone={<Presentation size={20} />}
+            rotulo={`Sua apresentação · ${dataCurta(dashboard.pedagogos.proxima.data)}`}
+            titulo={dashboard.pedagogos.proxima.tema}
+            texto={
+              dashboard.pedagogos.proxima.situacao === "devolvido"
+                ? "O instrutor pediu ajustes no plano de aula."
+                : dashboard.pedagogos.proxima.situacao === "atrasado"
+                  ? `O plano de aula era até ${dataCurta(dashboard.pedagogos.proxima.prazo)}. Entregue assim que puder.`
+                  : `Entregue o plano de aula até ${dataCurta(dashboard.pedagogos.proxima.prazo)}.`
+            }
+            acao="Abrir o plano de aula"
+            href={`/grupos/${dashboard.pedagogos.proxima.grupoId}?aba=escala`}
+          />
+        ),
+      },
     favorita && favorita !== "economia" && QUADROS[favorita] && {
       id: "favorita",
       conteudo: <Anuncio icone={QUADROS[favorita].icone} rotulo="Acesso rápido · o que você mais usa" titulo={QUADROS[favorita].titulo} texto={QUADROS[favorita].subtitulo} acao="Abrir" onClick={() => setModal(favorita as ModalKey)} />,
@@ -485,6 +510,20 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               subtitle={dashboard.gruposDeEstudo.some((g) => g.participo) ? dashboard.gruposDeEstudo.filter((g) => g.participo).map((g) => g.nome).join(", ") : "Estudos e leituras comentadas abertos"}
               onClick={() => setModal("grupos_estudo")}
             />
+          )}
+          {dashboard.pedagogos && (
+            <Link
+              href={`/grupos/${dashboard.pedagogos.grupoId}?aba=escala`}
+              className="flex flex-col items-start gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold dark:border-gray-800 dark:bg-gray-900"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
+                <Presentation size={16} />
+              </span>
+              <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">Turma de pedagogos</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                {dashboard.pedagogos.proxima ? `Apresenta em ${dataCurta(dashboard.pedagogos.proxima.data)}` : "Escala e planos de aula"}
+              </span>
+            </Link>
           )}
           <FeatureTile icon={<LifeBuoy size={16} />} title={t.tiles.ajuda.title} subtitle={t.tiles.ajuda.subtitle} onClick={() => setModal("ajuda")} />
           <FeatureTile

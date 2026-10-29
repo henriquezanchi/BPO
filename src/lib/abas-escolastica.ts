@@ -8,5 +8,6 @@ export const ABAS_ESCOLASTICA: readonly AbaEscolastica[] = [
   ["membros", "Membros"],
   ["avaliacao", "Avaliação dos instrutores", "/escolastica/avaliacao"],
   ["atendimentos", "Atendimentos dos instrutores", "/escolastica/atendimentos"],
+  ["pedagogos", "Turmas de pedagogos", "/escolastica/pedagogos"],
   ["orientacoes", "Orientações e gestão"],
 ];

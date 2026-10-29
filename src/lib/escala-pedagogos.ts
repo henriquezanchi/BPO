@@ -2,7 +2,7 @@ import "server-only";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { localInZone } from "@/lib/group-meetings";
-import { chaveTema, programaDaSigla, proximoTema, STATUS_NA_TRILHA, temasFeitos, type Programa } from "@/lib/pedagogos-programa";
+import { chaveTema, programaDaDisciplina, programaDaSigla, proximoTema, STATUS_NA_TRILHA, temasFeitos, type Programa } from "@/lib/pedagogos-programa";
 import { TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
 
 /**
@@ -155,4 +155,29 @@ export async function previaDaEscala(grupoId: string, opcoes: { programa: string
     // Trilha de todos da turma, para a tela marcar os temas já feitos e sugerir o próximo ao trocar a pessoa.
     trilhas: Object.fromEntries(trilhas),
   };
+}
+
+/**
+ * Para o Portal do Aluno (pedido do usuário 2026-10-29): a turma de pedagogos da pessoa e a próxima apresentação dela,
+ * com o prazo e a situação do plano. Quem entra na turma antes de ser instrutor no Mercúrio só chega à escala por aqui.
+ */
+export async function minhaTurmaDePedagogos(memberId: string, fuso: string) {
+  const turma = await db.classMembership.findFirst({
+    where: { memberId, role: "aluno", classGroup: { tipo: "PED", arquivadoEm: null } },
+    select: { classGroup: { select: { id: true, name: true } } },
+  });
+  if (!turma) return null;
+  const hoje = hojeNoFuso(fuso);
+  const a = await db.apresentacaoPedagogo.findFirst({
+    where: { pedagogoId: memberId, status: "agendada", data: { gte: hoje } },
+    orderBy: [{ data: "asc" }, { ordem: "asc" }],
+    select: { classGroupId: true, data: true, materiaSigla: true, tema: true, createdAt: true, plano: { select: { status: true } } },
+  });
+  const proxima = a && (() => {
+    const programa = programaDaDisciplina(a.materiaSigla);
+    const disciplina = programa && programa.disciplinas > 1 ? programa.temas.find((t) => t.sigla === a.materiaSigla)?.disciplina : null;
+    const prazo = prazoDoPlano(a.data, a.createdAt, fuso);
+    return { grupoId: a.classGroupId, data: a.data, tema: disciplina ? `${disciplina} · ${a.tema}` : a.tema, prazo, situacao: situacaoDoPlano(a.data, a.plano, hoje, prazo) };
+  })();
+  return { grupoId: proxima?.grupoId ?? turma.classGroup.id, nome: turma.classGroup.name, proxima };
 }
