@@ -54,11 +54,6 @@ export function DiarioCliente({ d }: { d: DiarioDaPessoa }) {
 
       <FogoInterno fogo={d.fogo} />
 
-      <figure className="rounded-2xl bg-na-green-light/40 p-4 dark:bg-emerald-950/20">
-        <blockquote className="text-[14px] leading-relaxed text-gray-800 italic dark:text-gray-200">“{d.frase.texto}”</blockquote>
-        <figcaption className="mt-1.5 text-[12px] font-semibold text-na-green-dark dark:text-emerald-400">— {d.frase.autor}</figcaption>
-      </figure>
-
       <Prologo key={`p-${d.data}`} d={d} pendente={pendente} rodar={rodar} />
       <Praticas key={`pr-${d.data}`} d={d} pendente={pendente} rodar={rodar} />
       <Epilogo key={`e-${d.data}`} d={d} pendente={pendente} rodar={rodar} />

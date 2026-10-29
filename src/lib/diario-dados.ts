@@ -1,6 +1,6 @@
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
-import { datasPermitidas, fogoInterno, fraseDoDia, hojeNoFuso, praticaNoDia } from "@/lib/diario";
+import { datasPermitidas, fogoInterno, hojeNoFuso, praticaNoDia } from "@/lib/diario";
 
 /**
  * Leitura do diário (servidor). Sempre da própria pessoa: ninguém mais lê o diário de outro (decisão do responsável,
@@ -27,7 +27,6 @@ export async function carregarDiario(m: { id: string; school: { uf: string | nul
       const r = recentes.find((x) => x.data === d);
       return { data: d, prologo: !!r?.prologoEm, epilogo: !!r?.epilogoEm };
     }),
-    frase: (dia?.frase as { texto: string; autor: string } | null) ?? fraseDoDia(data),
     dia: dia && {
       virtude: dia.virtude,
       compromisso: dia.compromisso,
