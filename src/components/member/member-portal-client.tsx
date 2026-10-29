@@ -25,6 +25,7 @@ import {
   PiggyBank,
   TriangleAlert,
   UsersRound,
+  Wallet,
 } from "lucide-react";
 import Image from "next/image";
 import { situacaoGeral } from "@/lib/situacao-contribuicao";
@@ -47,6 +48,7 @@ import { GafPanel, HelpPanel, VolunteerPanel } from "./misc-panels";
 import { GruposEstudoPanel } from "./grupos-estudo-panel";
 import { useAgendaComUlisses } from "@/lib/ulisses/navegador";
 import { AvisosGrupos } from "./avisos-grupos";
+import { AtalhoFavorito, DestaqueDoDia, registrarUso, useFavorita } from "./acesso-rapido";
 
 type ModalKey =
   | "cadastro"
@@ -60,7 +62,8 @@ type ModalKey =
   | "gaf"
   | "grupos_estudo"
   | "jornada"
-  | "transparencia";
+  | "transparencia"
+  | "economia";
 
 const DIA_VENCIMENTO = 10;
 
@@ -132,6 +135,107 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
   // Pagamento pelo Portal: escrita no Mercúrio liberada E conta Asaas da filial ligada (cobrança sempre pela subconta).
   const emBreve = member.school.language !== "en" && (!member.school.mercurioEscrita || !dashboard.cobraOnline);
 
+  // Cartões da contribuição e do Fortuna: no quadro "Economia" e, quando for o caso, no acesso rápido (2026-10-29).
+  const cartaoContribuicao = (
+    <div
+      data-tour-id="contribuicao-status"
+      className={`flex flex-col gap-3 rounded-2xl border p-4 ${
+        isDelayed
+          ? "border-na-danger/40 bg-na-danger-light dark:border-red-900 dark:bg-red-950/30"
+          : semDesconto
+            ? "border-na-warning/40 bg-na-warning-light dark:border-amber-900 dark:bg-amber-950/30"
+            : "border-na-success/40 bg-na-success-light dark:border-emerald-900 dark:bg-emerald-950/30"
+      }`}
+    >
+      <div className="flex items-center gap-2.5">
+        <div
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+            isDelayed
+              ? "bg-na-danger-light text-na-danger-dark dark:bg-red-900/50 dark:text-red-300"
+              : semDesconto
+                ? "bg-na-warning-light text-na-warning-dark dark:bg-amber-900/50 dark:text-amber-300"
+                : "bg-na-success-light text-na-success-dark dark:bg-emerald-900/50 dark:text-emerald-300"
+          }`}
+        >
+          {isDelayed || semDesconto ? <TriangleAlert size={16} /> : <CheckCircle2 size={16} />}
+        </div>
+        <div>
+          <h4
+            className={`text-[13px] font-bold ${
+              isDelayed ? "text-na-danger-dark dark:text-red-300" : semDesconto ? "text-na-warning-dark dark:text-amber-300" : "text-na-success-dark dark:text-emerald-300"
+            }`}
+          >
+            {isDelayed ? t.home.contribuicaoPendente : semDesconto ? t.home.contribuicaoSemDesconto : t.home.contribuicaoEmDia}
+          </h4>
+          <p className="mt-0.5 text-xs text-gray-700 dark:text-gray-400">
+            {semDesconto
+              ? t.home.mensagemSemDesconto(member.name.split(" ")[0])
+              : situacao === "a_vencer"
+                ? t.home.mensagemAVencer(member.name.split(" ")[0])
+                : `${t.home.ola(member.name.split(" ")[0])} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
+          </p>
+          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-500">
+            {proximoVencimento.diasRestantes < 0
+              ? t.home.venceuHa(Math.abs(proximoVencimento.diasRestantes), proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1)
+              : proximoVencimento.diasRestantes === 0
+                ? t.home.venceHoje
+                : t.home.proximoVencimento(proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1, proximoVencimento.diasRestantes)}
+          </p>
+        </div>
+      </div>
+
+      <button
+        onClick={() => setModal("situacao")}
+        className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold transition ${
+          isDelayed
+            ? "bg-na-danger text-white hover:bg-red-700"
+            : semDesconto
+              ? "bg-na-warning-dark text-white hover:opacity-90 dark:bg-amber-600"
+              : "bg-white/70 text-na-success-dark hover:bg-white dark:bg-black/20 dark:text-emerald-300"
+        }`}
+      >
+        {t.home.verSituacao}
+      </button>
+      {!somenteConsulta && (
+        <p className="text-center text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
+          Pelo Portal, sua contribuição é atualizada assim que o pagamento é confirmado.
+        </p>
+      )}
+      {emBreve && <p className="text-center text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">Pagamento pelo Portal: em breve na sua filial.</p>}
+    </div>
+  );
+  const cartaoFortuna = (
+    <div data-tour-id="fortuna">
+      <FortunaWalletCard
+        balances={fortunaBalances}
+        loading={fortunaCarregando}
+        onAdicionarCreditos={somenteConsulta ? undefined : () => setModal("fortuna_recarga")}
+        onAtualizar={buscarSaldoFortuna}
+      />
+    </div>
+  );
+  // Contribuição no acesso rápido: atrasada, sem desconto ou a 5 dias (ou menos) do vencimento sem pagamento.
+  const contribuicaoUrgente = isDelayed || semDesconto || (situacao === "a_vencer" && proximoVencimento.diasRestantes <= 5);
+  const QUADROS: Record<string, { icone: React.ReactNode; titulo: string; subtitulo: string }> = {
+    agenda: { icone: <CalendarCheck size={18} />, titulo: t.tiles.agenda.title, subtitulo: agendaItems.length > 0 ? t.tiles.agenda.subtitleComItens(agendaItems.length) : t.tiles.agenda.subtitleSemItens },
+    estudos: { icone: <BookOpen size={18} />, titulo: t.tiles.estudos.title, subtitulo: t.tiles.estudos.subtitle },
+    voluntariado: { icone: <HandHeart size={18} />, titulo: t.tiles.voluntariado.title, subtitulo: t.tiles.voluntariado.subtitle },
+    gaf: { icone: <UsersRound size={18} />, titulo: dashboard.meusGafs.length ? dashboard.meusGafs.map((g) => g.nome).join(", ") : t.tiles.gaf.title, subtitulo: t.tiles.gaf.subtitle },
+    grupos_estudo: { icone: <BookOpenText size={18} />, titulo: "Grupos de estudo", subtitulo: "Estudos e leituras comentadas" },
+    jornada: { icone: <Compass size={18} />, titulo: t.tiles.jornada.title, subtitulo: t.tiles.jornada.subtitleSemStreak },
+    transparencia: { icone: <PiggyBank size={18} />, titulo: t.tiles.transparencia.title, subtitulo: t.tiles.transparencia.subtitle },
+    ajuda: { icone: <LifeBuoy size={18} />, titulo: t.tiles.ajuda.title, subtitulo: t.tiles.ajuda.subtitle },
+  };
+  const favorita = useFavorita(member.id, ["economia", ...Object.keys(QUADROS)]);
+  useEffect(() => {
+    if (modal) registrarUso(member.id, modal);
+  }, [modal, member.id]);
+  const agoraMs = new Date().setHours(0, 0, 0, 0);
+  const proximosEventos = agendaItems
+    .flatMap((i) => (i.kind === "evento" && i.date.getTime() >= agoraMs && i.status !== "cancelado" ? [{ id: i.id, titulo: i.title, data: i.date }] : []))
+    .sort((a, b) => a.data.getTime() - b.data.getTime())
+    .slice(0, 3);
+
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
@@ -201,88 +305,26 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
         <AvisosGrupos avisos={dashboard.avisosGrupos} />
         <AtivarNotificacoes aguardar={tourVisivel} />
 
-        {/* Status financeiro */}
-        <div
-          data-tour-id="contribuicao-status"
-          className={`flex flex-col gap-3 rounded-2xl border p-4 ${
-            isDelayed
-              ? "border-na-danger/40 bg-na-danger-light dark:border-red-900 dark:bg-red-950/30"
-              : semDesconto
-                ? "border-na-warning/40 bg-na-warning-light dark:border-amber-900 dark:bg-amber-950/30"
-                : "border-na-success/40 bg-na-success-light dark:border-emerald-900 dark:bg-emerald-950/30"
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                isDelayed
-                  ? "bg-na-danger-light text-na-danger-dark dark:bg-red-900/50 dark:text-red-300"
-                  : semDesconto
-                    ? "bg-na-warning-light text-na-warning-dark dark:bg-amber-900/50 dark:text-amber-300"
-                    : "bg-na-success-light text-na-success-dark dark:bg-emerald-900/50 dark:text-emerald-300"
-              }`}
-            >
-              {isDelayed || semDesconto ? <TriangleAlert size={16} /> : <CheckCircle2 size={16} />}
-            </div>
-            <div>
-              <h4
-                className={`text-[13px] font-bold ${
-                  isDelayed ? "text-na-danger-dark dark:text-red-300" : semDesconto ? "text-na-warning-dark dark:text-amber-300" : "text-na-success-dark dark:text-emerald-300"
-                }`}
-              >
-                {isDelayed ? t.home.contribuicaoPendente : semDesconto ? t.home.contribuicaoSemDesconto : t.home.contribuicaoEmDia}
-              </h4>
-              <p className="mt-0.5 text-xs text-gray-700 dark:text-gray-400">
-                {semDesconto
-                  ? t.home.mensagemSemDesconto(member.name.split(" ")[0])
-                  : situacao === "a_vencer"
-                    ? t.home.mensagemAVencer(member.name.split(" ")[0])
-                    : `${t.home.ola(member.name.split(" ")[0])} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
-              </p>
-              <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-500">
-                {proximoVencimento.diasRestantes < 0
-                  ? t.home.venceuHa(Math.abs(proximoVencimento.diasRestantes), proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1)
-                  : proximoVencimento.diasRestantes === 0
-                    ? t.home.venceHoje
-                    : t.home.proximoVencimento(proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1, proximoVencimento.diasRestantes)}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setModal("situacao")}
-            className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold transition ${
-              isDelayed
-                ? "bg-na-danger text-white hover:bg-red-700"
-                : semDesconto
-                  ? "bg-na-warning-dark text-white hover:opacity-90 dark:bg-amber-600"
-                  : "bg-white/70 text-na-success-dark hover:bg-white dark:bg-black/20 dark:text-emerald-300"
-            }`}
-          >
-            {t.home.verSituacao}
-          </button>
-          {!somenteConsulta && (
-            <p className="text-center text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
-              Pelo Portal, sua contribuição é atualizada assim que o pagamento é confirmado.
-            </p>
+        {/* Acesso rápido (pedido do usuário 2026-10-29): contribuição perto do vencimento, o quadro mais usado ou,
+            sem nada a destacar, a frase do dia (alternando com o Acrópole Play) e os próximos eventos. */}
+        <section aria-label="Acesso rápido" className="flex flex-col gap-3">
+          {contribuicaoUrgente && cartaoContribuicao}
+          {favorita === "economia" && !contribuicaoUrgente && cartaoFortuna}
+          {favorita && favorita !== "economia" && QUADROS[favorita] && <AtalhoFavorito {...QUADROS[favorita]} onClick={() => setModal(favorita as ModalKey)} />}
+          {!contribuicaoUrgente && !favorita && (
+            <DestaqueDoDia frase={dashboard.fraseDoDia} acropolePlay={dashboard.recursos.acropole_play} eventos={proximosEventos} abrirAgenda={() => setModal("agenda")} />
           )}
-          {emBreve && <p className="text-center text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">Pagamento pelo Portal: em breve na sua filial.</p>}
-        </div>
-
-        {/* Carteira Fortuna */}
-        <div data-tour-id="fortuna">
-          <FortunaWalletCard
-            balances={fortunaBalances}
-            loading={fortunaCarregando}
-            onAdicionarCreditos={somenteConsulta ? undefined : () => setModal("fortuna_recarga")}
-            onAtualizar={buscarSaldoFortuna}
-          />
-        </div>
-
+        </section>
 
         {/* Grid de funcionalidades */}
         <section className="grid grid-cols-2 gap-2.5">
-          <FeatureTile icon={<Leaf size={16} />} title={t.tiles.contribuicao.title} subtitle={t.tiles.contribuicao.subtitle} onClick={() => setModal("contribuicao")} />
+          <FeatureTile
+            tourId="economia"
+            icon={<Wallet size={16} />}
+            title={t.tiles.economia.title}
+            subtitle={isDelayed ? t.home.contribuicaoPendente : semDesconto ? t.home.contribuicaoSemDesconto : t.tiles.economia.subtitle}
+            onClick={() => setModal("economia")}
+          />
           <FeatureTile
             tourId="agenda"
             icon={<CalendarCheck size={16} />}
@@ -353,8 +395,8 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
             </span>
           </a>
         )}
-        {/* Frase do dia (pedido do usuário 2026-10-29), embaixo de tudo; a mesma do diário. */}
-        {member.school.language !== "en" && (
+        {/* Frase do dia (pedido do usuário 2026-10-29), embaixo de tudo, quando não está no acesso rápido. */}
+        {member.school.language !== "en" && (contribuicaoUrgente || !!favorita) && (
           <figure className="mt-6 mb-16 px-2 text-center">
             <blockquote className="text-[13px] leading-relaxed text-gray-600 italic dark:text-gray-400">“{dashboard.fraseDoDia.texto}”</blockquote>
             <figcaption className="mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-500">
@@ -392,6 +434,23 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
               addressZip={member.addressZip}
               avatarUrl={member.avatarUrl}
             />
+          )}
+          {modal === "economia" && (
+            <div className="flex flex-col gap-4">
+              {cartaoContribuicao}
+              <button onClick={() => setModal("contribuicao")} className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:border-na-gold dark:border-gray-800 dark:bg-gray-900">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
+                    <Leaf size={16} />
+                  </span>
+                  <span>
+                    <span className="block text-xs font-semibold text-gray-900 dark:text-gray-100">{t.tiles.contribuicao.title}</span>
+                    <span className="block text-[10px] text-gray-500 dark:text-gray-400">{t.tiles.contribuicao.subtitle}</span>
+                  </span>
+                </span>
+              </button>
+              {cartaoFortuna}
+            </div>
           )}
           {modal === "contribuicao" && (
             <MyContributionPanel

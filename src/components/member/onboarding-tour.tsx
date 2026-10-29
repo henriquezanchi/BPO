@@ -1,7 +1,7 @@
 "use client";
 
 import { marcarTourConcluido } from "@/lib/actions/misc-request-actions";
-import { Calendar, Coffee, Compass, Wallet, X } from "lucide-react";
+import { Calendar, Compass, Wallet, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 const PASSOS = [
@@ -13,15 +13,9 @@ const PASSOS = [
   },
   {
     icon: Wallet,
-    titulo: "Nunca mais esqueça de pagar",
-    texto: 'Toque em "Ver Situação" e ative o "Débito Automático" — depois de autorizar uma vez, sua mensalidade é cobrada sozinha todo mês.',
-    alvo: "contribuicao-status",
-  },
-  {
-    icon: Coffee,
-    titulo: "Carteira Fortuna",
-    texto: "Recarregue sua carteira da lanchonete direto por aqui e evite fila na hora do lanche.",
-    alvo: "fortuna",
+    titulo: "Economia",
+    texto: "Sua contribuição e a carteira Fortuna da lanchonete ficam aqui. Perto do vencimento, a contribuição aparece logo no topo.",
+    alvo: "economia",
   },
   {
     icon: Calendar,

@@ -40,6 +40,7 @@ export interface Dictionary {
     grupos_estudo: string;
     jornada: string;
     transparencia: string;
+    economia: string;
   };
   home: {
     portalDoMembro: string;
@@ -64,6 +65,7 @@ export interface Dictionary {
   };
   tiles: {
     contribuicao: { title: string; subtitle: string };
+    economia: { title: string; subtitle: string };
     agenda: { title: string; subtitleComItens: (n: number) => string; subtitleSemItens: string };
     estudos: { title: string; subtitle: string };
     voluntariado: { title: string; subtitle: string };
@@ -101,6 +103,7 @@ const pt: Dictionary = {
     gaf: "Conhecer o GAF",
     grupos_estudo: "Grupos de estudo e leituras",
     transparencia: "Transparência Financeira",
+    economia: "Economia",
     jornada: "Minha Jornada",
   },
   home: {
@@ -126,6 +129,7 @@ const pt: Dictionary = {
   },
   tiles: {
     contribuicao: { title: "Minha Contribuição", subtitle: "Composição e apoios" },
+    economia: { title: "Economia", subtitle: "Contribuição e carteira Fortuna" },
     agenda: {
       title: "Agenda & Eventos",
       subtitleComItens: (n) => `${n} próximos`,
@@ -174,6 +178,7 @@ const en: Dictionary = {
     gaf: "Learn about GAF",
     grupos_estudo: "Study groups",
     transparencia: "Financial Transparency",
+    economia: "Finances",
     jornada: "My Journey",
   },
   home: {
@@ -199,6 +204,7 @@ const en: Dictionary = {
   },
   tiles: {
     contribuicao: { title: "My Contribution", subtitle: "Breakdown and support items" },
+    economia: { title: "Finances", subtitle: "Contribution and Fortuna wallet" },
     agenda: {
       title: "Calendar & Events",
       subtitleComItens: (n) => `${n} upcoming`,
