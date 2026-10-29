@@ -1,17 +1,17 @@
 "use client";
 
-import { BookOpen, BookOpenText, Clapperboard, PlaySquare } from "lucide-react";
+import { BookOpen, BookOpenText, Castle, Clapperboard, PlaySquare } from "lucide-react";
 
 /** Acrópole Play e Apostilas só aparecem se a filial liberou (ver recursos-filial.ts). */
 export function StudyAreaPanel({
   mostrarAcropolePlay = false,
-  mostrarBiblioteca = false,
+  mostrarBastioes = false,
 }: {
   mostrarAcropolePlay?: boolean;
   /** Apostilas: aceito e ignorado até haver conteúdo (o botão foi escondido em 26/10/2026). */
   mostrarApostilas?: boolean;
-  /** Só membros (2º nível em diante); N1 e programa complementar não veem. */
-  mostrarBiblioteca?: boolean;
+  /** Bastiões: só membros (2º nível em diante, FV, HD, dirigentes, provacionistas); N1 e programa complementar não veem. */
+  mostrarBastioes?: boolean;
 }) {
 
   return (
@@ -33,14 +33,23 @@ export function StudyAreaPanel({
           <Clapperboard size={16} /> Acrópole Play — vídeos e séries
         </a>
         )}
-        {mostrarBiblioteca && (
+        {/* Biblioteca da Nova Acrópole Brasil, para todos (29/10/2026; antes o botão levava ao Bastiões, só para membros). */}
+        <a
+          href="https://biblioteca.acropolebrasil.com.br/"
+          target="_blank"
+          rel="noreferrer"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+        >
+          <BookOpenText size={16} /> Acessar Biblioteca
+        </a>
+        {mostrarBastioes && (
           <a
             href="https://bastiao.oinabn.com.br/"
             target="_blank"
             rel="noreferrer"
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
           >
-            <BookOpenText size={16} /> Acessar Biblioteca
+            <Castle size={16} /> Bastiões
           </a>
         )}
         {/* Apostilas: botão escondido até haver conteúdo (26/10/2026; antes só dizia "em breve"). `mostrarApostilas` fica para quando houver. */}
