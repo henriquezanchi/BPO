@@ -2,14 +2,15 @@ import "server-only";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { localInZone } from "@/lib/group-meetings";
-import { catalogoDaMateria, TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
+import { chaveTema, programaDaSigla, proximoTema, STATUS_NA_TRILHA, temasFeitos, type Programa } from "@/lib/pedagogos-programa";
+import { TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
 
 /**
  * Escala de apresentações da turma de pedagogos (pedido do usuário 2026-10-26): os encontros são semanais, com
  * duração variável; cada pedagogo apresenta sua aula (15 min) ao instrutor dos pedagogos. A escala diz quem
- * apresenta, em que dia e qual tema. O tema é a sequência dos temas da disciplina escolhida (catálogo em
- * lib/temas-curriculo.ts), continuando de onde a última apresentação daquela disciplina parou. O plano de aula
- * é entregue até 7 dias antes da apresentação.
+ * apresenta, em que dia e qual tema. Cada pedagogo segue a própria trilha do programa (N1: todos os temas de Ética,
+ * Sociedade e Filosofia da História — lib/pedagogos-programa.ts, pedido do usuário 2026-10-29): apresenta o próximo
+ * tema que ainda não apresentou, sem ligação com os colegas. O plano de aula é entregue até 7 dias antes.
  */
 
 export const DIAS_ANTES_PLANO = 7;
@@ -37,17 +38,28 @@ export function situacaoDoPlano(data: string, plano: { status: string } | null, 
   return hoje > prazoDoPlano(data) ? "atrasado" : "no_prazo";
 }
 
-/** Próximos `n` temas da disciplina na turma, continuando depois do último já escalado (volta ao início no fim). */
-export async function proximosTemas(grupoId: string, sigla: string, n: number) {
-  const catalogo = catalogoDaMateria(sigla);
-  if (!catalogo?.temas.length) return [];
-  const ultima = await db.apresentacaoPedagogo.findFirst({
-    where: { classGroupId: grupoId, materiaSigla: sigla, status: { not: "cancelada" } },
-    orderBy: [{ data: "desc" }, { ordem: "desc" }],
-    select: { tema: true },
+/** Temas da trilha de cada pessoa (todas as turmas): marcados ou feitos contam; "faltou" e "cancelada" voltam para a fila. */
+export async function trilhasDosPedagogos(ids: string[], somenteApresentadas = false) {
+  const linhas = await db.apresentacaoPedagogo.findMany({
+    where: { pedagogoId: { in: ids }, status: somenteApresentadas ? "apresentada" : { in: STATUS_NA_TRILHA } },
+    select: { pedagogoId: true, materiaSigla: true, tema: true },
   });
-  const i = ultima ? catalogo.temas.findIndex((t) => t.titulo === ultima.tema) : -1;
-  return Array.from({ length: n }, (_, k) => catalogo.temas[(i + 1 + k) % catalogo.temas.length]);
+  const por = new Map<string, string[]>(ids.map((id) => [id, []]));
+  for (const l of linhas) por.get(l.pedagogoId)?.push(chaveTema(l.materiaSigla, l.tema));
+  return por;
+}
+
+/** Progresso de cada pessoa no programa: temas já apresentados e o próximo da trilha. */
+export async function progressoNoPrograma(programa: Programa, pessoas: { id: string; name: string }[]) {
+  const ids = pessoas.map((p) => p.id);
+  const [apresentadas, naTrilha] = await Promise.all([trilhasDosPedagogos(ids, true), trilhasDosPedagogos(ids)]);
+  return pessoas.map((p) => ({
+    id: p.id,
+    nome: p.name,
+    apresentados: temasFeitos(programa, apresentadas.get(p.id) ?? []),
+    marcados: temasFeitos(programa, naTrilha.get(p.id) ?? []),
+    proximo: proximoTema(programa, naTrilha.get(p.id) ?? []),
+  }));
 }
 
 /**
@@ -89,15 +101,21 @@ export async function pedagogosEmRodizio(grupoId: string) {
     .sort((a, b) => (ultimaDe.get(a.id) ?? "").localeCompare(ultimaDe.get(b.id) ?? "") || a.name.localeCompare(b.name, "pt-BR"));
 }
 
-/** Monta (sem gravar) a próxima rodada: todos os pedagogos uma vez, `porEncontro` por data, temas em sequência. */
-export async function previaDaEscala(grupoId: string, opcoes: { sigla: string; inicio: string; porEncontro: number; diaSemana?: number }) {
+/**
+ * Monta (sem gravar) a próxima rodada: cada pedagogo que ainda não concluiu o programa apresenta uma vez, o próximo
+ * tema da própria trilha; `porEncontro` por data. Quem já tem todos os temas marcados ou feitos fica de fora.
+ */
+export async function previaDaEscala(grupoId: string, opcoes: { programa: string; inicio: string; porEncontro: number; diaSemana?: number }) {
+  const programa = programaDaSigla(opcoes.programa);
   const grupo = await db.classGroup.findUniqueOrThrow({ where: { id: grupoId }, select: { school: { select: { uf: true } } } });
   const fuso = fusoDaEscola(grupo.school.uf);
-  const pedagogos = await pedagogosEmRodizio(grupoId);
-  if (!pedagogos.length) return { fuso, linhas: [] };
+  const todos = await pedagogosEmRodizio(grupoId);
+  if (!programa || !todos.length) return { fuso, linhas: [], concluiram: [], trilhas: {} };
+  const trilhas = await trilhasDosPedagogos(todos.map((p) => p.id));
+  const comTema = todos.map((p) => ({ ...p, tema: proximoTema(programa, trilhas.get(p.id) ?? []) }));
+  const pedagogos = comTema.filter((p) => p.tema);
   const porEncontro = Math.max(1, Math.min(6, Math.floor(opcoes.porEncontro)));
-  const datas = await datasDosEncontros(grupoId, fuso, opcoes.inicio, Math.ceil(pedagogos.length / porEncontro), opcoes.diaSemana);
-  const temas = await proximosTemas(grupoId, opcoes.sigla, pedagogos.length);
+  const datas = pedagogos.length ? await datasDosEncontros(grupoId, fuso, opcoes.inicio, Math.ceil(pedagogos.length / porEncontro), opcoes.diaSemana) : [];
   return {
     fuso,
     linhas: pedagogos.map((p, i) => ({
@@ -105,9 +123,12 @@ export async function previaDaEscala(grupoId: string, opcoes: { sigla: string; i
       pedagogo: p.name,
       data: datas[Math.floor(i / porEncontro)],
       ordem: (i % porEncontro) + 1,
-      materiaSigla: opcoes.sigla,
-      tema: temas[i]?.titulo ?? "Tema a definir",
-      topicos: temas[i]?.topicos ?? [],
+      materiaSigla: p.tema!.sigla,
+      tema: p.tema!.titulo,
+      topicos: p.tema!.topicos,
     })),
+    concluiram: comTema.filter((p) => !p.tema).map((p) => p.name),
+    // Trilha de todos da turma, para a tela marcar os temas já feitos e sugerir o próximo ao trocar a pessoa.
+    trilhas: Object.fromEntries(trilhas),
   };
 }

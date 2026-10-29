@@ -13,6 +13,7 @@ import {
   revisarPlano,
   salvarPlano,
 } from "@/lib/actions/escala-actions";
+import { chaveTema, programaDaDisciplina, proximoTema, temasFeitos, type Programa, type TemaDoPrograma } from "@/lib/pedagogos-programa";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { AlertTriangle, CalendarClock, CheckCircle2, FileText, Loader2, Paperclip, Pencil, Sparkles, Trash2, Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -43,6 +44,7 @@ export type ApresentacaoView = {
   plano: PlanoView | null;
 };
 type Disciplina = { sigla: string; nome: string; temas: { titulo: string; topicos: string[] }[] };
+export type ProgressoView = { programa: string; total: number; pessoas: { id: string; nome: string; apresentados: number; marcados: number; proximo: string | null }[] };
 type Linha = { pedagogoId: string; pedagogo: string; data: string; ordem: number; materiaSigla: string; tema: string; topicos: string[] };
 
 const CARTAO = "rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900";
@@ -57,6 +59,12 @@ const PONTOS = [
   ["consequencias", "Consequências quando essa ideia não é vivida", "O que acontece quando ela falta."],
 ] as const;
 
+/** "Ética · 1. Filosofia natural": a disciplina na frente quando o programa tem mais de uma (os números se repetem). */
+const temaComDisciplina = (a: { materiaSigla: string | null; tema: string }) => {
+  const p = programaDaDisciplina(a.materiaSigla);
+  const d = p && p.disciplinas > 1 ? p.temas.find((t) => t.sigla === a.materiaSigla)?.disciplina : null;
+  return d ? `${d} · ${a.tema}` : a.tema;
+};
 const dataBR = (iso: string) => {
   const d = new Date(`${iso}T12:00:00Z`);
   return `${DIAS[d.getUTCDay()]}, ${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
@@ -80,6 +88,8 @@ export function EscalaPedagogos({
   podeGerir,
   pedagogos,
   disciplinas,
+  programas,
+  progresso,
   apresentacoes,
 }: {
   grupoId: string;
@@ -88,6 +98,8 @@ export function EscalaPedagogos({
   podeGerir: boolean;
   pedagogos: { id: string; nome: string }[];
   disciplinas: Disciplina[];
+  programas: Programa[];
+  progresso: ProgressoView[];
   apresentacoes: ApresentacaoView[];
 }) {
   const router = useRouter();
@@ -153,7 +165,9 @@ export function EscalaPedagogos({
         </p>
       )}
 
-      {podeGerir && <GerarRodada grupoId={grupoId} hoje={hoje} disciplinas={disciplinas} pedagogos={pedagogos} pendente={pendente} rodar={rodar} />}
+      {podeGerir && <GerarRodada grupoId={grupoId} hoje={hoje} programas={programas} pedagogos={pedagogos} pendente={pendente} rodar={rodar} />}
+
+      {progresso.some((p) => p.pessoas.length > 0) && <ProgressoPrograma progresso={progresso} />}
 
       <section className="flex flex-col gap-2">
         <h2 className={TITULO}>Escala</h2>
@@ -182,7 +196,7 @@ export function EscalaPedagogos({
               {[...passadas].reverse().map((a) => (
                 <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span className="min-w-0 text-gray-800 dark:text-gray-200">
-                    <b>{a.pedagogo}</b> · {a.tema} <span className="text-gray-500">· {dataBR(a.data)}</span>
+                    <b>{a.pedagogo}</b> · {temaComDisciplina(a)} <span className="text-gray-500">· {dataBR(a.data)}</span>
                   </span>
                   <span className="flex items-center gap-2">
                     <span className="font-semibold text-gray-500 dark:text-gray-400">
@@ -207,13 +221,16 @@ export function EscalaPedagogos({
 
 type Rodar = (acao: () => Promise<{ ok: boolean; error?: string }>, depois?: () => void) => void;
 
-function GerarRodada({ grupoId, hoje, disciplinas, pedagogos, pendente, rodar }: { grupoId: string; hoje: string; disciplinas: Disciplina[]; pedagogos: { id: string; nome: string }[]; pendente: boolean; rodar: Rodar }) {
+function GerarRodada({ grupoId, hoje, programas, pedagogos, pendente, rodar }: { grupoId: string; hoje: string; programas: Programa[]; pedagogos: { id: string; nome: string }[]; pendente: boolean; rodar: Rodar }) {
   const [aberto, setAberto] = useState(false);
-  const [sigla, setSigla] = useState(disciplinas[0]?.sigla ?? "");
+  const [sigla, setSigla] = useState(programas[0]?.sigla ?? "");
   const [inicio, setInicio] = useState(() => new Date(Date.parse(`${hoje}T12:00:00Z`) + 8 * 864e5).toISOString().slice(0, 10));
   const [porEncontro, setPorEncontro] = useState(2);
   const [linhas, setLinhas] = useState<Linha[] | null>(null);
-  const temas = disciplinas.find((d) => d.sigla === sigla)?.temas ?? [];
+  const [trilhas, setTrilhas] = useState<Record<string, string[]>>({});
+  const [concluiram, setConcluiram] = useState<string[]>([]);
+  const programa = programas.find((p) => p.sigla === sigla);
+  const disciplinas = programa ? [...new Set(programa.temas.map((t) => t.disciplina))] : [];
 
   if (!aberto)
     return (
@@ -223,12 +240,16 @@ function GerarRodada({ grupoId, hoje, disciplinas, pedagogos, pendente, rodar }:
     );
   return (
     <section className={`${CARTAO} flex flex-col gap-3 border-na-green/40`}>
-      <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100">Próxima rodada: todos os pedagogos apresentam uma vez</p>
+      <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100">Próxima rodada: cada pedagogo apresenta o próximo tema da própria trilha</p>
       <div className="grid gap-3 sm:grid-cols-3">
         <label className={ROTULO}>
-          Disciplina
+          Programa
           <select value={sigla} onChange={(e) => { setSigla(e.target.value); setLinhas(null); }} className={CAMPO}>
-            {disciplinas.map((d) => <option key={d.sigla} value={d.sigla}>{d.nome}</option>)}
+            {programas.map((p) => (
+              <option key={p.sigla} value={p.sigla}>
+                {p.nome} · {p.temas.length} temas
+              </option>
+            ))}
           </select>
         </label>
         <label className={ROTULO}>
@@ -243,15 +264,19 @@ function GerarRodada({ grupoId, hoje, disciplinas, pedagogos, pendente, rodar }:
         </label>
       </div>
       <p className="text-[11px] text-gray-500 dark:text-gray-400">
-        As datas seguem os encontros marcados na aba Encontros (ou semanais, no dia da data de início). Os temas continuam a sequência da disciplina de onde a última apresentação parou. Quem apresentou há mais tempo vem primeiro.
+        Para concluir, cada pedagogo apresenta todos os temas de todas as disciplinas do programa{programa && programa.disciplinas > 1 ? ` (${disciplinas.join(", ")})` : ""}. Cada um segue a própria trilha, na ordem do programa, sem ligação com os colegas; quem não apresentou repete o tema. As datas seguem os encontros da aba Encontros (ou semanais, no dia da data de início). Quem apresentou há mais tempo vem primeiro.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
           disabled={pendente}
           onClick={() =>
             rodar(async () => {
-              const r = await preverEscala(grupoId, { sigla, inicio, porEncontro });
-              if (r.ok) setLinhas(r.linhas);
+              const r = await preverEscala(grupoId, { programa: sigla, inicio, porEncontro });
+              if (r.ok) {
+                setLinhas(r.linhas);
+                setTrilhas(r.trilhas);
+                setConcluiram(r.concluiram);
+              }
               return r;
             })
           }
@@ -261,19 +286,61 @@ function GerarRodada({ grupoId, hoje, disciplinas, pedagogos, pendente, rodar }:
         </button>
         <button onClick={() => { setAberto(false); setLinhas(null); }} className="px-2 text-[13px] font-semibold text-gray-500">Cancelar</button>
       </div>
-      {linhas && (
+      {linhas && programa && (
         <div className="flex flex-col gap-2">
-          <p className="text-[12px] text-gray-600 dark:text-gray-300">Ajuste o que quiser antes de gravar:</p>
+          {concluiram.length > 0 && (
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-[12px] text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+              Já têm todos os temas marcados ou apresentados (ficam fora): {concluiram.map((n) => n.split(" ").slice(0, 2).join(" ")).join(", ")}.
+            </p>
+          )}
+          <p className="text-[12px] text-gray-600 dark:text-gray-300">Ajuste o que quiser antes de gravar. ✓ = tema que a pessoa já apresentou ou tem marcado.</p>
           {linhas.map((l, i) => {
             const mudar = (parte: Partial<Linha>) => setLinhas((atual) => atual!.map((x, k) => (k === i ? { ...x, ...parte } : x)));
+            const feitos = new Set(trilhas[l.pedagogoId] ?? []);
+            const temaDe = (t: TemaDoPrograma) => ({ materiaSigla: t.sigla, tema: t.titulo, topicos: t.topicos });
             return (
               <div key={i} className="grid gap-2 rounded-xl border border-gray-200 p-2 sm:grid-cols-[1fr_9rem_1.4fr] dark:border-gray-800">
-                <select aria-label="Pedagogo" value={l.pedagogoId} onChange={(e) => mudar({ pedagogoId: e.target.value, pedagogo: pedagogos.find((p) => p.id === e.target.value)?.nome ?? "" })} className={CAMPO}>
-                  {pedagogos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                </select>
+                <div className="flex flex-col gap-0.5">
+                  <select
+                    aria-label="Pedagogo"
+                    value={l.pedagogoId}
+                    onChange={(e) => {
+                      const proximo = proximoTema(programa, trilhas[e.target.value] ?? []);
+                      mudar({ pedagogoId: e.target.value, pedagogo: pedagogos.find((p) => p.id === e.target.value)?.nome ?? "", ...(proximo ? temaDe(proximo) : {}) });
+                    }}
+                    className={CAMPO}
+                  >
+                    {pedagogos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                  </select>
+                  <span className="px-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    {temasFeitos(programa, feitos)} de {programa.temas.length} temas na trilha
+                  </span>
+                </div>
                 <input aria-label="Data" type="date" value={l.data} onChange={(e) => mudar({ data: e.target.value })} className={CAMPO} />
-                <select aria-label="Tema" value={l.tema} onChange={(e) => mudar({ tema: e.target.value, topicos: temas.find((t) => t.titulo === e.target.value)?.topicos ?? [] })} className={CAMPO}>
-                  {temas.map((t) => <option key={t.titulo} value={t.titulo}>{t.titulo}</option>)}
+                <select
+                  aria-label="Tema"
+                  value={chaveTema(l.materiaSigla, l.tema)}
+                  onChange={(e) => {
+                    const t = programa.temas.find((x) => chaveTema(x.sigla, x.titulo) === e.target.value);
+                    if (t) mudar(temaDe(t));
+                  }}
+                  className={CAMPO}
+                >
+                  {disciplinas.map((d) => (
+                    <optgroup key={d} label={d}>
+                      {programa.temas
+                        .filter((t) => t.disciplina === d)
+                        .map((t) => {
+                          const k = chaveTema(t.sigla, t.titulo);
+                          return (
+                            <option key={k} value={k}>
+                              {feitos.has(k) ? "✓ " : ""}
+                              {t.titulo}
+                            </option>
+                          );
+                        })}
+                    </optgroup>
+                  ))}
                 </select>
               </div>
             );
@@ -291,6 +358,45 @@ function GerarRodada({ grupoId, hoje, disciplinas, pedagogos, pendente, rodar }:
   );
 }
 
+/** Progresso de cada pedagogo no programa (pedido do usuário 2026-10-29): conclui quem apresentou todos os temas. */
+function ProgressoPrograma({ progresso }: { progresso: ProgressoView[] }) {
+  return (
+    <section className={CARTAO}>
+      <CollapsibleSection defaultOpen={false} title={<h2 className={TITULO}>Progresso na formação</h2>}>
+        <div className="mt-2 flex flex-col gap-4">
+          {progresso.map((p) => (
+            <div key={p.programa} className="flex flex-col gap-2">
+              <p className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">
+                {p.programa} · {p.total} temas
+              </p>
+              <ul className="flex flex-col gap-2.5">
+                {p.pessoas.map((x) => {
+                  const concluiu = x.apresentados >= p.total;
+                  const soMarcados = x.marcados - x.apresentados;
+                  return (
+                    <li key={x.id} className="flex flex-col gap-1">
+                      <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-[12px]">
+                        <b className="text-gray-900 dark:text-gray-100">{x.nome}</b>
+                        <span className={concluiu ? "font-semibold text-emerald-700 dark:text-emerald-300" : "text-gray-500 dark:text-gray-400"}>
+                          {concluiu ? "Concluiu" : `${x.apresentados} de ${p.total} apresentados${soMarcados > 0 ? ` · ${soMarcados} marcado${soMarcados > 1 ? "s" : ""}` : ""}`}
+                        </span>
+                      </span>
+                      <span className="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                        <span className="block h-full rounded-full bg-na-green" style={{ width: `${Math.round((x.apresentados / p.total) * 100)}%` }} />
+                      </span>
+                      {!concluiu && x.proximo && <span className="text-[11px] text-gray-500 dark:text-gray-400">Próximo: {x.proximo}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </CollapsibleSection>
+    </section>
+  );
+}
+
 function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: { a: ApresentacaoView; podeGerir: boolean; pedagogos: { id: string; nome: string }[]; disciplinas: Disciplina[]; pendente: boolean; rodar: Rodar }) {
   const [modo, setModo] = useState<"nada" | "plano" | "editar">("nada");
   const [comentario, setComentario] = useState(a.plano?.comentarioInstrutor ?? "");
@@ -301,7 +407,7 @@ function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: 
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">{a.pedagogo}</p>
-          <p className="text-[12px] text-gray-600 dark:text-gray-300">{a.tema}</p>
+          <p className="text-[12px] text-gray-600 dark:text-gray-300">{temaComDisciplina(a)}</p>
           {a.topicos.length > 0 && <p className="text-[11px] text-gray-500 dark:text-gray-400">{a.topicos.join(" · ")}</p>}
         </div>
         <Etiqueta a={a} />
@@ -419,7 +525,7 @@ function MeuPlano({ a, pendente, rodar }: { a: ApresentacaoView; pendente: boole
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-[14px] font-bold text-gray-900 capitalize dark:text-gray-100">{dataBR(a.data)}</p>
-          <p className="text-[13px] text-gray-700 dark:text-gray-200">{a.tema}</p>
+          <p className="text-[13px] text-gray-700 dark:text-gray-200">{temaComDisciplina(a)}</p>
           {a.topicos.length > 0 && <p className="text-[11px] text-gray-500 dark:text-gray-400">{a.topicos.join(" · ")}</p>}
         </div>
         <Etiqueta a={a} />

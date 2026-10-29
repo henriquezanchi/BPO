@@ -1,7 +1,8 @@
 import { EscalaPedagogos, type ApresentacaoView } from "@/components/grupos/escala-pedagogos";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
-import { disciplinasDisponiveis, hojeNoFuso, prazoDoPlano, situacaoDoPlano } from "@/lib/escala-pedagogos";
+import { disciplinasDisponiveis, hojeNoFuso, prazoDoPlano, progressoNoPrograma, situacaoDoPlano } from "@/lib/escala-pedagogos";
+import { programaDaDisciplina, programasDosPedagogos } from "@/lib/pedagogos-programa";
 import { catalogoDaMateria } from "@/lib/temas-curriculo";
 
 /** Aba "Escala de apresentações" da turma de pedagogos: dados do servidor para a tela (escala-pedagogos.tsx). */
@@ -16,6 +17,16 @@ export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: str
     }),
     db.classMembership.findMany({ where: { classGroupId: grupoId, role: "aluno", member: { mercurioAtivo: true } }, select: { member: { select: { id: true, name: true } } }, orderBy: { member: { name: "asc" } } }),
   ]);
+  // Progresso na formação: o programa N1 sempre e os outros com apresentação na turma. Quem gere vê todos;
+  // o pedagogo, só o próprio.
+  const programas = programasDosPedagogos();
+  const emUso = new Set(apresentacoes.map((a) => programaDaDisciplina(a.materiaSigla)?.sigla).filter(Boolean));
+  const pessoas = integrantes.map((i) => i.member).filter((p) => podeGerir || p.id === euId);
+  const progresso = await Promise.all(
+    programas
+      .filter((p, i) => i === 0 || emUso.has(p.sigla))
+      .map(async (p) => ({ programa: p.nome, total: p.temas.length, pessoas: (await progressoNoPrograma(p, pessoas)).map((x) => ({ ...x, proximo: x.proximo ? `${x.proximo.disciplina} · ${x.proximo.titulo}` : null })) })),
+  );
   // O pedagogo vê o próprio plano; o rascunho dos outros não aparece para ninguém além de quem gere a turma.
   const views: ApresentacaoView[] = apresentacoes.map((a) => {
     const verPlano = a.plano && (a.pedagogoId === euId || (podeGerir && a.plano.status !== "rascunho"));
@@ -53,6 +64,8 @@ export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: str
       podeGerir={podeGerir}
       pedagogos={integrantes.map((i) => ({ id: i.member.id, nome: i.member.name }))}
       disciplinas={disciplinasDisponiveis().map((d) => ({ ...d, temas: (catalogoDaMateria(d.sigla)?.temas ?? []).map((t) => ({ titulo: t.titulo, topicos: t.topicos ?? [] })) }))}
+      programas={programas}
+      progresso={progresso}
       apresentacoes={views}
     />
   );

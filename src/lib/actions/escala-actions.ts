@@ -7,6 +7,7 @@ import { papelNoGrupo } from "@/lib/grupos-portal";
 import { avisarSemEsperar } from "@/lib/push";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { catalogoDaMateria } from "@/lib/temas-curriculo";
+import { programaDaSigla } from "@/lib/pedagogos-programa";
 import { revalidatePath } from "next/cache";
 
 /** Escala de apresentações e planos de aula da turma de pedagogos (pedido do usuário 2026-10-26). */
@@ -34,13 +35,14 @@ async function instrutoresDaTurma(grupoId: string) {
 
 // ───────────────────────── Escala (instrutor dos pedagogos e gestão) ─────────────────────────
 
-export async function preverEscala(grupoId: string, opcoes: { sigla: string; inicio: string; porEncontro: number; diaSemana?: number }) {
+export async function preverEscala(grupoId: string, opcoes: { programa: string; inicio: string; porEncontro: number; diaSemana?: number }) {
   if (!(await gestor(grupoId))) return falha("Sem permissão.");
-  if (!catalogoDaMateria(opcoes.sigla)) return falha("Escolha a disciplina.");
+  if (!programaDaSigla(opcoes.programa)) return falha("Escolha o programa.");
   if (!dataValida(opcoes.inicio)) return falha("Escolha a data de início.");
   const p = await previaDaEscala(grupoId, opcoes);
-  if (!p.linhas.length) return falha("A turma ainda não tem pedagogos. Inclua os instrutores na aba Pessoas.");
-  return { ok: true as const, linhas: p.linhas };
+  if (!p.linhas.length)
+    return falha(p.concluiram.length ? "Todos os pedagogos da turma já têm todos os temas do programa marcados ou apresentados." : "A turma ainda não tem pedagogos. Inclua os instrutores na aba Pessoas.");
+  return { ok: true as const, linhas: p.linhas, concluiram: p.concluiram, trilhas: p.trilhas };
 }
 
 export async function gravarEscala(grupoId: string, linhas: { pedagogoId: string; data: string; ordem: number; materiaSigla: string; tema: string; topicos: string[] }[]): Promise<Resultado> {
