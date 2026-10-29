@@ -288,6 +288,57 @@ export async function registrarPresenca(meetingId: string, participou: boolean, 
   });
 }
 
+// --- Presença marcada pela coordenação e relatório (pedido do usuário 2026-10-29, GAF) ---------------
+
+/** A coordenação marca quem participou de um encontro que já começou (grava na mesma GrupoPresenca da resposta do integrante). */
+export async function marcarPresencasDoEncontro(meetingId: string, marcas: { memberId: string; participou: boolean }[]) {
+  return executar(async () => {
+    const r = await db.groupMeeting.findUnique({ where: { id: meetingId }, select: { classGroupId: true, startsAt: true, status: true } });
+    if (!r || r.status === "cancelada") throw new GrupoErro("Encontro não encontrado ou cancelado.");
+    await exigirGestor(r.classGroupId);
+    if (r.startsAt > new Date()) throw new GrupoErro("O encontro ainda não começou.");
+    const doGrupo = new Set((await db.classMembership.findMany({ where: { classGroupId: r.classGroupId }, select: { memberId: true } })).map((v) => v.memberId));
+    for (const x of marcas.filter((x) => doGrupo.has(x.memberId))) {
+      await db.grupoPresenca.upsert({
+        where: { meetingId_memberId: { meetingId, memberId: x.memberId } },
+        create: { meetingId, memberId: x.memberId, participou: x.participou, naoInformou: !x.participou },
+        // Presente apaga a justificativa; ausente mantém a que a pessoa tiver dado.
+        update: x.participou ? { participou: true, motivo: null, naoInformou: false } : { participou: false },
+      });
+    }
+    revalidatePath(`/grupos/${r.classGroupId}`);
+    return {};
+  });
+}
+
+/** Presenças de um período (datas "AAAA-MM-DD", fuso de Brasília): por pessoa e por encontro. Só a coordenação. */
+export async function relatorioPresencas(grupoId: string, de: string, ate: string) {
+  return executar(async () => {
+    await exigirGestor(grupoId);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(de) || !/^\d{4}-\d{2}-\d{2}$/.test(ate) || de > ate) throw new GrupoErro("Confira o período.");
+    const fim = new Date(Math.min(Date.parse(`${ate}T23:59:59-03:00`), Date.now()));
+    const encontros = await db.groupMeeting.findMany({
+      where: { classGroupId: grupoId, status: { not: "cancelada" }, startsAt: { gte: new Date(`${de}T00:00:00-03:00`), lte: fim } },
+      orderBy: { startsAt: "asc" },
+      select: { id: true, startsAt: true, presencas: { select: { memberId: true, participou: true, motivo: true } } },
+    });
+    const vinculos = await db.classMembership.findMany({ where: { classGroupId: grupoId }, select: { memberId: true, role: true, member: { select: { name: true } } } });
+    const pessoas = [...new Map(vinculos.map((v) => [v.memberId, v])).values()]
+      .map((v) => {
+        const registros = encontros.map((e) => e.presencas.find((p) => p.memberId === v.memberId));
+        const presentes = registros.filter((p) => p?.participou).length;
+        const justificadas = registros.filter((p) => p && !p.participou && p.motivo).length;
+        const faltas = registros.filter((p) => p && !p.participou && !p.motivo).length;
+        return { memberId: v.memberId, nome: v.member.name, coordenacao: v.role === "professor", presentes, justificadas, faltas, semRegistro: encontros.length - presentes - justificadas - faltas, percentual: encontros.length ? Math.round((presentes / encontros.length) * 100) : null };
+      })
+      .sort((a, b) => Number(b.coordenacao) - Number(a.coordenacao) || a.nome.localeCompare(b.nome, "pt-BR"));
+    return {
+      encontros: encontros.map((e) => ({ id: e.id, inicio: e.startsAt.toISOString(), presentes: e.presencas.filter((p) => p.participou).length })),
+      pessoas,
+    };
+  });
+}
+
 // --- Secretarias sugeridas pelo Mercúrio --------------------------------------
 
 export type SugestaoComPessoas = {

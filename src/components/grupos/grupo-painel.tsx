@@ -5,6 +5,7 @@ import { FormGrupo } from "@/components/grupos/form-grupo";
 import { SeletorPessoas, type PessoaOpcao } from "@/components/grupos/seletor-pessoas";
 import { MeetingManager } from "@/components/member/groups/meeting-manager";
 import { PerguntaPresenca } from "@/components/grupos/pergunta-presenca";
+import { PresencasGrupo } from "@/components/grupos/presencas-grupo";
 import { LeiturasGaf } from "@/components/grupos/leituras-gaf";
 import {
   adicionarPessoas,
@@ -586,7 +587,11 @@ function ConteudoEncontros({ dados, recarregar, futuros, passados }: { dados: D;
   return (
     <>
       {papel.podeGerir ? (
-        <MeetingManager groupId={grupo.id} mostrarTraje={["BF", "BM", "CS", "GDVE"].includes(grupo.tipo)} />
+        <>
+          <MeetingManager groupId={grupo.id} mostrarTraje={["BF", "BM", "CS", "GDVE"].includes(grupo.tipo)} />
+          {/* Presença marcada pela coordenação e relatório por período (pedido do usuário 2026-10-29). */}
+          {grupo.tipo === "GAF" && <PresencasGrupo grupoId={grupo.id} pessoas={[...grupo.responsaveis, ...grupo.integrantes]} passados={passados} recarregar={recarregar} />}
+        </>
       ) : futuros.length === 0 ? (
         <p className="text-[12px] text-gray-500">Nenhum encontro marcado.</p>
       ) : (
