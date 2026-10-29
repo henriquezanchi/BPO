@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { publicosDaPessoa } from "@/lib/event-policy";
 import { candidatoElegivel } from "@/lib/grupos-portal";
 import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
+import { avisarSemEsperar } from "@/lib/push";
 
 /**
  * GAF e oferta de apoio voluntário — antes só mudavam um estado local de
@@ -39,6 +40,12 @@ export async function oferecerApoioVoluntario(memberId: string, secretarias: str
   const validas = [...new Set(secretarias)].filter((s) => (SECRETARIAS_OFERTA as readonly string[]).includes(s));
   if (validas.length === 0) throw new Error("Selecione pelo menos uma secretaria.");
   await db.volunteerOffer.create({ data: { memberId, secretarias: validas } });
+  // Antes ninguém era avisado (a oferta só aparecia na ficha da pessoa): a Direção da filial recebe e vê em Oportunidades.
+  const direcao = await db.member.findMany({ where: { schoolId: m.schoolId, mercurioAtivo: true, OR: [{ isDiretor: true }, { isSubChefe: true }] }, select: { id: true } });
+  avisarSemEsperar(
+    direcao.map((d) => d.id).filter((id) => id !== m.id),
+    { titulo: "Oferta de voluntariado", corpo: `${m.name.split(" ").slice(0, 2).join(" ")} se ofereceu para ajudar: ${validas.join(", ")}.`, url: "/voluntario/oportunidades", etiqueta: `oferta-${m.id}` },
+  );
 }
 
 /** Marca o tour guiado do 1º login como visto — ver onboarding-tour.tsx. Chamado ao terminar ou pular. */

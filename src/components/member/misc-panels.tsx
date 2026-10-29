@@ -3,6 +3,9 @@
 import { AtivarNotificacoes, pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
 import { meusGafsNoPortal } from "@/lib/actions/gaf-portal-actions";
 import { getMinhasSolicitacoes, oferecerApoioVoluntario, solicitarAdesaoGaf } from "@/lib/actions/misc-request-actions";
+import { carregarOportunidades } from "@/lib/actions/oportunidades-actions";
+import { OportunidadesMembro } from "@/components/member/volunteer/oportunidades-membro";
+import type { OportunidadeDoMembro } from "@/lib/oportunidades";
 import { formatDateBR, whatsappHref } from "@/lib/format";
 import type { GafNoPortal, ResumoGrupo } from "@/lib/grupos-dados";
 import { BookOpenText, CalendarClock, ChevronRight, HandHeart, Loader2, Settings, Users, Video } from "lucide-react";
@@ -254,9 +257,16 @@ export function VolunteerPanel({ memberId }: { memberId: string }) {
   const [oferecidoEm, setOferecidoEm] = useState<Date | null | undefined>(undefined);
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [oportunidades, setOportunidades] = useState<OportunidadeDoMembro[] | null>(null);
+  const recarregar = () => {
+    carregarOportunidades()
+      .then(setOportunidades)
+      .catch(() => setOportunidades([]));
+  };
 
   useEffect(() => {
     getMinhasSolicitacoes(memberId).then((r) => setOferecidoEm(r.voluntariadoOferecidoEm));
+    recarregar();
   }, [memberId]);
 
   function toggle(tag: string) {
@@ -278,7 +288,21 @@ export function VolunteerPanel({ memberId }: { memberId: string }) {
 
   return (
     <div className="text-left">
-      <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">Ofereça-se para ajudar no funcionamento da escola:</p>
+      {oportunidades === null ? (
+        <p className="mb-4 flex items-center gap-2 text-xs text-gray-400">
+          <Loader2 size={13} className="animate-spin" /> Buscando oportunidades…
+        </p>
+      ) : (
+        oportunidades.length > 0 && (
+          <>
+            <h3 className="mb-2 text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Oportunidades na sua escola</h3>
+            <OportunidadesMembro lista={oportunidades} aoMudar={recarregar} />
+          </>
+        )
+      )}
+      <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">
+        {oportunidades?.length ? "Ou ofereça-se por área, para quando a escola precisar:" : "Ofereça-se para ajudar no funcionamento da escola:"}
+      </p>
       {oferecidoEm && (
         <p className="mb-2 text-[11px] text-gray-400 dark:text-gray-500">Última oferta: {formatDateBR(oferecidoEm)}</p>
       )}

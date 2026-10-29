@@ -19,6 +19,7 @@ import { getAvatarUrl } from "@/lib/avatar-url";
 import { db } from "@/lib/db";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
 import { boasVindasDoVoluntario } from "@/lib/boas-vindas-voluntario";
+import { destaqueDeOportunidades } from "@/lib/oportunidades";
 import { avisosDosGrupos, meusGrupos } from "@/lib/grupos-dados";
 import { gruposDaAgenda } from "@/lib/grupos-portal";
 import { PRAZO_EVENTO_CANCELADO_MS } from "@/lib/evento-cancelado";
@@ -447,6 +448,8 @@ export async function getMemberDashboard(memberId: string) {
     pendenciasVoluntario: destinosVoluntario.reduce((soma, d) => soma + (d.pendentes ?? 0), 0),
     // Voluntariado só para membros (2026-10-29); N1 só com a exceção aberta pela Direção (acesso liberado).
     voluntariadoVisivel: recursos.voluntariado && (publicosDaPessoa(member).includes("membros") || acessoVoluntario),
+    // Oportunidades abertas da filial para o destaque da vitrine (2026-10-29).
+    oportunidades: recursos.voluntariado && (publicosDaPessoa(member).includes("membros") || acessoVoluntario) ? await destaqueDeOportunidades(member) : null,
     boasVindasVoluntario: await boasVindasDoVoluntario(member, destinosVoluntario),
     availableToAdd,
     streakMeses,

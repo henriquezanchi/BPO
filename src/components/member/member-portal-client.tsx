@@ -52,6 +52,7 @@ import { useAgendaComUlisses } from "@/lib/ulisses/navegador";
 import { AvisosGrupos } from "./avisos-grupos";
 import { AtalhoFavorito, DestaqueDoDia, registrarUso, useFavorita } from "./acesso-rapido";
 import { BoasVindasVoluntario } from "./boas-vindas-voluntario";
+import { quandoDaOportunidade } from "@/lib/oportunidades-comum";
 import { Anuncio, DestaqueDiario, DestaquePlay, Vitrine, type Destaque } from "./vitrine";
 
 type ModalKey =
@@ -96,14 +97,14 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
   return { vencimento, diasRestantes, jaResolvidoEsseMes };
 }
 
-export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard: MemberDashboard; eventoId?: string; boletim?: EdicaoAurora | null }) {
+export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { dashboard: MemberDashboard; eventoId?: string; abrir?: "voluntariado"; boletim?: EdicaoAurora | null }) {
   const { member, availableToAdd } = dashboard;
   // Eventos públicos do Ulisses lidos pelo navegador (ver lib/ulisses/navegador.ts).
   const agendaItems = useAgendaComUlisses(dashboard.agendaItems, member.school.ulissesFilialId, member.schoolId);
-  const [modal, setModal] = useState<ModalKey | null>(eventoId ? "agenda" : null);
+  const [modal, setModal] = useState<ModalKey | null>(eventoId ? "agenda" : abrir && dashboard.voluntariadoVisivel ? abrir : null);
   const [fortunaBalances, setFortunaBalances] = useState(dashboard.fortunaBalances);
   const [fortunaCarregando, setFortunaCarregando] = useState(true);
-  const [tourVisivel, setTourVisivel] = useState(!eventoId && !member.tourCompletedAt);
+  const [tourVisivel, setTourVisivel] = useState(!eventoId && !abrir && !member.tourCompletedAt);
 
   function carregarSaldoFortuna() {
     getFortunaBalancesForMember(member.id)
@@ -319,7 +320,26 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
         />
       ),
     },
-    dashboard.voluntariadoVisivel && !dashboard.areaVoluntario && {
+    // Com oportunidade aberta, o destaque mostra a mais próxima (também para quem já é voluntário).
+    dashboard.voluntariadoVisivel && dashboard.oportunidades && {
+      id: "voluntariado",
+      conteudo: (
+        <Anuncio
+          tom="verde"
+          icone={<HandHeart size={20} />}
+          rotulo={dashboard.oportunidades.total === 1 ? "Voluntariado · 1 oportunidade aberta" : `Voluntariado · ${dashboard.oportunidades.total} oportunidades abertas`}
+          titulo={dashboard.oportunidades.proxima?.titulo ?? "Sua escola precisa de você"}
+          texto={
+            dashboard.oportunidades.proxima
+              ? `${dashboard.oportunidades.proxima.area} · ${quandoDaOportunidade(dashboard.oportunidades.proxima)}`
+              : "Você já se ofereceu para as oportunidades abertas. Obrigado!"
+          }
+          acao={dashboard.oportunidades.proxima ? "Quero ajudar" : "Ver oportunidades"}
+          onClick={() => setModal("voluntariado")}
+        />
+      ),
+    },
+    dashboard.voluntariadoVisivel && !dashboard.oportunidades && !dashboard.areaVoluntario && {
       id: "voluntariado",
       conteudo: (
         <Anuncio

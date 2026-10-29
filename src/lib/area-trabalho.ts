@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { escolasAberturas } from "@/lib/aberturas/permissoes";
 import { ehFV } from "@/lib/grupos-portal";
 import { filiaisAdministradas } from "@/lib/recursos-filial";
+import { gestaoDeOportunidades } from "@/lib/oportunidades";
 import type { Member } from "@prisma/client";
 import { redirect } from "next/navigation";
 
@@ -36,7 +37,8 @@ export type IconeDestino =
   | "termo"
   | "calendario"
   | "aberturas"
-  | "secretarias";
+  | "secretarias"
+  | "oportunidades";
 
 export type Destino = { href: string; rotulo: string; descricao: string; icone: IconeDestino; secao: "Meu trabalho" | "Secretarias" | "Gestão da filial" | "Nacional"; pendentes?: number };
 
@@ -46,7 +48,7 @@ type Pessoa = Pick<
 >;
 
 export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
-  const [acesso, fv, nacional, administra, lideraFV, temGrupo, areas, aberturas, mandatos] = await Promise.all([
+  const [acesso, fv, nacional, administra, lideraFV, temGrupo, areas, aberturas, mandatos, oportunidades, interessados] = await Promise.all([
     temAcessoVoluntario(m),
     ehFV(m.id),
     ehAdministradorNacional(m),
@@ -57,6 +59,9 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
     areasNaFilial(m, m.schoolId),
     escolasAberturas(m as Member),
     db.secretariaMandato.findMany({where:{memberId:m.id,ativo:true},select:{secretaria:true,escopo:true}}),
+    gestaoDeOportunidades(m),
+    // Interessados aguardando resposta nas oportunidades de que a pessoa é responsável.
+    db.interesseVoluntariado.count({ where: { status: "pendente", oportunidade: { responsavelId: m.id, encerradaEm: null } } }),
   ]);
   const chefe = m.isDiretor || m.filiaisChefiadas.length > 0 || nacional;
   const emSecretaria = await db.classMembership.count({ where: { memberId: m.id, classGroup: { tipo: "SEC", arquivadoEm: null } } });
@@ -84,6 +89,15 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       descricao: "Aulas, reuniões, eventos e feriados da filial",
       icone: "calendario",
       secao: "Meu trabalho",
+    },
+    // Oportunidades de voluntariado (pedido do usuário 2026-10-29): Direção e responsáveis de secretarias e grupos.
+    (oportunidades.podeCadastrar || interessados > 0) && {
+      href: "/voluntario/oportunidades",
+      rotulo: "Oportunidades",
+      descricao: interessados ? `${interessados} interessado${interessados === 1 ? "" : "s"} aguardando resposta` : "O que a filial precisa e quem se ofereceu",
+      icone: "oportunidades",
+      secao: "Meu trabalho",
+      pendentes: interessados,
     },
     { href: "/voluntario/termo", rotulo: "Termo de voluntariado", descricao: "Assinatura do termo", icone: "termo", secao: "Meu trabalho" },
     // Secretarias da filial, à parte de Grupos (pedido do usuário 2026-10-25).

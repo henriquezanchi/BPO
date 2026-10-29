@@ -7,9 +7,11 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function MemberPortalPage({ searchParams }: { searchParams: Promise<{ evento?: string | string[] }> }) {
+export default async function MemberPortalPage({ searchParams }: { searchParams: Promise<{ evento?: string | string[]; abrir?: string | string[] }> }) {
   const params = await searchParams;
   const eventoId = typeof params.evento === "string" ? params.evento : undefined;
+  // Avisos de voluntariado abrem o quadro direto (oportunidades-actions.ts).
+  const abrir = params.abrir === "voluntariado" ? "voluntariado" : undefined;
   const member = await getAuthenticatedMember();
   if (!member) {
     const destino = eventoId ? `/portal?${new URLSearchParams({ evento: eventoId })}` : "/portal";
@@ -19,5 +21,5 @@ export default async function MemberPortalPage({ searchParams }: { searchParams:
 
   const [dashboard, boletim] = await Promise.all([getMemberDashboard(member.id), ultimaEdicaoAurora()]);
 
-  return <MemberPortalClient key={eventoId} dashboard={dashboard} eventoId={eventoId} boletim={boletim} />;
+  return <MemberPortalClient key={eventoId} dashboard={dashboard} eventoId={eventoId} abrir={abrir} boletim={boletim} />;
 }

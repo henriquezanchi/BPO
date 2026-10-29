@@ -191,6 +191,7 @@ model School {
   apresentacoesPedagogos ApresentacaoPedagogo[]
   whatsappEnvios WhatsappEnvio[]
   redesSociais RedeSocialFilial[]
+  oportunidadesVoluntariado OportunidadeVoluntariado[]
 }
 
 model Member {
@@ -207,6 +208,8 @@ model Member {
   diarioPraticas DiarioPratica[]
   anotacoesAula AnotacaoAula[]
   livrosLeitura LivroLeitura[]
+  oportunidadesResponsavel OportunidadeVoluntariado[] @relation("OportunidadeResponsavel")
+  interessesVoluntariado InteresseVoluntariado[]
   meetingResponses GroupMeetingResponse[]
   meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
   pushSubscriptions PushSubscription[]
@@ -2316,5 +2319,50 @@ model LivroLeitura {
   member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, origemId])
+  @@index([memberId])
+}
+
+// Oportunidades de voluntariado (pedido do usuário 2026-10-29): a Direção ou o responsável de uma secretaria/grupo
+// cadastra o que a filial precisa; o membro vê e se oferece; o responsável aceita ou recusa. Ver lib/oportunidades.ts.
+model OportunidadeVoluntariado {
+  id            String    @id @default(cuid())
+  schoolId      String
+  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  criadoPorId   String
+  responsavelId String
+  responsavel   Member    @relation("OportunidadeResponsavel", fields: [responsavelId], references: [id], onDelete: Cascade)
+  titulo        String
+  area          String
+  descricao     String
+  // "pontual" (um dia: data + horário) ou "continua" (horário recorrente em texto, ex: "Quintas, 19h às 21h").
+  tipo          String    @default("pontual")
+  data          String? // AAAA-MM-DD, data civil da filial (só pontual)
+  horario       String?
+  vagas         Int?
+  abertaAte     String? // AAAA-MM-DD; depois disso some para os membros
+  // Grupo do Portal (secretaria ou GDVE) em que a pessoa aceita entra.
+  grupoId       String?
+  encerradaEm   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  interesses    InteresseVoluntariado[]
+
+  @@index([schoolId, encerradaEm])
+  @@index([responsavelId])
+}
+
+model InteresseVoluntariado {
+  id             String                   @id @default(cuid())
+  oportunidadeId String
+  oportunidade   OportunidadeVoluntariado @relation(fields: [oportunidadeId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         Member                   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  recado         String?
+  status         String                   @default("pendente") // pendente | aceito | recusado | desistiu
+  respondidoPorId String?
+  respondidoEm   DateTime?
+  createdAt      DateTime                 @default(now())
+
+  @@unique([oportunidadeId, memberId])
   @@index([memberId])
 }
