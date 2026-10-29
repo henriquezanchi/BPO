@@ -136,6 +136,20 @@ export async function createActivity(input: CreateActivityInput) {
 
 
 /** Edição/exclusão sempre conferem o responsável pelo grupo real do registro. */
+/** Observações sobre uma atividade que já aconteceu (2026-10-29): uma só para professores/administração, outra para os alunos. */
+export async function salvarObservacoesAtividade(id: string, entrada: { interna: string; alunos: string }) {
+  try {
+    const activity = await db.activity.findUniqueOrThrow({ where: { id }, select: { classGroupId: true } });
+    await requireTeacherOfClass(activity.classGroupId);
+    await db.activity.update({ where: { id }, data: { observacaoInterna: entrada.interna.trim().slice(0, 5000) || null, observacaoAlunos: entrada.alunos.trim().slice(0, 5000) || null } });
+    revalidatePath(`/professor/turma/${activity.classGroupId}`);
+    revalidatePath("/portal");
+    return { ok: true as const };
+  } catch {
+    return { ok: false as const, error: "Não foi possível salvar. Atualize a página e confira seu acesso à turma." };
+  }
+}
+
 export async function manageActivity(id: string, input: Omit<CreateActivityInput, "classGroupId" | "publicarNoSlack"> | null) {
   try {
     const activity = await db.activity.findUniqueOrThrow({ where: { id }, select: { classGroupId: true, materiaSigla: true } });

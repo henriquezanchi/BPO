@@ -6,6 +6,8 @@ import { CreatePollForm } from "@/components/member/professor/create-poll-form";
 import { SlackChannelPanel } from "@/components/member/professor/slack-channel-panel";
 import { linkDoCanal, tokenSlackDaFilial } from "@/lib/slack";
 import { PublishedActivities } from "@/components/member/professor/published-activities";
+import { ConferirAnotacoes } from "@/components/member/professor/conferir-anotacoes";
+import { anotacoesParaConferir } from "@/lib/anotacoes";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { catalogoDaMateria } from "@/lib/temas-curriculo";
@@ -30,6 +32,8 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
   const ehGrupo = false;
   const pessoas = ehGrupo ? "integrantes" : "alunos";
   const slackDisponivel = !!tokenSlackDaFilial(turma.mercurioUnidade);
+  // Anotações que os alunos compartilharam, nas matérias deste professor (2026-10-29).
+  const anotacoes = await anotacoesParaConferir(member, turma.id);
   // Matérias em curso na turma (vêm do Mercúrio) com os temas do catálogo, para a prova/trabalho/leitura.
   const materias = ehGrupo
     ? []
@@ -94,6 +98,14 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
           </CollapsibleSection></div>
         )}
       </CollapsibleSection></section>
+
+      {anotacoes.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Anotações dos alunos para conferir ({anotacoes.filter((a) => a.revisao === "pendente").length})</h2>}>
+            <ConferirAnotacoes anotacoes={anotacoes} />
+          </CollapsibleSection>
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Nova enquete</h2>}>

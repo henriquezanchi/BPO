@@ -1,6 +1,6 @@
 "use client";
 
-import { manageActivity } from "@/lib/actions/activity-actions";
+import { manageActivity, salvarObservacoesAtividade } from "@/lib/actions/activity-actions";
 import { SeletorTemas } from "@/components/member/professor/create-activity-form";
 import { formatDateBR } from "@/lib/format";
 import { catalogoDaMateria } from "@/lib/temas-curriculo";
@@ -91,9 +91,27 @@ function PublishedActivity({ activity, ehGrupo, past }: { activity: Activity; eh
           <p className="whitespace-pre-wrap break-words">{activity.description || "Sem mensagem adicional."}</p>
           {!deleting && <div className="flex gap-2"><button disabled={pending} onClick={() => { setEditing(true); setMessage(""); }} className="rounded-lg border border-gray-300 px-4 py-2.5 font-semibold dark:border-gray-600">Editar</button><button disabled={pending} onClick={() => { setDeleting(true); setMessage(""); }} className="rounded-lg px-4 py-2.5 text-red-700 dark:text-red-300">Excluir</button></div>}
         </>}
+        {past && !editing && <Observacoes activity={activity} />}
         {deleting && <div className="rounded-lg border border-red-300 p-3"><p>Excluir esta publicação da Agenda? Essa ação não pode ser desfeita. Mensagens externas já enviadas não serão apagadas.</p><div className="mt-2 flex flex-wrap gap-2"><button disabled={pending} onClick={remove} className="rounded-lg bg-red-700 px-4 py-2.5 text-white disabled:opacity-50">{pending ? "Excluindo…" : "Confirmar exclusão"}</button><button disabled={pending} onClick={() => setDeleting(false)} className="rounded-lg px-4 py-2.5">Manter publicação</button></div></div>}
         {message && <p role="status">{message}</p>}
       </div>
     </details>
   </li>;
+}
+
+/** Depois da atividade (2026-10-29): observação só para professores/administração e outra que os alunos veem na Agenda. */
+function Observacoes({ activity }: { activity: Activity }) {
+  const router = useRouter();
+  const [interna, setInterna] = useState(activity.observacaoInterna ?? "");
+  const [alunos, setAlunos] = useState(activity.observacaoAlunos ?? "");
+  const [aviso, setAviso] = useState("");
+  const [pending, startTransition] = useTransition();
+  const mudou = interna !== (activity.observacaoInterna ?? "") || alunos !== (activity.observacaoAlunos ?? "");
+  return <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+    <p className="font-semibold">Como foi</p>
+    <label className="flex flex-col gap-1">Observação para os alunos <span className="text-[11px] text-gray-500 dark:text-gray-400">Aparece para a turma na Agenda.</span><textarea value={alunos} onChange={(e) => setAlunos(e.target.value)} rows={3} maxLength={5000} className={field} /></label>
+    <label className="flex flex-col gap-1">Observação só para a administração <span className="text-[11px] text-gray-500 dark:text-gray-400">Só professores da turma e a administração veem.</span><textarea value={interna} onChange={(e) => setInterna(e.target.value)} rows={3} maxLength={5000} className={field} /></label>
+    <button disabled={pending || !mudou} onClick={() => startTransition(async () => { const r = await salvarObservacoesAtividade(activity.id, { interna, alunos }); setAviso(r.ok ? "Observações salvas." : r.error); if (r.ok) router.refresh(); })} className="self-start rounded-lg bg-na-green px-4 py-2 font-semibold text-white disabled:opacity-50">{pending ? "Salvando…" : "Salvar observações"}</button>
+    {aviso && <p role="status">{aviso}</p>}
+  </div>;
 }

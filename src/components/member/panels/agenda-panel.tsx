@@ -511,6 +511,28 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
         </div>
       )}
       {item.description && <p className="mt-2 whitespace-pre-line break-words text-[11px] text-gray-600 dark:text-gray-400">{item.description}</p>}
+      {/* Resumos das anotações para os temas da prova: o do aluno e os dos colegas conferidos pelo professor (2026-10-29). */}
+      {!!item.resumos?.length && (
+        <div className="mt-2 flex flex-col gap-1.5">
+          {[...item.resumos].sort((a, b) => Number(b.meu) - Number(a.meu)).map((r) => (
+            <details key={r.id} className="rounded-lg bg-na-gold/10 p-2 text-[11px] text-gray-700 dark:bg-amber-950/20 dark:text-gray-300">
+              <summary className="cursor-pointer font-semibold">{r.meu ? "Seu resumo" : "Resumo de um colega"}: {r.tema}</summary>
+              <p className="mt-1 whitespace-pre-line">{r.resumo}</p>
+            </details>
+          ))}
+        </div>
+      )}
+      {item.temas?.length && item.type === "prova" && !item.resumos?.some((r) => r.meu) ? (
+        <Link href="/estudos/anotacoes" className="mt-2 inline-block text-[11px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
+          Fazer anotações e resumo destes temas →
+        </Link>
+      ) : null}
+      {item.observacao && (
+        <div className="mt-2 rounded-lg border-l-2 border-na-green bg-white p-2 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <span className="font-semibold">Do professor: </span>
+          <span className="whitespace-pre-line">{item.observacao}</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { eventosDoAgora } from "@/lib/agora/eventos";
 import { agoraPrecisaReconectar } from "@/lib/agora/sessao";
+import { resumosParaTemas } from "@/lib/anotacoes";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { fraseDoDia, hojeNoFuso } from "@/lib/diario";
 import { escolasQueCobramOnline, pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
@@ -107,6 +108,8 @@ export type AgendaItem =
       type: ActivityType;
       materiaNome?: string | null;
       temas?: string[];
+      observacao?: string | null;
+      resumos?: { id: string; tema: string; resumo: string; meu: boolean }[];
       studyItems: string | null;
       description: string | null;
       className: string;
@@ -215,7 +218,8 @@ export async function getMemberDashboard(memberId: string) {
     }),
     studentClassGroupIds.length
       ? db.activity.findMany({
-          where: { classGroupId: { in: studentClassGroupIds }, dueDate: { gte: new Date() } },
+          // Últimos 30 dias também (2026-10-29): a observação do professor sobre a atividade que já aconteceu.
+          where: { classGroupId: { in: studentClassGroupIds }, dueDate: { gte: new Date(Date.now() - 30 * 864e5) } },
           include: { classGroup: true },
           orderBy: { dueDate: "asc" },
         })
@@ -318,6 +322,8 @@ export async function getMemberDashboard(memberId: string) {
   // Cobrança sempre pela subconta da filial (2026-10-25): só filiais com a conta Asaas ligada e aprovada (27/10) cobram on-line.
   const escolasQueCobram = await escolasQueCobramOnline([member.schoolId, ...schoolEvents.map((e) => e.schoolId).filter((id): id is string => !!id)]);
   const eventPosters=new Map(await Promise.all(schoolEvents.map(async e=>[e.id,await eventPosterUrl(e.posterPath)] as const)));
+  // Resumos das anotações (próprios e dos colegas, conferidos) para os temas das provas (2026-10-29).
+  const resumosDasProvas = await resumosParaTemas(member, [...new Set(classActivities.flatMap((a) => (a.type === "prova" ? a.temas : [])))]);
   const agendaItems: AgendaItem[] = [
     ...(await agendaAgora),
     ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
@@ -365,6 +371,8 @@ export async function getMemberDashboard(memberId: string) {
         type: a.type,
         materiaNome: a.materiaNome,
         temas: a.temas,
+        observacao: a.observacaoAlunos,
+        resumos: a.type === "prova" ? resumosDasProvas.filter((r) => a.temas.includes(r.tema)) : [],
         studyItems: a.studyItems,
         description: a.description,
         className: portalLabel(a.classGroup.name),
