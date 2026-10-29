@@ -41,7 +41,8 @@ export default {
       const resultado = await Promise.all(
         DIAGNOSTICO.map(async (alvo) => {
           try {
-            const r = await fetch(alvo, { headers: { accept: "application/json", "user-agent": UA } });
+            // /api/versao do Ágora responde text/plain: pedir JSON gerava 400 no log deles (Marcos, 29/10/2026).
+            const r = await fetch(alvo, { headers: { accept: alvo.endsWith("/api/versao") ? "text/plain" : "application/json", "user-agent": UA } });
             return { alvo, status: r.status, bloqueado: r.headers.get("cf-mitigated") ?? null };
           } catch (e) {
             return { alvo, erro: String(e) };
