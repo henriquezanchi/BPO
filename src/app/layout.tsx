@@ -40,11 +40,15 @@ export const viewport: Viewport = {
 // classe "dark" já no primeiro paint — sem isso, a página nasceria clara
 // e só escureceria um instante depois (flash visível), mesmo pra quem já
 // escolheu modo noturno antes. Ver src/components/ui/theme-toggle.tsx.
+// Sem escolha feita no Portal, segue o tema do celular/computador e acompanha a troca (pedido do usuário 2026-10-29).
 const THEME_INIT_SCRIPT = `
   try {
-    if (localStorage.getItem('na-theme') === 'dark') {
-      document.documentElement.classList.add('dark');
-    }
+    var escolha = localStorage.getItem('na-theme');
+    var sistema = window.matchMedia('(prefers-color-scheme: dark)');
+    if (escolha ? escolha === 'dark' : sistema.matches) document.documentElement.classList.add('dark');
+    sistema.addEventListener('change', function (e) {
+      if (!localStorage.getItem('na-theme')) document.documentElement.classList.toggle('dark', e.matches);
+    });
   } catch (e) {}
 `;
 

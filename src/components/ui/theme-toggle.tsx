@@ -14,7 +14,14 @@ const listeners = new Set<() => void>();
 // óbvio aqui causaria "cascading renders", pego pelo eslint).
 function subscribe(callback: () => void) {
   listeners.add(callback);
-  return () => listeners.delete(callback);
+  // O tema do aparelho mudou (e a pessoa não escolheu um no Portal): o script de layout.tsx troca a classe; aqui só
+  // atualiza o ícone.
+  const sistema = window.matchMedia("(prefers-color-scheme: dark)");
+  sistema.addEventListener("change", callback);
+  return () => {
+    listeners.delete(callback);
+    sistema.removeEventListener("change", callback);
+  };
 }
 
 function getSnapshot() {
