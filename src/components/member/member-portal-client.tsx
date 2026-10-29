@@ -53,6 +53,7 @@ import { useAgendaComUlisses } from "@/lib/ulisses/navegador";
 import { AvisosGrupos } from "./avisos-grupos";
 import { AtalhoFavorito, DestaqueDoDia, registrarUso, useFavorita } from "./acesso-rapido";
 import { BoasVindasVoluntario } from "./boas-vindas-voluntario";
+import { BuscaPortal, type DestinoBusca } from "./busca-portal";
 import { quandoDaOportunidade } from "@/lib/oportunidades-comum";
 import { Anuncio, DestaqueDiario, DestaquePlay, Vitrine, type Destaque } from "./vitrine";
 
@@ -248,6 +249,38 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   const saldoFortuna = fortunaBalances.find((b) => b.isHome) ?? fortunaBalances[0];
   const podeIncluirCrianca = !somenteConsulta && availableToAdd.some((i) => /crian[cç]a.*bem/i.test(i.label));
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  // Busca de funções (pedido do usuário 2026-10-29): só o que a pessoa tem no Portal, com o mesmo destino dos quadros.
+  const abrirModal = (m: ModalKey) => ({ abrir: () => setModal(m) });
+  const destinosBusca: Record<string, DestinoBusca | false> = {
+    economia: abrirModal("economia"),
+    situacao: abrirModal("situacao"),
+    contribuicao: abrirModal("contribuicao"),
+    fortuna: fortunaBalances.length > 0 && abrirModal(somenteConsulta ? "economia" : "fortuna_recarga"),
+    agenda: abrirModal("agenda"),
+    meus_eventos: { href: "/eventos" },
+    atendimentos: dashboard.podeMarcarAtendimento && { href: "/atendimentos" },
+    estudos: abrirModal("estudos"),
+    anotacoes: { href: "/estudos/anotacoes" },
+    livros: { href: "/estudos/livros" },
+    play: dashboard.recursos.acropole_play && { href: "/api/portal/acropole-play/entrar", externo: true },
+    biblioteca: { href: "https://biblioteca.acropolebrasil.com.br/", externo: true },
+    bastioes: dashboard.bibliotecaLiberada && { href: "https://bastiao.oinabn.com.br/", externo: true },
+    gaf: (dashboard.recursos.gaf || dashboard.meusGafs.length > 0 || dashboard.gafsDisponiveis.length > 0) && abrirModal("gaf"),
+    diario: dashboard.meusGafs.length > 0 && { href: "/diario" },
+    diario_historico: dashboard.meusGafs.length > 0 && { href: "/diario/historico" },
+    grupos_estudo: dashboard.gruposDeEstudo.length > 0 && abrirModal("grupos_estudo"),
+    voluntariado: dashboard.voluntariadoVisivel && abrirModal("voluntariado"),
+    area_voluntario: dashboard.areaVoluntario && { href: "/voluntario" },
+    pedagogos: !!dashboard.pedagogos && { href: `/grupos/${dashboard.pedagogos.grupoId}?aba=escala` },
+    avaliacao: !!dashboard.avaliacao && { href: "/avaliacao" },
+    ajuda: abrirModal("ajuda"),
+    jornada: abrirModal("jornada"),
+    transparencia: dashboard.recursos.transparencia && abrirModal("transparencia"),
+    cadastro: abrirModal("cadastro"),
+    whatsapp: !!schoolWhatsapp && { href: whatsappHref(schoolWhatsapp), externo: true },
+    boletim: { href: boletim?.link ?? PAGINA_BOLETIM_AURORA, externo: true },
+  };
+
   const destaques = ([
     contribuicaoUrgente && { id: "contribuicao", conteudo: cartaoContribuicao },
     // Pedagogo com apresentação marcada e plano ainda por entregar (2026-10-29).
@@ -460,6 +493,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       <InstallPrompt />
 
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
+        {member.school.language !== "en" && <BuscaPortal destinos={Object.fromEntries(Object.entries(destinosBusca).filter(([, d]) => d)) as Record<string, DestinoBusca>} />}
         <NudgeCard memberId={member.id} />
         <AvisosGrupos avisos={dashboard.avisosGrupos} />
         <AtivarNotificacoes aguardar={tourVisivel} />
