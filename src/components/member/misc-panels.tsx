@@ -130,7 +130,7 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
                   <BookOpenText size={17} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[10px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Texto para ler · nº {g.leitura.numero}</span>
+                  <span className="block text-[10px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Texto de trabalho · nº {g.leitura.numero}</span>
                   <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{g.leitura.titulo}</span>
                 </span>
                 <ChevronRight size={16} className="shrink-0 text-gray-400" />
