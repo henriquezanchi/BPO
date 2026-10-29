@@ -73,13 +73,13 @@ export async function papelNoGrupo(m: Pessoa, grupoId: string): Promise<Papel & 
 
 /** Quem pode entrar no grupo (reconferido no servidor ao adicionar). */
 export async function candidatoElegivel(tipo: TipoGrupo, schoolId: string, permiteAlunos: boolean, alvoId: string): Promise<string | null> {
-  const alvo = await db.member.findUnique({ where: { id: alvoId }, select: { schoolId: true, mercurioAtivo: true, isMembroPrograma: true, isPedagogo: true } });
+  const alvo = await db.member.findUnique({ where: { id: alvoId }, select: { schoolId: true, mercurioAtivo: true, isMembroPrograma: true } });
   if (!alvo || !alvo.mercurioAtivo) return "Pessoa inativa ou não encontrada.";
   if (alvo.schoolId !== schoolId) return "A pessoa é de outra filial.";
   if (ehDeAlunos(tipo) && !permiteAlunos && !alvo.isMembroPrograma) return "Este grupo é só para membros (2º nível em diante).";
   if (tipo === "GDVE" && !(await ehFV(alvoId))) return "O GDVE é só para FV.";
-  if (tipo === "PED" && !alvo.isPedagogo && !(await db.classMembership.count({ where: { memberId: alvoId, role: "professor", classGroup: { tipo: "turma" } } })))
-    return "A turma de pedagogos é só para instrutores.";
+  // Turma de pedagogos aceita qualquer pessoa ativa da filial: a escola inclui futuros instrutores antes de
+  // aparecerem como pedagogos no Mercúrio (pedido do usuário 2026-10-29).
   if (TIPOS_FV.includes(tipo as (typeof TIPOS_FV)[number])) return "A composição deste grupo vem do Mercúrio.";
   return null;
 }
@@ -91,7 +91,6 @@ export function filtroCandidatos(tipo: TipoGrupo, schoolId: string, permiteAluno
     mercurioAtivo: true,
     ...(ehDeAlunos(tipo) && !permiteAlunos ? { isMembroPrograma: true } : {}),
     ...(tipo === "GDVE" ? { classMemberships: { some: { classGroup: { tipo: { in: [...TIPOS_FV] } } } } } : {}),
-    ...(tipo === "PED" ? { OR: [{ isPedagogo: true }, { classMemberships: { some: { role: "professor" as const, classGroup: { tipo: "turma" } } } }] } : {}),
   };
 }
 

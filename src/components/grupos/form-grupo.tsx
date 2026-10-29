@@ -154,7 +154,7 @@ export function FormGrupo({
           <SeletorPessoas rotulo={t.resp} ajuda={t.respAjuda} buscar={buscarResp} selecionados={responsaveis} onChange={setResponsaveis} />
           <SeletorPessoas
             rotulo={t.integ}
-            ajuda={tipo === "PED" ? "Em branco: entram todos os instrutores ativos da filial." : ehDeAlunos(tipo) ? (permiteAlunos ? "Membros e alunos ativos da filial." : "Membros ativos da filial (2º nível em diante).") : undefined}
+            ajuda={tipo === "PED" ? "Qualquer pessoa da filial. Em branco: entram todos os instrutores ativos." : ehDeAlunos(tipo) ? (permiteAlunos ? "Membros e alunos ativos da filial." : "Membros ativos da filial (2º nível em diante).") : undefined}
             buscar={buscarInteg}
             selecionados={integrantes}
             onChange={setIntegrantes}
