@@ -614,7 +614,10 @@ function LinkMeusEventos() {
   );
 }
 
-/** Linha compacta da lista "Próximos eventos": data em destaque, título e tipo; tocar abre o dia. */
+/**
+ * Cartão da lista "Próximos eventos" (grade de 2 por linha, pedido do usuário 2026-10-29: cabem mais eventos sem
+ * apertar): data e tipo no alto, título em até 2 linhas, horário; tocar abre o dia.
+ */
 function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "enquete" }>; onAbrir: () => void }) {
   const Icone = item.kind === "evento" ? PartyPopper : item.kind === "reuniao" ? Users : item.kind === "atendimento" ? MessagesSquare : GraduationCap;
   const tipo =
@@ -635,29 +638,29 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
   const cor = cancelado ? COR_PROXIMO.cancelado : COR_PROXIMO[categoriaProximo(item)];
   return (
     <li>
-      <button onClick={onAbrir} className={`flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition ${cor.cartao}`}>
-        <span className={`flex w-12 shrink-0 flex-col items-center rounded-xl py-1.5 leading-tight shadow-sm ${cor.data}`}>
-          <span className="text-[9px] font-bold uppercase opacity-85">{DIAS_CURTOS[item.date.getDay()]}</span>
-          <span className="text-lg font-black">{item.date.getDate()}</span>
-          <span className="text-[9px] font-bold uppercase opacity-85">{MESES_CURTOS[item.date.getMonth()]}</span>
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className={`flex items-center gap-1 text-[10px] font-bold tracking-wide uppercase ${cor.rotulo}`}>
-            <Icone size={11} className="shrink-0" /> <span className="truncate">{tipo}</span>
+      <button onClick={onAbrir} className={`flex h-full w-full flex-col gap-1.5 rounded-2xl border p-2.5 text-left transition ${cor.cartao}`}>
+        <span className="flex items-center gap-2">
+          <span className={`flex w-10 shrink-0 flex-col items-center rounded-lg py-1 leading-none shadow-sm ${cor.data}`}>
+            <span className="text-[8px] font-bold uppercase opacity-85">{DIAS_CURTOS[item.date.getDay()]}</span>
+            <span className="my-0.5 text-base font-black">{item.date.getDate()}</span>
+            <span className="text-[8px] font-bold uppercase opacity-85">{MESES_CURTOS[item.date.getMonth()]}</span>
           </span>
-          <span className={`block truncate text-[13px] font-semibold ${cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</span>
-          <span className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-            {!semHora && (
-              <>
-                <CalendarClock size={11} className="shrink-0" />
-                {item.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-              </>
-            )}
-            {cancelado && <span className="font-semibold text-red-700 dark:text-red-300">Cancelado</span>}
-            {!cancelado && item.kind === "evento" && item.lancheCompartilhado && <span className="font-semibold text-na-gold-dark dark:text-amber-300">· Lanche compartilhado</span>}
+          <span className={`line-clamp-2 min-w-0 flex-1 text-[9px] leading-tight font-bold tracking-wide uppercase ${cor.rotulo}`}>
+            <Icone size={10} className="mr-0.5 inline align-[-1px]" />
+            {tipo}
           </span>
         </span>
-        <ChevronRight size={14} className={`shrink-0 ${cor.seta}`} />
+        <span className={`line-clamp-2 text-[12.5px] leading-snug font-semibold ${cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</span>
+        <span className="mt-auto flex flex-wrap items-center gap-x-1 text-[10.5px] text-gray-500 dark:text-gray-400">
+          {!semHora && (
+            <span className="flex items-center gap-1">
+              <CalendarClock size={10} className="shrink-0" />
+              {item.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          {cancelado && <span className="font-semibold text-red-700 dark:text-red-300">Cancelado</span>}
+          {!cancelado && item.kind === "evento" && item.lancheCompartilhado && <span className="font-semibold text-na-gold-dark dark:text-amber-300">Lanche compartilhado</span>}
+        </span>
       </button>
     </li>
   );
@@ -809,7 +812,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
             .map((g) => (
               <div key={g.chave} className="flex flex-col gap-1.5">
                 {daEscola.length > 0 && outros.length > 0 && <h4 className="text-[10px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">{g.titulo}</h4>}
-                <ul className="flex flex-col gap-1.5">
+                <ul className="grid grid-cols-2 gap-2">
                   {g.lista.map((item) => (
                     <LinhaProximo
                       key={itemKey(item)}
