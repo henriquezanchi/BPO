@@ -2,6 +2,7 @@
 
 import { SeletorPessoas, type PessoaOpcao } from "@/components/grupos/seletor-pessoas";
 import { buscarCandidatos, buscarResponsaveis, criarGrupo, editarGrupo } from "@/lib/actions/grupos-actions";
+import { createGroupMeetings } from "@/lib/actions/group-meeting-actions";
 import { ehDeAlunos, type TipoDoPortal } from "@/lib/grupos-comum";
 import { Loader2 } from "lucide-react";
 import { useCallback, useState, useTransition } from "react";
@@ -18,6 +19,19 @@ export type CamposIniciais = {
 
 const CAMPO = "min-h-10 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-[13px] text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100";
 const ROTULO = "flex flex-col gap-1 text-[12px] font-semibold text-gray-700 dark:text-gray-300";
+
+const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const FREQUENCIA = { "1": "semanal", "2": "quinzenal", "4": "a cada 4 semanas" } as const;
+const doisDigitos = (n: number) => String(n).padStart(2, "0");
+
+/** Próxima data (AAAA-MM-DD, no relógio do aparelho) do dia da semana pedido; hoje só se o horário ainda não passou. */
+function proximaData(dia: number, inicio: string, agora = new Date()) {
+  const hora = `${doisDigitos(agora.getHours())}:${doisDigitos(agora.getMinutes())}`;
+  let falta = (dia - agora.getDay() + 7) % 7;
+  if (falta === 0 && inicio <= hora) falta = 7;
+  const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + falta);
+  return `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
+}
 
 const TEXTOS = {
   GAF: { titulo: "Novo GAF", nome: "Nome do GAF", exemploNome: "GAF de terça à noite", resp: "Coordenação", respAjuda: "Quem conduz os encontros (instrutor, dirigente).", integ: "Participantes" },
@@ -57,6 +71,11 @@ export function FormGrupo({
   const [integrantes, setIntegrantes] = useState<PessoaOpcao[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
+  // Dia e horário dos encontros na criação (pedido do usuário 2026-10-29); depois, em "Reuniões do grupo".
+  const [dia, setDia] = useState("");
+  const [inicio, setInicio] = useState("19:00");
+  const [fim, setFim] = useState("20:00");
+  const [frequencia, setFrequencia] = useState<keyof typeof FREQUENCIA>("1");
 
   const buscarResp = useCallback(
     (termo: string) => (tipo === "GDVE" ? buscarCandidatos({ schoolId, tipo, permiteAlunos: false }, termo) : buscarResponsaveis(schoolId, termo)),
@@ -77,13 +96,30 @@ export function FormGrupo({
       programa: String(f.get("programa") ?? ""),
     };
     setErro(null);
+    if (!editando && dia && fim <= inicio) return setErro("O término dos encontros deve ser depois do início.");
     iniciar(async () => {
       if (editando) {
         const r = await editarGrupo(grupoId!, campos);
         return r.ok ? onSalvo(grupoId!) : setErro(r.error);
       }
       const r = await criarGrupo({ ...campos, schoolId, tipo, responsaveis: responsaveis.map((p) => p.id), integrantes: integrantes.map((p) => p.id) });
-      return r.ok ? onSalvo(r.id) : setErro(r.error);
+      if (!r.ok) return setErro(r.error);
+      if (dia) {
+        const data = proximaData(Number(dia), inicio);
+        // Se a agenda falhar, o grupo já existe: os encontros podem ser cadastrados em "Reuniões do grupo".
+        await createGroupMeetings(r.id, {
+          title: `Encontro ${FREQUENCIA[frequencia]}`,
+          startsLocal: `${data}T${inicio}`,
+          endsLocal: `${data}T${fim}`,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          weekly: true,
+          intervalWeeks: Number(frequencia),
+          publicDetails: "",
+          internalDetails: "",
+          fullUniform: false,
+        }).catch(() => null);
+      }
+      return onSalvo(r.id);
     });
   }
 
@@ -120,6 +156,44 @@ export function FormGrupo({
           </label>
         )}
       </div>
+
+      {!editando && (
+        <fieldset className="grid gap-4 md:grid-cols-4">
+          <label className={ROTULO}>
+            {tipo === "SEC" ? "Dia das reuniões" : "Dia dos encontros"}
+            <select value={dia} onChange={(e) => setDia(e.target.value)} className={CAMPO}>
+              <option value="">A definir</option>
+              {DIAS.map((d, i) => (
+                <option key={d} value={i}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </label>
+          {dia && (
+            <>
+              <label className={ROTULO}>
+                Início
+                <input type="time" required value={inicio} onChange={(e) => setInicio(e.target.value)} className={CAMPO} />
+              </label>
+              <label className={ROTULO}>
+                Término
+                <input type="time" required value={fim} onChange={(e) => setFim(e.target.value)} className={CAMPO} />
+              </label>
+              <label className={ROTULO}>
+                Frequência
+                <select value={frequencia} onChange={(e) => setFrequencia(e.target.value as keyof typeof FREQUENCIA)} className={CAMPO}>
+                  {Object.entries(FREQUENCIA).map(([v, rotulo]) => (
+                    <option key={v} value={v}>
+                      {rotulo[0].toUpperCase() + rotulo.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+        </fieldset>
+      )}
 
       <label className={ROTULO}>
         {tipo === "SEC" ? "O que a secretaria faz" : "Sobre o grupo"}
