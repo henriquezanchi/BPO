@@ -4,6 +4,7 @@ import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { datasPermitidas, epilogoValido, fogoInterno, fraseDoDia, somarDias, type Recorrencia } from "@/lib/diario";
 import { hojeDaPessoa } from "@/lib/diario-dados";
+import { meusGrupos } from "@/lib/grupos-dados";
 import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -12,9 +13,14 @@ type Resultado = { ok: true } | { ok: false; error: string };
 
 const texto = (v: unknown, max = 4000) => (typeof v === "string" ? v.trim().slice(0, max) : "") || null;
 
+async function participaDeGaf(eu: NonNullable<Awaited<ReturnType<typeof getAuthenticatedMember>>>) {
+  if (!(await meusGrupos(eu, ["GAF"])).length) throw new Error("O diário é para quem participa de um GAF.");
+}
+
 async function pessoaEDia(data: string) {
   const eu = await getAuthenticatedMember();
   if (!eu) throw new Error("Entre no Portal.");
+  await participaDeGaf(eu);
   if (!datasPermitidas(hojeDaPessoa(eu)).includes(data)) throw new Error("Dá para preencher só hoje e os 3 dias anteriores.");
   return eu;
 }
@@ -68,6 +74,7 @@ export async function criarPratica(entrada: { nome: string; recorrencia: Recorre
   return executar(async () => {
     const eu = await getAuthenticatedMember();
     if (!eu) throw new Error("Entre no Portal.");
+    await participaDeGaf(eu);
     const nome = texto(entrada.nome, 120);
     if (!nome) throw new Error("Dê um nome à prática.");
     const recorrencia: Recorrencia = ["diaria", "semanal", "quinzenal", "mensal"].includes(entrada.recorrencia) ? entrada.recorrencia : "diaria";

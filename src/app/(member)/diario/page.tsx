@@ -2,6 +2,7 @@ import { DiarioCliente } from "@/components/diario/diario-cliente";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { carregarDiario } from "@/lib/diario-dados";
+import { meusGrupos } from "@/lib/grupos-dados";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -12,6 +13,8 @@ export const dynamic = "force-dynamic";
 export default async function DiarioPage(props: { searchParams: Promise<{ dia?: string }> }) {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/diario");
+  // O diário é do GAF (pedido do usuário 2026-10-29): só para quem participa de um.
+  if (!(await meusGrupos(member, ["GAF"])).length) redirect("/portal");
   const { dia } = await props.searchParams;
   const dados = await carregarDiario(member, dia);
   return (
