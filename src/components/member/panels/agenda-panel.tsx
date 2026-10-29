@@ -14,7 +14,7 @@ import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
-import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, MessagesSquare, PartyPopper, Ticket, Users, UtensilsCrossed, Video } from "lucide-react";
+import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, MessagesSquare, PartyPopper, RefreshCw, Ticket, Users, UtensilsCrossed, Video } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
 
@@ -576,6 +576,25 @@ const POR_PAGINA = 6;
 const URL_PORTAL = "https://portal-na-one.vercel.app/portal";
 
 /** Atalho para "Meus eventos" dentro da Agenda (pedido do usuário 2026-10-22). */
+/** Sessão do Ágora vencida (29/10/2026): os eventos de lá só voltam passando de novo pelo login unificado. */
+function ReconectarAgora() {
+  return (
+    <a
+      href="/auth/acropole/login?next=%2Fportal"
+      className="flex items-center gap-3 rounded-xl border border-teal-300/60 bg-teal-50 px-3 py-2.5 transition hover:border-teal-400 dark:border-teal-900 dark:bg-teal-950/30"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300">
+        <RefreshCw size={16} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">Mostrar os eventos do Ágora</span>
+        <span className="block text-[11px] text-gray-600 dark:text-gray-400">A conexão com o Ágora venceu. Toque para entrar de novo com a conta Nova Acrópole.</span>
+      </span>
+      <ChevronRight size={16} className="shrink-0 text-gray-400" />
+    </a>
+  );
+}
+
 function LinkMeusEventos() {
   return (
     <Link
@@ -699,7 +718,7 @@ const COR_PROXIMO: Record<CategoriaProximo, { cartao: string; data: string; rotu
   },
 };
 
-export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoId, podeMarcarAtendimento }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string; podeMarcarAtendimento?: boolean }) {
+export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoId, podeMarcarAtendimento, agoraReconectar }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string; podeMarcarAtendimento?: boolean; agoraReconectar?: boolean }) {
   const eventoCompartilhado = items.find((item) => item.kind === "evento" && item.id === eventoId);
   const avisoEvento = eventoId && !eventoCompartilhado
     ? <p role="status" className="text-sm text-gray-600 dark:text-gray-300">Este evento não está disponível na sua agenda. Ele pode ter encerrado ou ser destinado a outra escola.</p>
@@ -730,6 +749,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
     return (
       <div className="flex flex-col gap-4">
         <LinkMeusEventos />
+        {agoraReconectar && <ReconectarAgora />}
         {podeMarcarAtendimento && <LinkAtendimento />}
         {avisoEvento}
         <p className="py-8 text-center text-[13px] text-gray-500 dark:text-gray-400">Nenhum evento ou atividade agendada no momento.</p>
@@ -800,6 +820,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
         </section>
       )}
       <LinkMeusEventos />
+      {agoraReconectar && <ReconectarAgora />}
       {podeMarcarAtendimento && <LinkAtendimento />}
       <div ref={calendario} className="scroll-mt-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-2 flex items-center justify-between">

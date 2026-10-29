@@ -40,7 +40,8 @@ async function tokenDoAluno(memberId: string): Promise<string | null> {
   if (!s.refreshCifrado || !s.refreshExpiraEm || s.refreshExpiraEm.getTime() - Date.now() < MARGEM_MS) return null;
   const novos = await renovarTokens(decifrar(s.refreshCifrado, FINALIDADE));
   if (!novos) {
-    await db.sessaoAgora.delete({ where: { memberId } }).catch(() => {});
+    // Mantém a linha (sem o refresh) para a Agenda saber que precisa reconectar (ver agoraPrecisaReconectar).
+    await db.sessaoAgora.update({ where: { memberId }, data: { refreshCifrado: null, refreshExpiraEm: null, cookieCifrado: null, cookieAte: null } }).catch(() => {});
     return null;
   }
   await salvarSessaoAgora(memberId, novos);
@@ -84,4 +85,16 @@ export async function chamarAgora<T>(memberId: string, caminho: string): Promise
     await db.sessaoAgora.update({ where: { memberId }, data: { cookieCifrado: cifrar(cookie, FINALIDADE), cookieAte: new Date(ate), falhaEm: null, falha: null } });
   }
   return (await r.json()) as T;
+}
+
+/**
+ * A sessão do Ágora venceu e não dá mais para renovar (29/10/2026: o login do Portal dura semanas, a sessão do Keycloak
+ * não passa de um dia; os eventos do Ágora sumiam da Agenda sem aviso). Só para quem já entrou pelo login unificado.
+ */
+export async function agoraPrecisaReconectar(memberId: string): Promise<boolean> {
+  const s = await db.sessaoAgora.findUnique({ where: { memberId }, select: { accessExpiraEm: true, refreshExpiraEm: true, refreshCifrado: true } });
+  if (!s) return false;
+  const agora = Date.now() + MARGEM_MS;
+  if (s.accessExpiraEm.getTime() > agora) return false;
+  return !(s.refreshCifrado && s.refreshExpiraEm && s.refreshExpiraEm.getTime() > agora);
 }

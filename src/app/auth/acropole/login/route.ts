@@ -33,7 +33,10 @@ export async function GET(req: Request) {
     response_type: "code",
     client_id: KEYCLOAK.clientId,
     redirect_uri: enderecoRetorno(url.origin),
-    scope: "openid profile email",
+    // KEYCLOAK_OFFLINE=1 pede sessão offline (renovável por semanas, para o Ágora não sumir da Agenda). Só ligar depois
+    // de o Marcos confirmar que o client portal-aluno tem o escopo offline_access e os alunos o papel: sem isso, o
+    // Keycloak recusa a troca do código e o login falha.
+    scope: process.env.KEYCLOAK_OFFLINE === "1" ? "openid profile email offline_access" : "openid profile email",
     state,
     nonce,
     code_challenge: challenge,

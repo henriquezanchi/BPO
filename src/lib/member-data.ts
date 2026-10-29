@@ -1,4 +1,5 @@
 import { eventosDoAgora } from "@/lib/agora/eventos";
+import { agoraPrecisaReconectar } from "@/lib/agora/sessao";
 import { escolasQueCobramOnline, pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
@@ -414,6 +415,8 @@ export async function getMemberDashboard(memberId: string) {
     fortunaBalances,
     agendaItems,
     podeMarcarAtendimento: instrutoresDisponiveis.length > 0,
+    // Depois de buscar a agenda (que tenta renovar a sessão): sem sessão válida do Ágora, a Agenda oferece reconectar.
+    agoraReconectar: await agoraPrecisaReconectar(member.id),
     cobraOnline: escolasQueCobram.has(member.schoolId),
     // Pix Automático por filial (27/10/2026): a subconta de BGA ainda não tem o recurso liberado no Asaas.
     pixAutomaticoDisponivel: pixAutomaticoLiberado(member.school.mercurioUnidade) && escolasQueCobram.has(member.schoolId),

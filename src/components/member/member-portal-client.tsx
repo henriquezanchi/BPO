@@ -405,7 +405,7 @@ export function MemberPortalClient({ dashboard, eventoId, boletim }: { dashboard
             />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
-          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} emBreve={emBreve} eventoId={eventoId} podeMarcarAtendimento={dashboard.podeMarcarAtendimento} />}
+          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} emBreve={emBreve} eventoId={eventoId} podeMarcarAtendimento={dashboard.podeMarcarAtendimento} agoraReconectar={dashboard.agoraReconectar} />}
           {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} mostrarBiblioteca={dashboard.bibliotecaLiberada} />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}
