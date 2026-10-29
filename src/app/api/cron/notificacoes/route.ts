@@ -1,5 +1,5 @@
 import { processarListaDeEspera } from "@/lib/event-waitlist";
-import { avisosDeAtendimentos, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
+import { avisosDeAtendimentos, avisosDoDiario, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
 import { pushConfigurado } from "@/lib/push";
 import { autorizadoCron, executarRotina } from "@/lib/rotinas";
 
@@ -23,6 +23,7 @@ export async function GET(req: Request) {
         semana: () => resumoDaSemana(),
         vencimento: avisosDeVencimento,
         inscritos: avisosDeEventosInscritos,
+        diario: () => avisosDoDiario(),
       }
     : { push: async () => ({ aviso: "Chaves VAPID não configuradas; avisos no celular não enviados." }) };
   const r = await executarRotina("notificacoes", { ...avisos, listaDeEspera: () => processarListaDeEspera() });

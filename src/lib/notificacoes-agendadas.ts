@@ -404,3 +404,36 @@ export async function avisosDePlanosDeAula() {
   }
   return { lembretes, atrasos };
 }
+
+// ───────────────────────── Diário filosófico ─────────────────────────
+// Lembretes do diário como avisos do Portal (pedido do usuário 2026-10-29; antes o diário antigo mandava os próprios):
+// Prólogo às 7h e Epílogo às 21h, no fuso da escola, para quem usou o diário nos últimos 14 dias e ainda não fez a
+// parte do dia. Uma vez por dia cada (PushEnviado).
+
+export async function avisosDoDiario(agora = new Date()) {
+  const desde = new Date(agora.getTime() - 14 * 24 * 60 * MIN);
+  const pessoas = await db.member.findMany({
+    where: { ...comPush, diarioDias: { some: { updatedAt: { gte: desde } } } },
+    select: { id: true, school: { select: { uf: true } } },
+  });
+  let total = 0;
+  for (const p of pessoas) {
+    const fuso = fusoDaEscola(p.school?.uf);
+    const partes = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", hourCycle: "h23" }).formatToParts(agora).map((x) => [x.type, x.value]));
+    const hora = Number(partes.hour);
+    const parte = hora === 7 ? "prologo" : hora === 21 ? "epilogo" : null;
+    if (!parte) continue;
+    const data = `${partes.year}-${partes.month}-${partes.day}`;
+    const dia = await db.diarioDia.findUnique({ where: { memberId_data: { memberId: p.id, data } }, select: { prologoEm: true, epilogoEm: true } });
+    if (parte === "prologo" ? dia?.prologoEm : dia?.epilogoEm) continue;
+    if (!(await reservar(`diario-${parte}:${p.id}:${data}`))) continue;
+    const r = await enviarPush([p.id], {
+      titulo: parte === "prologo" ? "Prólogo do dia" : "Epílogo do dia",
+      corpo: parte === "prologo" ? "Qual virtude você vai praticar hoje?" : "Em que falhei, o que fiz bem, o que deixei de fazer?",
+      url: "/diario",
+      etiqueta: `diario-${parte}-${data}`,
+    });
+    total += r.pessoas;
+  }
+  return total;
+}
