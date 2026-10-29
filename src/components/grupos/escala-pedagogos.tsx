@@ -470,9 +470,31 @@ function TemasAnteriores({
   return (
     <div className="mt-1 flex flex-col gap-3 rounded-xl border border-na-green/40 p-3">
       <p className="text-[12px] font-semibold text-gray-800 dark:text-gray-200">O que {pessoa.nome.split(" ")[0]} já apresentou antes do Portal</p>
-      {disciplinas.map((d) => (
+      {disciplinas.map((d) => {
+        // Tocar no nome da disciplina marca todos os temas dela (ou desmarca, se já estavam todos marcados).
+        const livres = programa.temas.filter((t) => t.disciplina === d).map((t) => chaveTema(t.sigla, t.titulo)).filter((k) => !pelaEscala.has(k));
+        const todos = livres.length > 0 && livres.every((k) => marcados.has(k));
+        const alternarDisciplina = () =>
+          setMarcados((atual) => {
+            const novo = new Set(atual);
+            for (const k of livres) {
+              if (todos) novo.delete(k);
+              else novo.add(k);
+            }
+            return novo;
+          });
+        return (
         <fieldset key={d} className="flex flex-col gap-1">
-          {programa.disciplinas > 1 && <legend className="mb-1 text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">{d}</legend>}
+          <legend className="mb-1">
+            <button
+              type="button"
+              onClick={alternarDisciplina}
+              className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-500 uppercase hover:text-na-green-dark dark:text-gray-400 dark:hover:text-emerald-400"
+            >
+              {d}
+              <span className="font-semibold tracking-normal normal-case">· {todos ? "desmarcar todos" : "marcar todos"}</span>
+            </button>
+          </legend>
           {programa.temas
             .filter((t) => t.disciplina === d)
             .map((t) => {
@@ -487,7 +509,8 @@ function TemasAnteriores({
               );
             })}
         </fieldset>
-      ))}
+        );
+      })}
       <div className="flex gap-2">
         <button
           disabled={pendente}
