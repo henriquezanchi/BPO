@@ -14,7 +14,17 @@ const field = "w-full min-w-0 rounded-lg border border-gray-300 bg-transparent p
 export function PublishedActivities({ activities, ehGrupo }: { activities: Activity[]; ehGrupo: boolean }) {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const sorted = [...activities].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  return <ul className="flex flex-col gap-2">{sorted.map(activity => <PublishedActivity key={activity.id} activity={activity} ehGrupo={ehGrupo} past={new Date(activity.dueDate).toISOString().slice(0, 10) < today} />)}</ul>;
+  const passou = (a: Activity) => new Date(a.dueDate).toISOString().slice(0, 10) < today;
+  const proximas = sorted.filter((a) => !passou(a));
+  // O que já aconteceu fica numa gaveta fechada, mais recente primeiro (pedido do usuário 2026-10-29).
+  const passadas = sorted.filter(passou).reverse();
+  return <div className="flex flex-col gap-2">
+    {proximas.length > 0 ? <ul className="flex flex-col gap-2">{proximas.map(activity => <PublishedActivity key={activity.id} activity={activity} ehGrupo={ehGrupo} past={false} />)}</ul> : <p className="text-xs text-gray-500 dark:text-gray-400">Nenhuma atividade por vir.</p>}
+    {passadas.length > 0 && <details className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+      <summary className="cursor-pointer p-3 text-xs font-semibold text-gray-600 dark:text-gray-300">Já aconteceram ({passadas.length})</summary>
+      <ul className="flex flex-col gap-2 px-2 pb-2">{passadas.map(activity => <PublishedActivity key={activity.id} activity={activity} ehGrupo={ehGrupo} past />)}</ul>
+    </details>}
+  </div>;
 }
 
 function PublishedActivity({ activity, ehGrupo, past }: { activity: Activity; ehGrupo: boolean; past: boolean }) {
