@@ -528,7 +528,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
         </Link>
       ) : null}
       {item.observacao && (
-        <div className="mt-2 rounded-lg border-l-2 border-na-green bg-white p-2 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+        <div className="mt-2 rounded-lg bg-na-green-light/50 p-2 text-[11px] text-gray-700 dark:bg-emerald-950/30 dark:text-gray-300">
           <span className="font-semibold">Do professor: </span>
           <span className="whitespace-pre-line">{item.observacao}</span>
         </div>
