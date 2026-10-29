@@ -614,6 +614,10 @@ function LinkMeusEventos() {
   );
 }
 
+/** "FAZENDA NOVA ACRÓPOLE" -> "Fazenda Nova Acrópole" (sedes do Ágora vêm em maiúsculas). */
+const nomeDaSede = (t: string) =>
+  t === t.toUpperCase() ? t.toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, e: string, l: string) => e + l.toUpperCase()).replace(/\s(De|Da|Do|Dos|Das|E)(?=\s)/g, (m) => m.toLowerCase()) : t;
+
 /**
  * Cartão da lista "Próximos eventos" (grade de 2 por linha, pedido do usuário 2026-10-29: cabem mais eventos sem
  * apertar): data e tipo no alto, título em até 2 linhas, horário; tocar abre o dia.
@@ -626,7 +630,7 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
         ? `Evento de ${item.filialOrigem.replace(/^Nova Acrópole\s*-\s*/i, "")}`
         : item.scope === "filial"
           ? "Evento da escola"
-          : `Evento ${item.scope === "nacional" ? "nacional" : "regional"}`
+          : `Evento ${item.scope === "nacional" ? "nacional" : "regional"}${item.source === "agora" && item.location ? ` · ${nomeDaSede(item.location)}` : ""}`
       : item.kind === "reuniao"
         ? item.className
         : item.kind === "atendimento"

@@ -63,7 +63,7 @@ export function eventoCompartilhavel(item: ItemDeAgenda, agora = new Date()): Ev
       description: item.description,
       registrationUrl: item.registrationUrl,
       imagem: item.posterUrl ?? null,
-      chamada: item.scope === "nacional" ? "EVENTO NACIONAL" : "EVENTO REGIONAL",
+      chamada: item.scope === "nacional" ? "EVENTO NACIONAL" : item.scope === "filial" ? "EVENTO DA ESCOLA" : "EVENTO REGIONAL",
       valorTexto: item.agora?.valor ? `Inscrição: ${item.agora.valor}` : null,
       chamadaInscricao: "INSCRIÇÕES NO ÁGORA",
     };

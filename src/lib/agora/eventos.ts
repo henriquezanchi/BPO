@@ -119,8 +119,10 @@ const normalizar = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g,
 /**
  * Agenda a partir das ações do aluno no Ágora (filtradas pelo próprio Ágora, pedido do Marcos 27/10), completadas com
  * data, descrição e local de `/api/eventos/periodo` quando o evento estiver lá (casamento pelo slug ou pelo nome).
+ * Com a escola da pessoa e as unidades do Mercúrio: esconde eventos de outra escola e classifica a origem (29/10/2026,
+ * cores coerentes): sede na própria escola = evento da escola; centro da rede (Fazenda, Ítaca) = regional; nacional.
  */
-export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[], mostrar: (e: EventoDeEscola) => boolean = () => true): AgendaItem[] {
+export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[], contexto: { minhaUnidade: string | null; unidades: UnidadeRede[] } = { minhaUnidade: null, unidades: [] }): AgendaItem[] {
   const porSlug = new Map(periodo.filter((e) => e.slug).map((e) => [e.slug!, e]));
   const porNome = new Map(periodo.filter((e) => e.nome).map((e) => [normalizar(e.nome!), e]));
   return acoes.flatMap((a): AgendaItem[] => {
@@ -131,7 +133,10 @@ export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[], mostr
     const inscrito = a.tipo === "INSCRICAO_EDITAR";
     const evento = (typeof a.contextoId === "string" ? porSlug.get(a.contextoId) : undefined) ?? porNome.get(normalizar(nome));
     const sede = evento ? ((evento.sede && typeof evento.sede === "object" ? evento.sede.codigo : null) ?? (typeof evento.local === "string" ? evento.local : null)) : null;
-    if (!mostrar({ nacional: a.regiao === "NAC" || evento?.nacional === true, sede, titulo: nome })) return [];
+    const nacional = a.regiao === "NAC" || evento?.nacional === true;
+    if (eventoDeOutraEscola({ nacional, sede, titulo: nome }, contexto.minhaUnidade, contexto.unidades)) return [];
+    const daMinhaEscola = !nacional && !!sede && sede === contexto.minhaUnidade;
+    const deOutraEscola = !nacional && !!sede && !daMinhaEscola && contexto.unidades.some((u) => u.id === sede && ESCOLA.has(u.status));
     const base = evento ? agendaDoAgora([evento])[0] : undefined;
     const data = base?.date ?? (m ? dataDoAgora(`${m[4]}-${m[3]}-${m[2]}`) : null);
     if (!data) return [];
@@ -144,8 +149,9 @@ export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[], mostr
         : { kind: "evento" as const, id: `agora-${a.contextoId}`, title: nome, date: data, price: 0, reactions: [], minhaInscricao: null, source: "agora", status: "publicado", description: null, location: null, endsAt: null, allDay: true }),
       title: nome,
       date: data,
-      scope: a.regiao === "NAC" ? "nacional" : "regional",
-      filialOrigem: a.regiao === "NAC" ? null : (base?.kind === "evento" ? base.filialOrigem : null) ?? a.regiao ?? null,
+      scope: nacional ? "nacional" : daMinhaEscola ? "filial" : "regional",
+      // Laranja ("Evento de X") só para escola de fora; centro da rede ou sede desconhecida é regional (turquesa).
+      filialOrigem: deOutraEscola && base?.kind === "evento" ? base.filialOrigem : null,
       posterUrl: a.imagemId ? `${AGORA}/e/og/imagem/${a.imagemId}` : base?.kind === "evento" ? base.posterUrl : null,
       registrationUrl: slug ? `${AGORA}/#/e/${encodeURIComponent(slug)}` : `${AGORA}/`,
       agora: { inscrito, valor, prazo },
@@ -225,7 +231,7 @@ export async function eventosDoAgora(memberId: string): Promise<AgendaItem[]> {
       new Promise<never>((_, nao) => setTimeout(() => nao(new Error("Ágora sem resposta em 6 s")), 6000)),
     ]);
     const minhaUnidade = membro?.school.mercurioUnidade ?? null;
-    return Array.isArray(acoes) ? agendaDasAcoes(acoes, Array.isArray(periodo) ? periodo : [], (e) => !eventoDeOutraEscola(e, minhaUnidade, unidades)) : [];
+    return Array.isArray(acoes) ? agendaDasAcoes(acoes, Array.isArray(periodo) ? periodo : [], { minhaUnidade, unidades }) : [];
   } catch (e) {
     if (!(e instanceof SemSessaoAgora)) console.error("Agenda: eventos do Ágora indisponíveis:", e instanceof Error ? e.message : e);
     return [];
