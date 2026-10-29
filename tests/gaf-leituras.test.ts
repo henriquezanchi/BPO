@@ -41,3 +41,19 @@ test("fim do cronograma: depois do último texto, os encontros ficam a definir",
   assert.equal(r.get("b")!.origem, "a_definir");
   assert.equal(r.get("c")!.origem, "a_definir");
 });
+
+test("texto do GAF no Portal: só o conteúdo do artigo, sem scripts, estilos, navegação nem links para fora", async () => {
+  const { limparArtigo } = await import("../src/lib/gaf-texto");
+  const html = `<html><head><script src="auth.js"></script></head><body><main id="conteudo" class="container">
+    <article class="x" style="color:red"><p onclick="alert(1)">Texto <sup class="notas"><a href="#nota-1" id="ref-1">[1]</a></sup> <a href="https://fora.com">fora</a></p>
+    <script>roubar()</script><img src="x.png" onerror="alert(2)"><h2 class="t">Seção</h2></article>
+    <aside id="nota-1"><p>Nota</p></aside><nav class="article-nav"><a href="artigo02.html">Próximo</a></nav></main></body></html>`;
+  const limpo = limparArtigo(html)!;
+  assert.ok(limpo.includes('<a id="ref-1" href="#nota-1">[1]</a>'), limpo);
+  assert.ok(!limparArtigo("<main><p><scr<x>ipt>alert(1)</scr<x>ipt></p></main>")!.includes("<script"), "tag remontada não passa");
+  assert.ok(limpo.includes("<h2>Seção</h2>"));
+  assert.ok(limpo.includes('<aside id="nota-1">'));
+  assert.ok(!/script|onclick|onerror|style=|img|Próximo|https:\/\/fora/i.test(limpo), limpo);
+  assert.ok(limpo.includes("fora"), "o texto do link de fora fica, sem o link");
+  assert.equal(limparArtigo("<html><body>sem main</body></html>"), null);
+});

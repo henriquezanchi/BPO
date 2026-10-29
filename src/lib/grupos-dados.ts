@@ -239,7 +239,7 @@ export async function gafNoPortal(m: Pessoa, grupoId: string) {
     integrantes: d.grupo.integrantes.map((p) => p.name),
     proximo: proximo && { inicio: proximo.startsAt, fim: proximo.endsAt, titulo: proximo.title, cancelado: proximo.status === "cancelada", motivo: proximo.cancellationReason, detalhes: proximo.publicDetails },
     seguinte: seguinte && { inicio: seguinte.startsAt, fim: seguinte.endsAt, detalhes: seguinte.publicDetails },
-    leitura: leitura?.texto ? { titulo: leitura.texto.titulo, numero: leitura.texto.numero, url: leitura.texto.url } : leitura?.origem === "sem_leitura" ? { semLeitura: true as const } : null,
+    leitura: leitura?.texto ? { titulo: leitura.texto.titulo, numero: leitura.texto.numero, url: `/gaf/texto/${leitura.texto.codigo}` } : leitura?.origem === "sem_leitura" ? { semLeitura: true as const } : null,
   };
 }
 export type GafNoPortal = NonNullable<Awaited<ReturnType<typeof gafNoPortal>>>;

@@ -128,7 +128,7 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
             "semLeitura" in g.leitura ? (
               <p className="text-[12px] text-gray-500 dark:text-gray-400">Sem leitura para este encontro.</p>
             ) : (
-              <a href={g.leitura.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-2xl border border-gray-200 p-3 transition hover:border-na-green/60 dark:border-gray-700">
+              <Link href={g.leitura.url} className="flex items-center gap-3 rounded-2xl border border-gray-200 p-3 transition hover:border-na-green/60 dark:border-gray-700">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-na-gold/20 text-na-gold-dark dark:text-amber-300">
                   <BookOpenText size={17} />
                 </span>
@@ -137,7 +137,7 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
                   <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{g.leitura.titulo}</span>
                 </span>
                 <ChevronRight size={16} className="shrink-0 text-gray-400" />
-              </a>
+              </Link>
             )
           )}
 

@@ -61,7 +61,7 @@ export function LeiturasGaf({ itens, podeGerir, recarregar }: { itens: Item[]; p
             <span className="w-32 shrink-0 text-[12px] font-semibold text-gray-600 capitalize dark:text-gray-300">{quando(i.startsAt)}</span>
             <span className="min-w-0 flex-1">
               {i.texto ? (
-                <a href={i.texto.url} target="_blank" rel="noreferrer" className="group inline-flex items-start gap-1 text-[13px] font-semibold text-gray-900 hover:text-na-green-dark dark:text-gray-100 dark:hover:text-emerald-400">
+                <a href={`/gaf/texto/${i.texto.codigo}`} className="group inline-flex items-start gap-1 text-[13px] font-semibold text-gray-900 hover:text-na-green-dark dark:text-gray-100 dark:hover:text-emerald-400">
                   <span>{rotuloTexto(i.texto)}</span>
                   <ExternalLink size={12} className="mt-1 shrink-0 text-gray-400 group-hover:text-na-green-dark" />
                 </a>
