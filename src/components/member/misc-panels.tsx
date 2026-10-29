@@ -89,6 +89,26 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
                   <CalendarClock size={15} className="shrink-0" /> {quando(g.proximo.inicio, g.proximo.fim)}
                 </p>
                 {g.proximo.cancelado && <p className="text-[12px] font-semibold text-na-danger-dark dark:text-red-300">Cancelado{g.proximo.motivo ? `: ${g.proximo.motivo}` : ""}</p>}
+                {g.proximo.cancelado && (
+                  <div className="mt-1 flex flex-col gap-1 border-t border-na-green/20 pt-2 dark:border-emerald-900/50">
+                    <p className="text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Encontro seguinte</p>
+                    {g.seguinte ? (
+                      <>
+                        <p className="flex items-center gap-1.5 text-[14px] font-semibold text-gray-900 dark:text-gray-100">
+                          <CalendarClock size={15} className="shrink-0" /> {quando(g.seguinte.inicio, g.seguinte.fim)}
+                        </p>
+                        {g.seguinte.detalhes && <p className="text-[12px] whitespace-pre-line text-gray-600 dark:text-gray-300">{g.seguinte.detalhes}</p>}
+                        {g.link && (
+                          <a href={g.link} target="_blank" rel="noreferrer" className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-na-green-dark">
+                            <Video size={15} /> Entrar no encontro online
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-[13px] text-gray-500 dark:text-gray-400">Ainda sem data marcada.</p>
+                    )}
+                  </div>
+                )}
                 {g.proximo.detalhes && !g.proximo.cancelado && <p className="text-[12px] whitespace-pre-line text-gray-600 dark:text-gray-300">{g.proximo.detalhes}</p>}
                 {g.link && !g.proximo.cancelado && (
                   <a href={g.link} target="_blank" rel="noreferrer" className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-na-green-dark">
@@ -101,7 +121,7 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
             )}
           </div>
 
-          {g.proximo && !g.proximo.cancelado && g.leitura && (
+          {g.proximo && (!g.proximo.cancelado || g.seguinte) && g.leitura && (
             "semLeitura" in g.leitura ? (
               <p className="text-[12px] text-gray-500 dark:text-gray-400">Sem leitura para este encontro.</p>
             ) : (

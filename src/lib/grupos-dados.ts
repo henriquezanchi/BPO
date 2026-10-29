@@ -221,7 +221,10 @@ export async function gafNoPortal(m: Pessoa, grupoId: string) {
   if (!d || d.grupo.tipo !== "GAF") return null;
   const agora = Date.now();
   const proximo = d.encontros.find((e) => new Date(e.endsAt).getTime() >= agora) ?? null;
-  const leitura = proximo ? d.leiturasGaf?.find((l) => l.id === proximo.id) : null;
+  // Próximo cancelado: o aviso fica, e logo abaixo vem o encontro seguinte que vai acontecer (29/10/2026).
+  const seguinte = proximo?.status === "cancelada" ? (d.encontros.find((e) => new Date(e.endsAt).getTime() >= agora && e.status !== "cancelada") ?? null) : null;
+  const valendo = proximo?.status === "cancelada" ? seguinte : proximo;
+  const leitura = valendo ? d.leiturasGaf?.find((l) => l.id === valendo.id) : null;
   const online = d.grupo.modalidade === "online" || d.grupo.modalidade === "misto";
   return {
     id: d.grupo.id,
@@ -235,6 +238,7 @@ export async function gafNoPortal(m: Pessoa, grupoId: string) {
     responsaveis: d.grupo.responsaveis.map((p) => p.name),
     integrantes: d.grupo.integrantes.map((p) => p.name),
     proximo: proximo && { inicio: proximo.startsAt, fim: proximo.endsAt, titulo: proximo.title, cancelado: proximo.status === "cancelada", motivo: proximo.cancellationReason, detalhes: proximo.publicDetails },
+    seguinte: seguinte && { inicio: seguinte.startsAt, fim: seguinte.endsAt, detalhes: seguinte.publicDetails },
     leitura: leitura?.texto ? { titulo: leitura.texto.titulo, numero: leitura.texto.numero, url: leitura.texto.url } : leitura?.origem === "sem_leitura" ? { semLeitura: true as const } : null,
   };
 }
