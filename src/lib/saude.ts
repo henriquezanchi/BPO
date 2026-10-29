@@ -31,11 +31,20 @@ export const VERIFICACOES: Record<string, { titulo: string; checar: () => Promis
     },
   },
   ulisses: {
-    titulo: "Ulisses (eventos públicos)",
+    titulo: "Ulisses (eventos públicos e importação diária)",
+    // Antes só conferia se a API respondia (29/10/2026: "o Ulisses estava sem importar e não foi apontado"). Agora
+    // também falha se a importação diária não rodou nas últimas 26 h ou terminou com erro em alguma filial.
     checar: async () => {
       const r = await comPrazo(fetchAcropole("https://api.acropolebrasil.com.br/eventos/44", { headers: { accept: "application/json" }, cache: "no-store" }));
-      if (!r.ok) throw new Error(`respondeu ${r.status}`);
-      return `${((await r.json()) as unknown[]).length} eventos em Barra do Garças`;
+      if (!r.ok) throw new Error(`API respondeu ${r.status}`);
+      const rotina = await db.resumoNacional.findUnique({ where: { chave: "rotina:ulisses" } });
+      if (!rotina) throw new Error("API no ar, mas a importação diária nunca rodou");
+      const quando = rotina.geradoEm.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      if (Date.now() - rotina.geradoEm.getTime() > 26 * 3600_000) throw new Error(`API no ar, mas a importação não roda desde ${quando}`);
+      const dados = rotina.dados as { ok?: boolean; falhas?: string[] };
+      if (dados.ok === false) throw new Error(`importação de ${quando} com erro: ${(dados.falhas ?? []).join("; ").slice(0, 200)}`);
+      const futuros = await db.event.count({ where: { source: "ulisses", status: "publicado", startsAt: { gte: new Date() } } });
+      return `API no ar · importado em ${quando} · ${futuros} eventos futuros no Portal`;
     },
   },
   login: {

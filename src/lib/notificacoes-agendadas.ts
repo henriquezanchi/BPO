@@ -4,6 +4,7 @@ import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { agendaUlissesBranchWhere, eventAudienceWhere, eventScopeWhere } from "@/lib/event-policy";
 import { TIPOS_DO_PORTAL, dispensaAcessoVoluntario } from "@/lib/grupos-comum";
+import { prazoDoPlano } from "@/lib/escala-pedagogos";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import { enviarPush } from "@/lib/push";
 import { Prisma } from "@prisma/client";
@@ -384,17 +385,20 @@ export async function avisosDePlanosDeAula() {
   const hojeISO = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
   const soma = (iso: string, d: number) => new Date(Date.parse(`${iso}T12:00:00Z`) + d * 864e5).toISOString().slice(0, 10);
   const abertas = await db.apresentacaoPedagogo.findMany({
-    where: { status: "agendada", data: { gte: soma(hojeISO, 5), lte: soma(hojeISO, 11) }, OR: [{ plano: null }, { plano: { status: { in: ["rascunho", "devolvido"] } } }] },
-    select: { id: true, data: true, tema: true, classGroupId: true, pedagogoId: true, pedagogo: { select: { name: true } } },
+    // Desde hoje: escala feita em cima da hora tem prazo na véspera (prazoDoPlano).
+    where: { status: "agendada", data: { gte: hojeISO, lte: soma(hojeISO, 11) }, OR: [{ plano: null }, { plano: { status: { in: ["rascunho", "devolvido"] } } }] },
+    select: { id: true, data: true, tema: true, classGroupId: true, pedagogoId: true, createdAt: true, pedagogo: { select: { name: true } } },
   });
   let lembretes = 0;
   let atrasos = 0;
   for (const a of abertas) {
-    const prazo = soma(a.data, -7);
+    const prazo = prazoDoPlano(a.data, a.createdAt, TZ);
     const quando = prazo === soma(hojeISO, 3) ? "3dias" : prazo === hojeISO ? "hoje" : prazo === soma(hojeISO, -1) ? "atrasado" : null;
     if (!quando || !(await reservar(`plano-aula:${a.id}:${quando}`))) continue;
     const url = `/grupos/${a.classGroupId}?aba=escala`;
     if (quando === "atrasado") {
+      // O aviso do atraso diz "era ontem"; no dia da apresentação não faz mais sentido cobrar.
+      if (a.data <= hojeISO) continue;
       const instrutores = (await db.classMembership.findMany({ where: { classGroupId: a.classGroupId, role: "professor" }, select: { memberId: true } })).map((r) => r.memberId);
       atrasos += (await enviarPush(instrutores, { titulo: "Plano de aula atrasado", corpo: `${a.pedagogo.name.split(" ").slice(0, 2).join(" ")} ainda não entregou o plano "${a.tema}" (apresenta em ${a.data.split("-").reverse().join("/")}).`, url, etiqueta: `plano-atrasado-${a.id}` })).pessoas;
       await enviarPush([a.pedagogoId], { titulo: "Plano de aula atrasado", corpo: `O prazo do plano "${a.tema}" era ontem. Entregue assim que puder.`, url, etiqueta: `plano-${a.id}` });

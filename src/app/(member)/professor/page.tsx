@@ -22,7 +22,7 @@ export default async function ProfessorPage() {
   const [classes, apresentacao] = await Promise.all([
     getTeacherClasses(member.id),
     // Próxima apresentação na turma de pedagogos (pedido do usuário 2026-10-26).
-    db.apresentacaoPedagogo.findFirst({ where: { pedagogoId: member.id, status: "agendada", data: { gte: today } }, orderBy: { data: "asc" }, select: { classGroupId: true, data: true, tema: true, plano: { select: { status: true } } } }),
+    db.apresentacaoPedagogo.findFirst({ where: { pedagogoId: member.id, status: "agendada", data: { gte: today } }, orderBy: { data: "asc" }, select: { classGroupId: true, data: true, tema: true, createdAt: true, plano: { select: { status: true } } } }),
   ]);
 
   return (
@@ -50,7 +50,7 @@ export default async function ProfessorPage() {
           <span className="text-[11px] font-bold tracking-wide text-na-gold-dark uppercase dark:text-amber-300">Sua apresentação na turma de pedagogos</span>
           <span className="text-[15px] font-bold text-gray-900 dark:text-gray-100">{apresentacao.data.split("-").reverse().join("/")} · {apresentacao.tema}</span>
           <span className="text-[12px] text-gray-600 dark:text-gray-300">
-            {apresentacao.plano?.status === "aprovado" ? "Plano aprovado." : apresentacao.plano?.status === "entregue" ? "Plano entregue, aguardando o instrutor." : apresentacao.plano?.status === "devolvido" ? "O instrutor pediu ajustes no plano." : `Entregue o plano de aula até ${prazoDoPlano(apresentacao.data).split("-").reverse().join("/")}.`}
+            {apresentacao.plano?.status === "aprovado" ? "Plano aprovado." : apresentacao.plano?.status === "entregue" ? "Plano entregue, aguardando o instrutor." : apresentacao.plano?.status === "devolvido" ? "O instrutor pediu ajustes no plano." : `Entregue o plano de aula até ${prazoDoPlano(apresentacao.data, apresentacao.createdAt).split("-").reverse().join("/")}.`}
           </span>
         </Link>
       )}

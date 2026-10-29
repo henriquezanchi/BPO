@@ -8,7 +8,8 @@ import { catalogoDaMateria } from "@/lib/temas-curriculo";
 /** Aba "Escala de apresentações" da turma de pedagogos: dados do servidor para a tela (escala-pedagogos.tsx). */
 export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: string; euId: string; podeGerir: boolean }) {
   const grupo = await db.classGroup.findUniqueOrThrow({ where: { id: grupoId }, select: { school: { select: { uf: true } } } });
-  const hoje = hojeNoFuso(fusoDaEscola(grupo.school.uf));
+  const fuso = fusoDaEscola(grupo.school.uf);
+  const hoje = hojeNoFuso(fuso);
   const [apresentacoes, integrantes] = await Promise.all([
     db.apresentacaoPedagogo.findMany({
       where: { classGroupId: grupoId, data: { gte: new Date(Date.parse(`${hoje}T12:00:00Z`) - 120 * 864e5).toISOString().slice(0, 10) } },
@@ -40,8 +41,8 @@ export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: str
       tema: a.tema,
       topicos: a.topicos,
       status: a.status,
-      prazo: prazoDoPlano(a.data),
-      situacao: situacaoDoPlano(a.data, a.plano, hoje),
+      prazo: prazoDoPlano(a.data, a.createdAt, fuso),
+      situacao: situacaoDoPlano(a.data, a.plano, hoje, prazoDoPlano(a.data, a.createdAt, fuso)),
       plano: verPlano && a.plano
         ? {
             status: a.plano.status,

@@ -25,17 +25,30 @@ export function disciplinasDisponiveis() {
 }
 
 const somaDias = (iso: string, dias: number) => new Date(Date.parse(`${iso}T12:00:00Z`) + dias * 864e5).toISOString().slice(0, 10);
-export const prazoDoPlano = (data: string) => somaDias(data, -DIAS_ANTES_PLANO);
+/**
+ * Prazo do plano: 7 dias antes da apresentação. Se a apresentação foi marcada depois disso (escala feita em cima da
+ * hora), o prazo passa a ser a véspera — ou o próprio dia da marcação, se foi marcada na véspera ou no dia.
+ */
+export function prazoDoPlano(data: string, marcadaEm?: Date, fuso = "America/Sao_Paulo") {
+  const padrao = somaDias(data, -DIAS_ANTES_PLANO);
+  const marcada = marcadaEm ? localInZone(marcadaEm, fuso).slice(0, 10) : null;
+  if (!marcada || marcada <= padrao) return padrao;
+  const vespera = somaDias(data, -1);
+  return marcada > vespera ? marcada : vespera;
+}
+
+/** Temas apresentados antes do controle no Portal: registro com esta data, que não aparece na escala nem em "Já aconteceram". */
+export const DATA_ANTES_DO_PORTAL = "2000-01-01";
 export const hojeNoFuso = (fuso: string) => localInZone(new Date(), fuso).slice(0, 10);
 
 export type SituacaoPlano = "aprovado" | "entregue" | "devolvido" | "atrasado" | "no_prazo";
 
 /** Situação do plano de uma apresentação na data de hoje (fuso da filial). */
-export function situacaoDoPlano(data: string, plano: { status: string } | null, hoje: string): SituacaoPlano {
+export function situacaoDoPlano(data: string, plano: { status: string } | null, hoje: string, prazo = prazoDoPlano(data)): SituacaoPlano {
   if (plano?.status === "aprovado") return "aprovado";
   if (plano?.status === "entregue") return "entregue";
   if (plano?.status === "devolvido") return "devolvido";
-  return hoje > prazoDoPlano(data) ? "atrasado" : "no_prazo";
+  return hoje > prazo ? "atrasado" : "no_prazo";
 }
 
 /** Temas da trilha de cada pessoa (todas as turmas): marcados ou feitos contam; "faltou" e "cancelada" voltam para a fila. */
