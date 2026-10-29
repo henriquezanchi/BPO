@@ -2,12 +2,12 @@
 
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { BUCKET_PLANOS, EXTENSOES_PLANO, TAMANHO_MAX_PLANO, previaDaEscala } from "@/lib/escala-pedagogos";
+import { BUCKET_PLANOS, DATA_ANTES_DO_PORTAL, EXTENSOES_PLANO, TAMANHO_MAX_PLANO, previaDaEscala } from "@/lib/escala-pedagogos";
 import { papelNoGrupo } from "@/lib/grupos-portal";
 import { avisarSemEsperar } from "@/lib/push";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { catalogoDaMateria } from "@/lib/temas-curriculo";
-import { programaDaSigla } from "@/lib/pedagogos-programa";
+import { chaveTema, programaDaSigla, STATUS_NA_TRILHA } from "@/lib/pedagogos-programa";
 import { revalidatePath } from "next/cache";
 
 /** Escala de apresentações e planos de aula da turma de pedagogos (pedido do usuário 2026-10-26). */
@@ -34,6 +34,37 @@ async function instrutoresDaTurma(grupoId: string) {
 }
 
 // ───────────────────────── Escala (instrutor dos pedagogos e gestão) ─────────────────────────
+
+/**
+ * Temas que o pedagogo apresentou antes do controle no Portal (pedido do usuário 2026-10-29): grava como apresentados,
+ * com a data DATA_ANTES_DO_PORTAL (não aparecem na escala). Substitui o registro anterior daquele programa; o que veio
+ * pela escala do Portal não é mexido.
+ */
+export async function registrarTemasAnteriores(grupoId: string, pedagogoId: string, programaSigla: string, chaves: string[]): Promise<Resultado> {
+  const g = await gestor(grupoId);
+  if (!g) return falha("Sem permissão.");
+  const programa = programaDaSigla(programaSigla);
+  if (!programa) return falha("Programa não encontrado.");
+  if (!(await db.classMembership.count({ where: { classGroupId: grupoId, memberId: pedagogoId, role: "aluno" } }))) return falha("A pessoa não é pedagogo desta turma.");
+  const temas = new Map(programa.temas.map((t) => [chaveTema(t.sigla, t.titulo), t]));
+  const [anteriores, pelaEscala] = await Promise.all([
+    db.apresentacaoPedagogo.findMany({ where: { pedagogoId, data: DATA_ANTES_DO_PORTAL }, select: { id: true, materiaSigla: true, tema: true } }),
+    db.apresentacaoPedagogo.findMany({ where: { pedagogoId, data: { not: DATA_ANTES_DO_PORTAL }, status: { in: STATUS_NA_TRILHA } }, select: { materiaSigla: true, tema: true } }),
+  ]);
+  const escala = new Set(pelaEscala.map((a) => chaveTema(a.materiaSigla, a.tema)));
+  const querido = new Set(chaves.filter((k) => temas.has(k) && !escala.has(k)));
+  const existentes = new Map(anteriores.filter((a) => temas.has(chaveTema(a.materiaSigla, a.tema))).map((a) => [chaveTema(a.materiaSigla, a.tema), a.id]));
+  const remover = [...existentes].filter(([k]) => !querido.has(k)).map(([, id]) => id);
+  const criar = [...querido].filter((k) => !existentes.has(k)).map((k) => temas.get(k)!);
+  await db.$transaction([
+    db.apresentacaoPedagogo.deleteMany({ where: { id: { in: remover } } }),
+    db.apresentacaoPedagogo.createMany({
+      data: criar.map((t) => ({ classGroupId: grupoId, schoolId: g.papel.schoolId, pedagogoId, data: DATA_ANTES_DO_PORTAL, status: "apresentada", materiaSigla: t.sigla, tema: t.titulo, topicos: t.topicos })),
+    }),
+  ]);
+  atualizar(grupoId);
+  return { ok: true };
+}
 
 export async function preverEscala(grupoId: string, opcoes: { programa: string; inicio: string; porEncontro: number; diaSemana?: number }) {
   if (!(await gestor(grupoId))) return falha("Sem permissão.");

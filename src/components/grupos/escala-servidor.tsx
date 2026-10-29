@@ -26,7 +26,7 @@ export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: str
   const progresso = await Promise.all(
     programas
       .filter((p, i) => i === 0 || emUso.has(p.sigla))
-      .map(async (p) => ({ programa: p.nome, total: p.temas.length, pessoas: (await progressoNoPrograma(p, pessoas)).map((x) => ({ ...x, proximo: x.proximo ? `${x.proximo.disciplina} · ${x.proximo.titulo}` : null })) })),
+      .map(async (p) => ({ sigla: p.sigla, programa: p.nome, total: p.temas.length, pessoas: (await progressoNoPrograma(p, pessoas)).map((x) => ({ ...x, proximo: x.proximo ? `${x.proximo.disciplina} · ${x.proximo.titulo}` : null })) })),
   );
   // O pedagogo vê o próprio plano; o rascunho dos outros não aparece para ninguém além de quem gere a turma.
   const views: ApresentacaoView[] = apresentacoes.map((a) => {

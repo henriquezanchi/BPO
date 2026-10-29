@@ -5,6 +5,7 @@ import {
   abrirArquivoPlano,
   editarApresentacao,
   gravarEscala,
+  registrarTemasAnteriores,
   linkEnvioPlano,
   marcarApresentacao,
   preverEscala,
@@ -44,7 +45,12 @@ export type ApresentacaoView = {
   plano: PlanoView | null;
 };
 type Disciplina = { sigla: string; nome: string; temas: { titulo: string; topicos: string[] }[] };
-export type ProgressoView = { programa: string; total: number; pessoas: { id: string; nome: string; apresentados: number; marcados: number; proximo: string | null }[] };
+export type ProgressoView = {
+  sigla: string;
+  programa: string;
+  total: number;
+  pessoas: { id: string; nome: string; apresentados: number; marcados: number; proximo: string | null; anteriores: string[]; pelaEscala: string[] }[];
+};
 type Linha = { pedagogoId: string; pedagogo: string; data: string; ordem: number; materiaSigla: string; tema: string; topicos: string[] };
 
 const CARTAO = "rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900";
@@ -167,7 +173,7 @@ export function EscalaPedagogos({
 
       {podeGerir && <GerarRodada grupoId={grupoId} hoje={hoje} programas={programas} pedagogos={pedagogos} pendente={pendente} rodar={rodar} />}
 
-      {progresso.some((p) => p.pessoas.length > 0) && <ProgressoPrograma progresso={progresso} />}
+      {progresso.some((p) => p.pessoas.length > 0) && <ProgressoPrograma grupoId={grupoId} progresso={progresso} programas={programas} podeGerir={podeGerir} pendente={pendente} rodar={rodar} />}
 
       <section className="flex flex-col gap-2">
         <h2 className={TITULO}>Escala</h2>
@@ -359,41 +365,142 @@ function GerarRodada({ grupoId, hoje, programas, pedagogos, pendente, rodar }: {
 }
 
 /** Progresso de cada pedagogo no programa (pedido do usuário 2026-10-29): conclui quem apresentou todos os temas. */
-function ProgressoPrograma({ progresso }: { progresso: ProgressoView[] }) {
+function ProgressoPrograma({
+  grupoId,
+  progresso,
+  programas,
+  podeGerir,
+  pendente,
+  rodar,
+}: {
+  grupoId: string;
+  progresso: ProgressoView[];
+  programas: Programa[];
+  podeGerir: boolean;
+  pendente: boolean;
+  rodar: Rodar;
+}) {
+  const [registrando, setRegistrando] = useState<string | null>(null);
   return (
     <section className={CARTAO}>
       <CollapsibleSection defaultOpen={false} title={<h2 className={TITULO}>Progresso na formação</h2>}>
         <div className="mt-2 flex flex-col gap-4">
-          {progresso.map((p) => (
-            <div key={p.programa} className="flex flex-col gap-2">
-              <p className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">
-                {p.programa} · {p.total} temas
-              </p>
-              <ul className="flex flex-col gap-2.5">
-                {p.pessoas.map((x) => {
-                  const concluiu = x.apresentados >= p.total;
-                  const soMarcados = x.marcados - x.apresentados;
-                  return (
-                    <li key={x.id} className="flex flex-col gap-1">
-                      <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-[12px]">
-                        <b className="text-gray-900 dark:text-gray-100">{x.nome}</b>
-                        <span className={concluiu ? "font-semibold text-emerald-700 dark:text-emerald-300" : "text-gray-500 dark:text-gray-400"}>
-                          {concluiu ? "Concluiu" : `${x.apresentados} de ${p.total} apresentados${soMarcados > 0 ? ` · ${soMarcados} marcado${soMarcados > 1 ? "s" : ""}` : ""}`}
+          {podeGerir && (
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Para quem já apresentava antes do Portal, use “Temas já apresentados” e marque o que a pessoa já fez. Esses temas contam na trilha e não aparecem na escala.
+            </p>
+          )}
+          {progresso.map((p) => {
+            const programa = programas.find((x) => x.sigla === p.sigla);
+            return (
+              <div key={p.sigla} className="flex flex-col gap-2">
+                <p className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">
+                  {p.programa} · {p.total} temas
+                </p>
+                <ul className="flex flex-col gap-3">
+                  {p.pessoas.map((x) => {
+                    const concluiu = x.apresentados >= p.total;
+                    const soMarcados = x.marcados - x.apresentados;
+                    const chave = `${p.sigla}:${x.id}`;
+                    return (
+                      <li key={x.id} className="flex flex-col gap-1">
+                        <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-[12px]">
+                          <b className="text-gray-900 dark:text-gray-100">{x.nome}</b>
+                          <span className={concluiu ? "font-semibold text-emerald-700 dark:text-emerald-300" : "text-gray-500 dark:text-gray-400"}>
+                            {concluiu ? "Concluiu" : `${x.apresentados} de ${p.total} apresentados${soMarcados > 0 ? ` · ${soMarcados} marcado${soMarcados > 1 ? "s" : ""}` : ""}`}
+                          </span>
                         </span>
-                      </span>
-                      <span className="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                        <span className="block h-full rounded-full bg-na-green" style={{ width: `${Math.round((x.apresentados / p.total) * 100)}%` }} />
-                      </span>
-                      {!concluiu && x.proximo && <span className="text-[11px] text-gray-500 dark:text-gray-400">Próximo: {x.proximo}</span>}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
+                        <span className="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                          <span className="block h-full rounded-full bg-na-green" style={{ width: `${Math.round((x.apresentados / p.total) * 100)}%` }} />
+                        </span>
+                        <span className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                          <span>{!concluiu && x.proximo ? `Próximo: ${x.proximo}` : ""}</span>
+                          {podeGerir && programa && registrando !== chave && (
+                            <button onClick={() => setRegistrando(chave)} className="font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
+                              Temas já apresentados{x.anteriores.length ? ` (${x.anteriores.length})` : ""}
+                            </button>
+                          )}
+                        </span>
+                        {podeGerir && programa && registrando === chave && (
+                          <TemasAnteriores
+                            programa={programa}
+                            pessoa={x}
+                            pendente={pendente}
+                            salvar={(chaves) => rodar(() => registrarTemasAnteriores(grupoId, x.id, p.sigla, chaves), () => setRegistrando(null))}
+                            cancelar={() => setRegistrando(null)}
+                          />
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       </CollapsibleSection>
     </section>
+  );
+}
+
+/** Lista dos temas do programa para marcar o que a pessoa já apresentou antes do Portal. */
+function TemasAnteriores({
+  programa,
+  pessoa,
+  pendente,
+  salvar,
+  cancelar,
+}: {
+  programa: Programa;
+  pessoa: ProgressoView["pessoas"][number];
+  pendente: boolean;
+  salvar: (chaves: string[]) => void;
+  cancelar: () => void;
+}) {
+  const [marcados, setMarcados] = useState(() => new Set(pessoa.anteriores));
+  const pelaEscala = new Set(pessoa.pelaEscala);
+  const disciplinas = [...new Set(programa.temas.map((t) => t.disciplina))];
+  const alternar = (k: string) =>
+    setMarcados((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(k)) novo.delete(k);
+      else novo.add(k);
+      return novo;
+    });
+  return (
+    <div className="mt-1 flex flex-col gap-3 rounded-xl border border-na-green/40 p-3">
+      <p className="text-[12px] font-semibold text-gray-800 dark:text-gray-200">O que {pessoa.nome.split(" ")[0]} já apresentou antes do Portal</p>
+      {disciplinas.map((d) => (
+        <fieldset key={d} className="flex flex-col gap-1">
+          {programa.disciplinas > 1 && <legend className="mb-1 text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">{d}</legend>}
+          {programa.temas
+            .filter((t) => t.disciplina === d)
+            .map((t) => {
+              const k = chaveTema(t.sigla, t.titulo);
+              const naEscala = pelaEscala.has(k);
+              return (
+                <label key={k} className={`flex items-center gap-2 text-[12px] ${naEscala ? "text-gray-400" : "text-gray-800 dark:text-gray-200"}`}>
+                  <input type="checkbox" disabled={naEscala} checked={naEscala || marcados.has(k)} onChange={() => alternar(k)} className="h-4 w-4 accent-na-green" />
+                  {t.titulo}
+                  {naEscala && <span className="text-[11px]">(já na escala do Portal)</span>}
+                </label>
+              );
+            })}
+        </fieldset>
+      ))}
+      <div className="flex gap-2">
+        <button
+          disabled={pendente}
+          onClick={() => salvar([...marcados])}
+          className="flex items-center gap-1.5 rounded-lg bg-na-green px-3 py-1.5 text-[12px] font-bold text-white hover:bg-na-green-dark"
+        >
+          {pendente && <Loader2 size={13} className="animate-spin" />} Salvar
+        </button>
+        <button onClick={cancelar} className="px-2 text-[12px] font-semibold text-gray-500">
+          Cancelar
+        </button>
+      </div>
+    </div>
   );
 }
 

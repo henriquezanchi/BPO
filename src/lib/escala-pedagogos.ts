@@ -65,14 +65,25 @@ export async function trilhasDosPedagogos(ids: string[], somenteApresentadas = f
 /** Progresso de cada pessoa no programa: temas já apresentados e o próximo da trilha. */
 export async function progressoNoPrograma(programa: Programa, pessoas: { id: string; name: string }[]) {
   const ids = pessoas.map((p) => p.id);
-  const [apresentadas, naTrilha] = await Promise.all([trilhasDosPedagogos(ids, true), trilhasDosPedagogos(ids)]);
-  return pessoas.map((p) => ({
-    id: p.id,
-    nome: p.name,
-    apresentados: temasFeitos(programa, apresentadas.get(p.id) ?? []),
-    marcados: temasFeitos(programa, naTrilha.get(p.id) ?? []),
-    proximo: proximoTema(programa, naTrilha.get(p.id) ?? []),
-  }));
+  const [apresentadas, naTrilha, anteriores] = await Promise.all([
+    trilhasDosPedagogos(ids, true),
+    trilhasDosPedagogos(ids),
+    db.apresentacaoPedagogo.findMany({ where: { pedagogoId: { in: ids }, data: DATA_ANTES_DO_PORTAL }, select: { pedagogoId: true, materiaSigla: true, tema: true } }),
+  ]);
+  const doPrograma = new Set(programa.temas.map((t) => chaveTema(t.sigla, t.titulo)));
+  return pessoas.map((p) => {
+    const antes = anteriores.filter((a) => a.pedagogoId === p.id).map((a) => chaveTema(a.materiaSigla, a.tema));
+    return {
+      id: p.id,
+      nome: p.name,
+      apresentados: temasFeitos(programa, apresentadas.get(p.id) ?? []),
+      marcados: temasFeitos(programa, naTrilha.get(p.id) ?? []),
+      proximo: proximoTema(programa, naTrilha.get(p.id) ?? []),
+      // Para o registro do que a pessoa apresentou antes do Portal: o que já está lá e o que veio pela escala.
+      anteriores: antes.filter((k) => doPrograma.has(k)),
+      pelaEscala: (naTrilha.get(p.id) ?? []).filter((k) => doPrograma.has(k) && !antes.includes(k)),
+    };
+  });
 }
 
 /**
