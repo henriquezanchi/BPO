@@ -2,7 +2,7 @@
 
 import { definirLeituraGaf } from "@/lib/actions/gaf-leituras-actions";
 import { ETAPAS_GAF, rotuloTexto, SEM_LEITURA, TEXTOS_GAF, type TextoGaf } from "@/lib/gaf-leituras";
-import { BookOpenText, ExternalLink, Loader2 } from "lucide-react";
+import { BookOpenText, ExternalLink, Loader2, Pencil, Trash2, Undo2 } from "lucide-react";
 import { useState, useTransition } from "react";
 
 type Item = { id: string; startsAt: string; passado: boolean; origem: "escolhida" | "automatica" | "sem_leitura" | "a_definir"; texto: TextoGaf | null; escolha: string | null };
@@ -10,6 +10,7 @@ type Item = { id: string; startsAt: string; passado: boolean; origem: "escolhida
 const quando = (iso: string) => new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 const ORIGEM: Record<Item["origem"], string> = { escolhida: "escolhido", automatica: "na sequência", sem_leitura: "sem leitura", a_definir: "a definir" };
 const BIMESTRES = [...new Set(TEXTOS_GAF.map((t) => t.bimestre))];
+const BOTAO = "inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800";
 
 /**
  * Leituras do GAF (pedido do usuário 2026-10-26), na aba Encontros: o texto de cada encontro com o link para ler no
@@ -17,6 +18,8 @@ const BIMESTRES = [...new Set(TEXTOS_GAF.map((t) => t.bimestre))];
  */
 export function LeiturasGaf({ itens, podeGerir, recarregar }: { itens: Item[]; podeGerir: boolean; recarregar: () => void }) {
   const [salvando, setSalvando] = useState<string | null>(null);
+  // Mudar/excluir o texto de um encontro com botões (pedido do usuário 2026-10-29); a lista só abre ao tocar em "Mudar".
+  const [editando, setEditando] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [, iniciar] = useTransition();
   const etapa = ETAPAS_GAF.teseu;
@@ -28,6 +31,7 @@ export function LeiturasGaf({ itens, podeGerir, recarregar }: { itens: Item[]; p
     iniciar(async () => {
       const r = await definirLeituraGaf(id, valor === "" ? null : valor);
       setSalvando(null);
+      setEditando(null);
       if (!r.ok) setErro(r.error);
       else recarregar();
     });
@@ -66,10 +70,30 @@ export function LeiturasGaf({ itens, podeGerir, recarregar }: { itens: Item[]; p
               )}
               {podeGerir && i.texto && <span className="ml-2 text-[11px] text-gray-400">{ORIGEM[i.origem]}</span>}
             </span>
-            {podeGerir && (
+            {podeGerir && editando !== i.id && (
+              <span className="flex items-center gap-1.5">
+                {salvando === i.id && <Loader2 size={13} className="animate-spin text-gray-400" />}
+                <button type="button" disabled={salvando !== null} onClick={() => setEditando(i.id)} className={BOTAO}>
+                  <Pencil size={12} /> {i.texto ? "Mudar" : "Escolher"}
+                </button>
+                {i.origem === "sem_leitura" ? (
+                  <button type="button" disabled={salvando !== null} onClick={() => escolher(i.id, "")} className={BOTAO} title="Volta a seguir o cronograma">
+                    <Undo2 size={12} /> Voltar ao cronograma
+                  </button>
+                ) : (
+                  i.texto && (
+                    <button type="button" disabled={salvando !== null} onClick={() => escolher(i.id, SEM_LEITURA)} className={`${BOTAO} text-na-danger-dark dark:text-red-300`} title="Este encontro fica sem leitura">
+                      <Trash2 size={12} /> Excluir
+                    </button>
+                  )
+                )}
+              </span>
+            )}
+            {podeGerir && editando === i.id && (
               <span className="flex items-center gap-2">
                 {salvando === i.id && <Loader2 size={13} className="animate-spin text-gray-400" />}
                 <select
+                  autoFocus
                   aria-label={`Texto do encontro de ${quando(i.startsAt)}`}
                   value={i.escolha ?? ""}
                   disabled={salvando !== null}
@@ -88,6 +112,9 @@ export function LeiturasGaf({ itens, podeGerir, recarregar }: { itens: Item[]; p
                     </optgroup>
                   ))}
                 </select>
+                <button type="button" onClick={() => setEditando(null)} className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">
+                  Cancelar
+                </button>
               </span>
             )}
           </li>

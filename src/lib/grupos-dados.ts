@@ -1,3 +1,4 @@
+import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { db } from "@/lib/db";
 import { leiturasEmSequencia } from "@/lib/gaf-leituras";
 import { ehTipoGrupo, gruposDaAgenda, papelNoGrupo, TIPOS_DO_PORTAL, TIPOS_GRUPO, type Papel, type TipoGrupo } from "@/lib/grupos-portal";
@@ -229,7 +230,8 @@ export async function gafNoPortal(m: Pessoa, grupoId: string) {
     modalidade: d.grupo.modalidade,
     frequencia: d.grupo.frequencia,
     link: online ? d.grupo.linkOnline : null,
-    podeGerir: d.papel.podeGerir,
+    // Link para administrar só para quem gere o grupo E tem o Portal do Voluntário liberado (29/10/2026).
+    podeGerir: d.papel.podeGerir && (await temAcessoVoluntario(m)),
     responsaveis: d.grupo.responsaveis.map((p) => p.name),
     integrantes: d.grupo.integrantes.map((p) => p.name),
     proximo: proximo && { inicio: proximo.startsAt, fim: proximo.endsAt, titulo: proximo.title, cancelado: proximo.status === "cancelada", motivo: proximo.cancellationReason, detalhes: proximo.publicDetails },
