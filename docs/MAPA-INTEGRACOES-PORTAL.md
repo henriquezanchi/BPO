@@ -16,6 +16,6 @@ Informações fornecidas por Henrique em 23/10/2026. Este documento descreve des
 
 O Portal já usa Keycloak (realm oinabnb, client portal-aluno) e ponte de comunicação para chamadas de servidor. A ponte não substitui a sessão de navegador de outro aplicativo. Acesso sem nova senha depende de cada sistema estar integrado ao mesmo SSO e das permissões da pessoa. Não transportar tokens em URLs nem compartilhar sessão de administrador.
 
-## Pendência objetiva: biblioteca
+## Bastiões: endereço confirmado
 
-O código atualmente aponta para https://bastiao.oinabn.com.br/ em src/components/member/panels/study-area-panel.tsx, com elegibilidade de membros. Confirmar se este é o Bastiões citado ou obter a URL oficial nova antes de substituir. Investigar redirecionamento SSO do destino após confirmação.
+Endereço oficial confirmado pelo usuário em 29/10/2026: https://bastiao.oinabn.com.br/. É o botão "Bastiões" da Área de Estudos (src/components/member/panels/study-area-panel.tsx), só para membros. "Acessar Biblioteca" leva a https://biblioteca.acropolebrasil.com.br/. Pendente apenas investigar o redirecionamento SSO do destino.
