@@ -34,13 +34,19 @@ export async function atualizarResumos(limite = 4) {
   const vencidas = tarefas.filter((t) => agora - t.geradoEm > VALIDADE_MS).sort((a, b) => a.geradoEm - b.geradoEm);
   const feitas: string[] = [];
   const falhas: string[] = [];
+  let semConexao = false;
   for (const t of vencidas.slice(0, limite)) {
     try {
       await t.rodar();
       feitas.push(t.nome);
     } catch (e) {
       falhas.push(`${t.nome}: ${e instanceof Error ? e.message : String(e)}`);
+      // Banco de consulta fora do ar: as próximas também falhariam; ficam para a rodada seguinte.
+      if (e instanceof TypeError && e.message === "fetch failed") {
+        semConexao = true;
+        break;
+      }
     }
   }
-  return { feitas, falhas, faltam: Math.max(0, vencidas.length - limite), total: tarefas.length };
+  return { feitas, falhas, semConexao, faltam: Math.max(0, vencidas.length - limite), total: tarefas.length };
 }
