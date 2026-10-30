@@ -1,15 +1,12 @@
-import { db } from "@/lib/db";
 import type { Member, School } from "@prisma/client";
 
 /**
  * Termo oficial de Adesão ao Serviço Voluntário da Nova Acrópole
  * (Termo_Voluntario_V220219.pdf, enviado pelo usuário 2026-10-18).
- * Orientações do próprio termo: novo termo ao mudar de unidade e a cada 5
- * anos (ver termoVigente). Mudar VOLUNTEER_TERM_VERSION junto sempre que o
- * texto mudar, pra todos assinarem de novo.
+ * Desde 30/10/2026 só para leitura: o termo vale assinado no gov.br ou em
+ * papel com 2 testemunhas, com a filial (Instituto Maat). A assinatura pelo
+ * Portal saiu; os registros antigos ficam em VolunteerTermSignature.
  */
-export const VOLUNTEER_TERM_VERSION = "V220219";
-const VALIDADE_ANOS = 5;
 
 function formatarCnpj(cnpj: string | null) {
   const d = (cnpj ?? "").replace(/\D/g, "");
@@ -58,20 +55,4 @@ Pelo presente termo de adesão, estabelecido em obediência ao art. 2º da Lei n
 8. Fica estabelecido, desde logo, que o presente termo não gera para a parte aderente vínculo empregatício nem funcional ou quaisquer obrigações de caráter trabalhista, previdenciário ou afim, bem como qualquer direito a indenização, conforme preceitua o parágrafo único do art. 1º, da Lei nº 9.608/98.
 
 Orientações gerais: um novo termo deve ser assinado caso o voluntário mude de unidade; refazer o termo a cada 5 anos, guardando os anteriores.`;
-}
-
-/** "123.456.789-01" → "***.456.789-**" — o termo assinado guarda só a parte central. */
-export function mascararCpf(cpf: string) {
-  const d = cpf.replace(/\D/g, "").padStart(11, "0");
-  return `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**`;
-}
-
-/** Assinatura que ainda vale: versão atual, mesma filial e com menos de 5 anos. */
-export async function termoVigente(memberId: string, schoolId: string) {
-  const limite = new Date();
-  limite.setFullYear(limite.getFullYear() - VALIDADE_ANOS);
-  return db.volunteerTermSignature.findFirst({
-    where: { memberId, termVersion: VOLUNTEER_TERM_VERSION, schoolId, signedAt: { gte: limite } },
-    orderBy: { signedAt: "desc" },
-  });
 }

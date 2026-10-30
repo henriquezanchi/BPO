@@ -99,7 +99,7 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       secao: "Meu trabalho",
       pendentes: interessados,
     },
-    { href: "/voluntario/termo", rotulo: "Termo de voluntariado", descricao: "Assinatura do termo", icone: "termo", secao: "Meu trabalho" },
+    { href: "/voluntario/termo", rotulo: "Termo de voluntariado", descricao: "Como assinar o termo com a filial", icone: "termo", secao: "Meu trabalho" },
     // Secretarias da filial, à parte de Grupos (pedido do usuário 2026-10-25).
     (administra.length > 0 || emSecretaria > 0) && { href: "/secretarias", rotulo: "Secretarias da filial", descricao: "Responsáveis, equipes e atividades de cada secretaria", icone: "secretarias", secao: "Secretarias" },
     tem("escolastica") && {

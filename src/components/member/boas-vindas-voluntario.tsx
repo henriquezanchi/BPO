@@ -1,13 +1,13 @@
 "use client";
 
 import type { BoasVindasVoluntario as Dados } from "@/lib/boas-vindas-voluntario";
-import { CheckCircle2, ChevronRight, FileSignature, HandHeart, X } from "lucide-react";
+import { ChevronRight, FileSignature, HandHeart, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 /**
  * Boas-vindas do novo voluntário (pedido do usuário 2026-10-29): no próximo acesso depois da liberação, agradece,
- * mostra as áreas em que a pessoa foi indicada, o que ela pode fazer no Portal do Voluntário e leva ao termo.
+ * mostra as áreas em que a pessoa foi indicada, o que ela pode fazer no Portal do Voluntário e orienta a assinar o termo com a filial.
  * Some de vez quando a pessoa chega ao fim (por liberação, neste aparelho); "Ver depois" fecha só nesta sessão.
  * Os dados vêm de lib/boas-vindas-voluntario.ts.
  */
@@ -117,17 +117,15 @@ export function BoasVindasVoluntario({ memberId, nome, dados }: { memberId: stri
             </>
           )}
 
-          {passo === 2 &&
-            (dados.termoAssinado ? (
-              <p className="flex items-start gap-2 rounded-xl bg-na-success-light p-3 text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">
-                <CheckCircle2 size={17} className="mt-0.5 shrink-0" /> Seu Termo de Adesão ao Serviço Voluntário já está assinado. Está tudo pronto.
-              </p>
-            ) : (
+          {passo === 2 && (
+            <>
               <p>
-                O serviço voluntário começa pelo <strong>Termo de Adesão ao Serviço Voluntário</strong>. Leia com calma: ele já vem preenchido com os dados do seu cadastro. Se algo estiver errado,
-                peça à secretaria para corrigir antes de assinar.
+                O serviço voluntário começa pelo <strong>Termo de Adesão ao Serviço Voluntário</strong>. Procure a secretaria ou a Direção da sua filial para assinar: em papel, com duas
+                testemunhas, ou pelo gov.br.
               </p>
-            ))}
+              <p className="text-[12px] text-gray-500 dark:text-gray-400">Se você já assinou na filial, está tudo pronto. O texto do termo fica na Área do Voluntário, em Termo de voluntariado.</p>
+            </>
+          )}
         </div>
 
         <footer className="flex flex-col gap-2 px-6 pb-6">
@@ -136,8 +134,8 @@ export function BoasVindasVoluntario({ memberId, nome, dados }: { memberId: stri
               Continuar <ChevronRight size={16} />
             </button>
           ) : (
-            <Link href={dados.termoAssinado ? "/voluntario" : "/voluntario/termo"} onClick={() => fechar(true)} className={`${botao} bg-na-green text-white hover:bg-na-green-dark`}>
-              {dados.termoAssinado ? "Ir para a Área do Voluntário" : "Ler o termo"} <ChevronRight size={16} />
+            <Link href="/voluntario" onClick={() => fechar(true)} className={`${botao} bg-na-green text-white hover:bg-na-green-dark`}>
+              Ir para a Área do Voluntário <ChevronRight size={16} />
             </Link>
           )}
           <button onClick={passo === 0 ? () => fechar(false) : () => setPasso(passo - 1)} className={`${botao} text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800`}>

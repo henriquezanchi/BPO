@@ -24,9 +24,7 @@ Localização: **Turmas e grupos → brigada → Reuniões da brigada**. Para in
 
 ## Termo: estado real
 
-O termo atual registra nome digitado e CPF validado pelos dígitos verificadores. Não faz autenticação gov.br, não consulta identidade na Receita e não reúne assinaturas do representante e das testemunhas. Foi ajustada a linguagem para “concordância eletrônica”, preservando registros anteriores.
-
-Segundo a orientação recebida da escola, o fluxo externo deve manter o mesmo PDF para as assinaturas do voluntário, representante e duas testemunhas, com conferência a cada etapa em https://validar.iti.gov.br/. Não imprimir/regenerar o documento entre assinaturas. O Portal ainda não recebe esses arquivos nem valida criptograficamente as assinaturas. Não marcar esse processo como concluído pelo simples aceite interno.
+**Decisão de 30/10/2026** (direção nacional do Instituto Maat): o Termo de Adesão ao Serviço Voluntário só vale juridicamente assinado pelo gov.br ou em papel com 2 testemunhas, e validadores externos custam caro. O Portal **não colhe assinatura**. `/voluntario/termo` orienta a procurar a secretaria ou a Direção da filial e mostra o texto preenchido com o cadastro (recolhido). As boas-vindas do voluntário dão a mesma orientação. A ação `signVolunteerTerm` e o formulário foram removidos; a tabela `VolunteerTermSignature` continua com o único registro antigo (não é exibido). Não reativar assinatura pelo Portal sem nova orientação jurídica.
 
 ## Fontes dos diários localizadas
 
