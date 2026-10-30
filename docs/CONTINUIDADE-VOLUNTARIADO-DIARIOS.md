@@ -24,7 +24,7 @@ Localização: **Turmas e grupos → brigada → Reuniões da brigada**. Para in
 
 ## Termo: estado real
 
-**Decisão de 30/10/2026** (direção nacional do Instituto Maat): o Termo de Adesão ao Serviço Voluntário só vale juridicamente assinado pelo gov.br ou em papel com 2 testemunhas, e validadores externos custam caro. O Portal **não colhe assinatura**. `/voluntario/termo` orienta a procurar a secretaria ou a Direção da filial e mostra o texto preenchido com o cadastro (recolhido). As boas-vindas do voluntário dão a mesma orientação. A ação `signVolunteerTerm` e o formulário foram removidos; a tabela `VolunteerTermSignature` continua com o único registro antigo (não é exibido). Não reativar assinatura pelo Portal sem nova orientação jurídica.
+**Decisão de 30/10/2026** (direção nacional do Instituto Maat): o Termo de Adesão ao Serviço Voluntário só vale juridicamente assinado pelo gov.br ou em papel com 2 testemunhas, e validadores externos custam caro. O Portal **não colhe assinatura**. `/voluntario/termo` orienta a procurar a secretaria ou a Direção da filial e mostra o texto preenchido com o cadastro (recolhido). As boas-vindas do voluntário dão a mesma orientação. A ação `signVolunteerTerm` e o formulário foram removidos; a tabela `VolunteerTermSignature` ficou vazia (o único registro era um teste do usuário, excluído em 30/10/2026). Não reativar assinatura pelo Portal sem nova orientação jurídica.
 
 ## Fontes dos diários localizadas
 
