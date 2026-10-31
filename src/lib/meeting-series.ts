@@ -26,7 +26,16 @@ export async function materializeMeetingSeries(store:Store,series:GroupMeetingSe
 export async function ensureGroupMeetingWindow(groupIds:string[]) {
  if(!groupIds.length)return;
  const series=await db.groupMeetingSeries.findMany({where:{classGroupId:{in:groupIds}}});
- for(const item of series)await db.$transaction(async tx=>{
+ if(!series.length)return;
+ // Desempenho (31/10/2026): roda em todo acesso ao Portal. Antes travava e gravava cada série mesmo sem nada a gerar;
+ // agora confere numa leitura só se falta algum encontro na janela e abre a transação apenas para as séries incompletas.
+ const agora=Date.now();
+ const esperadas=series.map(s=>({s,slots:seriesOccurrences({...s,changes:s.changes as unknown as WeeklySegment[],intervalWeeks:s.intervaloSemanas},agora).map(d=>d.seriesSlot)}));
+ const todos=esperadas.flatMap(e=>e.slots);
+ const jaTem=todos.length?await db.groupMeeting.findMany({where:{seriesId:{in:series.map(s=>s.id)},seriesSlot:{in:todos}},select:{seriesId:true,seriesSlot:true}}):[];
+ const existe=new Set(jaTem.map(e=>`${e.seriesId}|${e.seriesSlot}`));
+ const incompletas=esperadas.filter(e=>e.slots.some(slot=>!existe.has(`${e.s.id}|${slot}`))).map(e=>e.s);
+ for(const item of incompletas)await db.$transaction(async tx=>{
   const current=await tx.groupMeetingSeries.update({where:{id:item.id},data:{id:item.id}});
   return materializeMeetingSeries(tx,current);
  },{timeout:30000});

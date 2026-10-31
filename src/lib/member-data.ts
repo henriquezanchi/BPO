@@ -136,6 +136,8 @@ export type AgendaItem =
  * em que o membro está matriculado como aluno).
  */
 export async function getMemberDashboard(memberId: string) {
+  // Túnel do Ágora (2026-10-27, até 6 s): só precisa do id, então começa já e corre em paralelo com tudo (31/10/2026).
+  const agendaAgora = eventosDoAgora(memberId);
   const member = await db.member.findUniqueOrThrow({
     where: { id: memberId },
     include: {
@@ -156,14 +158,80 @@ export async function getMemberDashboard(memberId: string) {
   // ainda não confirmada no Mercúrio pelo worker — ver process-mercurio-
   // queue.ts) — pra UI diferenciar visualmente "salvo, mas ainda não
   // confirmado" de "já confirmado".
-  const tarefasComposicaoPendentes = await db.mercurioSyncTask.findMany({
-    where: {
-      memberId,
-      status: "pendente",
-      taskType: { in: ["incluir_item_composicao", "editar_valor_item_composicao"] },
-    },
-    select: { payload: true },
-  });
+  // Desempenho (31/10/2026): o que só depende do cadastro roda junto, em vez de uma consulta esperando a outra.
+  const comPedido = member.isMembroPrograma ? {} : { permiteAlunos: true };
+  const [
+    tarefasComposicaoPendentes,
+    walletAgg,
+    acessoVoluntario,
+    administradorNacional,
+    recursos,
+    administraFilial,
+    avaliacao,
+    groupIds,
+    gafsDaFilial,
+    gruposDeEstudoDaFilial,
+    [avisosGrupos, meusGafs, destinosVoluntario],
+    [atendimentos, instrutoresDisponiveis],
+    pedagogos,
+    [streakMeses, badges, levelHistory, integrationCourses, eventHistory],
+  ] = await Promise.all([
+    db.mercurioSyncTask.findMany({
+      where: {
+        memberId,
+        status: "pendente",
+        taskType: { in: ["incluir_item_composicao", "editar_valor_item_composicao"] },
+      },
+      select: { payload: true },
+    }),
+    db.fortunaTransaction.aggregate({ where: { memberId }, _sum: { amount: true } }),
+    // Avisos de grupos de voluntários só com acesso liberado (ver acesso-voluntario.ts).
+    temAcessoVoluntario(member),
+    ehAdministradorNacional(member),
+    // Recursos que a filial liberou (painéis ocultos por padrão) e se a pessoa administra alguma filial.
+    recursosDaFilial(member.schoolId),
+    filiaisAdministradas(member).then((f) => f.length > 0),
+    // Quadrinho da avaliação de instrutores: só com rodada aberta e algo pendente pra este aluno.
+    avaliacaoPendente(member),
+    // Avisos e enquetes: turmas e os mesmos grupos cujos encontros a pessoa vê (GAF sempre; demais com acesso liberado; GDVE só FV).
+    gruposDaAgenda({ ...member, classMemberships: member.classMemberships.filter((cm) => cm.role === "aluno" && cm.classGroup.arquivadoEm === null) }),
+    // GAFs da filial que aceitam a pessoa e de que ela ainda não participa, com o pedido já feito (2026-10-25).
+    db.classGroup.findMany({
+      where: { schoolId: member.schoolId, tipo: "GAF", arquivadoEm: null, memberships: { none: { memberId: member.id } }, ...comPedido },
+      select: { id: true, name: true, descricao: true, modalidade: true, local: true, gafRequests: { where: { memberId: member.id }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
+      orderBy: { name: "asc" },
+    }),
+    // Grupos de estudo e leituras comentadas da filial que aceitam a pessoa (abertos e os dela).
+    db.classGroup.findMany({
+      where: { schoolId: member.schoolId, tipo: { in: ["ESTUDO", "LEITURA"] }, arquivadoEm: null, ...comPedido },
+      select: { id: true, name: true, tipo: true, descricao: true, modalidade: true, local: true, memberships: { where: { memberId: member.id }, select: { role: true } } },
+      orderBy: { name: "asc" },
+    }),
+    Promise.all([avisosDosGrupos({ ...member, classMemberships: member.classMemberships.filter((cm) => cm.classGroup.arquivadoEm === null) }), meusGrupos(member, ["GAF"]), destinosDaPessoa(member)]),
+    Promise.all([
+      db.atendimentoReserva.findMany({
+        where: { status: "marcada", fim: { gte: new Date() }, OR: [{ alunoId: memberId }, { instrutorId: memberId }] },
+        select: { id: true, inicio: true, fim: true, alunoId: true, modalidade: true, local: true, linkOnline: true, assunto: true, aluno: { select: { name: true } }, instrutor: { select: { name: true } } },
+        orderBy: { inicio: "asc" },
+      }),
+      member.mercurioAtivo ? instrutoresParaAtendimento(memberId).catch(() => []) : Promise.resolve([]),
+    ]),
+    // Turma de pedagogos e a próxima apresentação (2026-10-29): também para quem ainda não é instrutor no Mercúrio.
+    minhaTurmaDePedagogos(member.id, fusoDaEscola(member.school.uf)),
+    // Best-effort — uma falha nas conquistas não pode derrubar o Portal (decisão do usuário 2026-09-28); a lista
+    // vem depois da verificação para já mostrar a conquista nova.
+    verificarEAtribuirConquistas(memberId)
+      .catch(() => {})
+      .then(() =>
+        Promise.all([
+          calcularStreakMeses(memberId),
+          db.memberBadge.findMany({ where: { memberId }, orderBy: { earnedAt: "asc" } }),
+          db.memberLevelHistory.findMany({ where: { memberId }, orderBy: { changedAt: "asc" } }),
+          db.memberIntegrationCourse.findMany({ where: { memberId }, orderBy: { syncedAt: "asc" } }),
+          db.eventRegistration.findMany({ where: { memberId, checkedIn: true }, select: { event: { select: { title: true, startsAt: true } } }, orderBy: { event: { startsAt: "asc" } } }),
+        ]),
+      ),
+  ]);
   const gruposComTarefaPendente = new Set(
     tarefasComposicaoPendentes.map((t) => (t.payload as { mercurioGroupId: string }).mercurioGroupId),
   );
@@ -176,35 +244,19 @@ export async function getMemberDashboard(memberId: string) {
     .filter((c) => !gruposJaTidos.has(c.mercurioGroupId) && rubricaIncluivelPeloMembro(c.label) && rubricaVisivelPara(c.label, member))
     .map((c) => ({ value: c.mercurioGroupId, label: c.label }));
 
-  const walletAgg = await db.fortunaTransaction.aggregate({
-    where: { memberId },
-    _sum: { amount: true },
-  });
-
   // Saldo real do Fortuna NÃO é buscado aqui — API externa (login+2
   // requests) segurava o carregamento inicial da tela inteira (bug real
   // relatado pelo usuário). FortunaWalletCard busca sozinho, client-side,
   // via getFortunaBalancesForMember — ver fortuna-member-actions.ts.
   const fortunaBalances: FortunaBalanceView[] = [];
 
-  // Avisos de grupos de voluntários só com acesso liberado (ver acesso-voluntario.ts).
-  const acessoVoluntario = await temAcessoVoluntario(member);
-  const administradorNacional = await ehAdministradorNacional(member);
-  // Recursos que a filial liberou (painéis ocultos por padrão) e se a pessoa administra alguma filial.
-  const [recursos, administraFilial, avaliacao] = await Promise.all([
-    recursosDaFilial(member.schoolId),
-    filiaisAdministradas(member).then((f) => f.length > 0),
-    // Quadrinho da avaliação de instrutores: só com rodada aberta e algo pendente pra este aluno.
-    avaliacaoPendente(member),
-  ]);
-  // Avisos e enquetes: turmas e os mesmos grupos cujos encontros a pessoa vê (GAF sempre; demais com acesso liberado; GDVE só FV).
-  const groupIds = await gruposDaAgenda({ ...member, classMemberships: member.classMemberships.filter((cm) => cm.role === "aluno" && cm.classGroup.arquivadoEm === null) });
   const gruposVisiveis = new Set(groupIds);
   const studentClassGroupIds = member.classMemberships
     .filter((cm) => cm.role === "aluno" && (cm.classGroup.tipo === "turma" || gruposVisiveis.has(cm.classGroupId)))
     .map((cm) => cm.classGroupId);
 
-  const [schoolEvents, classActivities, classPolls] = await Promise.all([
+  const voluntariadoVisivel = recursos.voluntariado && (publicosDaPessoa(member).includes("membros") || acessoVoluntario);
+  const [schoolEvents, classActivities, classPolls, meetings, oportunidades, boasVindasVoluntario] = await Promise.all([
     // Eventos da própria filial + nacionais/regionais (importados — ver
     // sync-national-calendar.ts). Pedido do usuário 2026-10-09: por ora
     // nacional/regional aparece pra TODO MUNDO, sem recorte por perfil
@@ -230,69 +282,58 @@ export async function getMemberDashboard(memberId: string) {
     studentClassGroupIds.length
       ? db.poll.findMany({
           where: { classGroupId: { in: studentClassGroupIds } },
-          include: { classGroup: true, options: { include: { votes: true } } },
+          // Só a contagem e o voto da própria pessoa (antes vinham todas as linhas de voto de todas as enquetes).
+          include: { classGroup: true, options: { select: { id: true, label: true, _count: { select: { votes: true } }, votes: { where: { memberId }, select: { id: true } } } } },
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
+    // Reuniões dos grupos em que a pessoa é integrante (groupIds): grupos de FV e secretarias com acesso de
+    // voluntário, GAF sempre, GDVE só para FV (regras em grupos-portal.ts).
+    groupIds.length
+      ? ensureGroupMeetingWindow(groupIds).then(() =>
+          db.groupMeeting.findMany({
+            where: { classGroupId: { in: groupIds }, endsAt: { gte: new Date() } },
+            orderBy: { startsAt: "asc" },
+            select: { id: true, title: true, startsAt: true, endsAt: true, publicDetails: true, fullUniform: true, status: true, cancellationReason: true, version: true, classGroup: { select: { name: true } }, responses: { where: { memberId }, select: { response: true } } },
+          }),
+        )
+      : Promise.resolve([]),
+    // Oportunidades abertas da filial para o destaque da vitrine (2026-10-29).
+    voluntariadoVisivel ? destaqueDeOportunidades(member) : Promise.resolve(null),
+    boasVindasDoVoluntario(member, destinosVoluntario),
   ]);
 
-  // Reuniões dos grupos em que a pessoa é integrante (groupIds, acima): grupos de FV e secretarias com acesso
-  // de voluntário, GAF sempre, GDVE só para FV (regras em grupos-portal.ts).
-  // GAFs da filial que aceitam a pessoa e de que ela ainda não participa, com o pedido já feito (2026-10-25).
-  const gafsDisponiveis = (
-    await db.classGroup.findMany({
-      where: { schoolId: member.schoolId, tipo: "GAF", arquivadoEm: null, memberships: { none: { memberId: member.id } }, ...(member.isMembroPrograma ? {} : { permiteAlunos: true }) },
-      select: { id: true, name: true, descricao: true, modalidade: true, local: true, gafRequests: { where: { memberId: member.id }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
-      orderBy: { name: "asc" },
-    })
-  ).map((g) => ({ id: g.id, nome: g.name, descricao: g.descricao, modalidade: g.modalidade, local: g.local, pedidoEm: g.gafRequests[0]?.createdAt.toISOString() ?? null }));
-  // Grupos de estudo e leituras comentadas da filial que aceitam a pessoa (abertos e os dela).
-  const gruposDeEstudo = (
-    await db.classGroup.findMany({
-      where: { schoolId: member.schoolId, tipo: { in: ["ESTUDO", "LEITURA"] }, arquivadoEm: null, ...(member.isMembroPrograma ? {} : { permiteAlunos: true }) },
-      select: { id: true, name: true, tipo: true, descricao: true, modalidade: true, local: true, memberships: { where: { memberId: member.id }, select: { role: true } } },
-      orderBy: { name: "asc" },
-    })
-  ).map((g) => ({ id: g.id, nome: g.name, tipo: g.tipo === "LEITURA" ? "Leitura comentada" : "Grupo de estudo", descricao: g.descricao, modalidade: g.modalidade, local: g.local, participo: g.memberships.length > 0 }));
-  // Túnel do Ágora (2026-10-27): eventos liberados para o aluno, em paralelo com o resto (no máximo 6 s).
-  const agendaAgora = eventosDoAgora(member.id);
-  const [avisosGrupos,meusGafs,destinosVoluntario] = await Promise.all([avisosDosGrupos({...member,classMemberships:member.classMemberships.filter(cm=>cm.classGroup.arquivadoEm===null)}),meusGrupos(member,['GAF']),destinosDaPessoa(member)]);
-  await ensureGroupMeetingWindow(groupIds);
-  const meetings = groupIds.length ? await db.groupMeeting.findMany({
-    where:{classGroupId:{in:groupIds},endsAt:{gte:new Date()}},orderBy:{startsAt:'asc'},
-    select:{id:true,title:true,startsAt:true,endsAt:true,publicDetails:true,fullUniform:true,status:true,cancellationReason:true,version:true,classGroup:{select:{name:true}},responses:{where:{memberId},select:{response:true}}},
-  }) : [];
-
-  const [atendimentos, instrutoresDisponiveis] = await Promise.all([
-    db.atendimentoReserva.findMany({
-      where: { status: "marcada", fim: { gte: new Date() }, OR: [{ alunoId: memberId }, { instrutorId: memberId }] },
-      select: { id: true, inicio: true, fim: true, alunoId: true, modalidade: true, local: true, linkOnline: true, assunto: true, aluno: { select: { name: true } }, instrutor: { select: { name: true } } },
-      orderBy: { inicio: "asc" },
+  const gafsDisponiveis = gafsDaFilial.map((g) => ({ id: g.id, nome: g.name, descricao: g.descricao, modalidade: g.modalidade, local: g.local, pedidoEm: g.gafRequests[0]?.createdAt.toISOString() ?? null }));
+  const gruposDeEstudo = gruposDeEstudoDaFilial.map((g) => ({ id: g.id, nome: g.name, tipo: g.tipo === "LEITURA" ? "Leitura comentada" : "Grupo de estudo", descricao: g.descricao, modalidade: g.modalidade, local: g.local, participo: g.memberships.length > 0 }));
+  const [reacoesGravadas, minhasInscricoes, filas, escolasQueCobram, eventPosters, resumosDasProvas] = await Promise.all([
+    // Reações de emoji (ver toggleAgendaReaction) — 1 query só pros dois
+    // tipos de item, agregada localmente em vez de N queries por card.
+    db.agendaReaction.findMany({
+      where: {
+        OR: [
+          { itemType: "evento", itemId: { in: schoolEvents.map((e) => e.id) } },
+          { itemType: "atividade", itemId: { in: classActivities.map((a) => a.id) } },
+        ],
+      },
     }),
-    member.mercurioAtivo ? instrutoresParaAtendimento(memberId).catch(() => []) : Promise.resolve([]),
+    // Inscrição do próprio membro nos eventos listados (ver event-actions.ts)
+    // — pra decidir se mostra "Inscrever-se", o QR pendente, ou "Inscrito".
+    db.eventRegistration.findMany({
+      where: { memberId, eventId: { in: schoolEvents.map((e) => e.id) } },
+      select: { id: true, eventId: true, paid: true, pixPayload: true, pixQrCodeBase64: true, refundState: true, refundedAmount: true, desistenciaEm: true },
+    }),
+    // Lista de espera dos eventos com limite de vagas: posição da pessoa e reservas em vigor.
+    db.eventWaitlist.findMany({
+      where: { eventId: { in: schoolEvents.filter((e) => e.capacity !== null).map((e) => e.id) } },
+      select: { eventId: true, memberId: true, avisadoEm: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    // Cobrança sempre pela subconta da filial (2026-10-25): só filiais com a conta Asaas ligada e aprovada (27/10) cobram on-line.
+    escolasQueCobramOnline([member.schoolId, ...schoolEvents.map((e) => e.schoolId).filter((id): id is string => !!id)]),
+    Promise.all(schoolEvents.map(async (e) => [e.id, await eventPosterUrl(e.posterPath)] as const)).then((pares) => new Map(pares)),
+    // Resumos das anotações (próprios e dos colegas, conferidos) para os temas das provas (2026-10-29).
+    resumosParaTemas(member, [...new Set(classActivities.flatMap((a) => (a.type === "prova" ? a.temas : [])))]),
   ]);
-
-  // Reações de emoji (ver toggleAgendaReaction) — 1 query só pros dois
-  // tipos de item, agregada localmente em vez de N queries por card.
-  const reacoesGravadas = await db.agendaReaction.findMany({
-    where: {
-      OR: [
-        { itemType: "evento", itemId: { in: schoolEvents.map((e) => e.id) } },
-        { itemType: "atividade", itemId: { in: classActivities.map((a) => a.id) } },
-      ],
-    },
-  });
-
-  // Inscrição do próprio membro nos eventos listados (ver event-actions.ts)
-  // — pra decidir se mostra "Inscrever-se", o QR pendente, ou "Inscrito".
-  const minhasInscricoes = await db.eventRegistration.findMany({
-    where: { memberId, eventId: { in: schoolEvents.map((e) => e.id) } },
-  });
-  // Lista de espera dos eventos com limite de vagas: posição da pessoa e reservas em vigor.
-  const filas = await db.eventWaitlist.findMany({
-    where: { eventId: { in: schoolEvents.filter((e) => e.capacity !== null).map((e) => e.id) } },
-    orderBy: { createdAt: "asc" },
-  });
   const limiteReserva = Date.now() - RESERVA_MS;
   function esperaDoEvento(eventId: string) {
     const fila = filas.filter((f) => f.eventId === eventId);
@@ -322,11 +363,6 @@ export async function getMemberDashboard(memberId: string) {
     return [...contagemPorEmoji.entries()].map(([emoji, count]) => ({ emoji, count, reactedByMe: minhasReacoes.has(emoji) }));
   }
 
-  // Cobrança sempre pela subconta da filial (2026-10-25): só filiais com a conta Asaas ligada e aprovada (27/10) cobram on-line.
-  const escolasQueCobram = await escolasQueCobramOnline([member.schoolId, ...schoolEvents.map((e) => e.schoolId).filter((id): id is string => !!id)]);
-  const eventPosters=new Map(await Promise.all(schoolEvents.map(async e=>[e.id,await eventPosterUrl(e.posterPath)] as const)));
-  // Resumos das anotações (próprios e dos colegas, conferidos) para os temas das provas (2026-10-29).
-  const resumosDasProvas = await resumosParaTemas(member, [...new Set(classActivities.flatMap((a) => (a.type === "prova" ? a.temas : [])))]);
   const agendaItems: AgendaItem[] = [
     ...(await agendaAgora),
     ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
@@ -394,23 +430,11 @@ export async function getMemberDashboard(memberId: string) {
         question: p.question,
         date: p.createdAt,
         className: portalLabel(p.classGroup.name),
-        options: p.options.map((o) => ({ id: o.id, label: o.label, votes: o.votes.length })),
-        myVote: p.options.find((o) => o.votes.some((v) => v.memberId === memberId))?.id ?? null,
+        options: p.options.map((o) => ({ id: o.id, label: o.label, votes: o._count.votes })),
+        myVote: p.options.find((o) => o.votes.length > 0)?.id ?? null,
       }),
     ),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
-
-  // Best-effort — uma falha aqui não pode derrubar o carregamento do
-  // Portal inteiro (ver decisão do usuário 2026-09-28 sobre conquistas).
-  await verificarEAtribuirConquistas(memberId).catch(() => {});
-
-  const [streakMeses, badges, levelHistory, integrationCourses, eventHistory] = await Promise.all([
-    calcularStreakMeses(memberId),
-    db.memberBadge.findMany({ where: { memberId }, orderBy: { earnedAt: "asc" } }),
-    db.memberLevelHistory.findMany({ where: { memberId }, orderBy: { changedAt: "asc" } }),
-    db.memberIntegrationCourse.findMany({ where: { memberId }, orderBy: { syncedAt: "asc" } }),
-    db.eventRegistration.findMany({where:{memberId,checkedIn:true},select:{event:{select:{title:true,startsAt:true}}},orderBy:{event:{startsAt:"asc"}}}),
-  ]);
 
   return {
     member: {
@@ -442,18 +466,16 @@ export async function getMemberDashboard(memberId: string) {
     bibliotecaLiberada: publicosDaPessoa(member).includes("membros"),
     meusGafs,
     gruposDeEstudo,
-    // Turma de pedagogos e a próxima apresentação (2026-10-29): também para quem ainda não é instrutor no Mercúrio.
-    pedagogos: await minhaTurmaDePedagogos(member.id, fusoDaEscola(member.school.uf)),
+    pedagogos,
     gafsDisponiveis,
     // Um atalho só para a Área do Voluntário, quando a pessoa tem algo lá (mesma regra do menu).
     areaVoluntario: destinosVoluntario.length > 0,
     // Pedidos aguardando quem tem Escolástica/Economia — número no botão da Área do Voluntário.
     pendenciasVoluntario: destinosVoluntario.reduce((soma, d) => soma + (d.pendentes ?? 0), 0),
     // Voluntariado só para membros (2026-10-29); N1 só com a exceção aberta pela Direção (acesso liberado).
-    voluntariadoVisivel: recursos.voluntariado && (publicosDaPessoa(member).includes("membros") || acessoVoluntario),
-    // Oportunidades abertas da filial para o destaque da vitrine (2026-10-29).
-    oportunidades: recursos.voluntariado && (publicosDaPessoa(member).includes("membros") || acessoVoluntario) ? await destaqueDeOportunidades(member) : null,
-    boasVindasVoluntario: await boasVindasDoVoluntario(member, destinosVoluntario),
+    voluntariadoVisivel,
+    oportunidades,
+    boasVindasVoluntario,
     availableToAdd,
     streakMeses,
     eventHistory: eventHistory.map(r=>({title:r.event.title,date:r.event.startsAt})),

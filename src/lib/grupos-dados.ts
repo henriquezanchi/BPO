@@ -46,8 +46,9 @@ async function resumir(where: Prisma.ClassGroupWhereInput): Promise<ResumoGrupo[
       name: true,
       tipo: true,
       modalidade: true,
-      memberships: { select: { role: true, member: { select: { name: true } } } },
-      _count: { select: { atividades: { where: { status: "ativa" } } } },
+      // Só os nomes dos responsáveis e a contagem de integrantes (antes vinham todas as linhas de vínculo).
+      memberships: { where: { role: "professor" }, select: { member: { select: { name: true } } } },
+      _count: { select: { atividades: { where: { status: "ativa" } }, memberships: { where: { role: "aluno" } } } },
     },
     orderBy: { name: "asc" },
   });
@@ -59,8 +60,8 @@ async function resumir(where: Prisma.ClassGroupWhereInput): Promise<ResumoGrupo[
       nome: g.name,
       tipo: g.tipo as TipoGrupo,
       modalidade: g.modalidade,
-      responsaveis: g.memberships.filter((m) => m.role === "professor").map((m) => m.member.name),
-      integrantes: g.memberships.filter((m) => m.role === "aluno").length,
+      responsaveis: g.memberships.map((m) => m.member.name),
+      integrantes: g._count.memberships,
       atividades: g._count.atividades,
       proximoEncontro: prox.get(g.id)?.toISOString() ?? null,
     }));
@@ -78,8 +79,9 @@ export async function meusGrupos(m: Pessoa, tipos?: TipoGrupo[]): Promise<Resumo
     select: { classGroupId: true, role: true },
   });
   const ids = [...new Set(vinculos.map((v) => v.classGroupId))];
-  const visiveis: string[] = [];
-  for (const id of ids) if ((await papelNoGrupo(m, id)).podeVer) visiveis.push(id);
+  // Em paralelo (31/10/2026): cada conferência são várias consultas, e em série somavam quase 1 s no Portal.
+  const papeis = await Promise.all(ids.map((id) => papelNoGrupo(m, id)));
+  const visiveis = ids.filter((_, i) => papeis[i].podeVer);
   const resumos = await resumir({ id: { in: visiveis } });
   return resumos.map((r) => ({ ...r, papel: vinculos.some((v) => v.classGroupId === r.id && v.role === "professor") ? "responsavel" : "integrante" }));
 }
