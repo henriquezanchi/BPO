@@ -41,7 +41,8 @@ export async function salvarPrologo(data: string, entrada: { virtude: string; co
     const eu = await pessoaEDia(data);
     const virtude = texto(entrada.virtude, 120);
     if (!virtude) throw new Error("Escolha ou escreva a virtude do dia.");
-    const campos = { virtude, compromisso: texto(entrada.compromisso), frase: fraseDoDia(data), prologoEm: new Date() };
+    // Dia salvo no Portal passa a ser do Portal (31/10/2026): uma nova importação do diário antigo não o sobrescreve.
+    const campos = { virtude, compromisso: texto(entrada.compromisso), frase: fraseDoDia(data), prologoEm: new Date(), origem: "portal" };
     await db.diarioDia.upsert({ where: { memberId_data: { memberId: eu.id, data } }, update: campos, create: { memberId: eu.id, data, ...campos } });
   });
 }
@@ -51,7 +52,7 @@ export async function salvarEpilogo(data: string, entrada: { semPrologo: boolean
     const eu = await pessoaEDia(data);
     const campos = { semPrologo: !!entrada.semPrologo, falhei: texto(entrada.falhei), fizBem: texto(entrada.fizBem), deixeiDeFazer: texto(entrada.deixeiDeFazer), reflexaoLivre: texto(entrada.reflexaoLivre) };
     if (!epilogoValido(campos)) throw new Error("Responda às três perguntas ou escreva a reflexão livre.");
-    await db.diarioDia.upsert({ where: { memberId_data: { memberId: eu.id, data } }, update: { ...campos, epilogoEm: new Date() }, create: { memberId: eu.id, data, ...campos, epilogoEm: new Date() } });
+    await db.diarioDia.upsert({ where: { memberId_data: { memberId: eu.id, data } }, update: { ...campos, epilogoEm: new Date(), origem: "portal" }, create: { memberId: eu.id, data, ...campos, epilogoEm: new Date() } });
   });
 }
 
@@ -65,7 +66,7 @@ export async function marcarPratica(data: string, praticaId: string, feita: bool
       if (feita) praticas[praticaId] = true;
       else delete praticas[praticaId];
       const valor = praticas as Prisma.InputJsonValue;
-      await tx.diarioDia.upsert({ where: { memberId_data: { memberId: eu.id, data } }, update: { praticas: valor }, create: { memberId: eu.id, data, praticas: valor } });
+      await tx.diarioDia.upsert({ where: { memberId_data: { memberId: eu.id, data } }, update: { praticas: valor, origem: "portal" }, create: { memberId: eu.id, data, praticas: valor } });
     });
   });
 }

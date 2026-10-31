@@ -5,6 +5,10 @@
  * Uso:
  *   npx tsx --env-file=.env --env-file=.env.local scripts/importar-diario-firebase.ts [--chave <arquivo.json>] [--gravar]
  * Sem --gravar, só conta (nada é escrito). A chave é a de conta de serviço do Firebase; fica fora do repositório.
+ *   --somente <matrícula,...>  importa só essas pessoas (as demais nem são lidas).
+ *   --aceitar <matrícula,...>  aceita, para essas pessoas, a conta do Firebase com o MESMO e-mail do cadastro mesmo sem
+ *                              e-mail confirmado — só quando a própria pessoa avisou que os registros não vieram
+ *                              (31/10/2026: Guilherme, 102 dias pulados por e-mail não confirmado).
  *
  * Regras (docs/CONTINUIDADE-VOLUNTARIADO-DIARIOS.md):
  * - Pareia a conta do Firebase com a pessoa do Portal pelo e-mail CONFIRMADO no Firebase; e-mail não confirmado,
@@ -22,6 +26,8 @@ import { db } from "../src/lib/db";
 
 const args = process.argv.slice(2);
 const gravar = args.includes("--gravar");
+const aceitar = new Set(args.includes("--aceitar") ? args[args.indexOf("--aceitar") + 1].split(",").map((m) => m.trim()) : []);
+const somente = new Set(args.includes("--somente") ? args[args.indexOf("--somente") + 1].split(",").map((m) => m.trim()) : []);
 const chave = args.includes("--chave") ? args[args.indexOf("--chave") + 1] : "C:/Users/Henrique Zanchi/Downloads/diario-filosofico-firebase-adminsdk-fbsvc-7303b6efc8.json";
 
 type Tarefa = { id?: string; name?: string; recurrence?: string; weekDays?: number[]; monthDay?: number; baseDate?: string };
@@ -64,7 +70,8 @@ async function main() {
   }
 
   // Cadastros do Portal por e-mail (e-mail repetido em mais de um cadastro = ambíguo).
-  const membros = await db.member.findMany({ where: { email: { not: null } }, select: { id: true, email: true } });
+  const membros = (await db.member.findMany({ where: { email: { not: null } }, select: { id: true, email: true, mercurioId: true } })).filter((m) => !somente.size || (m.mercurioId && somente.has(m.mercurioId)));
+  const emailsAceitos = new Set(membros.filter((m) => m.mercurioId && aceitar.has(m.mercurioId)).map((m) => m.email!.trim().toLowerCase()));
   const porEmail = new Map<string, string[]>();
   for (const m of membros) {
     const e = m.email!.trim().toLowerCase();
@@ -74,7 +81,7 @@ async function main() {
   const c = { contas: contas.length, semEmail: 0, naoConfirmado: 0, semCadastro: 0, ambiguo: 0, pareadas: 0, comDiario: 0, dias: 0, diasVazios: 0, diasDoPortalMantidos: 0, diasGravados: 0, praticas: 0, livros: 0 };
   for (const conta of contas) {
     if (!conta.email) { c.semEmail++; continue; }
-    if (!conta.confirmado) { c.naoConfirmado++; continue; }
+    if (!conta.confirmado && !emailsAceitos.has(conta.email)) { c.naoConfirmado++; continue; }
     const ids = porEmail.get(conta.email) ?? [];
     if (!ids.length) { c.semCadastro++; continue; }
     if (ids.length > 1) { c.ambiguo++; continue; }
