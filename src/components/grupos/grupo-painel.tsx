@@ -588,7 +588,7 @@ function ConteudoEncontros({ dados, recarregar, futuros, passados }: { dados: D;
     <>
       {papel.podeGerir ? (
         <>
-          <MeetingManager groupId={grupo.id} mostrarTraje={["BF", "BM", "CS", "GDVE"].includes(grupo.tipo)} />
+          <MeetingManager groupId={grupo.id} mostrarTraje={["BF", "BM", "CS", "GDVE"].includes(grupo.tipo)} verTraje={dados.souFV} />
           {/* Presença marcada pela coordenação e relatório por período (pedido do usuário 2026-10-29). */}
           {grupo.tipo === "GAF" && <PresencasGrupo grupoId={grupo.id} pessoas={[...grupo.responsaveis, ...grupo.integrantes]} passados={passados} recarregar={recarregar} />}
         </>

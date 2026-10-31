@@ -22,7 +22,7 @@ import { boasVindasDoVoluntario } from "@/lib/boas-vindas-voluntario";
 import { destaqueDeOportunidades } from "@/lib/oportunidades";
 import { minhaTurmaDePedagogos } from "@/lib/escala-pedagogos";
 import { avisosDosGrupos, meusGrupos } from "@/lib/grupos-dados";
-import { gruposDaAgenda } from "@/lib/grupos-portal";
+import { ehFV, gruposDaAgenda } from "@/lib/grupos-portal";
 import { PRAZO_EVENTO_CANCELADO_MS } from "@/lib/evento-cancelado";
 import { rubricaIncluivelPeloMembro, rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
 import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
@@ -175,6 +175,7 @@ export async function getMemberDashboard(memberId: string) {
     [atendimentos, instrutoresDisponiveis],
     pedagogos,
     [streakMeses, badges, levelHistory, integrationCourses, eventHistory],
+    souFV,
   ] = await Promise.all([
     db.mercurioSyncTask.findMany({
       where: {
@@ -231,6 +232,8 @@ export async function getMemberDashboard(memberId: string) {
           db.eventRegistration.findMany({ where: { memberId, checkedIn: true }, select: { event: { select: { title: true, startsAt: true } } }, orderBy: { event: { startsAt: "asc" } } }),
         ]),
       ),
+    // "CRM com traje completo" é sigla interna de FV: só quem é FV vê na Agenda (pedido do usuário 2026-10-31).
+    ehFV(memberId),
   ]);
   const gruposComTarefaPendente = new Set(
     tarefasComposicaoPendentes.map((t) => (t.payload as { mercurioGroupId: string }).mercurioGroupId),
@@ -365,7 +368,7 @@ export async function getMemberDashboard(memberId: string) {
 
   const agendaItems: AgendaItem[] = [
     ...(await agendaAgora),
-    ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
+    ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:souFV&&m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
     ...schoolEvents.map(
       (e): AgendaItem => ({
         kind: "evento",

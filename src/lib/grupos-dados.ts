@@ -1,7 +1,7 @@
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { db } from "@/lib/db";
 import { leiturasEmSequencia } from "@/lib/gaf-leituras";
-import { ehTipoGrupo, gruposDaAgenda, papelNoGrupo, TIPOS_DO_PORTAL, TIPOS_GRUPO, type Papel, type TipoGrupo } from "@/lib/grupos-portal";
+import { ehFV, ehTipoGrupo, gruposDaAgenda, papelNoGrupo, TIPOS_DO_PORTAL, TIPOS_GRUPO, type Papel, type TipoGrupo } from "@/lib/grupos-portal";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import { linkDoCanal } from "@/lib/slack";
 import type { Member, Prisma } from "@prisma/client";
@@ -146,6 +146,8 @@ export async function detalheDoGrupo(m: Pessoa, grupoId: string) {
   return {
     agora: Date.now(),
     papel,
+    // "CRM com traje completo" é sigla interna de FV: só quem é FV vê (pedido do usuário 2026-10-31).
+    souFV: await ehFV(m.id),
     pedidos,
     leiturasGaf,
     grupo: {
