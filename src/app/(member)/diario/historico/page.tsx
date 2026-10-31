@@ -75,8 +75,8 @@ export default async function HistoricoDiarioPage(props: { searchParams: Promise
                     <span className="block truncate text-[14px] font-bold text-gray-900 dark:text-gray-100">{d.virtude ?? "Sem virtude escolhida"}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
-                    <Sunrise size={15} aria-label={d.prologo ? "Prólogo feito" : "Sem Prólogo"} className={d.prologo ? "text-amber-500" : "text-gray-300 dark:text-gray-700"} />
-                    <Moon size={15} aria-label={d.epilogo ? "Epílogo feito" : "Sem Epílogo"} className={d.epilogo ? "text-indigo-500 dark:text-indigo-300" : "text-gray-300 dark:text-gray-700"} />
+                    <Sunrise size={15} aria-label={d.prologo ? "Prólogo feito" : "Sem Prólogo"} className={d.prologo ? "text-na-warning" : "text-gray-300 dark:text-gray-700"} />
+                    <Moon size={15} aria-label={d.epilogo ? "Epílogo feito" : "Sem Epílogo"} className={d.epilogo ? "text-na-turquesa dark:text-indigo-300" : "text-gray-300 dark:text-gray-700"} />
                     <ChevronRight size={15} className="text-gray-400 transition group-open:rotate-90" />
                   </span>
                 </summary>

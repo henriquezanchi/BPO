@@ -76,10 +76,10 @@ const dataBR = (iso: string) => {
   return `${DIAS[d.getUTCDay()]}, ${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 };
 const SITUACAO: Record<ApresentacaoView["situacao"], [string, string]> = {
-  aprovado: ["Plano aprovado", "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"],
+  aprovado: ["Plano aprovado", "bg-na-success-light text-na-success-dark dark:bg-emerald-950/50 dark:text-emerald-300"],
   entregue: ["Plano entregue, a revisar", "bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300"],
-  devolvido: ["Plano devolvido para ajustes", "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"],
-  atrasado: ["Plano atrasado", "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300"],
+  devolvido: ["Plano devolvido para ajustes", "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/50 dark:text-amber-300"],
+  atrasado: ["Plano atrasado", "bg-na-danger-light text-na-danger-dark dark:bg-red-950/50 dark:text-red-300"],
   no_prazo: ["Plano até", "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"],
 };
 function Etiqueta({ a }: { a: ApresentacaoView }) {
@@ -155,7 +155,7 @@ export function EscalaPedagogos({
             ["Atrasados", atrasados.length, "plano não entregue no prazo"],
             ["Pedagogos", pedagogos.length, "na turma"],
           ].map(([r, v, d]) => (
-            <div key={String(r)} className={`${CARTAO} !p-3 ${r === "Atrasados" && Number(v) > 0 ? "border-red-300 dark:border-red-900" : ""}`}>
+            <div key={String(r)} className={`${CARTAO} !p-3 ${r === "Atrasados" && Number(v) > 0 ? "border-na-danger/40 dark:border-red-900" : ""}`}>
               <p className="text-2xl font-black text-gray-900 tabular-nums dark:text-gray-100">{v}</p>
               <p className="text-[12px] font-semibold text-gray-700 dark:text-gray-200">{r}</p>
               <p className="text-[10px] text-gray-500 dark:text-gray-400">{d}</p>
@@ -165,7 +165,7 @@ export function EscalaPedagogos({
       )}
 
       {podeGerir && atrasados.length > 0 && (
-        <p className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+        <p className="flex items-start gap-2 rounded-xl border border-na-danger/30 bg-na-danger-light px-3 py-2 text-[13px] text-na-danger-dark dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
           <span>Planos atrasados: {atrasados.map((a) => `${a.pedagogo.split(" ")[0]} (${dataBR(a.data)})`).join(", ")}.</span>
         </p>
@@ -295,7 +295,7 @@ function GerarRodada({ grupoId, hoje, programas, pedagogos, pendente, rodar }: {
       {linhas && programa && (
         <div className="flex flex-col gap-2">
           {concluiram.length > 0 && (
-            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-[12px] text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <p className="rounded-lg bg-na-success-light px-3 py-2 text-[12px] text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">
               Já têm todos os temas marcados ou apresentados (ficam fora): {concluiram.map((n) => n.split(" ").slice(0, 2).join(" ")).join(", ")}.
             </p>
           )}
@@ -406,7 +406,7 @@ function ProgressoPrograma({
                       <li key={x.id} className="flex flex-col gap-1">
                         <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-[12px]">
                           <b className="text-gray-900 dark:text-gray-100">{x.nome}</b>
-                          <span className={concluiu ? "font-semibold text-emerald-700 dark:text-emerald-300" : "text-gray-500 dark:text-gray-400"}>
+                          <span className={concluiu ? "font-semibold text-na-success-dark dark:text-emerald-300" : "text-gray-500 dark:text-gray-400"}>
                             {concluiu ? "Concluiu" : `${x.apresentados} de ${p.total} apresentados${soMarcados > 0 ? ` · ${soMarcados} marcado${soMarcados > 1 ? "s" : ""}` : ""}`}
                           </span>
                         </span>
@@ -552,7 +552,7 @@ function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: 
           <button onClick={() => setModo(modo === "editar" ? "nada" : "editar")} className="flex items-center gap-1 text-gray-600 hover:underline dark:text-gray-300">
             <Pencil size={13} /> Ajustar
           </button>
-          <button disabled={pendente} onClick={() => rodar(() => removerApresentacao(a.id))} className="flex items-center gap-1 text-gray-500 hover:text-red-600">
+          <button disabled={pendente} onClick={() => rodar(() => removerApresentacao(a.id))} className="flex items-center gap-1 text-gray-500 hover:text-na-danger-dark">
             <Trash2 size={13} /> Remover
           </button>
         </div>
@@ -565,7 +565,7 @@ function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: 
             <button disabled={pendente} onClick={() => rodar(() => revisarPlano(a.id, "aprovado", comentario), () => setModo("nada"))} className="flex items-center gap-1 rounded-lg bg-na-green px-3 py-1.5 text-white">
               <CheckCircle2 size={13} /> Aprovar
             </button>
-            <button disabled={pendente} onClick={() => rodar(() => revisarPlano(a.id, "devolvido", comentario), () => setModo("nada"))} className="flex items-center gap-1 rounded-lg border border-amber-400 px-3 py-1.5 text-amber-800 dark:text-amber-300">
+            <button disabled={pendente} onClick={() => rodar(() => revisarPlano(a.id, "devolvido", comentario), () => setModo("nada"))} className="flex items-center gap-1 rounded-lg border border-na-warning/60 px-3 py-1.5 text-na-warning-dark dark:text-amber-300">
               <Undo2 size={13} /> Devolver com correções
             </button>
           </div>
@@ -591,7 +591,7 @@ function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: 
           >
             Salvar
           </button>
-          {ed.pedagogoId !== a.pedagogoId && a.plano && <p className="text-[11px] text-amber-700 sm:col-span-4 dark:text-amber-300">Trocar a pessoa apaga o plano já feito para esta apresentação.</p>}
+          {ed.pedagogoId !== a.pedagogoId && a.plano && <p className="text-[11px] text-na-warning-dark sm:col-span-4 dark:text-amber-300">Trocar a pessoa apaga o plano já feito para esta apresentação.</p>}
         </div>
       )}
     </div>
@@ -661,12 +661,12 @@ function MeuPlano({ a, pendente, rodar }: { a: ApresentacaoView; pendente: boole
         <Etiqueta a={a} />
       </div>
       {a.plano?.status === "devolvido" && a.plano.comentarioInstrutor && (
-        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[13px] whitespace-pre-line text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+        <p className="rounded-xl bg-na-warning-light px-3 py-2 text-[13px] whitespace-pre-line text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-200">
           <b>Correções do instrutor:</b> {a.plano.comentarioInstrutor}
         </p>
       )}
       {a.plano?.status === "aprovado" && a.plano.comentarioInstrutor && (
-        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-[13px] whitespace-pre-line text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+        <p className="rounded-xl bg-na-success-light px-3 py-2 text-[13px] whitespace-pre-line text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-200">
           <b>Comentário do instrutor:</b> {a.plano.comentarioInstrutor}
         </p>
       )}
@@ -679,7 +679,7 @@ function MeuPlano({ a, pendente, rodar }: { a: ApresentacaoView; pendente: boole
         {a.plano?.arquivoNome && <span className="text-[12px] text-gray-600 dark:text-gray-300">{a.plano.arquivoNome}</span>}
         <span className="text-[11px] text-gray-500 dark:text-gray-400">PDF, Word, PowerPoint ou texto, até 20 MB</span>
       </div>
-      {aviso && <p className="text-[12px] text-red-700 dark:text-red-300">{aviso}</p>}
+      {aviso && <p className="text-[12px] text-na-danger-dark dark:text-red-300">{aviso}</p>}
       <div className="grid gap-3 md:grid-cols-2">
         {PONTOS.map(([k, rotulo, ajuda]) => (
           <label key={k} className={ROTULO}>

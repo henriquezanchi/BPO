@@ -636,7 +636,7 @@ function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: s
           <button
             type="submit"
             disabled={isPending}
-            className="flex-1 rounded-lg bg-na-warning px-3 py-2 text-[11px] font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+            className="flex-1 rounded-lg bg-na-warning px-3 py-2 text-[11px] font-semibold text-white hover:bg-na-warning-dark disabled:opacity-60"
           >
             {isPending ? "Gerando..." : "Gerar autorização"}
           </button>

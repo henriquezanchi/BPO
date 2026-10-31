@@ -115,7 +115,7 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
             </div>
           </div>
           {crescimentoAnterior && (
-            <p className="mt-2 text-[10px] text-gray-400">
+            <p className="mt-2 text-[10px] text-gray-500">
               Em {NOMES_MES[crescimentoAnterior.mes - 1]}: {formatBRL(crescimentoAnterior.crescimentoComposicao)}/mês em rubricas/doações, {formatBRL(crescimentoAnterior.reversaoInadimplencia)} em reversão de inadimplência.
             </p>
           )}
@@ -126,7 +126,7 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
         Pedidos para diminuir ou remover itens da contribuição ({solicitacoes.length})
       </p>
       {solicitacoes.length === 0 ? (
-        <p className="text-xs text-gray-400">Nenhuma solicitação pendente.</p>
+        <p className="text-xs text-gray-500">Nenhuma solicitação pendente.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {solicitacoes.map((s) => {
@@ -153,7 +153,7 @@ export function EconomiaPanel({ schoolId }: { schoolId: string }) {
                     {s.tipo === "reducao" && s.previousAmount !== null ? `${formatBRL(s.previousAmount)} → ${formatBRL(s.amount)}/mês` : `${formatBRL(s.amount)}/mês`}
                   </span>
                 </p>
-                <p className="mt-1 text-[10px] text-gray-400">Solicitado em {formatDateBR(s.createdAt)}</p>
+                <p className="mt-1 text-[10px] text-gray-500">Solicitado em {formatDateBR(s.createdAt)}</p>
                 <div className="mt-2 flex gap-2">
                   <button
                     onClick={() => handleAprovar(s.id)}

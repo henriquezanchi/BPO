@@ -50,7 +50,7 @@ export async function AvisosDoGrupo({ grupoId }: { grupoId: string }) {
                           </span>
                         </div>
                       ))}
-                      <div className="mt-1 text-[10px] text-gray-400">
+                      <div className="mt-1 text-[10px] text-gray-500">
                         {total} resposta{total === 1 ? "" : "s"} no total
                       </div>
                     </li>

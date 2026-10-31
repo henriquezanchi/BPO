@@ -99,7 +99,7 @@ function Prologo({ d, pendente, rodar }: { d: DiarioDaPessoa; pendente: boolean;
   return (
     <section className={CARTAO}>
       <h2 className="flex items-center gap-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">
-        <Sunrise size={17} className="text-amber-500" /> Prólogo
+        <Sunrise size={17} className="text-na-warning" /> Prólogo
         {feito && !editando && (
           <button onClick={() => setEditando(true)} className="ml-auto flex items-center gap-1 text-[12px] font-semibold text-na-green-dark dark:text-emerald-400">
             <Pencil size={12} /> Editar
@@ -285,7 +285,7 @@ function Epilogo({ d, pendente, rodar }: { d: DiarioDaPessoa; pendente: boolean;
   return (
     <section className={CARTAO}>
       <h2 className="flex items-center gap-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">
-        <Moon size={17} className="text-indigo-500 dark:text-indigo-300" /> Epílogo
+        <Moon size={17} className="text-na-turquesa dark:text-indigo-300" /> Epílogo
         {feito && !editando && (
           <button onClick={() => setEditando(true)} className="ml-auto flex items-center gap-1 text-[12px] font-semibold text-na-green-dark dark:text-emerald-400">
             <Pencil size={12} /> Editar

@@ -141,7 +141,7 @@ export function EscolasticaPanel({ schoolId }: { schoolId: string }) {
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-1 text-[10px] text-gray-400">Solicitado em {formatDateBR(s.createdAt)}</p>
+                  <p className="mt-1 text-[10px] text-gray-500">Solicitado em {formatDateBR(s.createdAt)}</p>
                   <div className="mt-2 flex gap-2">
                     <button
                       onClick={() => handleAprovar(s.id)}

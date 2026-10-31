@@ -95,7 +95,7 @@ export function CalendarioTab({ schoolId }: { schoolId: string }) {
           ))}
         </div>
 
-        {erro ? <p role="alert" className="text-sm text-red-700 dark:text-red-300">Não foi possível carregar o calendário. Tente trocar o mês ou recarregar a página.</p> : !itens ? (
+        {erro ? <p role="alert" className="text-sm text-na-danger-dark dark:text-red-300">Não foi possível carregar o calendário. Tente trocar o mês ou recarregar a página.</p> : !itens ? (
           <p className="flex items-center gap-1.5 text-[12px] text-gray-500 dark:text-gray-400">
             <Loader2 size={13} className="animate-spin" /> Montando o calendário…
           </p>

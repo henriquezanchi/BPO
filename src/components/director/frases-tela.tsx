@@ -81,7 +81,7 @@ function ItemFrase({ schoolId, f }: { schoolId: string; f: FraseResumo }) {
             <button type="button" onClick={() => setEditando(true)} aria-label="Editar frase" className="rounded-lg p-1.5 text-na-green-dark hover:bg-na-green-light dark:text-emerald-400 dark:hover:bg-emerald-950/40">
               <Pencil size={15} aria-hidden />
             </button>
-            <button type="button" disabled={pendente} onClick={() => confirm("Apagar esta frase?") && rodar(() => excluirFrase(schoolId, f.id))} aria-label="Apagar frase" className="rounded-lg p-1.5 text-na-danger-dark hover:bg-red-50 disabled:opacity-50 dark:text-na-danger-light dark:hover:bg-red-950/40">
+            <button type="button" disabled={pendente} onClick={() => confirm("Apagar esta frase?") && rodar(() => excluirFrase(schoolId, f.id))} aria-label="Apagar frase" className="rounded-lg p-1.5 text-na-danger-dark hover:bg-na-danger-light disabled:opacity-50 dark:text-na-danger-light dark:hover:bg-red-950/40">
               <Trash2 size={15} aria-hidden />
             </button>
           </div>

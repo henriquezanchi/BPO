@@ -195,7 +195,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
         onClick={() => setModal("situacao")}
         className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold transition ${
           isDelayed
-            ? "bg-na-danger text-white hover:bg-red-700"
+            ? "bg-na-danger text-white hover:bg-na-danger-dark"
             : semDesconto
               ? "bg-na-warning-dark text-white hover:opacity-90 dark:bg-amber-600"
               : "bg-white/70 text-na-success-dark hover:bg-white dark:bg-black/20 dark:text-emerald-300"
@@ -466,7 +466,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
             </div>
             <span className="text-base font-bold">{member.name}</span>
           </div>
-          <div className="flex justify-between border-t border-white/15 pt-2.5 text-[11px] text-green-100">
+          <div className="flex justify-between border-t border-white/15 pt-2.5 text-[11px] text-white/85">
             <span>{member.school.city ?? member.school.name}</span>
             <span>
               {t.home.matricula}: <strong>#{member.registrationNo ?? "—"}</strong>
@@ -730,7 +730,7 @@ function FeatureTile({
         {icon}
       </div>
       <h5 className="text-xs font-semibold text-gray-900 dark:text-gray-100">{title}</h5>
-      <p className="text-[10px] text-gray-500 dark:text-gray-400">{subtitle}</p>
+      <p className="text-[11px] text-gray-500 dark:text-gray-400">{subtitle}</p>
     </button>
   );
 }

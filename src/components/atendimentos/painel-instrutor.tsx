@@ -108,7 +108,7 @@ export function PainelInstrutor({ fuso, janelas, horarios, conversas }: { fuso: 
                 <span className="flex items-center gap-1">{j.modalidade === "online" ? <Video size={12} /> : <MapPin size={12} />}{MODALIDADE_ROTULO[j.modalidade]}{j.local ? ` · ${j.local}` : ""}</span>
               </p>
             </div>
-            <button disabled={pendente} onClick={() => rodar(() => excluirJanela(j.id))} aria-label="Remover faixa" title="Remover faixa (conversas já marcadas continuam)" className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800">
+            <button disabled={pendente} onClick={() => rodar(() => excluirJanela(j.id))} aria-label="Remover faixa" title="Remover faixa (conversas já marcadas continuam)" className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-na-danger-dark dark:hover:bg-gray-800">
               <Trash2 size={16} />
             </button>
           </div>
@@ -206,7 +206,7 @@ function CartaoConversa({ c, fuso, pendente, cancelar }: { c: Conversa; fuso: st
           <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo (o aluno recebe)" maxLength={300} className={CAMPO} />
           <div className="flex justify-end gap-2 text-[12px] font-semibold">
             <button onClick={() => setCancelando(false)} className="px-2 py-1 text-gray-600 dark:text-gray-300">Voltar</button>
-            <button disabled={pendente} onClick={() => cancelar(motivo)} className="rounded-lg bg-red-600 px-3 py-1.5 text-white">Cancelar conversa</button>
+            <button disabled={pendente} onClick={() => cancelar(motivo)} className="rounded-lg bg-na-danger px-3 py-1.5 text-white">Cancelar conversa</button>
           </div>
         </div>
       ) : (

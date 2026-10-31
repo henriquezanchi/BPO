@@ -45,7 +45,7 @@ export default function Home() {
           Entrar no Portal
         </Link>
 
-        <p className="mt-4 text-[10px] text-gray-400 dark:text-gray-500">
+        <p className="mt-4 text-[10px] text-gray-500 dark:text-gray-500">
           Use o e-mail cadastrado na secretaria. Primeiro acesso? A senha inicial são os 6 primeiros números do seu CPF.
         </p>
       </div>

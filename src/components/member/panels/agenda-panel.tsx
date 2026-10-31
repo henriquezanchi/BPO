@@ -261,7 +261,7 @@ function InscricaoEvento({
     );
   }
 
-  if(unavailableReason)return <p role="status" className="mt-2 text-xs text-amber-700 dark:text-amber-300">{unavailableReason}</p>;
+  if(unavailableReason)return <p role="status" className="mt-2 text-xs text-na-warning-dark dark:text-amber-300">{unavailableReason}</p>;
 
   if (mostrarCpf) {
     return (
@@ -466,7 +466,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
             <MapPin size={11} className="shrink-0" /> {item.location}
           </span>
         )}
-        {item.status === "cancelado" && <span className="mt-1 block text-[11px] font-semibold text-red-700 dark:text-red-300">Cancelado</span>}
+        {item.status === "cancelado" && <span className="mt-1 block text-[11px] font-semibold text-na-danger-dark dark:text-red-300">Cancelado</span>}
         </span>
         <ChevronDown size={16} className="mt-0.5 shrink-0 text-gray-400 transition group-open:rotate-180" aria-hidden />
         </summary>
@@ -488,7 +488,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
         {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{(item.availableSpots??0)===1?'1 vaga disponível':`${item.availableSpots??0} vagas disponíveis`} de {item.capacity}</p>}
         {item.participantInstructions&&<p className="mt-2 whitespace-pre-wrap text-xs"><strong>Orientações: </strong>{item.participantInstructions}</p>}
         {item.contactInfo&&<p className="mt-2 break-words text-xs"><strong>Dúvidas: </strong>{item.contactInfo}</p>}
-        {item.status === "cancelado" && <p className="mt-2 text-sm font-semibold text-red-700 dark:text-red-300">Evento cancelado. {item.minhaInscricao?.refundState&&item.minhaInscricao.refundState!=="nao_solicitado"?`Reembolso: ${REFUND_LABELS[item.minhaInscricao.refundState]??"em acompanhamento"}${item.minhaInscricao.refundedAmount?` · ${formatBRL(item.minhaInscricao.refundedAmount)}`:""}.`:"Consulte a Economia se houver pagamento."}</p>}
+        {item.status === "cancelado" && <p className="mt-2 text-sm font-semibold text-na-danger-dark dark:text-red-300">Evento cancelado. {item.minhaInscricao?.refundState&&item.minhaInscricao.refundState!=="nao_solicitado"?`Reembolso: ${REFUND_LABELS[item.minhaInscricao.refundState]??"em acompanhamento"}${item.minhaInscricao.refundedAmount?` · ${formatBRL(item.minhaInscricao.refundedAmount)}`:""}.`:"Consulte a Economia se houver pagamento."}</p>}
         {item.status !== "cancelado" && item.source === "manual" && item.scope === "filial" && (
           <>
             <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
@@ -634,9 +634,9 @@ function ReconectarAgora() {
   return (
     <a
       href="/auth/acropole/login?next=%2Fportal"
-      className="flex items-center gap-3 rounded-xl border border-teal-300/60 bg-teal-50 px-3 py-2.5 transition hover:border-teal-400 dark:border-teal-900 dark:bg-teal-950/30"
+      className="flex items-center gap-3 rounded-xl border border-na-turquesa/40 bg-na-turquesa/10 px-3 py-2.5 transition hover:border-na-turquesa/60 dark:border-teal-900 dark:bg-teal-950/30"
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-na-turquesa/15 text-na-green-dark dark:bg-teal-900/50 dark:text-teal-300">
         <RefreshCw size={16} />
       </span>
       <span className="min-w-0 flex-1">
@@ -716,7 +716,7 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
               {horaNoFuso(item.date, fuso)}
             </span>
           )}
-          {cancelado && <span className="font-semibold text-red-700 dark:text-red-300">Cancelado</span>}
+          {cancelado && <span className="font-semibold text-na-danger-dark dark:text-red-300">Cancelado</span>}
           {!cancelado && item.kind === "evento" && item.lancheCompartilhado && <span className="font-semibold text-na-gold-dark dark:text-amber-300">Lanche compartilhado</span>}
         </span>
       </button>

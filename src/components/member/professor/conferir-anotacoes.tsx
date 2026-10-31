@@ -51,7 +51,7 @@ export function ConferirAnotacoes({ anotacoes }: { anotacoes: Anotacao[] }) {
                   <button disabled={pendente || a.revisao === "correta"} onClick={() => marcar(a.id, "correta")} className="inline-flex items-center gap-1 rounded-lg bg-na-green px-3 py-1.5 font-semibold text-white disabled:opacity-50">
                     <Check size={12} /> Correta
                   </button>
-                  <button disabled={pendente || a.revisao === "incorreta"} onClick={() => marcar(a.id, "incorreta")} className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-3 py-1.5 font-semibold text-red-700 disabled:opacity-50 dark:text-red-300">
+                  <button disabled={pendente || a.revisao === "incorreta"} onClick={() => marcar(a.id, "incorreta")} className="inline-flex items-center gap-1 rounded-lg border border-na-danger/40 px-3 py-1.5 font-semibold text-na-danger-dark disabled:opacity-50 dark:text-red-300">
                     <X size={12} /> Incorreta
                   </button>
                   {a.revisao !== "pendente" && (

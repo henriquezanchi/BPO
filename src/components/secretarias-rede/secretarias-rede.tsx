@@ -199,7 +199,7 @@ function CardPublicacao({ publicacao, data, aoEditar }: { publicacao: Publicacao
     <article className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
       <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide">
         <span className="rounded-full bg-na-green-light px-2.5 py-1 text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-300">{ROTULO_TIPO[publicacao.tipo as TipoPublicacao] ?? publicacao.tipo}</span>
-        {publicacao.exigeLeitura && <span className={`rounded-full px-2.5 py-1 ${publicacao.lida ? "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200"}`}>{publicacao.lida ? "Lida" : "Leitura pendente"}</span>}
+        {publicacao.exigeLeitura && <span className={`rounded-full px-2.5 py-1 ${publicacao.lida ? "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/50 dark:text-amber-200"}`}>{publicacao.lida ? "Lida" : "Leitura pendente"}</span>}
         <span className="text-gray-400">Versão {publicacao.versao}</span>
       </div>
       <div className="flex items-start justify-between gap-3">
@@ -217,7 +217,7 @@ function CardPublicacao({ publicacao, data, aoEditar }: { publicacao: Publicacao
         <span>Publicado por {publicacao.autorNome}</span>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3 dark:border-gray-800">
-        <span className="text-[10px] text-gray-400">Atualizado {new Date(publicacao.atualizadoEm).toLocaleDateString("pt-BR")}</span>
+        <span className="text-[10px] text-gray-500">Atualizado {new Date(publicacao.atualizadoEm).toLocaleDateString("pt-BR")}</span>
         <ConfirmacaoLeitura publicacao={publicacao} />
       </div>
     </article>
@@ -287,7 +287,7 @@ function SeletorMembro({
       {consulta.trim().length >= 2 && !pending && resultados.length === 0 && <p className="text-[11px] text-gray-400">Nenhuma pessoa ativa encontrada dentro do território.</p>}
       {selecionado && <button type="button" onClick={() => setSelecionado(null)} className="w-fit text-[11px] text-gray-500 underline">Remover seleção</button>}
       {erro && <p className="text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
-      <p className="text-[10px] text-gray-400">A busca mostra apenas membros ativos que pertencem ao escopo escolhido.</p>
+      <p className="text-[10px] text-gray-500">A busca mostra apenas membros ativos que pertencem ao escopo escolhido.</p>
     </div>
   );
 }
@@ -512,7 +512,7 @@ function ListaEscalas({ escalas }: { escalas: Escala[] }) {
 
               <p className="text-xs text-gray-600 dark:text-gray-400">{escala.funcao} · {DIAS_SEMANA[escala.diaSemana] ?? "Dia não informado"} · {horaMinuto(escala.inicioMinuto)}–{horaMinuto(escala.fimMinuto)}</p>
             </div>
-            <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${escala.confirmado ? "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200"}`}>{escala.confirmado ? "Confirmada" : "Pendente"}</span>
+            <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${escala.confirmado ? "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/50 dark:text-amber-200"}`}>{escala.confirmado ? "Confirmada" : "Pendente"}</span>
           </div>
           <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Válida de {escala.validaDe} até {escala.validaAte}</p>
         </CollapsibleSection></article>
@@ -582,7 +582,7 @@ export function SecretariasRede({ data }: { data: PaginaSecretariasRede }) {
       ) : (
         <p className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">Ainda não há publicações visíveis neste filtro.</p>
       )}
-      {data.podePublicarLivre && <p className="text-[10px] text-gray-400">Conteúdos novos aparecem publicados imediatamente. Ao editar, uma nova versão é criada e as confirmações de leitura da versão anterior permanecem no histórico.</p>}
+      {data.podePublicarLivre && <p className="text-[10px] text-gray-500">Conteúdos novos aparecem publicados imediatamente. Ao editar, uma nova versão é criada e as confirmações de leitura da versão anterior permanecem no histórico.</p>}
     </div>
   );
 }

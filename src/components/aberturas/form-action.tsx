@@ -43,7 +43,7 @@ export function Feedback({ error, success, aviso = "" }: { error: string; succes
   if (!error && !success && !aviso) return null;
   const mensagem = error || aviso || success;
   return (
-    <p role={error || aviso ? "alert" : "status"} className={`rounded-lg px-3 py-2 text-sm ${error ? "border border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300" : aviso ? "border border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" : "border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"}`}>
+    <p role={error || aviso ? "alert" : "status"} className={`rounded-lg px-3 py-2 text-sm ${error ? "border border-na-danger/30 bg-na-danger-light text-na-danger-dark dark:border-red-900 dark:bg-red-950/40 dark:text-red-300" : aviso ? "border border-na-warning/30 bg-na-warning-light text-na-warning-dark dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" : "border border-na-success/30 bg-na-success-light text-na-success-dark dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"}`}>
       {mensagem}
     </p>
   );

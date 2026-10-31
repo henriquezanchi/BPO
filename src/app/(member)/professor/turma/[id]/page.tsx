@@ -126,7 +126,7 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
                         <span>{o.votes} voto{o.votes === 1 ? "" : "s"}</span>
                       </div>
                     ))}
-                    <div className="mt-1 text-[10px] text-gray-400">{total} resposta{total === 1 ? "" : "s"} no total</div>
+                    <div className="mt-1 text-[10px] text-gray-500">{total} resposta{total === 1 ? "" : "s"} no total</div>
                   </li>
                 );
               })}

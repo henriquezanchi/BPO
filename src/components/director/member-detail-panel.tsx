@@ -99,7 +99,7 @@ export function MemberDetailPanel({ schoolId, memberId }: { schoolId: string; me
       )}
 
       {detail.voluntariadoOferecido && (
-        <div className="rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
+        <div className="rounded-lg bg-na-turquesa/10 p-3 text-[11px] text-na-green-dark dark:bg-blue-950/30 dark:text-blue-300">
           <strong>Ofereceu apoio voluntário</strong> em {formatDateBR(detail.voluntariadoOferecido.createdAt)}: {detail.voluntariadoOferecido.secretarias.join(", ")}
         </div>
       )}

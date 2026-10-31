@@ -76,7 +76,7 @@ export function TabelaInstrutores({ linhas, mostrarFilial }: { linhas: Linha[]; 
                   {mostrarFilial && <td className="px-3 py-2.5 text-gray-500 dark:text-gray-400">{l.filial}</td>}
                   {l.horariosAbertos === 0 ? (
                     <td colSpan={4} className="px-3 py-2.5">
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">Sem horários abertos</span>
+                      <span className="rounded-full bg-na-warning-light px-2 py-0.5 text-[11px] font-semibold text-na-warning-dark dark:bg-amber-950/40 dark:text-amber-300">Sem horários abertos</span>
                     </td>
                   ) : (
                     <>

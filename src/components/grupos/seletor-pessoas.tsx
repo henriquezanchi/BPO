@@ -101,7 +101,7 @@ export function SeletorPessoas({
                   className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] text-gray-800 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
                 >
                   {o.name}
-                  {o.isMembroPrograma === false && <span className="text-[10px] text-gray-400">aluno</span>}
+                  {o.isMembroPrograma === false && <span className="text-[10px] text-gray-500">aluno</span>}
                 </button>
               ))}
           </div>

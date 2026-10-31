@@ -155,7 +155,7 @@ function MinhaConversa({ m, fuso, pendente, cancelar }: { m: Minha; fuso: string
           <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo (opcional, o instrutor recebe)" maxLength={300} className={CAMPO} />
           <div className="flex justify-end gap-2 text-[12px] font-semibold">
             <button onClick={() => setCancelando(false)} className="px-2 py-1 text-gray-600 dark:text-gray-300">Voltar</button>
-            <button disabled={pendente} onClick={() => cancelar(motivo)} className="rounded-lg bg-red-600 px-3 py-1.5 text-white">Cancelar conversa</button>
+            <button disabled={pendente} onClick={() => cancelar(motivo)} className="rounded-lg bg-na-danger px-3 py-1.5 text-white">Cancelar conversa</button>
           </div>
         </div>
       ) : (

@@ -46,7 +46,7 @@ export function CampoImpedimentos({ iniciais }: { iniciais: Impedimento[] }) {
               às <input type="time" aria-label="Até" value={l.fim} onChange={(e) => mudar(i, { fim: e.target.value })} className={`${CAMPO_CLASS} w-28`} />
             </span>
           )}
-          <button type="button" onClick={() => setLinhas((atual) => atual.filter((_, k) => k !== i))} aria-label="Remover data" className="ml-auto rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800">
+          <button type="button" onClick={() => setLinhas((atual) => atual.filter((_, k) => k !== i))} aria-label="Remover data" className="ml-auto rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-na-danger-dark dark:hover:bg-gray-800">
             <Trash2 size={15} />
           </button>
         </div>

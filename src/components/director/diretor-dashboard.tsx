@@ -187,7 +187,7 @@ export function KpiCard({
     danger: "bg-na-danger-light text-na-danger-dark dark:bg-red-950/40 dark:text-red-400",
     warning: "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/40 dark:text-amber-400",
     gold: "bg-na-gold/15 text-na-gold-dark dark:bg-na-gold/20",
-    blue: "bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400",
+    blue: "bg-na-turquesa/15 text-na-green-dark dark:bg-blue-950/40 dark:text-blue-400",
   };
   return (
     <button

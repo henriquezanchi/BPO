@@ -270,7 +270,7 @@ function ContaRow({
         <div>
           <span className="font-medium text-gray-900 dark:text-gray-100">{payable.vendor}</span>
           {payable.predicted && (
-            <span className="ml-2 inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+            <span className="ml-2 inline-flex items-center gap-1 rounded bg-na-turquesa/10 px-1.5 py-0.5 text-[10px] font-medium text-na-green-dark dark:bg-blue-950/30 dark:text-blue-400">
               <Sparkles size={10} /> Previsão automática
             </span>
           )}

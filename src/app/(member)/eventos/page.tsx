@@ -77,7 +77,7 @@ export default async function Page() {
           Agenda & Eventos
         </p>
         <h1 className="mt-1 text-xl font-black">Meus eventos</h1>
-        <p className="mt-1 text-[12px] text-green-100">
+        <p className="mt-1 text-[12px] text-white/85">
           Suas inscrições, a participação nos eventos e as equipes de recepção.
         </p>
       </header>
