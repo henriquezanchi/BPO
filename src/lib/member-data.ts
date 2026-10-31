@@ -452,6 +452,10 @@ export async function getMemberDashboard(memberId: string) {
     fortunaBalances,
     agendaItems,
     podeMarcarAtendimento: instrutoresDisponiveis.length > 0,
+    // Fuso da filial e o dia de hoje nele (31/10/2026): as telas formatam datas com eles, para o servidor (UTC na
+    // Vercel) e o aparelho mostrarem o mesmo dia e a mesma hora.
+    fuso: fusoDaEscola(member.school.uf),
+    hoje: hojeNoFuso(fusoDaEscola(member.school.uf)),
     // Frase do dia no fim do Portal (2026-10-29): a mesma do diário, fixa no dia.
     fraseDoDia: fraseDoDia(hojeNoFuso(fusoDaEscola(member.school.uf))),
     // Depois de buscar a agenda (que tenta renovar a sessão): sem sessão válida do Ágora, a Agenda oferece reconectar.

@@ -1,4 +1,5 @@
 "use client";
+import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import {
@@ -65,7 +66,7 @@ export function RecuperacaoTab({ schoolId, data }: { schoolId: string; data: Dir
       try {
         setAvisoEnvio(await acao());
       } catch (e) {
-        setAvisoEnvio((e as Error).message);
+        setAvisoEnvio(mensagemErroAmigavel(e));
       }
     });
   }

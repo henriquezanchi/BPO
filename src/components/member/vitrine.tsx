@@ -195,8 +195,9 @@ export function Anuncio({
 }
 
 /** Uma série da Acrópole Play por dia, na ordem da lista; o clique entra com o login do Portal. */
-export function DestaquePlay() {
-  const [dia] = useState(() => Math.floor(Date.now() / 864e5));
+export function DestaquePlay({ hoje }: { hoje: string }) {
+  // Dia vindo do servidor (31/10/2026): com Date.now() no render, servidor e aparelho escolhiam séries diferentes à noite.
+  const dia = Math.floor(Date.parse(hoje) / 864e5);
   const [semCapa, setSemCapa] = useState(false);
   const serie = SERIES_PLAY[dia % SERIES_PLAY.length];
   return (

@@ -22,7 +22,8 @@ export function NudgeCard({ memberId }: { memberId: string }) {
   function responder(resposta: "sim" | "depois" | "nao", valor?: number) {
     if (!nudge) return;
     startTransition(async () => {
-      await responderNudge(memberId, nudge.id, resposta, valor);
+      // Sugestão secundária: se a resposta falhar, ela só some, em vez de quebrar a tela (31/10/2026).
+      await responderNudge(memberId, nudge.id, resposta, valor).catch(() => {});
       setNudge(null);
     });
   }

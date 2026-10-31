@@ -28,12 +28,18 @@ export function BuscaPortal({ destinos }: { destinos: Record<string, DestinoBusc
   const ids = disponiveis.map((f) => f.id).join(",");
   useEffect(() => {
     if (!precisaIa) return;
+    // Resposta de uma consulta que já mudou é descartada (31/10/2026): uma resposta antiga chegando depois da nova
+    // apagava o resultado e deixava "Entendendo o que você procura…" girando para sempre.
+    let vigente = true;
     const t = setTimeout(() => {
       buscarFuncoesComIA(consulta, ids.split(","))
-        .then((r) => setIa({ consulta: chave, ids: r }))
-        .catch(() => setIa({ consulta: chave, ids: [] }));
+        .then((r) => vigente && setIa({ consulta: chave, ids: r }))
+        .catch(() => vigente && setIa({ consulta: chave, ids: [] }));
     }, ESPERA_IA_MS);
-    return () => clearTimeout(t);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
   }, [precisaIa, chave, consulta, ids]);
 
   const sugeridos = (iaDaConsulta ?? []).map((id) => disponiveis.find((f) => f.id === id)).filter((f): f is FuncaoPortal => !!f && !locais.some((l) => l.funcao.id === f.id));

@@ -35,7 +35,17 @@ export function ChangePasswordForm() {
       const { error } = await supabase.auth.updateUser({ password: novaSenha });
 
       if (error) {
-        setStatus({ ok: false, message: error.message });
+        // Texto do Supabase vem em inglês (31/10/2026); só os casos conhecidos, em português.
+        setStatus({
+          ok: false,
+          message: /same|different from the old/i.test(error.message)
+            ? "A nova senha precisa ser diferente da atual."
+            : /weak|short|at least/i.test(error.message)
+              ? "Essa senha é fraca demais. Use pelo menos 6 caracteres, misturando letras e números."
+              : /session|jwt|expired/i.test(error.message)
+                ? "Sua sessão expirou. Entre de novo no Portal e tente outra vez."
+                : "Não foi possível alterar a senha agora. Tente de novo em instantes.",
+        });
         return;
       }
 

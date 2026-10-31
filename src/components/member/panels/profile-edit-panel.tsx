@@ -3,6 +3,7 @@
 import { removerAvatar, uploadAvatar } from "@/lib/actions/avatar-actions";
 import { getSolicitacaoContatoPendente, solicitarAlteracaoContato, updateMemberAddress } from "@/lib/actions/member-actions";
 import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Loader2, Pencil, Trash2, Upload, UserRound } from "lucide-react";
+import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 
@@ -43,15 +44,20 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
         const res = await uploadAvatar(memberId, formData);
         setAvatarUrl(res.avatarUrl);
       } catch (err) {
-        setErro((err as Error).message);
+        setErro(mensagemErroAmigavel(err));
       }
     });
   }
 
   function handleRemover() {
+    setErro(null);
     startTransition(async () => {
-      await removerAvatar(memberId);
-      setAvatarUrl(null);
+      try {
+        await removerAvatar(memberId);
+        setAvatarUrl(null);
+      } catch (err) {
+        setErro(mensagemErroAmigavel(err));
+      }
     });
   }
 
@@ -185,9 +191,13 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
   const { memberId, name, avatarUrl } = props;
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ changed: boolean; alerted: boolean } | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
 
   function handleSubmit(formData: FormData) {
+    setErro(null);
+    setResult(null);
     startTransition(async () => {
+      try {
       const campo = (k: string) => {
         const v = String(formData.get(k) ?? "").trim();
         return v === "" ? "" : v;
@@ -202,6 +212,9 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         addressZip: campo("addressZip"),
       });
       setResult(res);
+      } catch (e) {
+        setErro(mensagemErroAmigavel(e));
+      }
     });
   }
 
@@ -338,6 +351,16 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
           <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
           <span>Solicitação enviada. A secretaria vai conferir — o endereço só muda no seu cadastro depois da aprovação.</span>
         </div>
+      )}
+
+      {/* Antes, sem mudança nenhuma o botão só voltava ao normal, sem resposta (31/10/2026). */}
+      {result && !result.changed && (
+        <p role="status" className="mt-3 text-[11px] text-gray-600 dark:text-gray-400">Nada foi alterado no endereço.</p>
+      )}
+      {erro && (
+        <p role="alert" className="mt-3 text-[11px] text-na-danger-dark dark:text-red-300">
+          {erro}
+        </p>
       )}
 
       {result?.alerted && (

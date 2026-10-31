@@ -1,10 +1,14 @@
 "use client";
 
+import { PaymentStatus } from "@/components/ui/payment-status";
+import { usePaymentPolling } from "@/hooks/use-payment-polling";
 import { checkFortunaTopUpStatus, createFortunaTopUpCharge } from "@/lib/actions/fortuna-topup-actions";
+import { mensagemErroAmigavel } from "@/lib/friendly-error";
+import { lerValorBRL } from "@/lib/valor-brl";
 import { formatBRL } from "@/lib/format";
 import type { FortunaBalanceView } from "@/lib/member-data";
-import { AlertTriangle, Check, Copy, Loader2 } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
+import { AlertTriangle, Check, Copy } from "lucide-react";
+import { useState, useTransition } from "react";
 
 /**
  * Recarga real da carteira Fortuna via PIX (Asaas) — CPF nunca fica
@@ -27,7 +31,7 @@ export function FortunaTopUpPanel({ balances, memberId }: { balances: FortunaBal
   const [isPending, startTransition] = useTransition();
 
   const branch = balances.find((b) => b.branchId === branchId) ?? home;
-  const valorNumerico = parseFloat(amount.replace(/\./g, "").replace(",", ".")) || 0;
+  const valorNumerico = lerValorBRL(amount) ?? 0;
 
   function handleGerarCobranca(e: React.FormEvent) {
     e.preventDefault();
@@ -50,22 +54,21 @@ export function FortunaTopUpPanel({ balances, memberId }: { balances: FortunaBal
         const res = await createFortunaTopUpCharge(memberId, valorNumerico, cpfLimpo, branchId);
         setCharge(res);
       } catch (e) {
-        setErro((e as Error).message);
+        setErro(mensagemErroAmigavel(e));
       }
     });
   }
 
-  useEffect(() => {
-    if (!charge || pago) return;
-    const intervalo = setInterval(async () => {
-      const res = await checkFortunaTopUpStatus(memberId, charge.chargeId);
-      if (res.status === "pago") {
-        setPago(true);
-        clearInterval(intervalo);
-      }
-    }, 5000);
-    return () => clearInterval(intervalo);
-  }, [charge, pago, memberId]);
+  // Mesma espera da contribuição (31/10/2026): antes, uma falha de rede deixava "Aguardando confirmação" para sempre.
+  const polling = usePaymentPolling(
+    charge && !pago ? `${memberId}:${charge.chargeId}` : null,
+    () => checkFortunaTopUpStatus(memberId, charge!.chargeId),
+    (res) => {
+      if (res.status !== "pago") return false;
+      setPago(true);
+      return true;
+    },
+  );
 
   function handleCopiar() {
     if (!charge) return;
@@ -97,9 +100,7 @@ export function FortunaTopUpPanel({ balances, memberId }: { balances: FortunaBal
         >
           {copiado ? <Check size={14} /> : <Copy size={14} />} {copiado ? "Copiado!" : "Copiar código PIX"}
         </button>
-        <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-          <Loader2 size={12} className="animate-spin" /> Aguardando confirmação do pagamento...
-        </p>
+        <PaymentStatus state={polling.state} onRetry={polling.retry} />
       </div>
     );
   }

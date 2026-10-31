@@ -50,10 +50,13 @@ export function LoginClient({
       });
 
       if (error) {
+        // Só mensagens nossas (31/10/2026): o texto do Supabase vem em inglês ("Email not confirmed", "rate limit").
         setError(
-          error.message.includes("Invalid login credentials")
+          /invalid login credentials/i.test(error.message)
             ? t.login.erroCredenciais
-            : error.message,
+            : /rate limit|too many/i.test(error.message) || error.status === 429
+              ? t.login.erroMuitasTentativas
+              : t.login.erroGenerico,
         );
         return;
       }

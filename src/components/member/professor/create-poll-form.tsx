@@ -2,6 +2,7 @@
 
 import { createPoll } from "@/lib/actions/poll-actions";
 import { CheckCircle2, Plus, X } from "lucide-react";
+import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { useState, useTransition } from "react";
 
 export function CreatePollForm({ classGroupId }: { classGroupId: string }) {
@@ -9,14 +10,20 @@ export function CreatePollForm({ classGroupId }: { classGroupId: string }) {
   const [options, setOptions] = useState(["", ""]);
   const [isPending, startTransition] = useTransition();
   const [done, setDone] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErro(null);
     startTransition(async () => {
-      await createPoll({ classGroupId, question, options });
-      setQuestion("");
-      setOptions(["", ""]);
-      setDone(true);
+      try {
+        await createPoll({ classGroupId, question, options });
+        setQuestion("");
+        setOptions(["", ""]);
+        setDone(true);
+      } catch (e) {
+        setErro(mensagemErroAmigavel(e));
+      }
     });
   }
 
@@ -72,6 +79,7 @@ export function CreatePollForm({ classGroupId }: { classGroupId: string }) {
         {isPending ? "Publicando..." : "Publicar enquete para a turma"}
       </button>
 
+      {erro && <p role="alert" className="text-xs text-na-danger-dark dark:text-red-300">{erro}</p>}
       {done && (
         <div className="flex items-center gap-2 rounded-lg bg-na-success-light p-2.5 text-xs text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">
           <CheckCircle2 size={14} /> Enquete publicada — os alunos já podem votar pela Agenda.

@@ -299,7 +299,8 @@ function RealPaymentScreen({
     if (!fortunaNudge) return;
     setRespondendoNudge(true);
     startTransition(async () => {
-      await responderNudge(memberId, fortunaNudge.id, resposta, valor);
+      // A sugestão é secundária: se a resposta falhar, ela só some, sem atrapalhar o pagamento (31/10/2026).
+      await responderNudge(memberId, fortunaNudge.id, resposta, valor).catch(() => {});
       setRespondendoNudge(false);
       setFortunaNudge(null);
     });
@@ -308,9 +309,15 @@ function RealPaymentScreen({
   function handleCancelarEGerarNova() {
     if (!charge) return;
     if (!confirm("Cancelar essa cobrança e gerar uma nova? A cobrança antiga deixa de valer.")) return;
+    setErro(null);
     startTransition(async () => {
-      await cancelarCobrancaContribuicaoPendente(memberId, charge.chargeId);
-      setCharge(null);
+      // Antes, uma falha aqui não mostrava nada (31/10/2026).
+      try {
+        await cancelarCobrancaContribuicaoPendente(memberId, charge.chargeId);
+        setCharge(null);
+      } catch (e) {
+        setErro(mensagemErroAmigavel(e));
+      }
     });
   }
 
@@ -429,6 +436,7 @@ function RealPaymentScreen({
           <button onClick={handleCancelarEGerarNova} disabled={isPending} className="text-[11px] font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
             Cancelar essa cobrança e gerar outra
           </button>
+          {erro && <p role="alert" className="text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
         </div>
       ) : charge?.metodo === "CREDIT_CARD" ? (
         <div className="flex flex-col items-center gap-3">
@@ -447,6 +455,7 @@ function RealPaymentScreen({
           <button onClick={handleCancelarEGerarNova} disabled={isPending} className="text-[11px] font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
             Cancelar essa cobrança e gerar outra
           </button>
+          {erro && <p role="alert" className="text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
         </div>
       ) : (
         <form onSubmit={handleGerarCobranca} className="flex flex-col gap-3">
@@ -574,21 +583,28 @@ function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: s
 
   function handleDesativar() {
     if (!confirm("Desativar o débito automático? Você volta a precisar pagar manualmente todo mês.")) return;
+    setErro(null);
     startTransition(async () => {
-      await desativarPixAutomatico(memberId);
-      setStatusAtual("CANCELLED");
+      // Sem o try, uma falha deixava a pessoa sem saber se o débito automático continuava ativo (31/10/2026).
+      try {
+        await desativarPixAutomatico(memberId);
+        setStatusAtual("CANCELLED");
+      } catch (e) {
+        setErro(mensagemErroAmigavel(e));
+      }
     });
   }
 
   if (statusAtual === "ACTIVE") {
     return (
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-na-success/30 bg-na-success-light p-3 text-[11px] dark:border-emerald-900 dark:bg-emerald-950/30">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-y-1 rounded-lg border border-na-success/30 bg-na-success-light p-3 text-[11px] dark:border-emerald-900 dark:bg-emerald-950/30">
         <span className="flex items-center gap-1.5 font-semibold text-na-success-dark dark:text-emerald-300">
           <Zap size={13} /> Débito automático ativo — sua contribuição é cobrada sozinha todo mês.
         </span>
         <button onClick={handleDesativar} disabled={isPending} className="shrink-0 font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
           Desativar
         </button>
+        {erro && <span role="alert" className="basis-full text-[11px] text-na-danger-dark dark:text-red-300">{erro}</span>}
       </div>
     );
   }

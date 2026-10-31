@@ -24,6 +24,8 @@ export interface Dictionary {
     senha: string;
     senhaDica: string;
     erroCredenciais: string;
+    erroMuitasTentativas: string;
+    erroGenerico: string;
     entrando: string;
     entrar: string;
   };
@@ -88,6 +90,8 @@ const pt: Dictionary = {
     senha: "Senha",
     senhaDica: "Senha inicial: os 6 primeiros números do seu CPF.",
     erroCredenciais: "E-mail ou senha incorretos. A senha inicial são os 6 primeiros números do seu CPF.",
+    erroMuitasTentativas: "Muitas tentativas seguidas. Espere alguns minutos e tente de novo.",
+    erroGenerico: "Não foi possível entrar agora. Tente de novo em instantes.",
     entrando: "Entrando...",
     entrar: "Entrar",
   },
@@ -163,6 +167,8 @@ const en: Dictionary = {
     // esquema de senha inicial pras filiais americanas.
     senhaDica: "Your initial password was provided by your branch.",
     erroCredenciais: "Incorrect email or password.",
+    erroMuitasTentativas: "Too many attempts. Please wait a few minutes and try again.",
+    erroGenerico: "We could not sign you in right now. Please try again shortly.",
     entrando: "Signing in...",
     entrar: "Sign in",
   },

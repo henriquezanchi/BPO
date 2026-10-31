@@ -12,10 +12,10 @@ import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/eve
 import { cancelarMinhaInscricao, entrarNaListaDeEspera, sairDaListaDeEspera } from "@/lib/actions/event-self-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
-import { formatBRL, formatDateBR, formatDateTimeBR } from "@/lib/format";
+import { formatBRL, formatDateBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
 import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, MessagesSquare, PartyPopper, RefreshCw, Ticket, Users, UtensilsCrossed, Video } from "lucide-react";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { createContext, useContext, useMemo, useRef, useState, useTransition } from "react";
 import { pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -32,10 +32,30 @@ const MESES_NOME = [
 ];
 const DIAS_SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
 
-/** Chave local "aaaa-mm-dd" — agrupa por dia no fuso do navegador, igual ao que formatDateTimeBR já mostra. */
+/** Chave "aaaa-m-d" (mês de 0 a 11) de uma célula da grade do calendário (datas locais à meia-noite). */
 function chaveDia(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
+
+/**
+ * Fuso da filial para toda a Agenda (31/10/2026). Antes, eventos usavam São Paulo fixo e o resto o fuso do aparelho
+ * (no servidor, UTC): o mesmo compromisso podia cair em dias diferentes do calendário e a hora trocava ao carregar.
+ */
+const FusoDaAgenda = createContext("America/Sao_Paulo");
+
+/** Ano, mês (0 a 11), dia e dia da semana de um instante no fuso da filial. */
+function partesNoFuso(date: Date, fuso: string) {
+  const [a, m, d] = date.toLocaleDateString("en-CA", { timeZone: fuso }).split("-").map(Number);
+  return { ano: a, mes: m - 1, dia: d, semana: new Date(Date.UTC(a, m - 1, d)).getUTCDay() };
+}
+
+/** Mesma chave de chaveDia, para o dia de um compromisso no fuso da filial. */
+function chaveDoItem(date: Date, fuso: string): string {
+  const p = partesNoFuso(date, fuso);
+  return `${p.ano}-${p.mes}-${p.dia}`;
+}
+
+const horaNoFuso = (date: Date, fuso: string) => date.toLocaleTimeString("pt-BR", { timeZone: fuso, hour: "2-digit", minute: "2-digit" });
 
 const COR_PONTO: Record<AgendaItem["kind"], string> = {
   reuniao: "bg-na-green",
@@ -53,13 +73,19 @@ const COR_PONTO: Record<AgendaItem["kind"], string> = {
 function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaItem, { kind: "enquete" }> }) {
   const [options, setOptions] = useState(item.options);
   const [myVote, setMyVote] = useState(item.myVote);
+  const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleVote(optionId: string) {
+    setErro(null);
     startTransition(async () => {
-      const res = await votePoll(memberId, item.id, optionId);
-      setMyVote(res.myOptionId);
-      setOptions((prev) => prev.map((o) => ({ ...o, votes: res.counts[o.id] ?? 0 })));
+      try {
+        const res = await votePoll(memberId, item.id, optionId);
+        setMyVote(res.myOptionId);
+        setOptions((prev) => prev.map((o) => ({ ...o, votes: res.counts[o.id] ?? 0 })));
+      } catch (e) {
+        setErro(mensagemErroAmigavel(e));
+      }
     });
   }
 
@@ -101,6 +127,7 @@ function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaIt
           );
         })}
       </div>
+      {erro && <p role="alert" className="mt-2 text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
     </div>
   );
 }
@@ -273,7 +300,7 @@ function InscricaoEvento({
   );
 }
 
-const dataCurta = (d: Date) => d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+const dataCurta = (d: Date, fuso: string) => d.toLocaleString("pt-BR", { timeZone: fuso, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 /** Inscrição paga: desistir com devolução até o prazo do evento (padrão 3 dias antes). */
 function DesistenciaPaga({
@@ -289,17 +316,18 @@ function DesistenciaPaga({
   prazoDias: number | null;
   onCancelada: (mensagem: string, desistenciaPaga?: boolean) => void;
 }) {
+  const fuso = useContext(FusoDaAgenda);
   const limite = prazoDias === null ? null : new Date(inicio.getTime() - prazoDias * 86_400_000);
   const [agora] = useState(() => Date.now());
   if (!limite) return <p className="text-[11px] text-gray-500 dark:text-gray-400">Este evento não prevê devolução em caso de desistência.</p>;
   if (agora > limite.getTime())
-    return <p className="text-[11px] text-gray-500 dark:text-gray-400">O prazo para desistir com devolução terminou em {dataCurta(limite)}. Fale com a Economia.</p>;
+    return <p className="text-[11px] text-gray-500 dark:text-gray-400">O prazo para desistir com devolução terminou em {dataCurta(limite, fuso)}. Fale com a Economia.</p>;
   return (
     <CancelarInscricao
       memberId={memberId}
       registrationId={registrationId}
       onCancelada={onCancelada}
-      rotulo={`Desistir com devolução (até ${dataCurta(limite)})`}
+      rotulo={`Desistir com devolução (até ${dataCurta(limite, fuso)})`}
       confirmacao="Confirma a desistência? O valor pago será devolvido no mesmo PIX e sua vaga vai para outra pessoa."
     />
   );
@@ -391,8 +419,9 @@ function ListaDeEspera({ memberId, eventId, espera }: { memberId: string; eventI
 }
 
 function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean; emBreve?: boolean; aberto?: boolean }) {
+  const fuso = useContext(FusoDaAgenda);
   if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm"><CollapsibleSection defaultOpen={aberto} title={<h3 className="font-bold">{item.title}</h3>}>
-    <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><p>{item.date.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</p>
+    <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><p>{item.date.toLocaleString('pt-BR',{timeZone:fuso,dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{timeZone:fuso,dateStyle:'short',timeStyle:'short'})}</p>
     {item.status==='cancelada'?<p>Reunião cancelada: {item.cancellationReason}</p>:<><p>Comparecimento obrigatório. Se não puder participar, registre uma justificativa.</p>{item.fullUniform&&<p className="font-semibold">CRM com traje completo</p>}{item.description&&<p>{item.description}</p>}<MeetingResponse key={`${item.id}:${item.version}`} memberId={memberId} id={item.id} version={item.version} initial={item.myResponse}/></>}
   </CollapsibleSection></section>;
   if (item.kind === "enquete") return <PollCard memberId={memberId} item={item} />;
@@ -430,7 +459,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
         <span className="min-w-0">
         <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</span>
         <span className="mt-1 block text-[11px] capitalize text-gray-500 dark:text-gray-400">
-          {item.allDay ? (item.endsAt && formatDateBR(item.endsAt) !== formatDateBR(item.date) ? `${formatDateBR(item.date)} a ${formatDateBR(item.endsAt)}` : formatDateBR(item.date)) : item.date.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"})}
+          {item.allDay ? (item.endsAt && formatDateBR(item.endsAt) !== formatDateBR(item.date) ? `${formatDateBR(item.date)} a ${formatDateBR(item.endsAt)}` : formatDateBR(item.date)) : item.date.toLocaleString("pt-BR",{timeZone:fuso,dateStyle:"short",timeStyle:"short"})}
         </span>
         {item.location && (
           <span className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
@@ -492,7 +521,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
         <GraduationCap size={14} /> {ACTIVITY_LABEL[item.type] ?? item.type} · {item.className}
       </div>
       <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
-      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Data: {formatDateTimeBR(item.date)}</div>
+      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Data: {item.date.toLocaleDateString("pt-BR", { timeZone: fuso, weekday: "long", day: "2-digit", month: "long" })}</div>
       {item.materiaNome && <div className="mt-1 text-[11px] font-semibold text-gray-700 dark:text-gray-300">Matéria: {item.materiaNome}</div>}
       {!!item.temas?.length && (
         <div className="mt-2 rounded-lg bg-white p-2 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -539,6 +568,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
 
 /** Conversa individual marcada (aluno ou instrutor); cancelar e detalhes ficam na página de atendimentos. */
 function CartaoAtendimento({ item }: { item: Extract<AgendaItem, { kind: "atendimento" }> }) {
+  const fuso = useContext(FusoDaAgenda);
   const MODALIDADE: Record<string, string> = { presencial: "Presencial", online: "Online" };
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-na-green/40 bg-white p-3 dark:bg-gray-900">
@@ -547,7 +577,7 @@ function CartaoAtendimento({ item }: { item: Extract<AgendaItem, { kind: "atendi
       </p>
       <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">{item.papel === "aluno" ? `Com ${item.comQuem}` : `Com ${item.comQuem} (aluno)`}</p>
       <p className="text-[12px] text-gray-600 dark:text-gray-300">
-        {item.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}–{item.endsAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+        {horaNoFuso(item.date, fuso)}–{horaNoFuso(item.endsAt, fuso)}
       </p>
       <p className="flex items-center gap-1 text-[12px] text-gray-500 dark:text-gray-400">
         {item.modalidade === "online" ? <Video size={12} /> : <MapPin size={12} />}
@@ -645,6 +675,8 @@ const nomeDaSede = (t: string) =>
  * apertar): data e tipo no alto, título em até 2 linhas, horário; tocar abre o dia.
  */
 function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "enquete" }>; onAbrir: () => void }) {
+  const fuso = useContext(FusoDaAgenda);
+  const partes = partesNoFuso(item.date, fuso);
   const Icone = item.kind === "evento" ? PartyPopper : item.kind === "reuniao" ? Users : item.kind === "atendimento" ? MessagesSquare : GraduationCap;
   const tipo =
     item.kind === "evento"
@@ -667,9 +699,9 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
       <button onClick={onAbrir} className={`flex h-full w-full flex-col gap-1.5 rounded-2xl border p-2.5 text-left transition ${cor.cartao}`}>
         <span className="flex items-center gap-2">
           <span className={`flex w-10 shrink-0 flex-col items-center rounded-lg py-1 leading-none shadow-sm ${cor.data}`}>
-            <span className="text-[8px] font-bold uppercase opacity-85">{DIAS_CURTOS[item.date.getDay()]}</span>
-            <span className="my-0.5 text-base font-black">{item.date.getDate()}</span>
-            <span className="text-[8px] font-bold uppercase opacity-85">{MESES_CURTOS[item.date.getMonth()]}</span>
+            <span className="text-[8px] font-bold uppercase opacity-85">{DIAS_CURTOS[partes.semana]}</span>
+            <span className="my-0.5 text-base font-black">{partes.dia}</span>
+            <span className="text-[8px] font-bold uppercase opacity-85">{MESES_CURTOS[partes.mes]}</span>
           </span>
           <span className={`line-clamp-2 min-w-0 flex-1 text-[9px] leading-tight font-bold tracking-wide uppercase ${cor.rotulo}`}>
             <Icone size={10} className="mr-0.5 inline align-[-1px]" />
@@ -681,7 +713,7 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
           {!semHora && (
             <span className="flex items-center gap-1">
               <CalendarClock size={10} className="shrink-0" />
-              {item.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              {horaNoFuso(item.date, fuso)}
             </span>
           )}
           {cancelado && <span className="font-semibold text-red-700 dark:text-red-300">Cancelado</span>}
@@ -748,7 +780,15 @@ const COR_PROXIMO: Record<CategoriaProximo, { cartao: string; data: string; rotu
   },
 };
 
-export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoId, podeMarcarAtendimento, agoraReconectar }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string; podeMarcarAtendimento?: boolean; agoraReconectar?: boolean }) {
+export function AgendaPanel(props: Parameters<typeof AgendaConteudo>[0]) {
+  return (
+    <FusoDaAgenda.Provider value={props.fuso}>
+      <AgendaConteudo {...props} />
+    </FusoDaAgenda.Provider>
+  );
+}
+
+function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, podeMarcarAtendimento, agoraReconectar, fuso, hoje: hojeCivil }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string; podeMarcarAtendimento?: boolean; agoraReconectar?: boolean; fuso: string; hoje: string }) {
   const eventoCompartilhado = items.find((item) => item.kind === "evento" && item.id === eventoId);
   const avisoEvento = eventoId && !eventoCompartilhado
     ? <p role="status" className="text-sm text-gray-600 dark:text-gray-300">Este evento não está disponível na sua agenda. Ele pode ter encerrado ou ser destinado a outra escola.</p>
@@ -756,15 +796,19 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
   const porDia = useMemo(() => {
     const mapa = new Map<string, AgendaItem[]>();
     for (const item of items) {
-      const chave = chaveDia(item.date);
+      const chave = chaveDoItem(item.date, fuso);
       const lista = mapa.get(chave);
       if (lista) lista.push(item);
       else mapa.set(chave, [item]);
     }
     return mapa;
-  }, [items]);
+  }, [items, fuso]);
 
-  const hoje = useMemo(() => new Date(), []);
+  // "Hoje" é o da filial, decidido no servidor: o calendário abre no mesmo dia no servidor e no aparelho.
+  const hoje = useMemo(() => {
+    const [a, m, d] = hojeCivil.split("-").map(Number);
+    return new Date(a, m - 1, d);
+  }, [hojeCivil]);
 
   // Abre sempre em hoje (pedido do usuário 2026-10-25); os próximos de outras datas ficam na lista abaixo.
   const [diaSelecionado, setDiaSelecionado] = useState(() => hoje);
@@ -801,7 +845,7 @@ export function AgendaPanel({ memberId, items, somenteConsulta, emBreve, eventoI
   // Próximos compromissos de OUTRAS datas (pedido do usuário 2026-10-21), de hoje em diante.
   const inicioDeHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   const proximos = items
-    .filter((i): i is Exclude<AgendaItem, { kind: "enquete" }> => i.kind !== "enquete" && i.date >= inicioDeHoje && chaveDia(i.date) !== chaveDia(diaSelecionado))
+    .filter((i): i is Exclude<AgendaItem, { kind: "enquete" }> => i.kind !== "enquete" && i.date.toLocaleDateString("en-CA", { timeZone: fuso }) >= hojeCivil && chaveDoItem(i.date, fuso) !== chaveDia(diaSelecionado))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
   // Primeiro o que é da escola no próximo mês (eventos da escola, grupos, turma, conversas); depois os demais.
   const fimDoMes = new Date(inicioDeHoje.getTime() + 30 * 864e5);

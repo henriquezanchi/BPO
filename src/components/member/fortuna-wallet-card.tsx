@@ -59,6 +59,7 @@ export function FortunaWalletCard({
           <select
             value={selecionada}
             onChange={(e) => setSelecionada(Number(e.target.value))}
+            aria-label="Carteira do Fortuna"
             className="rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-[11px] text-gray-600 outline-none dark:border-gray-700 dark:text-gray-300"
           >
             {balances.map((b) => (
@@ -73,7 +74,7 @@ export function FortunaWalletCard({
         <div>
           <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
             Saldo em {atual.branchTitle}
-            <button onClick={onAtualizar} disabled={loading} title="Atualizar saldo" className="text-gray-400 transition hover:text-na-green disabled:opacity-60">
+            <button onClick={onAtualizar} disabled={loading} title="Atualizar saldo" aria-label="Atualizar saldo" className="-m-3 p-3 text-gray-400 transition hover:text-na-green disabled:opacity-60">
               <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
             </button>
           </div>

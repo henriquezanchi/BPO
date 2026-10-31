@@ -1,4 +1,5 @@
 "use client";
+import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { excluirAccountantDocument, getAccountantDocumentUrl, uploadAccountantDocument } from "@/lib/actions/accountant-actions";
@@ -368,7 +369,7 @@ export function ContasConciliacoesTab({ schoolId, data }: { schoolId: string; da
         await sincronizarRubricasDePagamento(schoolId);
         setResultadoRubricas("Solicitação enviada — pode levar alguns minutos até a lista de rubricas abaixo refletir o Mercúrio (recarregue a página depois).");
       } catch (e) {
-        setResultadoRubricas((e as Error).message);
+        setResultadoRubricas(mensagemErroAmigavel(e));
       }
     });
   }

@@ -13,6 +13,7 @@ import { EntradaDiario } from "@/components/diario/entrada-diario";
 import { FREQUENCIAS, MODALIDADES } from "@/lib/grupos-comum";
 import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
 import Link from "next/link";
+import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { useEffect, useState, useTransition } from "react";
 
 const SECRETARIAS = SECRETARIAS_OFERTA;
@@ -280,9 +281,13 @@ export function VolunteerPanel({ memberId }: { memberId: string }) {
     }
     setErro(null);
     startTransition(async () => {
-      await oferecerApoioVoluntario(memberId, active);
-      setOferecidoEm(new Date());
-      setActive([]);
+      try {
+        await oferecerApoioVoluntario(memberId, active);
+        setOferecidoEm(new Date());
+        setActive([]);
+      } catch (e) {
+        setErro(mensagemErroAmigavel(e));
+      }
     });
   }
 

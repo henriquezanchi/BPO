@@ -82,10 +82,9 @@ const dataCurta = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
  * Portal — pedido do usuário 2026-09-30: saber "quantos dias faltam" sem
  * precisar entrar em "Situação da Contribuição".
  */
-function calcularProximoVencimento(monthlyStatus: { year: number; month: number; status: string }[]) {
-  const hoje = new Date();
-  const anoAtual = hoje.getFullYear();
-  const mesAtual = hoje.getMonth() + 1;
+function calcularProximoVencimento(monthlyStatus: { year: number; month: number; status: string }[], hoje: string) {
+  // "Hoje" da filial, vindo do servidor (31/10/2026): com o relógio local, o SSR em UTC já virava o dia às 21h.
+  const [anoAtual, mesAtual, diaAtual] = hoje.split("-").map(Number);
 
   const statusMesAtual = monthlyStatus.find((m) => m.year === anoAtual && m.month === mesAtual)?.status ?? "em_branco";
   const jaResolvidoEsseMes = statusMesAtual === "paga" || statusMesAtual === "isento";
@@ -96,9 +95,8 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
       : [anoAtual, mesAtual + 1]
     : [anoAtual, mesAtual];
 
-  const vencimento = new Date(ano, mes - 1, DIA_VENCIMENTO);
-  const diasRestantes = Math.round((vencimento.getTime() - new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime()) / 86400000);
-  return { vencimento, diasRestantes, jaResolvidoEsseMes };
+  const diasRestantes = Math.round((Date.UTC(ano, mes - 1, DIA_VENCIMENTO) - Date.UTC(anoAtual, mesAtual - 1, diaAtual)) / 86400000);
+  return { vencimento: { dia: DIA_VENCIMENTO, mes }, diasRestantes, jaResolvidoEsseMes };
 }
 
 export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { dashboard: MemberDashboard; eventoId?: string; abrir?: "voluntariado"; boletim?: EdicaoAurora | null }) {
@@ -132,7 +130,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   const semDesconto = situacao === "sem_desconto";
   const schoolWhatsapp = member.school.whatsapp ?? member.whatsapp;
   const compositionTotal = member.compositionItems.reduce((soma, i) => soma + i.amount, 0);
-  const proximoVencimento = calcularProximoVencimento(member.monthlyStatus);
+  const proximoVencimento = calcularProximoVencimento(member.monthlyStatus, dashboard.hoje);
   const t = getDictionary(member.school.language);
   // Asaas/PIX é só Brasil — decisão do usuário 2026-10-15: 1ª versão do
   // Portal em inglês não processa pagamento, só consulta (ver
@@ -185,10 +183,10 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           </p>
           <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-500">
             {proximoVencimento.diasRestantes < 0
-              ? t.home.venceuHa(Math.abs(proximoVencimento.diasRestantes), proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1)
+              ? t.home.venceuHa(Math.abs(proximoVencimento.diasRestantes), proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes)
               : proximoVencimento.diasRestantes === 0
                 ? t.home.venceHoje
-                : t.home.proximoVencimento(proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1, proximoVencimento.diasRestantes)}
+                : t.home.proximoVencimento(proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes, proximoVencimento.diasRestantes)}
           </p>
         </div>
       </div>
@@ -239,9 +237,8 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   useEffect(() => {
     if (modal) registrarUso(member.id, modal);
   }, [modal, member.id]);
-  const agoraMs = new Date().setHours(0, 0, 0, 0);
   const proximosEventos = agendaItems
-    .flatMap((i) => (i.kind === "evento" && i.date.getTime() >= agoraMs && i.status !== "cancelado" ? [{ id: i.id, titulo: i.title, data: i.date }] : []))
+    .flatMap((i) => (i.kind === "evento" && i.date.toLocaleDateString("en-CA", { timeZone: dashboard.fuso }) >= dashboard.hoje && i.status !== "cancelado" ? [{ id: i.id, titulo: i.title, data: i.date }] : []))
     .sort((a, b) => a.data.getTime() - b.data.getTime())
     .slice(0, 3);
 
@@ -320,7 +317,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
             <span className="mt-1 flex flex-col gap-0.5">
               {proximosEventos.map((e) => (
                 <span key={e.id} className="flex items-baseline gap-2 text-[12px]">
-                  <span className="w-10 shrink-0 font-bold text-gray-500 tabular-nums">{e.data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
+                  <span className="w-10 shrink-0 font-bold text-gray-500 tabular-nums">{e.data.toLocaleDateString("pt-BR", { timeZone: dashboard.fuso, day: "2-digit", month: "2-digit" })}</span>
                   <span className="truncate text-gray-700 dark:text-gray-300">{e.titulo}</span>
                 </span>
               ))}
@@ -331,7 +328,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
         />
       ),
     },
-    dashboard.recursos.acropole_play && { id: "play", conteudo: <DestaquePlay /> },
+    dashboard.recursos.acropole_play && { id: "play", conteudo: <DestaquePlay hoje={dashboard.hoje} /> },
     dashboard.meusGafs.length > 0 && { id: "diario", conteudo: <DestaqueDiario /> },
     saldoFortuna && {
       id: "fortuna",
@@ -418,7 +415,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           icone={<Wallet size={20} />}
           rotulo="Minha contribuição"
           titulo={t.home.contribuicaoEmDia}
-          texto={proximoVencimento.diasRestantes > 0 ? t.home.proximoVencimento(proximoVencimento.vencimento.getDate(), proximoVencimento.vencimento.getMonth() + 1, proximoVencimento.diasRestantes) : undefined}
+          texto={proximoVencimento.diasRestantes > 0 ? t.home.proximoVencimento(proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes, proximoVencimento.diasRestantes) : undefined}
           acao={t.home.verSituacao}
           onClick={() => setModal("economia")}
         />
@@ -495,7 +492,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         {member.school.language !== "en" && <BuscaPortal destinos={Object.fromEntries(Object.entries(destinosBusca).filter(([, d]) => d)) as Record<string, DestinoBusca>} />}
         <NudgeCard memberId={member.id} />
-        <AvisosGrupos avisos={dashboard.avisosGrupos} />
+        <AvisosGrupos avisos={dashboard.avisosGrupos} fuso={dashboard.fuso} />
         <AtivarNotificacoes aguardar={tourVisivel} />
 
         {/* Acesso rápido (pedido do usuário 2026-10-29): contribuição perto do vencimento, o quadro mais usado ou,
@@ -686,7 +683,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
             />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
-          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} emBreve={emBreve} eventoId={eventoId} podeMarcarAtendimento={dashboard.podeMarcarAtendimento} agoraReconectar={dashboard.agoraReconectar} />}
+          {modal === "agenda" && <AgendaPanel memberId={member.id} items={agendaItems} somenteConsulta={somenteConsulta} emBreve={emBreve} eventoId={eventoId} podeMarcarAtendimento={dashboard.podeMarcarAtendimento} agoraReconectar={dashboard.agoraReconectar} fuso={dashboard.fuso} hoje={dashboard.hoje} />}
           {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} mostrarBastioes={dashboard.bibliotecaLiberada} />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}

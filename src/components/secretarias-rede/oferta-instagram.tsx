@@ -1,5 +1,6 @@
 "use client";
 
+import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { cancelarInstagram, conectarInstagram, contratarInstagram } from "@/lib/actions/redes-actions";
 import { formatDateBR } from "@/lib/format";
 import { Check, Loader2 } from "lucide-react";
@@ -33,7 +34,7 @@ export function OfertaInstagram({ filiais }: { filiais: InstagramFilial[] }) {
         if (link) window.location.href = link;
         setConfirmar(null);
       } catch (e) {
-        setErro((e as Error).message);
+        setErro(mensagemErroAmigavel(e));
       }
     });
   }

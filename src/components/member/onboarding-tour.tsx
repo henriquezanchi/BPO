@@ -118,7 +118,7 @@ export function OnboardingTour({ memberId, onFechar }: { memberId: string; onFec
             : { left: "50%", top: "50%", transform: "translate(-50%, -50%)" }
         }
       >
-        <button onClick={concluir} disabled={isPending} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+        <button onClick={concluir} disabled={isPending} aria-label="Fechar o tour" className="absolute top-2 right-2 flex h-11 w-11 items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
           <X size={18} />
         </button>
 

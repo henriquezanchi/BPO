@@ -7,6 +7,7 @@ import {
   updateContributionItemValue,
 } from "@/lib/actions/contribution-actions";
 import { formatBRL } from "@/lib/format";
+import { lerValorBRL } from "@/lib/valor-brl";
 import type { SerializedCompositionItem } from "@/lib/member-data";
 import type { MercurioCatalogItem } from "@/lib/mercurio";
 import { AlertTriangle, Check, Clock, Loader2, Lock, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
@@ -48,8 +49,8 @@ export function MyContributionPanel({
 
   function handleAdd() {
     if (!selectedGroup) return;
-    const valor = parseFloat(newItemValue.replace(/\./g, "").replace(",", "."));
-    if (!Number.isFinite(valor) || valor <= 0) {
+    const valor = lerValorBRL(newItemValue);
+    if (valor === null || valor <= 0) {
       setError("Informe o valor desse item antes de incluir.");
       return;
     }
@@ -78,8 +79,10 @@ export function MyContributionPanel({
   }
 
   function handleSaveEdit(item: SerializedCompositionItem) {
-    const novoValor = parseFloat(editValue.replace(/\./g, "").replace(",", "."));
-    if (!Number.isFinite(novoValor) || novoValor < 0) {
+    // Enter repetido enquanto salva não pode mandar a alteração duas vezes (31/10/2026).
+    if (isSavingEdit) return;
+    const novoValor = lerValorBRL(editValue);
+    if (novoValor === null || novoValor < 0) {
       setError("Valor inválido.");
       return;
     }
