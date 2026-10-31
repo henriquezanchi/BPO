@@ -1,6 +1,6 @@
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
-import { datasPermitidas, fogoInterno, hojeNoFuso, praticaNoDia } from "@/lib/diario";
+import { datasPermitidas, fogoInterno, hojeNoFuso, PRATICA_TRATAK, praticaNoDia } from "@/lib/diario";
 
 /**
  * Leitura do diário (servidor). Sempre da própria pessoa: ninguém mais lê o diário de outro (decisão do responsável,
@@ -40,6 +40,7 @@ export async function carregarDiario(m: { id: string; school: { uf: string | nul
     },
     praticas: praticas.map((p) => ({ id: p.id, nome: p.nome, recorrencia: p.recorrencia, diasSemana: p.diasSemana, diaMes: p.diaMes, doDia: praticaNoDia(p, data), feita: !!feitas[p.id] })),
     fogo: { ...fogoInterno(comEpilogo.map((d) => d.data), hoje), total },
+    tratakFeito: !!feitas[PRATICA_TRATAK],
   };
 }
 
@@ -56,7 +57,7 @@ export async function carregarHistorico(m: { id: string; school: { uf: string | 
     db.diarioDia.findMany({ where: { ...comRegistro, data: { startsWith: mes } }, orderBy: { data: "desc" } }),
     db.diarioPratica.findMany({ where: { memberId: m.id }, select: { id: true, nome: true } }),
   ]);
-  const nomes = new Map(praticas.map((p) => [p.id, p.nome]));
+  const nomes = new Map([...praticas.map((p) => [p.id, p.nome] as const), [PRATICA_TRATAK, "Tratak"] as const]);
   const editaveis = new Set(datasPermitidas(hoje));
   return {
     mes,

@@ -10,6 +10,7 @@ import { formatDateBR, whatsappHref } from "@/lib/format";
 import type { GafNoPortal, ResumoGrupo } from "@/lib/grupos-dados";
 import { BookOpenText, CalendarClock, ChevronRight, HandHeart, Loader2, Settings, Users, Video } from "lucide-react";
 import { EntradaDiario } from "@/components/diario/entrada-diario";
+import { BotaoTratak } from "@/components/diario/tratak";
 import { FREQUENCIAS, MODALIDADES } from "@/lib/grupos-comum";
 import { SECRETARIAS_OFERTA } from "@/lib/secretarias";
 import Link from "next/link";
@@ -79,6 +80,8 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
     <div className="flex flex-col gap-6 text-left">
       {/* Diário filosófico dentro do Portal (pedido do usuário 2026-10-29). */}
       <EntradaDiario />
+      {/* Tratak dentro do GAF (pedido do usuário 2026-10-31), como no diário antigo. */}
+      <BotaoTratak />
       {detalhes.map((g) => (
         <section key={g.id} className="flex flex-col gap-3">
           {detalhes.length > 1 && <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">{g.nome}</h3>}

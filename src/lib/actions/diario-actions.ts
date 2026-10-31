@@ -2,7 +2,7 @@
 
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { datasPermitidas, epilogoValido, fogoInterno, fraseDoDia, somarDias, type Recorrencia } from "@/lib/diario";
+import { datasPermitidas, epilogoValido, fogoInterno, fraseDoDia, PRATICA_TRATAK, somarDias, type Recorrencia } from "@/lib/diario";
 import { hojeDaPessoa } from "@/lib/diario-dados";
 import { meusGrupos } from "@/lib/grupos-dados";
 import type { Prisma } from "@prisma/client";
@@ -56,6 +56,24 @@ export async function salvarEpilogo(data: string, entrada: { semPrologo: boolean
   });
 }
 
+/**
+ * Tratak concluído (2026-10-31): entra nas práticas de HOJE com a chave fixa "tratak" (como no diário antigo), ao lado
+ * das práticas que a pessoa cria. Só a tela de prática chama, depois dos 3 minutos completos.
+ */
+export async function registrarTratak(): Promise<Resultado> {
+  return executar(async () => {
+    const eu = await getAuthenticatedMember();
+    if (!eu) throw new Error("Entre no Portal.");
+    await participaDeGaf(eu);
+    const data = hojeDaPessoa(eu);
+    await db.$transaction(async (tx) => {
+      const dia = await tx.diarioDia.findUnique({ where: { memberId_data: { memberId: eu.id, data } }, select: { praticas: true } });
+      const valor = { ...((dia?.praticas ?? {}) as Record<string, boolean>), [PRATICA_TRATAK]: true } as Prisma.InputJsonValue;
+      await tx.diarioDia.upsert({ where: { memberId_data: { memberId: eu.id, data } }, update: { praticas: valor, origem: "portal" }, create: { memberId: eu.id, data, praticas: valor } });
+    });
+  });
+}
+
 export async function marcarPratica(data: string, praticaId: string, feita: boolean): Promise<Resultado> {
   return executar(async () => {
     const eu = await pessoaEDia(data);
@@ -98,13 +116,13 @@ export async function arquivarPratica(praticaId: string): Promise<Resultado> {
 }
 
 /** Situação de hoje para o cartão do diário (Prólogo, Epílogo, Fogo Interno), sem nenhum texto do diário. */
-export async function estadoDoDiarioHoje(): Promise<{ prologo: boolean; epilogo: boolean; sequencia: number } | null> {
+export async function estadoDoDiarioHoje(): Promise<{ prologo: boolean; epilogo: boolean; sequencia: number; tratak: boolean } | null> {
   const eu = await getAuthenticatedMember();
   if (!eu) return null;
   const hoje = hojeDaPessoa(eu);
   const [dia, comEpilogo] = await Promise.all([
-    db.diarioDia.findUnique({ where: { memberId_data: { memberId: eu.id, data: hoje } }, select: { prologoEm: true, epilogoEm: true } }),
+    db.diarioDia.findUnique({ where: { memberId_data: { memberId: eu.id, data: hoje } }, select: { prologoEm: true, epilogoEm: true, praticas: true } }),
     db.diarioDia.findMany({ where: { memberId: eu.id, epilogoEm: { not: null }, data: { gte: somarDias(hoje, -400) } }, select: { data: true } }),
   ]);
-  return { prologo: !!dia?.prologoEm, epilogo: !!dia?.epilogoEm, sequencia: fogoInterno(comEpilogo.map((d) => d.data), hoje).atual };
+  return { prologo: !!dia?.prologoEm, epilogo: !!dia?.epilogoEm, sequencia: fogoInterno(comEpilogo.map((d) => d.data), hoje).atual, tratak: !!(dia?.praticas as Record<string, boolean> | null)?.[PRATICA_TRATAK] };
 }

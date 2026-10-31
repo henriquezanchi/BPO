@@ -1,4 +1,5 @@
 "use client";
+import { BotaoTratak } from "@/components/diario/tratak";
 
 import { arquivarPratica, criarPratica, marcarPratica, salvarEpilogo, salvarPrologo } from "@/lib/actions/diario-actions";
 import { DIAS_DA_SEMANA, RECORRENCIAS, type Recorrencia } from "@/lib/diario";
@@ -193,6 +194,8 @@ function Praticas({ d, pendente, rodar }: { d: DiarioDaPessoa; pendente: boolean
           {gerir ? "Fechar" : "Minhas práticas"}
         </button>
       </h2>
+      {/* Tratak do diário antigo (2026-10-31): sempre à mão, mas só se faz no dia de hoje. */}
+      {d.data === d.hoje ? <BotaoTratak feitoHoje={d.tratakFeito} variante="linha" /> : d.tratakFeito && <p className="text-[12px] text-gray-600 dark:text-gray-300">Tratak feito neste dia.</p>}
       {doDia.length ? (
         <ul className="flex flex-col gap-1.5">
           {doDia.map((p) => (

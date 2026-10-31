@@ -91,3 +91,6 @@ export function epilogoValido(e: { falhei?: string | null; fizBem?: string | nul
   const t = (v?: string | null) => !!v?.trim();
   return (t(e.falhei) && t(e.fizBem) && t(e.deixeiDeFazer)) || t(e.reflexaoLivre);
 }
+
+/** Chave do Tratak nas práticas do dia (DiarioDia.praticas), igual à do diário antigo (2026-10-31). */
+export const PRATICA_TRATAK = "tratak";
