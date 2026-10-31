@@ -6,6 +6,7 @@ import { contaDaEscolaId } from "@/lib/asaas/conta-escola";
 import { splitDoBpo } from "@/lib/asaas/split";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { fortunaGetClient } from "@/lib/fortuna/client";
 import { confirmarRecargaFortuna } from "@/lib/fortuna/confirmar-recarga";
 
 const VALOR_MINIMO = 5;
@@ -32,6 +33,21 @@ export async function createFortunaTopUpCharge(memberId: string, valor: number, 
     throw new Error(`Valor deve estar entre ${VALOR_MINIMO} e ${VALOR_MAXIMO}.`);
   }
   if (!member.fortunaClientId) throw new Error("Sua conta ainda não está vinculada ao Fortuna — fale com a secretaria.");
+  valor = Math.round(valor * 100) / 100;
+
+  // A filial do crédito vem da tela (31/10/2026): só vale uma das carteiras da própria pessoa no Fortuna — as mesmas
+  // que o seletor mostra (getFortunaBalancesForMember). Sem isso, um pedido adulterado creditaria em outro caixa.
+  const clienteFortuna = await fortunaGetClient(member.fortunaClientId).catch(() => null);
+  if (!clienteFortuna) throw new Error("O Fortuna não respondeu agora. Tente de novo em instantes.");
+  const filiaisDaPessoa = new Set([clienteFortuna.branch.id, ...clienteFortuna.balance.map((b) => b.branchId)]);
+  if (!Number.isInteger(branchId) || !filiaisDaPessoa.has(branchId)) throw new Error("Escolha uma das suas carteiras do Fortuna.");
+
+  // Duplo toque ou tela reaberta (31/10/2026): reaproveita o PIX igual ainda em aberto, em vez de criar outro.
+  const emAberto = await db.fortunaTopUpCharge.findFirst({
+    where: { memberId, branchId, amount: valor, status: "pendente", createdAt: { gte: new Date(Date.now() - 20 * 60 * 60 * 1000) }, pixPayload: { not: null } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (emAberto) return { chargeId: emAberto.id, pixPayload: emAberto.pixPayload!, pixQrCodeBase64: emAberto.pixQrCodeBase64 ?? "", amount: valor };
 
   // Sempre pela subconta da filial (regra do usuário 2026-10-25).
   const conta = await contaDaEscolaId(member.schoolId);

@@ -46,6 +46,8 @@ export async function votePoll(memberId: string, pollId: string, pollOptionId: s
     where: { classGroupId: poll.classGroupId, memberId: member.id, role: "aluno" },
   });
   if (!matricula) throw new Error("Você não é aluno desta turma.");
+  // A opção precisa ser desta enquete (31/10/2026): o banco não amarra as duas, e um id de outra enquete contaria lá.
+  if (!(await db.pollOption.findFirst({ where: { id: pollOptionId, pollId }, select: { id: true } }))) throw new Error("Opção inválida para esta enquete.");
 
   await db.pollVote.upsert({
     where: { pollId_memberId: { pollId, memberId: member.id } },

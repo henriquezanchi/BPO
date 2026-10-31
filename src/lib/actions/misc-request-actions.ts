@@ -27,6 +27,9 @@ export async function solicitarAdesaoGaf(memberId: string, classGroupId?: string
     if (motivo) return { ok: false, error: motivo };
     if (await db.classMembership.findFirst({ where: { classGroupId, memberId } })) return { ok: false, error: "Você já participa deste GAF." };
     if (await db.gafRequest.findFirst({ where: { classGroupId, memberId } })) return { ok: false, error: "Seu pedido para este GAF já foi enviado." };
+  } else if (await db.gafRequest.findFirst({ where: { memberId, classGroupId: null, createdAt: { gte: new Date(Date.now() - 30 * 864e5) } } })) {
+    // Pedido sem GAF escolhido: um por mês basta (31/10/2026; antes cada toque criava outro).
+    return { ok: false, error: "Seu pedido já foi enviado. A filial vai entrar em contato." };
   }
   await db.gafRequest.create({ data: { memberId, classGroupId: classGroupId ?? null } });
   return { ok: true };

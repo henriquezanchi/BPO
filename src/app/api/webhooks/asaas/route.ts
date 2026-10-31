@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import {processEventRefund} from "@/lib/event-refunds";
 import {confirmEventPayment} from "@/lib/event-payments";
 import {asaasGetPaymentStatus} from "@/lib/asaas/client";
@@ -31,11 +32,11 @@ const EVENTO_PARA_STATUS: Record<string, "ACTIVE" | "CANCELLED" | "REFUSED" | "E
 export async function POST(req: Request) {
   const tokenEsperado = process.env.ASAAS_WEBHOOK_TOKEN;
   if (!tokenEsperado) return new Response("webhook not configured", { status: 503 });
-  if (tokenEsperado) {
-    const tokenRecebido = req.headers.get("asaas-access-token");
-    if (tokenRecebido !== tokenEsperado) {
-      return new Response("unauthorized", { status: 401 });
-    }
+  // Comparação em tempo constante, como no webhook de saque (31/10/2026).
+  const recebido = Buffer.from(req.headers.get("asaas-access-token") ?? "");
+  const esperado = Buffer.from(tokenEsperado);
+  if (recebido.length !== esperado.length || !timingSafeEqual(recebido, esperado)) {
+    return new Response("unauthorized", { status: 401 });
   }
 
   const body = (await req.json()) as {

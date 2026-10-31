@@ -45,11 +45,16 @@ function mesmoDiaUTC(a: Date, b: Date): boolean {
  * relatório de "quanto a contribuição cresceu" (ver
  * getCrescimentoComposicao em economia-actions.ts).
  */
+// Teto de um item da composição (31/10/2026): barra erro de digitação (ex.: R$ 2.000 no lugar de R$ 20,00) antes de
+// chegar à fila do Mercúrio; contribuição real nenhuma passa perto disso.
+const VALOR_MAXIMO_ITEM = 5000;
+
 export async function solicitarItemComposicao(memberId: string, mercurioGroupId: string, rotulo: string, valor: number) {
   const eu = await requireAuthenticatedMember(memberId);
   exigirEscritaMercurio(eu);
 
-  if (!Number.isFinite(valor) || valor <= 0) {
+  valor = Math.round(valor * 100) / 100;
+  if (!Number.isFinite(valor) || valor <= 0 || valor > VALOR_MAXIMO_ITEM) {
     return { ok: false as const, error: "Valor inválido." };
   }
   // Só rubricas do catálogo da filial que o membro pode incluir (o rótulo vem do catálogo, não da tela).
@@ -99,7 +104,8 @@ export async function getSolicitacoesComposicaoDoMembro(memberId: string) {
 export async function updateContributionItemValue(memberId: string, compositionItemId: string, novoValor: number) {
   exigirEscritaMercurio(await requireAuthenticatedMember(memberId));
 
-  if (!Number.isFinite(novoValor) || novoValor < 0) {
+  novoValor = Math.round(novoValor * 100) / 100;
+  if (!Number.isFinite(novoValor) || novoValor < 0 || novoValor > VALOR_MAXIMO_ITEM) {
     return { ok: false as const, error: "Valor inválido." };
   }
 

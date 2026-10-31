@@ -13,18 +13,21 @@ async function garantirBucket() {
   await supabaseAdmin.storage.createBucket(BUCKET, { public: true, fileSizeLimit: TAMANHO_MAXIMO }).catch(() => {});
 }
 
+const TIPOS_DE_FOTO: Record<string, string> = { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" };
+
 /** Foto de perfil — pedido do usuário 2026-09-30: deixa o Portal mais pessoal e ajuda a diretoria a reconhecer quem é quem. */
 export async function uploadAvatar(memberId: string, formData: FormData) {
   await requireAuthenticatedMember(memberId);
 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) throw new Error("Selecione uma imagem.");
-  if (!file.type.startsWith("image/")) throw new Error("Só é possível enviar imagens.");
+  // Só fotos (31/10/2026): o bucket é público, e SVG pode carregar script.
+  const extensao = TIPOS_DE_FOTO[file.type];
+  if (!extensao) throw new Error("Envie uma foto em JPG, PNG ou WebP.");
   if (file.size > TAMANHO_MAXIMO) throw new Error("Imagem muito grande — máximo 3MB.");
 
   await garantirBucket();
 
-  const extensao = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : ".jpg";
   const path = `${memberId}/${Date.now()}${extensao}`;
   const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: true });
   if (error) throw new Error(`Falha ao subir a imagem: ${error.message}`);
