@@ -6,6 +6,9 @@
  *   npx tsx --env-file=.env --env-file=.env.local scripts/importar-diario-firebase.ts [--chave <arquivo.json>] [--gravar]
  * Sem --gravar, só conta (nada é escrito). A chave é a de conta de serviço do Firebase; fica fora do repositório.
  *   --somente <matrícula,...>  importa só essas pessoas (as demais nem são lidas).
+ *   --vincular "<nome no diário antigo>=<matrícula>"  liga uma conta cujo e-mail não é o do cadastro (31/10/2026: a conta
+ *                              antiga do usuário e a 2ª do Guilherme). O nome precisa ser único no Firebase; só com a
+ *                              confirmação da própria pessoa de que a conta é dela.
  *   --aceitar <matrícula,...>  aceita, para essas pessoas, a conta do Firebase com o MESMO e-mail do cadastro mesmo sem
  *                              e-mail confirmado — só quando a própria pessoa avisou que os registros não vieram
  *                              (31/10/2026: Guilherme, 102 dias pulados por e-mail não confirmado).
@@ -28,6 +31,8 @@ const args = process.argv.slice(2);
 const gravar = args.includes("--gravar");
 const aceitar = new Set(args.includes("--aceitar") ? args[args.indexOf("--aceitar") + 1].split(",").map((m) => m.trim()) : []);
 const somente = new Set(args.includes("--somente") ? args[args.indexOf("--somente") + 1].split(",").map((m) => m.trim()) : []);
+// Pode repetir --vincular; cada um é "Nome exato no diário antigo=matrícula".
+const vinculos = args.flatMap((a, i) => (a === "--vincular" && args[i + 1]?.includes("=") ? [args[i + 1].split("=").map((x) => x.trim()) as [string, string]] : []));
 const chave = args.includes("--chave") ? args[args.indexOf("--chave") + 1] : "C:/Users/Henrique Zanchi/Downloads/diario-filosofico-firebase-adminsdk-fbsvc-7303b6efc8.json";
 
 type Tarefa = { id?: string; name?: string; recurrence?: string; weekDays?: number[]; monthDay?: number; baseDate?: string };
@@ -78,11 +83,30 @@ async function main() {
     porEmail.set(e, [...(porEmail.get(e) ?? []), m.id]);
   }
 
-  const c = { contas: contas.length, semEmail: 0, naoConfirmado: 0, semCadastro: 0, ambiguo: 0, pareadas: 0, comDiario: 0, dias: 0, diasVazios: 0, diasDoPortalMantidos: 0, diasGravados: 0, praticas: 0, livros: 0 };
+  // Ligações manuais: conta do diário antigo (pelo nome, que precisa ser único) -> cadastro do Portal (pela matrícula).
+  const vinculadas = new Map<string, string>();
+  if (vinculos.length) {
+    const usuarios = [];
+    for (let pagina: string | undefined; ; ) {
+      const r = await auth.listUsers(1000, pagina);
+      usuarios.push(...r.users);
+      if (!r.pageToken) break;
+      pagina = r.pageToken;
+    }
+    for (const [nome, matricula] of vinculos) {
+      const achadas = usuarios.filter((u) => u.displayName?.trim() === nome);
+      const pessoa = await db.member.findFirst({ where: { mercurioId: matricula }, select: { id: true } });
+      if (achadas.length !== 1 || !pessoa) throw new Error(`--vincular "${nome}=${matricula}": ${achadas.length !== 1 ? `${achadas.length} contas com esse nome no diário antigo` : "matrícula sem cadastro no Portal"}.`);
+      vinculadas.set(achadas[0].uid, pessoa.id);
+    }
+  }
+
+  const c = { contas: contas.length, semEmail: 0, naoConfirmado: 0, semCadastro: 0, ambiguo: 0, pareadas: 0, comDiario: 0, dias: 0, diasVazios: 0, diasDoPortalMantidos: 0, diasDeOutraContaMantidos: 0, diasGravados: 0, praticas: 0, livros: 0 };
   for (const conta of contas) {
-    if (!conta.email) { c.semEmail++; continue; }
-    if (!conta.confirmado && !emailsAceitos.has(conta.email)) { c.naoConfirmado++; continue; }
-    const ids = porEmail.get(conta.email) ?? [];
+    const vinculada = vinculadas.get(conta.uid);
+    if (!vinculada && !conta.email) { c.semEmail++; continue; }
+    if (!vinculada && !conta.confirmado && !emailsAceitos.has(conta.email!)) { c.naoConfirmado++; continue; }
+    const ids = vinculada ? [vinculada] : (porEmail.get(conta.email!) ?? []);
     if (!ids.length) { c.semCadastro++; continue; }
     if (ids.length > 1) { c.ambiguo++; continue; }
     c.pareadas++;
@@ -120,8 +144,10 @@ async function main() {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) continue;
       c.dias++;
       if (!e.morningDone && !e.eveningDone) { c.diasVazios++; continue; }
-      const existente = await db.diarioDia.findUnique({ where: { memberId_data: { memberId, data } }, select: { origem: true } });
+      const existente = await db.diarioDia.findUnique({ where: { memberId_data: { memberId, data } }, select: { origem: true, origemId: true } });
       if (existente?.origem === "portal") { c.diasDoPortalMantidos++; continue; }
+      // Pessoa com duas contas no diário antigo (31/10/2026): o dia que já veio de uma não é trocado pelo da outra.
+      if (existente?.origemId && existente.origemId !== doc.id) { c.diasDeOutraContaMantidos++; continue; }
       if (!gravar) { c.diasGravados++; continue; }
       const praticas = Object.fromEntries(Object.entries(e.tasksStatus ?? {}).filter(([id, feita]) => feita && novoId.has(id)).map(([id]) => [novoId.get(id)!, true]));
       const dados = {
