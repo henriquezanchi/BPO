@@ -38,3 +38,10 @@ export function mesNoFuso(fuso: string, agora = new Date()) {
     fimCivil: new Date(Date.UTC(anoSeguinte, mesSeguinte - 1, 1)),
   };
 }
+
+/** Deslocamento do fuso em relação ao UTC no formato ISO ("-03:00"), para montar horários locais com new Date(). */
+export function deslocamentoNoFuso(fuso: string, quando = new Date()) {
+  const partes = new Intl.DateTimeFormat("en-US", { timeZone: fuso, timeZoneName: "longOffset" }).formatToParts(quando);
+  const nome = partes.find((p) => p.type === "timeZoneName")?.value ?? "GMT-03:00";
+  return nome === "GMT" ? "+00:00" : nome.replace("GMT", "");
+}

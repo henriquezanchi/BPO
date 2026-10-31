@@ -24,3 +24,9 @@ test("virada do ano", () => {
   assert.equal(m.fim.toISOString(), "2027-01-01T03:00:00.000Z");
   assert.equal(m.fimCivil.toISOString(), "2027-01-01T00:00:00.000Z");
 });
+
+test("deslocamento ISO do fuso", async () => {
+  const { deslocamentoNoFuso } = await import("../src/lib/fuso-escola");
+  assert.equal(deslocamentoNoFuso("America/Sao_Paulo"), "-03:00");
+  assert.equal(deslocamentoNoFuso("America/Cuiaba"), "-04:00");
+});
