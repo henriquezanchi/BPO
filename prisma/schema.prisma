@@ -206,6 +206,8 @@ model Member {
   sessaoAgora SessaoAgora?
   diarioDias  DiarioDia[]
   diarioPraticas DiarioPratica[]
+  diarioFvDias DiarioFvDia[]
+  diarioFvFicha DiarioFvFicha?
   anotacoesAula AnotacaoAula[]
   livrosLeitura LivroLeitura[]
   oportunidadesResponsavel OportunidadeVoluntariado[] @relation("OportunidadeResponsavel")
@@ -2365,4 +2367,46 @@ model InteresseVoluntariado {
 
   @@unique([oportunidadeId, memberId])
   @@index([memberId])
+}
+
+// Diário de FV dentro do GDVE (pedido do usuário 2026-10-31, migração autorizada). Mesma privacidade do diário: só a
+// própria pessoa lê e grava, nem coordenação do GDVE, direção ou administração. Ver src/lib/fv/.
+model DiarioFvDia {
+  id                  String   @id @default(cuid())
+  memberId            String
+  data                String // "AAAA-MM-DD", dia local da pessoa
+  itens               Json     @default("{}") // Degrau: { item1, item2_instintos..item2_ambiente, item2 (antigo), item34, item5, item6, item7 }
+  praticas            Json     @default("{}") // Forja: { recitarHonra, recitar7Fases, camara, formasGeometricas, porta, patioAberto, patioColunas, santuario } (Tratak fica em DiarioDia)
+  presencas           Json     @default("{}") // { aulaRegular, reuniaoRaio, aulaMinistrada, crm, aulaEd }: "Sim" | "Não"
+  minutosVoluntariado Int?
+  minutosAulaAssistida  Int? // só vindos da importação; os novos são calculados pelo calendário
+  minutosAulaMinistrada Int?
+  gdveTarefas         Json     @default("{}") // { tarefaId: contador do dia }
+  gdvePresenca        Boolean  @default(false)
+  origem              String   @default("portal") // portal | firebase
+  origemId            String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
+  member              Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, data])
+}
+
+model DiarioFvFicha {
+  id             String   @id @default(cuid())
+  memberId       String   @unique
+  unidade        String?
+  condicao       String? // GS | GF | GM | Prov GS | Prov GF | Prov GM
+  mestre         String? // "Mestre / Instrutor (CD)", a quem a Carta de Degrau é entregue
+  ultimoEncontro String? // "AAAA-MM-DD"
+  ultimaCarta    String?
+  proximaCarta   String?
+  calendario     Json     @default("{}") // aula regular, reunião de Raio, aulas ministradas, CRM e ED
+  tarefas        Json     @default("[]") // [{ id, nome, meta, ciclo }] — práticas específicas do ciclo do GDVE
+  ciclo          Json     @default("{}") // { tarefaId: true } — missões do ciclo concluídas
+  proximaReuniao String? // "AAAA-MM-DDTHH:MM", quando o GDVE ainda não tem encontro marcado no Portal
+  origemId       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+  member         Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }

@@ -441,3 +441,43 @@ export async function avisosDoDiario(agora = new Date()) {
   }
   return total;
 }
+
+/**
+ * Diário de FV (2026-10-31), como os avisos do diário de FV antigo, às 20h no fuso da filial, para quem usou o diário
+ * de FV nos últimos 14 dias: 3 dias sem nenhuma prática de FV (Tratak conta) e reunião do GDVE daqui a 7 dias.
+ */
+export async function avisosDoDiarioFv(agora = new Date()) {
+  const desde = new Date(agora.getTime() - 14 * 24 * 60 * MIN);
+  const pessoas = await db.member.findMany({
+    where: { ...comPush, diarioFvDias: { some: { updatedAt: { gte: desde } } } },
+    select: { id: true, school: { select: { uf: true } }, classMemberships: { where: { classGroup: { tipo: "GDVE", arquivadoEm: null } }, select: { classGroupId: true } } },
+  });
+  let total = 0;
+  for (const p of pessoas) {
+    const grupos = p.classMemberships.map((c) => c.classGroupId);
+    if (!grupos.length) continue;
+    const fuso = fusoDaEscola(p.school?.uf);
+    const partes = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", hourCycle: "h23" }).formatToParts(agora).map((x) => [x.type, x.value]));
+    if (Number(partes.hour) !== 20) continue;
+    const hoje = `${partes.year}-${partes.month}-${partes.day}`;
+    const dias = [0, 1, 2].map((n) => new Date(Date.parse(`${hoje}T12:00:00Z`) - n * 864e5).toISOString().slice(0, 10));
+    const url = `/grupos/${grupos[0]}?aba=diariofv`;
+
+    const [fv, comuns] = await Promise.all([
+      db.diarioFvDia.findMany({ where: { memberId: p.id, data: { in: dias } }, select: { praticas: true } }),
+      db.diarioDia.findMany({ where: { memberId: p.id, data: { in: dias } }, select: { praticas: true } }),
+    ]);
+    const praticou = fv.some((d) => Object.values((d.praticas ?? {}) as Record<string, boolean>).some(Boolean)) || comuns.some((d) => !!((d.praticas ?? {}) as Record<string, boolean>).tratak);
+    if (!praticou && (await reservar(`fv-praticas:${p.id}:${hoje}`))) {
+      total += (await enviarPush([p.id], { titulo: "Práticas de FV", corpo: "Já são 3 dias sem registrar práticas.", url, etiqueta: `fv-praticas-${hoje}` })).pessoas;
+    }
+
+    const daquiAUmaSemana = new Date(Date.parse(`${hoje}T12:00:00Z`) + 7 * 864e5).toISOString().slice(0, 10);
+    const reunioes = await db.groupMeeting.findMany({ where: { classGroupId: { in: grupos }, status: "agendada", startsAt: { gte: agora, lte: new Date(agora.getTime() + 9 * 864e5) } }, select: { startsAt: true } });
+    const naSemana = reunioes.some((r) => r.startsAt.toLocaleDateString("en-CA", { timeZone: fuso }) === daquiAUmaSemana);
+    if (naSemana && (await reservar(`fv-gdve-7d:${p.id}:${daquiAUmaSemana}`))) {
+      total += (await enviarPush([p.id], { titulo: "Reunião do GDVE", corpo: "Falta 1 semana para a reunião do GDVE. Confira se a leitura do ciclo está em dia.", url, etiqueta: `fv-gdve-${daquiAUmaSemana}` })).pessoas;
+    }
+  }
+  return total;
+}

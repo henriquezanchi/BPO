@@ -1,6 +1,7 @@
 import {carregarContextoSecretaria,podeAcessarSecretaria} from "@/lib/secretarias-rede/acesso";
 import { AreaSecretaria } from "@/components/secretarias-rede/area-secretaria";
 import { AvisosDoGrupo } from "@/components/grupos/avisos-do-grupo";
+import { DiarioFvDoGrupo } from "@/components/fv/diario-fv-servidor";
 import { EscalaDoGrupo } from "@/components/grupos/escala-servidor";
 import { GrupoPainel } from "@/components/grupos/grupo-painel";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
@@ -19,9 +20,9 @@ export const dynamic = "force-dynamic";
  * Segurança. Voluntários e administração veem dentro da Área do Voluntário;
  * quem só participa de um GAF (aluno) vê uma página simples, com volta ao Portal.
  */
-export default async function GrupoPage(props: { params: Promise<{ id: string }>; searchParams: Promise<{ de?: string; aba?: string }> }) {
+export default async function GrupoPage(props: { params: Promise<{ id: string }>; searchParams: Promise<{ de?: string; aba?: string; dia?: string }> }) {
   const { id } = await props.params;
-  const { aba } = await props.searchParams;
+  const { aba, dia } = await props.searchParams;
   const member = await getAuthenticatedMember();
   if (!member) redirect(`/login?next=/grupos/${id}`);
   const [dados, destinos] = await Promise.all([detalheDoGrupo(member, id), destinosDaPessoa(member)]);
@@ -35,6 +36,7 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
       avisos={dados.papel.podeGerir ? <AvisosDoGrupo grupoId={dados.grupo.id} /> : undefined}
       orientacoes={orientacoes ? <AreaSecretaria secretaria={dados.grupo.name} /> : undefined}
       escala={dados.grupo.tipo === "PED" ? <EscalaDoGrupo grupoId={dados.grupo.id} euId={member.id} podeGerir={dados.papel.podeGerir} /> : undefined}
+      diarioFv={dados.grupo.tipo === "GDVE" && (dados.papel.integrante || dados.papel.responsavel) ? <DiarioFvDoGrupo member={member} dia={dia} /> : undefined}
     />
   );
 

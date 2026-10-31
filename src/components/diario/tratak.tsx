@@ -14,7 +14,7 @@ const CARENCIA_MS = 2000; // o clique de "Iniciar" e o ajuste inicial não inter
 
 type Fase = "intro" | "pratica" | "interrompida" | "concluida" | "registrada";
 
-export function BotaoTratak({ feitoHoje, variante = "cartao" }: { feitoHoje?: boolean; variante?: "cartao" | "linha" }) {
+export function BotaoTratak({ feitoHoje, variante = "cartao", registrar }: { feitoHoje?: boolean; variante?: "cartao" | "linha"; registrar?: Registrar }) {
   const [aberto, setAberto] = useState(false);
   const [feito, setFeito] = useState(!!feitoHoje);
   // No quadro do GAF a situação de hoje vem do servidor depois de abrir (sem nenhum texto do diário).
@@ -44,12 +44,15 @@ export function BotaoTratak({ feitoHoje, variante = "cartao" }: { feitoHoje?: bo
           <span className="text-[12px] font-semibold text-na-green-dark dark:text-emerald-400">{feito ? "Repetir" : "Fazer"}</span>
         </button>
       )}
-      {aberto && <PraticaTratak aoFechar={() => setAberto(false)} aoRegistrar={() => setFeito(true)} />}
+      {aberto && <PraticaTratak aoFechar={() => setAberto(false)} aoRegistrar={() => setFeito(true)} registrar={registrar} />}
     </>
   );
 }
 
-function PraticaTratak({ aoFechar, aoRegistrar }: { aoFechar: () => void; aoRegistrar: () => void }) {
+/** Quem grava a prática concluída: o diário (hoje) por padrão; o diário de FV passa a sua (dia escolhido). */
+type Registrar = () => Promise<{ ok: true } | { ok: false; error: string }>;
+
+export function PraticaTratak({ aoFechar, aoRegistrar, registrar = registrarTratak }: { aoFechar: () => void; aoRegistrar: () => void; registrar?: Registrar }) {
   const [fase, setFase] = useState<Fase>("intro");
   const [explicar, setExplicar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -113,7 +116,7 @@ function PraticaTratak({ aoFechar, aoRegistrar }: { aoFechar: () => void; aoRegi
   async function confirmar() {
     setSalvando(true);
     setErro(null);
-    const r = await registrarTratak().catch(() => ({ ok: false as const, error: "Não foi possível registrar agora. Tente de novo." }));
+    const r = await registrar().catch(() => ({ ok: false as const, error: "Não foi possível registrar agora. Tente de novo." }));
     setSalvando(false);
     if (!r.ok) return setErro(r.error);
     aoRegistrar();

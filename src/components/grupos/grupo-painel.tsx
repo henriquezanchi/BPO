@@ -39,7 +39,7 @@ const quando = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 const STATUS: Record<string, string> = { ativa: "Ativa", pausada: "Pausada", concluida: "Concluída" };
 
-export type AbaGrupo = "escala" | "encontros" | "avisos" | "atividades" | "equipe" | "sobre" | "orientacoes";
+export type AbaGrupo = "diariofv" | "escala" | "encontros" | "avisos" | "atividades" | "equipe" | "sobre" | "orientacoes";
 type Aba = AbaGrupo;
 
 /**
@@ -47,7 +47,7 @@ type Aba = AbaGrupo;
  * usuário 2026-10-25: abas (na URL, ?aba=) em qualquer tela. "Avisos e enquetes" (antes só em
  * Professor) e "Orientações" (secretarias) chegam prontos do servidor.
  */
-export function GrupoPainel({ dados, abaInicial, avisos, orientacoes, escala }: { dados: D; abaInicial?: string; avisos?: ReactNode; orientacoes?: ReactNode; escala?: ReactNode }) {
+export function GrupoPainel({ dados, abaInicial, avisos, orientacoes, escala, diarioFv }: { dados: D; abaInicial?: string; avisos?: ReactNode; orientacoes?: ReactNode; escala?: ReactNode; diarioFv?: ReactNode }) {
   const { papel, grupo } = dados;
   const router = useRouter();
   const [editando, setEditando] = useState(false);
@@ -57,6 +57,8 @@ export function GrupoPainel({ dados, abaInicial, avisos, orientacoes, escala }: 
   const abas = ([
     // Turma de pedagogos (2026-10-26): a escala de apresentações é a primeira aba.
     escala ? ["escala", "Escala de apresentações"] : null,
+    // GDVE (2026-10-31): o diário de FV de quem está logado; só a própria pessoa vê.
+    diarioFv ? ["diariofv", "Meu diário de FV"] : null,
     ["encontros", "Encontros"],
     avisos ? ["avisos", "Avisos e enquetes"] : null,
     ["atividades", "Atividades"],
@@ -132,6 +134,7 @@ export function GrupoPainel({ dados, abaInicial, avisos, orientacoes, escala }: 
 
       <div className="flex max-w-3xl flex-col gap-4">
         {aba === "escala" && escala}
+        {aba === "diariofv" && diarioFv}
         {aba === "encontros" && <Encontros dados={dados} recarregar={recarregar} />}
         {aba === "encontros" && dados.leiturasGaf && <LeiturasGaf itens={dados.leiturasGaf} podeGerir={dados.papel.podeGerir} recarregar={recarregar} />}
         {aba === "avisos" && avisos}
