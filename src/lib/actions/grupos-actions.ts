@@ -184,9 +184,13 @@ export async function removerPessoa(grupoId: string, role: "professor" | "aluno"
   return executar(async () => {
     const { papel } = await exigirGestor(grupoId);
     if (!(TIPOS_DO_PORTAL as readonly string[]).includes(papel.tipo)) throw new GrupoErro("A composição deste grupo vem do Mercúrio.");
-    if (role === "professor" && (await db.classMembership.count({ where: { classGroupId: grupoId, role: "professor" } })) <= 1)
-      throw new GrupoErro("O grupo precisa de pelo menos um responsável.");
-    await db.classMembership.deleteMany({ where: { classGroupId: grupoId, memberId, role } });
+    // Remove e reconfere na mesma transação (31/10/2026): duas remoções ao mesmo tempo deixavam o grupo sem
+    // responsável, e aí ninguém mais conseguia gerir.
+    await db.$transaction(async (tx) => {
+      await tx.classMembership.deleteMany({ where: { classGroupId: grupoId, memberId, role } });
+      if (role === "professor" && (await tx.classMembership.count({ where: { classGroupId: grupoId, role: "professor" } })) < 1)
+        throw new GrupoErro("O grupo precisa de pelo menos um responsável.");
+    });
     // Atividades não ficam com responsável que saiu do grupo.
     const restantes = await db.classMembership.count({ where: { classGroupId: grupoId, memberId } });
     if (!restantes) {

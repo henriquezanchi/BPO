@@ -208,6 +208,8 @@ export async function salvarPlano(apresentacaoId: string, pontos: Pontos, entreg
 export async function linkEnvioPlano(apresentacaoId: string, nome: string, tamanho: number): Promise<Resultado<{ path: string; token: string }>> {
   const r = await minhaApresentacao(apresentacaoId);
   if (!r) return falha("Este plano é de outra pessoa.");
+  // Como em salvarPlano (31/10/2026): apresentação já feita ou cancelada não recebe arquivo novo.
+  if (r.a.status !== "agendada") return falha("Esta apresentação não está mais em aberto.");
   const ext = (nome.split(".").pop() ?? "").toLowerCase();
   if (!EXTENSOES_PLANO.includes(ext)) return falha("Envie PDF, Word, PowerPoint ou texto.");
   if (!(tamanho > 0 && tamanho <= TAMANHO_MAX_PLANO)) return falha("O arquivo pode ter até 20 MB.");
@@ -222,11 +224,15 @@ export async function linkEnvioPlano(apresentacaoId: string, nome: string, taman
 export async function registrarArquivoPlano(apresentacaoId: string, path: string, nome: string, tipo: string): Promise<Resultado> {
   const r = await minhaApresentacao(apresentacaoId);
   if (!r || !path.startsWith(`${r.a.schoolId}/${r.a.classGroupId}/${apresentacaoId}/`)) return falha("Envio inválido.");
+  if (r.a.status !== "agendada") return falha("Esta apresentação não está mais em aberto.");
   const anterior = r.a.plano?.arquivoPath;
+  // Arquivo novo num plano já aprovado volta para a revisão do instrutor (31/10/2026): antes continuava "aprovado"
+  // com um conteúdo que ninguém tinha visto.
+  const reabrir = r.a.plano?.status === "aprovado" ? { status: "entregue", entregueEm: new Date() } : {};
   await db.planoAula.upsert({
     where: { apresentacaoId },
     create: { apresentacaoId, autorId: r.m.id, arquivoPath: path, arquivoNome: nome.slice(0, 200), arquivoTipo: tipo.slice(0, 120) },
-    update: { arquivoPath: path, arquivoNome: nome.slice(0, 200), arquivoTipo: tipo.slice(0, 120) },
+    update: { arquivoPath: path, arquivoNome: nome.slice(0, 200), arquivoTipo: tipo.slice(0, 120), ...reabrir },
   });
   if (anterior && anterior !== path) await supabaseAdmin.storage.from(BUCKET_PLANOS).remove([anterior]).catch(() => {});
   atualizar(r.a.classGroupId);

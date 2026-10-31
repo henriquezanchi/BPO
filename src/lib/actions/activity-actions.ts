@@ -36,6 +36,10 @@ export interface CreateActivityInput {
  */
 export async function createActivity(input: CreateActivityInput) {
   const professor = await requireTeacherOfClass(input.classGroupId);
+  const grupoTipo = (await db.classGroup.findUniqueOrThrow({ where: { id: input.classGroupId }, select: { tipo: true } })).tipo;
+  // Mesma conferência da edição (manageActivity), que faltava na criação (31/10/2026): o texto vai por WhatsApp e push
+  // para a turma inteira.
+  if (!publicacaoValida(grupoTipo, input)) throw new Error("Confira o título, a data e o conteúdo da publicação.");
 
   // Só aceita matéria que a turma está cursando e temas que existem no catálogo dela.
   // Prova conjunta (ex.: conclusão do N1): vale se a turma cursa alguma das matérias dela.
@@ -65,7 +69,6 @@ export async function createActivity(input: CreateActivityInput) {
     },
   });
 
-  const grupoTipo = (await db.classGroup.findUniqueOrThrow({ where: { id: input.classGroupId }, select: { tipo: true } })).tipo;
   const rosterTodo = await db.classMembership.findMany({
     where: { classGroupId: input.classGroupId, role: "aluno" },
     include: { member: true },
@@ -150,14 +153,27 @@ export async function salvarObservacoesAtividade(id: string, entrada: { interna:
   }
 }
 
+/** Tipo permitido para o grupo, título de 1 a 160 caracteres, textos até 5.000 e data válida. */
+function publicacaoValida(grupoTipo: string, input: Pick<CreateActivityInput, "type" | "title" | "description" | "studyItems" | "dueDate">) {
+  const tipos = grupoTipo === "turma" ? ["prova", "trabalho", "leitura", "atividade_turma", "aviso"] : ["atividade_turma", "aviso"];
+  return (
+    tipos.includes(input.type) &&
+    !!input.title.trim() &&
+    input.title.length <= 160 &&
+    (input.description?.length ?? 0) <= 5000 &&
+    (input.studyItems?.length ?? 0) <= 5000 &&
+    input.dueDate instanceof Date &&
+    Number.isFinite(input.dueDate.getTime())
+  );
+}
+
 export async function manageActivity(id: string, input: Omit<CreateActivityInput, "classGroupId" | "publicarNoSlack"> | null) {
   try {
     const activity = await db.activity.findUniqueOrThrow({ where: { id }, select: { classGroupId: true, materiaSigla: true } });
     await requireTeacherOfClass(activity.classGroupId);
     if (input) {
       const group = await db.classGroup.findUniqueOrThrow({ where: { id: activity.classGroupId }, select: { tipo: true } });
-      const types = group.tipo === "turma" ? ["prova", "trabalho", "leitura", "atividade_turma", "aviso"] : ["atividade_turma", "aviso"];
-      if (!types.includes(input.type) || !input.title.trim() || input.title.length > 160 || (input.description?.length ?? 0) > 5000 || (input.studyItems?.length ?? 0) > 5000 || !(input.dueDate instanceof Date) || !Number.isFinite(input.dueDate.getTime())) {
+      if (!publicacaoValida(group.tipo, input)) {
         return { ok: false, error: "Confira o título, a data e o conteúdo da publicação." };
       }
       await db.activity.update({ where: { id }, data: { type: input.type, title: input.title.trim(), description: input.description?.trim() || null, studyItems: input.studyItems?.trim() || null, dueDate: input.dueDate, ...(input.temas ? { temas: temasValidos(activity.materiaSigla, input.temas) } : {}) } });

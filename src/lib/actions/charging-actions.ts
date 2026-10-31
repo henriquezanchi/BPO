@@ -141,10 +141,21 @@ export async function aprovarEEnviarTodos(schoolId: string) {
   const pendentes = await db.chargeMessageDraft.findMany({ where: { status: "pendente_aprovacao", member: { schoolId } }, select: { id: true } });
   let enviados = 0;
   let deFora = 0;
-  for (const p of pendentes) {
-    const r = await enviarRascunho(schoolId, p.id);
-    if (r.status === "enviada" || r.status === "repetida") enviados++;
-    else deFora++;
+  // Uma falha não interrompe o lote sem contagem (31/10/2026): antes, o primeiro erro abortava e a Economia não sabia
+  // quantas mensagens já tinham saído. WhatsApp desligado logo de cara continua sendo erro; no meio, para e conta.
+  for (const [n, p] of pendentes.entries()) {
+    try {
+      const r = await enviarRascunho(schoolId, p.id);
+      if (r.status === "enviada" || r.status === "repetida") enviados++;
+      else deFora++;
+    } catch (e) {
+      if (/ainda não está ligado/.test((e as Error).message)) {
+        if (!enviados && !deFora) throw e;
+        deFora += pendentes.length - n;
+        break;
+      }
+      deFora++;
+    }
   }
   revalidatePath("/", "layout");
   return { enviados, deFora };
