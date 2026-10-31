@@ -15,16 +15,8 @@ export const SEMANAS_A_FRENTE = 4;
 export const ANTECEDENCIA_MIN = 24 * 60;
 export const MODALIDADES = { presencial: "Presencial", online: "Online", ambos: "Presencial ou online" } as const;
 
-const FUSO_POR_UF: Record<string, string> = {
-  MT: "America/Cuiaba",
-  MS: "America/Campo_Grande",
-  AM: "America/Manaus",
-  RR: "America/Boa_Vista",
-  RO: "America/Porto_Velho",
-  AC: "America/Rio_Branco",
-};
-/** Fuso da filial pela UF (Barra do Garças-MT é uma hora antes de Brasília). */
-export const fusoDaEscola = (uf: string | null | undefined) => FUSO_POR_UF[(uf ?? "").toUpperCase()] ?? "America/Sao_Paulo";
+import { fusoDaEscola } from "@/lib/fuso-escola";
+export { fusoDaEscola };
 
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 export const rotuloHora = (m: number) => `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, "0") : ""}`;

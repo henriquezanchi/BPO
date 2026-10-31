@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { notificarErroSuporte } from "@/lib/error-notify";
+import { fusoDaEscola } from "@/lib/fuso-escola";
 import type { MercurioContactChanges, MercurioWriteResult } from "./adapter";
 import { abrirSessaoMercurio, lerRubricasDePagamentoHoje, RodadaEmAndamentoError } from "./browser-session";
 import { adapterParaEscola } from "./index";
@@ -143,12 +144,15 @@ export async function processMercurioSyncQueue(limit = 20) {
           // Data real (com hora), não "pura" como Fundação/dueDate — usa o
           // fuso do Brasil de propósito (não UTC), já que é isso que decide
           // se ainda vale o desconto de pontualidade lá dentro do Mercúrio.
-          const dataBR = (charge.paidAt ?? new Date()).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+          // Fuso da própria filial (31/10/2026; antes São Paulo fixo, 1 h fora em MT).
+          const fuso = fusoDaEscola(member.school.uf);
+          const dataBR = (charge.paidAt ?? new Date()).toLocaleDateString("pt-BR", { timeZone: fuso });
           result = await adapter.launchContributionPayment(identidade, member.school.mercurioCaixaLancamento ?? "", {
             referenceYear: charge.referenceYear,
             referenceMonth: charge.referenceMonth,
             amount: Number(charge.amount),
             paidAtBR: dataBR,
+            diaDoCaixaBR: new Date().toLocaleDateString("pt-BR", { timeZone: fuso }),
           });
         }
       } else {

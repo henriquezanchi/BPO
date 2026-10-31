@@ -1702,9 +1702,10 @@ export async function lancarPagamentoContribuicaoHoje(
   filialLabelRegex: RegExp,
   nomeCaixa: string,
   lancamento: LancamentoContribuicao,
+  // Dia do caixa no fuso da filial (31/10/2026). Com o relógio do servidor (UTC na Vercel), pagamentos confirmados
+  // depois das 21h de Brasília iam para o caixa do dia seguinte, fechado, e caíam na fila de exceção.
+  dataDDMMAAAA = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }),
 ): Promise<void> {
-  const hoje = new Date();
-  const dataDDMMAAAA = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
 
   const { frame, editavel } = await abrirDia(page, filialLabelRegex, nomeCaixa, dataDDMMAAAA);
   if (!editavel) {

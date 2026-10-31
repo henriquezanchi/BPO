@@ -113,6 +113,8 @@ export interface MercurioContributionPayment {
   referenceMonth: number;
   amount: number;
   paidAtBR: string; // "dd/mm/yyyy"
+  /** Dia de hoje no fuso da filial, "dd/mm/yyyy" — o caixa em que se lança (31/10/2026; a fila roda em UTC na Vercel). */
+  diaDoCaixaBR?: string;
   interessado?: string;
 }
 
