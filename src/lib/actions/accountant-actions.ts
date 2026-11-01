@@ -22,6 +22,9 @@ async function recalcularHasInvoice(payableId: string) {
  * solta de documentos, pra nunca conciliar o arquivo errado com o
  * pagamento errado. Marca hasInvoice automaticamente.
  */
+const TIPO_POR_EXTENSAO: Record<string, string> = { ".pdf": "application/pdf", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".xml": "text/plain", ".csv": "text/csv", ".txt": "text/plain" };
+const EXTENSOES_PERMITIDAS = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp", ".xml", ".csv", ".xls", ".xlsx", ".ods", ".ofx", ".txt", ".doc", ".docx"]);
+
 export async function uploadAccountantDocument(schoolId: string, payableId: string, formData: FormData) {
   await requireArea(schoolId, "economia");
   const payable = await db.payable.findUniqueOrThrow({ where: { id: payableId } });
@@ -30,12 +33,15 @@ export async function uploadAccountantDocument(schoolId: string, payableId: stri
   const file = formData.get("file") as File | null;
   const title = String(formData.get("title") ?? "").trim() || file?.name || "Documento";
   if (!file || file.size === 0) throw new Error("Selecione um arquivo.");
+  // Limites do documento (01/11/2026): tamanho e tipos de comprovante; nada de página, script ou imagem SVG.
+  if (file.size > 15 * 1024 * 1024) throw new Error("Arquivo muito grande — máximo 15 MB.");
+  const extensao = (file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "").toLowerCase();
+  if (!EXTENSOES_PERMITIDAS.has(extensao)) throw new Error("Envie PDF, imagem (JPG, PNG, WebP), XML de nota, planilha ou OFX.");
 
   await garantirBucket();
 
-  const extensao = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
   const path = `${schoolId}/${payableId}/${Date.now()}${extensao}`;
-  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, await file.arrayBuffer(), { contentType: file.type });
+  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, await file.arrayBuffer(), { contentType: TIPO_POR_EXTENSAO[extensao] ?? "application/octet-stream" });
   if (error) throw new Error(`Falha ao subir o arquivo: ${error.message}`);
 
   await db.accountantDocument.create({ data: { payableId, title, filePath: path } });

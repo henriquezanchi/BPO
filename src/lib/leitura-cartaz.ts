@@ -58,7 +58,7 @@ export async function lerCartazesPendentes() {
     select: { id: true, title: true, imageUrl: true, cartazLidoUrl: true },
   });
   const pendentes = eventos.filter((e) => e.imageUrl !== e.cartazLidoUrl).slice(0, MAX_POR_RODADA);
-  const cliente = new Anthropic();
+  const cliente = new Anthropic({ timeout: 90_000, maxRetries: 1 });
   let lidos = 0;
   const erros: string[] = [];
   for (const e of pendentes) {

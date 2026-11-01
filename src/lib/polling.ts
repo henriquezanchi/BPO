@@ -1,6 +1,10 @@
 export type PollingState = "checking" | "waiting" | "error" | "paused" | "complete";
 
-/** Consultas sequenciais: nunca repete uma operação enquanto a anterior está pendente. */
+/**
+ * Consultas sequenciais: nunca repete uma operação enquanto a anterior está pendente. O intervalo cresce com a
+ * espera (01/11/2026): 5 s no primeiro minuto, 10 s até uns 3 minutos e 20 s depois. Quem paga logo vê na hora; quem
+ * deixa o Pix aberto não consulta o Asaas a cada 5 s por 10 minutos (o webhook confirma de qualquer jeito).
+ */
 export function createPolling<T>({ check, onResult, onState, interval = 5000, maxDuration = 10 * 60 * 1000 }: {
   check: () => Promise<T>;
   onResult: (result: T) => boolean;
@@ -13,6 +17,7 @@ export function createPolling<T>({ check, onResult, onState, interval = 5000, ma
   let completed = false;
   let pending = false;
   let failures = 0;
+  let rodadas = 0;
   let timer: ReturnType<typeof setTimeout>;
   let deadline: ReturnType<typeof setTimeout>;
 
@@ -40,6 +45,7 @@ export function createPolling<T>({ check, onResult, onState, interval = 5000, ma
         return;
       }
       failures = 0;
+      rodadas++;
       onState("waiting");
     } catch {
       if (disposed || paused) return;
@@ -47,7 +53,7 @@ export function createPolling<T>({ check, onResult, onState, interval = 5000, ma
       onState("error");
     } finally {
       pending = false;
-      if (!disposed && !paused) timer = setTimeout(run, Math.min(interval * 2 ** failures, 30000));
+      if (!disposed && !paused) timer = setTimeout(run, Math.min(interval * (rodadas < 12 ? 1 : rodadas < 24 ? 2 : 4) * 2 ** failures, 30000));
     }
   }
 

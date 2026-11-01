@@ -50,9 +50,15 @@ export function enderecoRetorno(origem: string) {
 
 /** Só caminhos internos do Portal depois do login. */
 export function destinoSeguro(next: string | null | undefined) {
-  return next && next.startsWith("/") && !next.startsWith("//")
-    ? next
-    : "/portal";
+  // Resolvido como o navegador resolveria (01/11/2026): "/\site.com" e "/%09/site.com" viravam outro site.
+  if (!next || !next.startsWith("/") || /[\\\s]|%(09|0a|0d|5c)/i.test(next)) return "/portal";
+  try {
+    const base = "https://portal.invalido";
+    const u = new URL(next, base);
+    return u.origin === base ? `${u.pathname}${u.search}${u.hash}` : "/portal";
+  } catch {
+    return "/portal";
+  }
 }
 
 /** Identificação do client no endpoint de token (client_secret_post quando confidencial). */

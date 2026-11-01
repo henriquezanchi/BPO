@@ -51,6 +51,9 @@ export async function vincularMembroFortuna(schoolId: string, memberId: string, 
   await requireArea(schoolId, "cafe");
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
   if (member.schoolId !== schoolId) throw new Error("Membro não pertence a esta escola.");
+  if (!Number.isInteger(fortunaClientId) || fortunaClientId <= 0) throw new Error("Cliente do Fortuna inválido.");
+  // Um cliente do Fortuna é de uma pessoa só: senão a recarga de um cairia no saldo de outro.
+  if (await db.member.count({ where: { fortunaClientId, id: { not: memberId } } })) throw new Error("Este cliente do Fortuna já está vinculado a outra pessoa.");
 
   await db.member.update({ where: { id: memberId }, data: { fortunaClientId } });
   revalidatePath("/", "layout");
@@ -69,11 +72,16 @@ export async function tentarNovamenteCreditoFortuna(schoolId: string, topUpCharg
   if (charge.status !== "pago") throw new Error("Só é possível creditar uma recarga já paga.");
   if (!charge.member.fortunaClientId) throw new Error("Membro ainda sem vínculo com o Fortuna — vincule antes de tentar de novo.");
 
-  await fortunaCreditarSaldo(charge.member.fortunaClientId, charge.branchId, Number(charge.amount));
-  await db.fortunaTopUpCharge.update({
-    where: { id: topUpChargeId },
-    data: { launchedAt: new Date(), launchedBy: "Automático (nova tentativa)", autoCreditError: null },
-  });
+  // Reserva antes de creditar (01/11/2026): dois cliques, ou uma recarga já lançada, não creditam duas vezes.
+  const reserva = await db.fortunaTopUpCharge.updateMany({ where: { id: topUpChargeId, launchedAt: null }, data: { launchedAt: new Date(), launchedBy: "Automático (nova tentativa)" } });
+  if (!reserva.count) throw new Error("Esta recarga já foi lançada no Fortuna.");
+  try {
+    await fortunaCreditarSaldo(charge.member.fortunaClientId, charge.branchId, Number(charge.amount));
+  } catch (e) {
+    await db.fortunaTopUpCharge.update({ where: { id: topUpChargeId }, data: { launchedAt: null, launchedBy: null } });
+    throw e;
+  }
+  await db.fortunaTopUpCharge.update({ where: { id: topUpChargeId }, data: { autoCreditError: null } });
   revalidatePath("/", "layout");
 }
 
@@ -105,12 +113,16 @@ export async function tentarNovamenteCreditoFortunaContribuicao(schoolId: string
   if (charge.status !== "pago" || !charge.fortunaTopUpAmount) throw new Error("Só é possível creditar uma recarga combinada já paga.");
   if (!charge.member.fortunaClientId) throw new Error("Membro ainda sem vínculo com o Fortuna — vincule antes de tentar de novo.");
 
-  const cliente = await fortunaGetClient(charge.member.fortunaClientId);
-  await fortunaCreditarSaldo(charge.member.fortunaClientId, cliente.branch.id, Number(charge.fortunaTopUpAmount));
-  await db.paymentCharge.update({
-    where: { id: chargeId },
-    data: { fortunaTopUpLaunchedAt: new Date(), fortunaTopUpLaunchedBy: "Automático (nova tentativa)", fortunaTopUpError: null },
-  });
+  const reserva = await db.paymentCharge.updateMany({ where: { id: chargeId, fortunaTopUpLaunchedAt: null }, data: { fortunaTopUpLaunchedAt: new Date(), fortunaTopUpLaunchedBy: "Automático (nova tentativa)" } });
+  if (!reserva.count) throw new Error("Esta recarga já foi lançada no Fortuna.");
+  try {
+    const cliente = await fortunaGetClient(charge.member.fortunaClientId);
+    await fortunaCreditarSaldo(charge.member.fortunaClientId, cliente.branch.id, Number(charge.fortunaTopUpAmount));
+  } catch (e) {
+    await db.paymentCharge.update({ where: { id: chargeId }, data: { fortunaTopUpLaunchedAt: null, fortunaTopUpLaunchedBy: null } });
+    throw e;
+  }
+  await db.paymentCharge.update({ where: { id: chargeId }, data: { fortunaTopUpError: null } });
   revalidatePath("/", "layout");
 }
 

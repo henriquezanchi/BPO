@@ -2,7 +2,10 @@
 
 import { enviarMatricula, situacaoMatricula } from "@/lib/actions/matricula-actions";
 import { CheckCircle2, Copy, Loader2 } from "lucide-react";
+import Script from "next/script";
 import { useEffect, useState } from "react";
+
+const CHAVE_TURNSTILE = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 const CAMPO = "min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 text-[14px] text-gray-900 outline-none focus:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 const ROTULO = "flex flex-col gap-1 text-[12px] font-semibold text-gray-700 dark:text-gray-300";
@@ -52,7 +55,11 @@ export function FormMatricula({ token, vagas, valorCentavos }: { token: string; 
     setEnviando(true);
     const r = await enviarMatricula(token, { ...dados, consentimento: f.get("consentimento") === "on" }).catch(() => ({ ok: false as const, error: "Não foi possível enviar agora." }));
     setEnviando(false);
-    if (!r.ok) return setErro(r.error);
+    if (!r.ok) {
+      // O código da verificação vale uma vez: um novo para a próxima tentativa.
+      (window as Window & { turnstile?: { reset: () => void } }).turnstile?.reset();
+      return setErro(r.error);
+    }
     setFeito({ id: r.id, pagamento: r.pagamento });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -156,6 +163,14 @@ export function FormMatricula({ token, vagas, valorCentavos }: { token: string; 
         <input type="checkbox" name="consentimento" required className="mt-1 h-4 w-4 accent-na-green" />
         Concordo que a Nova Acrópole use estes dados para a minha matrícula e para falar comigo sobre o curso.
       </label>
+
+      {/* Verificação contra robôs (Cloudflare Turnstile), só quando a chave está configurada. */}
+      {CHAVE_TURNSTILE && (
+        <>
+          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+          <div className="cf-turnstile" data-sitekey={CHAVE_TURNSTILE} data-language="pt-br" data-theme="auto" />
+        </>
+      )}
 
       {erro && <p className="rounded-xl bg-na-danger-light px-3 py-2 text-[13px] text-na-danger-dark dark:bg-red-950/30 dark:text-red-300">{erro}</p>}
       <button disabled={enviando} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-na-green px-5 text-[15px] font-bold text-white hover:bg-na-green-dark disabled:opacity-60">

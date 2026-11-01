@@ -131,20 +131,25 @@ async function enrollEvent(memberId:string,eventId:string,cpf?:string){
  // Cobrança sempre pela subconta da filial (regra do usuário 2026-10-25): sem ela, sem inscrição paga.
  if(price>0&&!escolaCobraOnline(school))throw new EventEnrollmentError(MENSAGEM_CONTA_PENDENTE);
  const registration=await db.$transaction(async tx=>{
-  const lock=await tx.event.updateMany({where:{...eligible,revision:event.revision},data:{revision:{increment:1}}});
-  if(!lock.count)throw new EventEnrollmentError('O evento mudou. Atualize a Agenda antes de se inscrever.');
+  // Fila em vez de recusa (01/11/2026): a linha do evento fica travada até o fim desta transação, então inscrições
+  // simultâneas esperam a vez e contam as vagas certas. Antes, a trava pela revisão recusava todos menos um e quem
+  // clicava junto recebia "O evento mudou" em sequência. Os dados vêm de novo, já travados.
+  await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+  const atual=await tx.event.findFirst({where:eligible,select:{capacity:true,registrationClosesAt:true,price:true}});
+  if(!atual)throw new EventEnrollmentError('Evento indisponível para seu perfil ou inscrições encerradas.');
+  if(Number(atual.price)!==price)throw new EventEnrollmentError('O valor do evento mudou. Atualize a Agenda antes de se inscrever.');
   // Quem desistiu (2026-10-22) não volta sozinho: a inscrição antiga guarda o histórico do reembolso.
   if((await tx.eventRegistration.findUnique({where:{eventId_memberId:{eventId,memberId}},select:{desistenciaEm:true}}))?.desistenciaEm)throw new EventEnrollmentError('Você desistiu desta inscrição. Para voltar, fale com a secretaria.');
-  if(event.capacity!==null&&event.capacity!==undefined||event.registrationClosesAt){
+  if(atual.capacity!==null&&atual.capacity!==undefined||atual.registrationClosesAt){
    const existing=await tx.eventRegistration.findUnique({where:{eventId_memberId:{eventId,memberId}},select:{id:true}});
    if(!existing){
-    if(event.registrationClosesAt&&event.registrationClosesAt<=new Date())throw new EventEnrollmentError('As inscrições deste evento foram encerradas.');
+    if(atual.registrationClosesAt&&atual.registrationClosesAt<=new Date())throw new EventEnrollmentError('As inscrições deste evento foram encerradas.');
     // Vagas reservadas a quem foi avisado pela lista de espera (2026-10-22) contam como ocupadas para os demais.
-    if(event.capacity!==null&&event.capacity!==undefined&&(await tx.eventRegistration.count({where:{eventId,desistenciaEm:null}}))+(await tx.eventWaitlist.count({where:reservasAtivasWhere(eventId,memberId)}))>=event.capacity)throw new EventEnrollmentError('Todas as vagas deste evento já foram reservadas.');
+    if(atual.capacity!==null&&atual.capacity!==undefined&&(await tx.eventRegistration.count({where:{eventId,desistenciaEm:null}}))+(await tx.eventWaitlist.count({where:reservasAtivasWhere(eventId,memberId)}))>=atual.capacity)throw new EventEnrollmentError('Todas as vagas deste evento já foram reservadas.');
    }
   }
   return tx.eventRegistration.upsert({where:{eventId_memberId:{eventId,memberId}},create:{eventId,memberId,amount:price,paid:price===0,paymentState:price===0?'gratuito':'novo'},update:{}});
- });
+ },{maxWait:15_000,timeout:20_000});
  if(price===0||registration.paid){
   if(event.status==='publicado')await db.eventNotice.createMany({data:eventNoticePlan(event.startsAt,event.endsAt??event.startsAt).map(n=>({...n,registrationId:registration.id})),skipDuplicates:true});
   refresh(eventId);return {jaInscrito:true as const,pago:true as const,registrationId:registration.id};

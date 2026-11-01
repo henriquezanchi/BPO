@@ -5,6 +5,8 @@ mockModule(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{paymen
 mockModule(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasGetPaymentStatus:async(id,conta)=>{assert.equal(id,'payment');assert.deepEqual(conta,{apiKey:'subconta-key'});return {status:'CONFIRMED',value};}}});
 mockModule(new URL('../src/lib/event-payments.ts',import.meta.url).href,{exports:{confirmEventPayment:async()=>{confirmed++;}}});
 mockModule(new URL('../src/lib/asaas/confirm-payment.ts',import.meta.url).href,{exports:{confirmarPagamento:async()=>{throw Error('unexpected contribution payment');}}});
+let alertas=0;
+mockModule(new URL('../src/lib/error-notify.ts',import.meta.url).href,{exports:{notificarErroSuporte:async()=>{alertas++;}}});
 mockModule(new URL('../src/lib/event-refunds.ts',import.meta.url).href,{exports:{processEventRefund:async()=>{}}});
 const {POST}=await import('../src/app/api/webhooks/asaas/route.ts');
 function request(token){return new Request('http://localhost/api/webhooks/asaas',{method:'POST',headers:{'content-type':'application/json',...(token?{'asaas-access-token':token}:{})},body:JSON.stringify({event:'PAYMENT_CONFIRMED',payment:{id:'payment'}})});}
@@ -13,6 +15,7 @@ test('webhook sem configuração ou sem autenticação nunca confirma inscriçã
  process.env.ASAAS_WEBHOOK_TOKEN='test-only';assert.equal((await POST(request('wrong'))).status,401);assert.equal(confirmed,0);
 });
 test('confirmação exige valor real esperado no gateway',async()=>{
- value=49;assert.equal((await POST(request('test-only'))).status,409);assert.equal(confirmed,0);
+ // Valor divergente: não confirma, avisa o suporte e responde 200 (o Asaas não reenvia nem pausa a fila).
+ value=49;assert.equal((await POST(request('test-only'))).status,200);assert.equal(confirmed,0);assert.equal(alertas,1);
  value=50;assert.equal((await POST(request('test-only'))).status,200);assert.equal(confirmed,1);
 });

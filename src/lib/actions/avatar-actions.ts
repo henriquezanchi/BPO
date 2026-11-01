@@ -15,6 +15,14 @@ async function garantirBucket() {
 
 const TIPOS_DE_FOTO: Record<string, string> = { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" };
 
+/** O tipo informado pelo navegador confere com os primeiros bytes do arquivo (01/11/2026). */
+function conteudoDeFoto(b: Uint8Array, tipo: string) {
+  if (tipo === "image/jpeg") return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  if (tipo === "image/png") return b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47;
+  if (tipo === "image/webp") return String.fromCharCode(...b.slice(0, 4)) === "RIFF" && String.fromCharCode(...b.slice(8, 12)) === "WEBP";
+  return false;
+}
+
 /** Foto de perfil — pedido do usuário 2026-09-30: deixa o Portal mais pessoal e ajuda a diretoria a reconhecer quem é quem. */
 export async function uploadAvatar(memberId: string, formData: FormData) {
   await requireAuthenticatedMember(memberId);
@@ -25,11 +33,13 @@ export async function uploadAvatar(memberId: string, formData: FormData) {
   const extensao = TIPOS_DE_FOTO[file.type];
   if (!extensao) throw new Error("Envie uma foto em JPG, PNG ou WebP.");
   if (file.size > TAMANHO_MAXIMO) throw new Error("Imagem muito grande — máximo 3MB.");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!conteudoDeFoto(bytes, file.type)) throw new Error("Envie uma foto em JPG, PNG ou WebP.");
 
   await garantirBucket();
 
   const path = `${memberId}/${Date.now()}${extensao}`;
-  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: true });
+  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, bytes, { contentType: file.type, upsert: true });
   if (error) throw new Error(`Falha ao subir a imagem: ${error.message}`);
 
   const antigo = (await db.member.findUniqueOrThrow({ where: { id: memberId } })).avatarPath;

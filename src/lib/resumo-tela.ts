@@ -86,7 +86,7 @@ export async function gerarResumosTela(ids?: string[]) {
   const pendentes = eventos
     .filter((e) => e.description!.trim().length > 160 && e.resumoTelaDe !== impressaoDescricao(e.description!))
     .slice(0, MAX_POR_RODADA);
-  const cliente = new Anthropic();
+  const cliente = new Anthropic({ timeout: 90_000, maxRetries: 1 });
   let resumidos = 0;
   const erros: string[] = [];
   for (const e of pendentes) {

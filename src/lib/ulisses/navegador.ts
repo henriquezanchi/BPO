@@ -24,7 +24,7 @@ const UM_DIA = 24 * 60 * 60 * 1000;
 type Cache = { em: number; eventos: UlissesEvent[] };
 
 async function pedir<T>(caminho: string): Promise<T> {
-  const r = await fetch(`${API}${caminho}`, { headers: { accept: "application/json" } });
+  const r = await fetch(`${API}${caminho}`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
   if (!r.ok) throw Object.assign(new Error(`GET ${caminho} -> ${r.status}`), { status: r.status });
   return r.json() as Promise<T>;
 }

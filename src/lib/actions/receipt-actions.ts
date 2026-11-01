@@ -53,6 +53,10 @@ export async function viewReceipt(memberId: string, receiptId: string) {
  */
 export async function viewReceiptByMercurioRecId(memberId: string, mercurioRecId: string) {
   await requireAuthenticatedMember(memberId);
+  // Só recibo que consta na ficha da própria pessoa (01/11/2026): antes qualquer número virava um pedido de busca
+  // no Mercúrio com a sessão administrativa, e o recibo de outra pessoa aparecia para quem pediu.
+  if (!/^\d{1,12}$/.test(mercurioRecId)) throw new Error("Recibo inválido.");
+  if (!(await db.contributionMonthlyStatus.count({ where: { memberId, mercurioRecId } }))) throw new Error("Este recibo não pertence a este membro.");
 
   let receipt = await db.contributionReceipt.findUnique({ where: { mercurioRecId } });
   if (receipt && receipt.memberId !== memberId) throw new Error("Este recibo não pertence a este membro.");

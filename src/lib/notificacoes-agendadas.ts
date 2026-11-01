@@ -31,6 +31,19 @@ async function reservar(chave: string) {
   }
 }
 
+/**
+ * Envia para várias pessoas ao mesmo tempo (01/11/2026), de 10 em 10: um laço de uma pessoa por vez passava do
+ * tempo da rotina (120 s) com mais de mil pessoas com notificação ativa, e os avisos seguintes não saíam.
+ */
+async function emLotes<T>(itens: T[], fn: (item: T) => Promise<void>, concorrencia = 10) {
+  let i = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concorrencia, itens.length) }, async () => {
+      while (i < itens.length) await fn(itens[i++]);
+    }),
+  );
+}
+
 /** Só quem já ativou as notificações interessa para os avisos (poupa consultas). */
 const comPush = { pushSubscriptions: { some: {} }, mercurioAtivo: true } as const;
 
@@ -206,12 +219,13 @@ export async function avisosDeEventosNovos(agora = new Date()) {
 
   const pessoas = await db.member.findMany({ where: comPush, select: camposPublico });
   let total = 0;
-  for (const p of pessoas) {
+  await emLotes(pessoas, async (p) => {
     const lista = await db.event.findMany({ where: { id: { in: novos }, ...eventosQueAPessoaVe(p) }, orderBy: { startsAt: "asc" }, select: { title: true, startsAt: true, allDay: true } });
-    if (!lista.length) continue;
+    if (!lista.length) return;
     const texto = textoDeEventos(lista, (t) => `Evento novo: ${t}`, (n) => `${n} eventos novos na Agenda`);
-    total += (await enviarPush([p.id], { ...texto, url: "/portal", etiqueta: `eventos-novos-${data}` })).pessoas;
-  }
+    const enviados = (await enviarPush([p.id], { ...texto, url: "/portal", etiqueta: `eventos-novos-${data}` })).pessoas;
+      total += enviados;
+  });
   return total;
 }
 
@@ -221,17 +235,18 @@ export async function resumoDaSemana(agora = new Date()) {
   const fimDaSemana = new Date(new Date(`${data}T00:00:00-03:00`).getTime() + 7 * 24 * 60 * MIN);
   const pessoas = await db.member.findMany({ where: comPush, select: camposPublico });
   let total = 0;
-  for (const p of pessoas) {
-    if (!(await reservar(`semana:${p.id}:${data}`))) continue;
+  await emLotes(pessoas, async (p) => {
+    if (!(await reservar(`semana:${p.id}:${data}`))) return;
     const lista = await db.event.findMany({
       where: { startsAt: { gte: agora, lt: fimDaSemana }, ...eventosQueAPessoaVe(p) },
       orderBy: { startsAt: "asc" },
       select: { title: true, startsAt: true, allDay: true },
     });
-    if (!lista.length) continue;
+    if (!lista.length) return;
     const texto = textoDeEventos(lista, (t) => `Esta semana: ${t}`, (n) => `${n} eventos nesta semana`);
-    total += (await enviarPush([p.id], { ...texto, url: "/portal", etiqueta: `semana-${data}` })).pessoas;
-  }
+    const enviados = (await enviarPush([p.id], { ...texto, url: "/portal", etiqueta: `semana-${data}` })).pessoas;
+      total += enviados;
+  });
   return total;
 }
 
@@ -262,8 +277,8 @@ export async function avisosDeVencimento() {
     select: { id: true },
   });
   let total = 0;
-  for (const m of membros) {
-    if (!(await reservar(`vencimento:${m.id}:${ano}-${String(mes).padStart(2, "0")}:${tipo}`))) continue;
+  await emLotes(membros, async (m) => {
+    if (!(await reservar(`vencimento:${m.id}:${ano}-${String(mes).padStart(2, "0")}:${tipo}`))) return;
     const r = await enviarPush([m.id], {
       titulo: tipo === "d0" ? "Sua contribuição vence hoje" : `Contribuição de ${MESES[mes - 1]} vence dia ${DIA_VENCIMENTO}`,
       corpo: "Pague pelo Portal com Pix em poucos segundos. Se já pagou, desconsidere.",
@@ -271,7 +286,7 @@ export async function avisosDeVencimento() {
       etiqueta: `vencimento-${ano}-${mes}`,
     });
     total += r.pessoas;
-  }
+  });
   return total;
 }
 
@@ -422,16 +437,16 @@ export async function avisosDoDiario(agora = new Date()) {
     select: { id: true, school: { select: { uf: true } } },
   });
   let total = 0;
-  for (const p of pessoas) {
+  await emLotes(pessoas, async (p) => {
     const fuso = fusoDaEscola(p.school?.uf);
     const partes = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", hourCycle: "h23" }).formatToParts(agora).map((x) => [x.type, x.value]));
     const hora = Number(partes.hour);
     const parte = hora === 7 ? "prologo" : hora === 21 ? "epilogo" : null;
-    if (!parte) continue;
+    if (!parte) return;
     const data = `${partes.year}-${partes.month}-${partes.day}`;
     const dia = await db.diarioDia.findUnique({ where: { memberId_data: { memberId: p.id, data } }, select: { prologoEm: true, epilogoEm: true } });
-    if (parte === "prologo" ? dia?.prologoEm : dia?.epilogoEm) continue;
-    if (!(await reservar(`diario-${parte}:${p.id}:${data}`))) continue;
+    if (parte === "prologo" ? dia?.prologoEm : dia?.epilogoEm) return;
+    if (!(await reservar(`diario-${parte}:${p.id}:${data}`))) return;
     const r = await enviarPush([p.id], {
       titulo: parte === "prologo" ? "Prólogo do dia" : "Epílogo do dia",
       corpo: parte === "prologo" ? "Qual virtude você vai praticar hoje?" : "Em que falhei, o que fiz bem, o que deixei de fazer?",
@@ -439,7 +454,7 @@ export async function avisosDoDiario(agora = new Date()) {
       etiqueta: `diario-${parte}-${data}`,
     });
     total += r.pessoas;
-  }
+  });
   return total;
 }
 
@@ -454,13 +469,13 @@ export async function avisosDoDiarioFv(agora = new Date()) {
     select: { id: true, school: { select: { uf: true } }, classMemberships: { where: { classGroup: { tipo: "GDVE", arquivadoEm: null } }, select: { classGroupId: true } } },
   });
   let total = 0;
-  for (const p of pessoas) {
+  await emLotes(pessoas, async (p) => {
     // Quem saiu do GDVE e segue usando o diário de FV recebe o aviso das práticas, com o diário fora do grupo.
     const grupos = p.classMemberships.map((c) => c.classGroupId);
-    if (!grupos.length && !(await ehFV(p.id))) continue;
+    if (!grupos.length && !(await ehFV(p.id))) return;
     const fuso = fusoDaEscola(p.school?.uf);
     const partes = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", hourCycle: "h23" }).formatToParts(agora).map((x) => [x.type, x.value]));
-    if (Number(partes.hour) !== 20) continue;
+    if (Number(partes.hour) !== 20) return;
     const hoje = `${partes.year}-${partes.month}-${partes.day}`;
     const dias = [0, 1, 2].map((n) => new Date(Date.parse(`${hoje}T12:00:00Z`) - n * 864e5).toISOString().slice(0, 10));
     const url = grupos.length ? `/grupos/${grupos[0]}?aba=diariofv` : "/diario/fv";
@@ -471,16 +486,18 @@ export async function avisosDoDiarioFv(agora = new Date()) {
     ]);
     const praticou = fv.some((d) => Object.values((d.praticas ?? {}) as Record<string, boolean>).some(Boolean)) || comuns.some((d) => !!((d.praticas ?? {}) as Record<string, boolean>).tratak);
     if (!praticou && (await reservar(`fv-praticas:${p.id}:${hoje}`))) {
-      total += (await enviarPush([p.id], { titulo: "Práticas de FV", corpo: "Já são 3 dias sem registrar práticas.", url, etiqueta: `fv-praticas-${hoje}` })).pessoas;
+      const enviados = (await enviarPush([p.id], { titulo: "Práticas de FV", corpo: "Já são 3 dias sem registrar práticas.", url, etiqueta: `fv-praticas-${hoje}` })).pessoas;
+      total += enviados;
     }
 
-    if (!grupos.length) continue;
+    if (!grupos.length) return;
     const daquiAUmaSemana = new Date(Date.parse(`${hoje}T12:00:00Z`) + 7 * 864e5).toISOString().slice(0, 10);
     const reunioes = await db.groupMeeting.findMany({ where: { classGroupId: { in: grupos }, status: "agendada", startsAt: { gte: agora, lte: new Date(agora.getTime() + 9 * 864e5) } }, select: { startsAt: true } });
     const naSemana = reunioes.some((r) => r.startsAt.toLocaleDateString("en-CA", { timeZone: fuso }) === daquiAUmaSemana);
     if (naSemana && (await reservar(`fv-gdve-7d:${p.id}:${daquiAUmaSemana}`))) {
-      total += (await enviarPush([p.id], { titulo: "Reunião do GDVE", corpo: "Falta 1 semana para a reunião do GDVE. Confira se a leitura do ciclo está em dia.", url, etiqueta: `fv-gdve-${daquiAUmaSemana}` })).pessoas;
+      const enviados = (await enviarPush([p.id], { titulo: "Reunião do GDVE", corpo: "Falta 1 semana para a reunião do GDVE. Confira se a leitura do ciclo está em dia.", url, etiqueta: `fv-gdve-${daquiAUmaSemana}` })).pessoas;
+      total += enviados;
     }
-  }
+  });
   return total;
 }

@@ -108,7 +108,7 @@ const Resumo = z.object({ resumo: z.string().describe("Resumo de estudo em portu
 /** Resumo de estudo das anotações (Claude Haiku 5.5, esforço baixo; ~R$ 0,003 por resumo). */
 export async function resumirComIA(materia: string, tema: string, texto: string) {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error("O resumo por IA ainda não está configurado.");
-  const resposta = await new Anthropic().messages.parse({
+  const resposta = await new Anthropic({ timeout: 60_000, maxRetries: 1 }).messages.parse({
     model: "claude-haiku-5-5",
     max_tokens: 2000,
     output_config: { effort: "low", format: zodOutputFormat(Resumo) },

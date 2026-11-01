@@ -59,7 +59,7 @@ export async function avisarDono(texto: string): Promise<void> {
   const apikey = process.env.CALLMEBOT_APIKEY;
   if (!phone || !apikey) return console.error("[error-notify] CallMeBot não configurado — aviso não enviado:", texto);
   try {
-    const res = await fetch(`https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&apikey=${encodeURIComponent(apikey)}&text=${encodeURIComponent(texto)}`);
+    const res = await fetch(`https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&apikey=${encodeURIComponent(apikey)}&text=${encodeURIComponent(texto)}`, { signal: AbortSignal.timeout(10_000) });
     if (!res.ok) console.error(`[error-notify] CallMeBot respondeu HTTP ${res.status}`);
   } catch (e) {
     console.error("[error-notify] Falha ao enviar aviso ao dono:", e);
@@ -83,7 +83,7 @@ async function enviarAlertaWhatsApp(erro: ErroParaNotificar): Promise<void> {
     .join("\n");
 
   try {
-    const res = await fetch(`https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&apikey=${encodeURIComponent(apikey)}&text=${encodeURIComponent(texto)}`);
+    const res = await fetch(`https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&apikey=${encodeURIComponent(apikey)}&text=${encodeURIComponent(texto)}`, { signal: AbortSignal.timeout(10_000) });
     if (!res.ok) console.error(`[error-notify] CallMeBot respondeu HTTP ${res.status}: ${await res.text()}`);
   } catch (e) {
     console.error("[error-notify] Falha ao enviar alerta WhatsApp:", e);

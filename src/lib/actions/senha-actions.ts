@@ -4,7 +4,8 @@ import { ehAdministradorNacional } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { consultarMercurio } from "@/lib/mercurio-db/client";
-import { podeAdministrar } from "@/lib/recursos-filial";
+import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
+import { filiaisAdministradas, podeAdministrar } from "@/lib/recursos-filial";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
@@ -34,9 +35,16 @@ export async function pedirLinkDeSenha(email: string): Promise<{ ok: boolean }> 
 export async function voltarSenhaInicial(memberId: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const eu = await getAuthenticatedMember();
   if (!eu) return { ok: false, error: "Entre no Portal." };
-  const alvo = await db.member.findUnique({ where: { id: memberId }, select: { id: true, schoolId: true, authUserId: true, mercurioId: true, mercurioAtivo: true } });
+  const alvo = await db.member.findUnique({ where: { id: memberId }, select: { id: true, schoolId: true, authUserId: true, mercurioId: true, mercurioAtivo: true, isDiretor: true, isSubChefe: true, filiaisChefiadas: true } });
   if (!alvo) return { ok: false, error: "Pessoa não encontrada." };
-  if (!(await podeAdministrar(eu, alvo.schoolId)) && !(await ehAdministradorNacional(eu))) return { ok: false, error: "Só a administração da filial redefine senhas." };
+  const nacional = await ehAdministradorNacional(eu);
+  if (!(await podeAdministrar(eu, alvo.schoolId)) && !nacional) return { ok: false, error: "Só a administração da filial redefine senhas." };
+  // Ninguém redefine a senha de quem está acima ou no mesmo nível (01/11/2026): um administrador da filial voltaria
+  // a senha do Diretor para a inicial e entraria na conta dele. Direção e administração só pela administração
+  // nacional; o dono do sistema, só ele mesmo.
+  if (ehDonoDoSistema(alvo) && !ehDonoDoSistema(eu)) return { ok: false, error: "Essa senha não pode ser redefinida por aqui." };
+  const alvoAdministra = alvo.isDiretor || alvo.isSubChefe || (await ehAdministradorNacional(alvo)) || (await filiaisAdministradas({ ...alvo, mercurioId: alvo.mercurioId })).length > 0;
+  if (alvoAdministra && !nacional) return { ok: false, error: "A senha de quem dirige ou administra a filial só é redefinida pela administração nacional." };
   if (!alvo.authUserId) return { ok: false, error: "Essa pessoa ainda não tem login no Portal." };
   if (!alvo.mercurioId || !/^\d+$/.test(alvo.mercurioId)) return { ok: false, error: "Matrícula do Mercúrio não encontrada." };
   const [linha] = await consultarMercurio(`SELECT cad_cpf FROM cadastro WHERE cad_matr=${Number(alvo.mercurioId)} LIMIT 1`);

@@ -15,6 +15,7 @@ export function tokenSlackDaFilial(mercurioUnidade: string | null | undefined): 
 
 async function slack<T = Record<string, unknown>>(token: string, metodo: string, params: Record<string, string | boolean>): Promise<T & { ok: true }> {
   const res = await fetch(`https://slack.com/api/${metodo}`, {
+    signal: AbortSignal.timeout(15_000),
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/x-www-form-urlencoded; charset=utf-8" },
     body: new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])),

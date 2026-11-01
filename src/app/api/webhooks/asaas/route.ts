@@ -1,3 +1,4 @@
+import { notificarErroSuporte } from "@/lib/error-notify";
 import { timingSafeEqual } from "node:crypto";
 import {processEventRefund} from "@/lib/event-refunds";
 import {confirmEventPayment} from "@/lib/event-payments";
@@ -57,10 +58,18 @@ export async function POST(req: Request) {
     const registration=await db.eventRegistration.findUnique({where:{asaasPaymentId:body.payment.id},include:{event:{select:{schoolId:true}}}});
     if(registration){
       const payment=await asaasGetPaymentStatus(body.payment.id,await contaDeLeituraId(registration.event.schoolId));
-      if(!["RECEIVED","CONFIRMED"].includes(payment.status))return new Response("payment not confirmed",{status:409});
-      if(registration.amount!==null&&Math.round(Number(registration.amount)*100)!==Math.round(payment.value*100))return new Response("payment amount mismatch",{status:409});
-      await confirmEventPayment(registration.id);
-      await processEventRefund(registration.id);
+      // Responde 200 mesmo sem confirmar (01/11/2026): com erro, o Asaas reenvia e, depois de várias falhas, pode
+      // pausar a fila de avisos da conta inteira (parando a confirmação dos outros pagamentos). A conferência fica
+      // com a tela do aluno e com a Economia, avisada quando o valor diverge.
+      const confirmado=["RECEIVED","CONFIRMED"].includes(payment.status);
+      const valorConfere=registration.amount===null||Math.round(Number(registration.amount)*100)===Math.round(payment.value*100);
+      if(confirmado&&valorConfere){
+        await confirmEventPayment(registration.id);
+        await processEventRefund(registration.id);
+      }else if(confirmado){
+        console.error("[Webhook Asaas] valor divergente na inscrição",registration.id);
+        await notificarErroSuporte({message:`Inscrição ${registration.id}: valor pago diverge do valor da inscrição. Conferir na Economia.`,path:"/api/webhooks/asaas",routeType:"webhook"});
+      }
     }
   }
 

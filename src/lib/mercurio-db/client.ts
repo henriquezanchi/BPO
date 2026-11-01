@@ -42,6 +42,8 @@ async function requisicao(cookies: Map<string, string>, path: string, init: Requ
   const pedir = () =>
     fetch(url + path, {
       ...init,
+      // Mercúrio fora do ar não segura o login de quem entra pela primeira vez (01/11/2026).
+      signal: init.signal ?? AbortSignal.timeout(20_000),
       redirect: "manual",
       cache: "no-store",
       headers: {

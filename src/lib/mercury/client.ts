@@ -60,6 +60,7 @@ export async function mercuryGet<T>(path: string, tentativa = 0): Promise<T> {
   const correlationId = crypto.randomUUID();
 
   const res = await fetch(`${BASE_URL}${path}`, {
+    signal: AbortSignal.timeout(20_000),
     headers: {
       Authorization: `Bearer ${chave}`,
       Accept: "application/json",

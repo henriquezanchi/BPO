@@ -23,7 +23,7 @@ export async function buscarFuncoesComIA(consulta: string, disponiveis: string[]
   const chave = `${texto.toLowerCase()}|${funcoes.map((f) => f.id).join(",")}`;
   if (cache.has(chave)) return cache.get(chave)!;
   try {
-    const resposta = await new Anthropic().messages.parse({
+    const resposta = await new Anthropic({ timeout: 60_000, maxRetries: 1 }).messages.parse({
       model: "claude-haiku-5-5",
       max_tokens: 300,
       output_config: { effort: "low", format: zodOutputFormat(Escolha) },

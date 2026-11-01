@@ -189,6 +189,10 @@ export async function checkChargeStatus(memberId: string, chargeId: string) {
   const charge = await db.paymentCharge.findUniqueOrThrow({ where: { id: chargeId } });
   if (charge.memberId !== memberId) throw new Error("Cobrança não pertence a este membro.");
   if (charge.status === "pago") return { status: "pago" as const };
+  // No máximo uma consulta ao Asaas a cada 15 s por cobrança (01/11/2026), mesmo com várias abas abertas; no
+  // intervalo vale o banco, que o webhook atualiza.
+  const vez = await db.paymentCharge.updateMany({ where: { id: chargeId, status: { not: "pago" }, updatedAt: { lt: new Date(Date.now() - 15_000) } }, data: { updatedAt: new Date() } });
+  if (!vez.count) return { status: "pendente" as const };
 
   const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, await contaDeLeituraId(member.schoolId));
   if (pagamento.status === "RECEIVED" || pagamento.status === "CONFIRMED") {

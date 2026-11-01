@@ -45,6 +45,8 @@ export async function criarPendenciaEscolastica(
   await requireEscolasticaOuDirecao(schoolId);
   if (!dados.title.trim()) throw new Error("Descreva a pendência.");
   if (!dados.dueDate) throw new Error("Informe a data prevista.");
+  // A pessoa ligada à pendência é da mesma filial (01/11/2026).
+  if (dados.memberId && !(await db.member.count({ where: { id: dados.memberId, schoolId } }))) throw new Error("Pessoa não encontrada nesta filial.");
 
   await db.scholasticPendency.create({
     data: {

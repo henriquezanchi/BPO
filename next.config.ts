@@ -15,9 +15,23 @@ const nextConfig: NextConfig = {
     // playwright-core/browsers.json não era empacotado ("Cannot find module …/browsers.json", 27/10/2026).
     "/api/cron/fila-mercurio": ["./node_modules/@sparticuz/chromium/bin/**/*", "./node_modules/playwright-core/**/*.json", "./node_modules/playwright/**/*.json"],
   },
+  poweredByHeader: false,
   // Service worker do PWA: sempre a versão mais nova (sem cache), só scripts do próprio site.
   async headers() {
     return [
+      // Proteções do navegador em todo o site (01/11/2026): o Portal só pode ser embutido por ele mesmo (a TV girada
+      // usa um iframe da própria tela), o navegador não "adivinha" tipos de arquivo e o endereço completo não vaza
+      // para outros sites.
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+        ],
+      },
       {
         source: "/sw.js",
         headers: [

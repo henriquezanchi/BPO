@@ -263,7 +263,8 @@ main {
 
 .cartao h2 {
   margin: 0 0 16px 0;
-  font-size: 1.02rem;
+  /* Um degrau claro acima do texto (01/11/2026): com 1.02rem o título do passo tinha o tamanho do texto. */
+  font-size: 1.25rem;
   line-height: 1.25;
 }
 

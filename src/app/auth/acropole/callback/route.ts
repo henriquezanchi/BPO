@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { COOKIE_OIDC, trocarCodigo } from "@/lib/login-acropole";
+import { COOKIE_OIDC, destinoSeguro, trocarCodigo } from "@/lib/login-acropole";
 import { importarPorEmail } from "@/lib/mercurio-db/primeiro-acesso";
 import { salvarSessaoAgora } from "@/lib/agora/sessao";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -157,5 +157,5 @@ export async function GET(req: Request) {
   await salvarSessaoAgora(membro.id, pessoa.tokens).catch((e) =>
     console.error("Login Nova Acrópole: sessão do Ágora não gravada:", e instanceof Error ? e.message : e),
   );
-  return redirecionar(new URL(next || "/portal", url.origin).toString());
+  return redirecionar(new URL(destinoSeguro(next), url.origin).toString());
 }

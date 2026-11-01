@@ -1,10 +1,11 @@
 import { LoginClient } from "@/components/login-client";
+import { destinoSeguro } from "@/lib/login-acropole";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage(props: PageProps<"/login">) {
   const searchParams = await props.searchParams;
-  const next = typeof searchParams.next === "string" ? searchParams.next : "/portal";
+  const next = destinoSeguro(typeof searchParams.next === "string" ? searchParams.next : null);
 
   const erro = typeof searchParams.erro === "string" ? searchParams.erro : null;
 

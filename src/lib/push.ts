@@ -51,7 +51,7 @@ export async function enviarPush(memberIds: string[], aviso: AvisoPush): Promise
   await Promise.all(
     inscricoes.map(async (s) => {
       try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, carga, { TTL: 60 * 60 * 12, urgency: "high" });
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, carga, { TTL: 60 * 60 * 12, urgency: "high", timeout: 10_000 });
         entregues.push(s);
       } catch (e) {
         const status = (e as { statusCode?: number }).statusCode;
