@@ -217,7 +217,6 @@ export async function lerSaldoDoDia(page, nomeCaixa, dataDDMMAAAA) {
 // dizendo se o dia está editável (mostra a barra Recebimento/Pagamento) ou
 // só leitura (dia fechado/trancado, sem como lançar nada nele).
 export async function abrirDia(page, nomeCaixa, dataDDMMAAAA) {
-  const [dia] = dataDDMMAAAA.split('/');
   let frame = await irParaCalendario(page, nomeCaixa, dataDDMMAAAA);
 
   // A tabela do calendário escreve a data com TRAÇO (ex: "14-09-2026"), não
@@ -564,7 +563,6 @@ export async function lancarRecebimentoAvulsoOuInscricao(page, frameDia, transac
 // abrirNavegador() (lib/mercurioAuth.js).
 
 const TOLERANCIA_CENTAVOS = 0.005;
-const LIMITE_DESCONTO_PONTUALIDADE = 10;
 const DIA_LIMITE_DESCONTO_PONTUALIDADE = 10;
 
 // Decide o que fazer quando o valor pago difere da ficha da contribuição
