@@ -480,7 +480,7 @@ export async function getMemberDashboard(memberId: string) {
     meusGafs,
     // O diário aparece ao entrar num GAF e não some depois do primeiro registro (pedido do usuário 2026-10-31).
     temDiario: meusGafs.length > 0 || !!registroNoDiario,
-    temDiarioFv,
+    temDiarioFv: temDiarioFv && souFV,
     gruposDeEstudo,
     pedagogos,
     gafsDisponiveis,

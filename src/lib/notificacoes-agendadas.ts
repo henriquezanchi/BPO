@@ -1,6 +1,7 @@
 import { comAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { fusoDaEscola } from "@/lib/atendimentos";
+import { ehFV } from "@/lib/grupos-portal";
 import { db } from "@/lib/db";
 import { agendaUlissesBranchWhere, eventAudienceWhere, eventScopeWhere } from "@/lib/event-policy";
 import { TIPOS_DO_PORTAL, dispensaAcessoVoluntario } from "@/lib/grupos-comum";
@@ -456,6 +457,7 @@ export async function avisosDoDiarioFv(agora = new Date()) {
   for (const p of pessoas) {
     // Quem saiu do GDVE e segue usando o diário de FV recebe o aviso das práticas, com o diário fora do grupo.
     const grupos = p.classMemberships.map((c) => c.classGroupId);
+    if (!grupos.length && !(await ehFV(p.id))) continue;
     const fuso = fusoDaEscola(p.school?.uf);
     const partes = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", hourCycle: "h23" }).formatToParts(agora).map((x) => [x.type, x.value]));
     if (Number(partes.hour) !== 20) continue;

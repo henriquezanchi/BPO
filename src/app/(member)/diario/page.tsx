@@ -2,7 +2,7 @@ import { DiarioCliente } from "@/components/diario/diario-cliente";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { carregarDiario, temDiario } from "@/lib/diario-dados";
-import { temRegistroFv } from "@/lib/fv/dados";
+import { temDiarioFv } from "@/lib/fv/dados";
 import { ArrowLeft, History, Mountain } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -14,7 +14,7 @@ export default async function DiarioPage(props: { searchParams: Promise<{ dia?: 
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/diario");
   // O diário é do GAF (pedido do usuário 2026-10-29); depois do primeiro registro, fica mesmo fora do grupo (2026-10-31).
-  const [pode, fv] = await Promise.all([temDiario(member), temRegistroFv(member.id)]);
+  const [pode, fv] = await Promise.all([temDiario(member), temDiarioFv(member)]);
   if (!pode) redirect(fv ? "/diario/fv" : "/portal");
   const { dia } = await props.searchParams;
   const dados = await carregarDiario(member, dia);

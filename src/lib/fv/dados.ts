@@ -6,6 +6,7 @@ import { fusoDaEscola } from "@/lib/fuso-escola";
 import { minutosDeAula, type Calendario, type DiaDoCiclo, type ItensDegrau, type Presencas, type TarefaGdve } from "@/lib/fv/comum";
 import type { DiaDaCarta } from "@/lib/fv/historico-carta";
 import { meusGrupos } from "@/lib/grupos-dados";
+import { ehFV } from "@/lib/grupos-portal";
 import type { DiarioFvDia, DiarioFvFicha } from "@prisma/client";
 
 /**
@@ -28,9 +29,13 @@ export async function temRegistroFv(memberId: string) {
   return !!(dia || ficha);
 }
 
-/** Quem tem o diário de FV (pedido do usuário 2026-10-31): aparece ao entrar num GDVE e não some depois do primeiro registro. */
+/**
+ * Quem tem o diário de FV (pedido do usuário 2026-10-31): aparece ao entrar num GDVE e não some depois do primeiro
+ * registro. Fora do GDVE, só para quem é FV: registro de quem não é FV não abre o diário.
+ */
 export async function temDiarioFv(m: Parameters<typeof meusGrupos>[0]) {
-  return (await temRegistroFv(m.id)) || (await participaDeGdve(m)).length > 0;
+  if ((await participaDeGdve(m)).length > 0) return true;
+  return (await temRegistroFv(m.id)) && (await ehFV(m.id));
 }
 
 const comoFicha = (f: DiarioFvFicha | null) => ({

@@ -17,6 +17,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Prisma } from "@prisma/client";
 import { db } from "../src/lib/db";
+import { ehFV } from "../src/lib/grupos-portal";
 
 const args = process.argv.slice(2);
 const gravar = args.includes("--gravar");
@@ -67,7 +68,7 @@ async function main() {
     vinculadas.set(achadas[0].uid, pessoa.id);
   }
 
-  const c = { contasComFv: 0, naoConfirmado: 0, semCadastro: 0, ambiguo: 0, pareadas: 0, fichasCriadas: 0, fichasCompletadas: 0, dias: 0, diasSemConteudo: 0, diasDoPortalMantidos: 0, diasDeOutraContaMantidos: 0, diasGravados: 0, tratak: 0 };
+  const c = { contasComFv: 0, naoConfirmado: 0, semCadastro: 0, ambiguo: 0, pareadas: 0, naoFv: 0, fichasVazias: 0, fichasCriadas: 0, fichasCompletadas: 0, dias: 0, diasSemConteudo: 0, diasDoPortalMantidos: 0, diasDeOutraContaMantidos: 0, diasGravados: 0, tratak: 0 };
   const fvDocs = new Map((await fs.collection("fvData").get()).docs.map((d) => [d.id, d.data()]));
   const comDiarioFv = new Set((await fs.collection("entries").get()).docs.filter((d) => d.data().fvDaily).map((d) => d.data().userId as string));
 
@@ -82,10 +83,14 @@ async function main() {
     if (ids.length > 1) { c.ambiguo++; continue; }
     c.pareadas++;
     const memberId = ids[0];
+    // O app antigo guardava o Tratak na parte de FV também para quem não é FV (31/10/2026): de quem não é FV, só o
+    // Tratak vem (para o diário comum); ficha e dias de FV, não.
+    const souFv = await ehFV(memberId);
+    if (!souFv) c.naoFv++;
 
     // Ficha (fvData/{uid}): cria; se já existe, só completa campos vazios (nunca troca o que foi preenchido no Portal).
     const f = fvDocs.get(u.uid) as Record<string, unknown> | undefined;
-    if (f) {
+    if (f && souFv) {
       const cal = (f.fvCalendar ?? {}) as Record<string, unknown>;
       const ficha = {
         unidade: txt(f.fvUnidade),
@@ -102,7 +107,10 @@ async function main() {
         .map((t) => ({ id: t.id!, nome: txt(t.name)!.slice(0, 160), meta: Math.min(Math.max(Number(t.target) || 1, 1), 10), ciclo: !!t.isCycle }));
       const ciclo = (f.gdveCycleStatus ?? {}) as Prisma.InputJsonValue;
       const existente = await db.diarioFvFicha.findUnique({ where: { memberId } });
-      if (!existente) {
+      const fichaVazia = !Object.values(ficha).some(Boolean) && !Object.keys(cal).length && !tarefas.length;
+      if (!existente && fichaVazia) {
+        c.fichasVazias++;
+      } else if (!existente) {
         c.fichasCriadas++;
         if (gravar) await db.diarioFvFicha.create({ data: { memberId, ...ficha, calendario, tarefas, ciclo, origemId: u.uid } });
       } else {
@@ -141,8 +149,9 @@ async function main() {
         gdveTarefas,
         gdvePresenca: fv.gdveAttendance === true,
       };
-      const temConteudo = Object.keys(itens).length || Object.keys(praticas).length || Object.keys(presencas).length || dados.minutosVoluntariado || dados.minutosAulaAssistida || dados.minutosAulaMinistrada || Object.keys(gdveTarefas).length || dados.gdvePresenca || tratak;
-      if (!temConteudo) { c.diasSemConteudo++; continue; }
+      // O Tratak sozinho não é conteúdo de FV: vai só para o diário comum.
+      const temConteudo = Object.keys(itens).length || Object.keys(praticas).length || Object.keys(presencas).length || dados.minutosVoluntariado || dados.minutosAulaAssistida || dados.minutosAulaMinistrada || Object.keys(gdveTarefas).length || dados.gdvePresenca;
+      if (!temConteudo && !tratak) { c.diasSemConteudo++; continue; }
 
       if (tratak) {
         c.tratak++;
@@ -156,6 +165,7 @@ async function main() {
         }
       }
 
+      if (!temConteudo || !souFv) continue;
       const existente = await db.diarioFvDia.findUnique({ where: { memberId_data: { memberId, data: dia } }, select: { origem: true, origemId: true } });
       if (existente?.origem === "portal") { c.diasDoPortalMantidos++; continue; }
       if (existente?.origemId && existente.origemId !== doc.id) { c.diasDeOutraContaMantidos++; continue; }
