@@ -79,3 +79,12 @@ Pedido do usuário: o diário de FV antigo (repo `diario-filosofico-fv`, dados n
 - Diferenças em relação ao app antigo (decisões): sem IA; sem avisos ao grupo (só a própria pessoa vê); horas de aula calculadas pelo calendário quando a presença é "Sim" (o antigo prometia e não gravava); os textos do Código de Dignidade e das 7 Fases não existem no app antigo (a tela é de foro íntimo, sem texto).
 - Lembretes (push, 20h da filial): 3 dias sem prática de FV; reunião do GDVE em 7 dias (`avisosDoDiarioFv`, rotina notificacoes).
 - Importação: `scripts/importar-diario-fv.ts` (mesmas regras de pareamento; nada sobrescrito; ficha só completa campos vazios). Pessoas com registros: Eliane Faria (9890, e-mail confirmado, 45 dias), Guilherme (37402, `--aceitar 37402`, 19 dias), usuário (21596, `--vincular "Henrique Zanchi=21596"`, 37 dias).
+
+## Diários continuam depois de sair do grupo (31/10/2026)
+
+Pedido do usuário: o diário do GAF e o diário de FV só aparecem quando a pessoa entra num GAF ou num GDVE, mas não somem mais depois do primeiro registro, mesmo que ela deixe o grupo.
+
+- Regra: `temDiario(m)` (`src/lib/diario-dados.ts`) = algum `DiarioDia` da pessoa **ou** participa de um GAF; `temDiarioFv(m)` (`src/lib/fv/dados.ts`) = algum `DiarioFvDia`/`DiarioFvFicha` (`temRegistroFv`) **ou** participa de um GDVE. Valem nas páginas e nas ações (gravar continua permitido para quem saiu).
+- Diário de FV fora do grupo: página `/diario/fv` (mesmo componente da aba do GDVE). Atalhos: busca do Portal ("Meu diário de FV"), botão "FV" no topo de `/diario` (para quem tem registro de FV); `/diario` sem diário comum e com FV redireciona para `/diario/fv`.
+- Portal: `dashboard.temDiario`/`temDiarioFv`; busca, destaque do diário e quadro GAF usam `temDiario`. O painel do GAF, para quem saiu com registros, mostra a entrada do diário e o Tratak acima do convite para conhecer os GAFs.
+- Lembretes: o de práticas de FV vai também para quem saiu do GDVE (link `/diario/fv`); o da reunião do GDVE só para quem está num.

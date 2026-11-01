@@ -1,9 +1,9 @@
 import { DiarioCliente } from "@/components/diario/diario-cliente";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
-import { carregarDiario } from "@/lib/diario-dados";
-import { meusGrupos } from "@/lib/grupos-dados";
-import { ArrowLeft, History } from "lucide-react";
+import { carregarDiario, temDiario } from "@/lib/diario-dados";
+import { temRegistroFv } from "@/lib/fv/dados";
+import { ArrowLeft, History, Mountain } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -13,8 +13,9 @@ export const dynamic = "force-dynamic";
 export default async function DiarioPage(props: { searchParams: Promise<{ dia?: string }> }) {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/diario");
-  // O diário é do GAF (pedido do usuário 2026-10-29): só para quem participa de um.
-  if (!(await meusGrupos(member, ["GAF"])).length) redirect("/portal");
+  // O diário é do GAF (pedido do usuário 2026-10-29); depois do primeiro registro, fica mesmo fora do grupo (2026-10-31).
+  const [pode, fv] = await Promise.all([temDiario(member), temRegistroFv(member.id)]);
+  if (!pode) redirect(fv ? "/diario/fv" : "/portal");
   const { dia } = await props.searchParams;
   const dados = await carregarDiario(member, dia);
   return (
@@ -32,9 +33,16 @@ export default async function DiarioPage(props: { searchParams: Promise<{ dia?: 
           <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Meu diário</h1>
           <p className="text-[12px] text-gray-500 dark:text-gray-400">Um lugar onde só a sua consciência entra.</p>
         </span>
-        <Link href="/diario/historico" className="flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-          <History size={14} /> Histórico
-        </Link>
+        <span className="flex shrink-0 gap-2">
+          {fv && (
+            <Link href="/diario/fv" className="flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+              <Mountain size={14} /> FV
+            </Link>
+          )}
+          <Link href="/diario/historico" className="flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            <History size={14} /> Histórico
+          </Link>
+        </span>
       </header>
       <DiarioCliente d={dados} />
     </main>

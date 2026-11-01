@@ -3,8 +3,7 @@
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { datasPermitidas, epilogoValido, fogoInterno, fraseDoDia, PRATICA_TRATAK, somarDias, type Recorrencia } from "@/lib/diario";
-import { hojeDaPessoa } from "@/lib/diario-dados";
-import { meusGrupos } from "@/lib/grupos-dados";
+import { hojeDaPessoa, temDiario } from "@/lib/diario-dados";
 import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -14,7 +13,7 @@ type Resultado = { ok: true } | { ok: false; error: string };
 const texto = (v: unknown, max = 4000) => (typeof v === "string" ? v.trim().slice(0, max) : "") || null;
 
 async function participaDeGaf(eu: NonNullable<Awaited<ReturnType<typeof getAuthenticatedMember>>>) {
-  if (!(await meusGrupos(eu, ["GAF"])).length) throw new Error("O diário é para quem participa de um GAF.");
+  if (!(await temDiario(eu))) throw new Error("O diário é para quem participa de um GAF.");
 }
 
 async function pessoaEDia(data: string) {

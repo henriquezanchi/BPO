@@ -32,9 +32,18 @@ export type GafDisponivel = { id: string; nome: string; descricao: string | null
  * escolhe um e envia o pedido, que cai na página daquele GAF para a coordenação aceitar. Sem GAF disponível,
  * continua o pedido geral (a administração encaminha).
  */
-export function GafPanel({ memberId, gafs = [], disponiveis = [] }: { memberId: string; gafs?: ResumoGrupo[]; disponiveis?: GafDisponivel[] }) {
+export function GafPanel({ memberId, gafs = [], disponiveis = [], temDiario = false }: { memberId: string; gafs?: ResumoGrupo[]; disponiveis?: GafDisponivel[]; temDiario?: boolean }) {
   // Já está num GAF (pedido do usuário 2026-10-29): mostra o grupo em si, não o convite para conhecer.
   if (gafs.length > 0) return <MeusGafs gafs={gafs} />;
+  // Saiu do GAF depois de escrever no diário (2026-10-31): o diário e o Tratak continuam aqui.
+  if (temDiario)
+    return (
+      <div className="flex flex-col gap-6 text-left">
+        <EntradaDiario />
+        <BotaoTratak />
+        <ConhecerGaf memberId={memberId} disponiveis={disponiveis} />
+      </div>
+    );
   return <ConhecerGaf memberId={memberId} disponiveis={disponiveis} />;
 }
 

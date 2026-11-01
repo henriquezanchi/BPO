@@ -91,7 +91,7 @@ export function DiarioFv({ d }: { d: DiarioFvDaPessoa }) {
 
   function irParaDia(dia: string) {
     const url = new URL(window.location.href);
-    url.searchParams.set("aba", "diariofv");
+    if (url.pathname.startsWith("/grupos/")) url.searchParams.set("aba", "diariofv");
     if (dia === d.hoje) url.searchParams.delete("dia");
     else url.searchParams.set("dia", dia);
     router.push(url.pathname + url.search, { scroll: false });

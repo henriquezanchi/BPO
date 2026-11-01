@@ -262,9 +262,10 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
     play: dashboard.recursos.acropole_play && { href: "/api/portal/acropole-play/entrar", externo: true },
     biblioteca: { href: "https://biblioteca.acropolebrasil.com.br/", externo: true },
     bastioes: dashboard.bibliotecaLiberada && { href: "https://bastiao.oinabn.com.br/", externo: true },
-    gaf: (dashboard.recursos.gaf || dashboard.meusGafs.length > 0 || dashboard.gafsDisponiveis.length > 0) && abrirModal("gaf"),
-    diario: dashboard.meusGafs.length > 0 && { href: "/diario" },
-    diario_historico: dashboard.meusGafs.length > 0 && { href: "/diario/historico" },
+    gaf: (dashboard.recursos.gaf || dashboard.meusGafs.length > 0 || dashboard.gafsDisponiveis.length > 0 || dashboard.temDiario) && abrirModal("gaf"),
+    diario: dashboard.temDiario && { href: "/diario" },
+    diario_historico: dashboard.temDiario && { href: "/diario/historico" },
+    diario_fv: dashboard.temDiarioFv && { href: "/diario/fv" },
     grupos_estudo: dashboard.gruposDeEstudo.length > 0 && abrirModal("grupos_estudo"),
     voluntariado: dashboard.voluntariadoVisivel && abrirModal("voluntariado"),
     area_voluntario: dashboard.areaVoluntario && { href: "/voluntario" },
@@ -329,7 +330,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       ),
     },
     dashboard.recursos.acropole_play && { id: "play", conteudo: <DestaquePlay hoje={dashboard.hoje} /> },
-    dashboard.meusGafs.length > 0 && { id: "diario", conteudo: <DestaqueDiario /> },
+    dashboard.temDiario && { id: "diario", conteudo: <DestaqueDiario /> },
     saldoFortuna && {
       id: "fortuna",
       conteudo: (
@@ -531,7 +532,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           {dashboard.voluntariadoVisivel && (
             <FeatureTile icon={<HandHeart size={16} />} title={t.tiles.voluntariado.title} subtitle={t.tiles.voluntariado.subtitle} onClick={() => setModal("voluntariado")} />
           )}
-          {(dashboard.recursos.gaf || dashboard.meusGafs.length > 0) && (
+          {(dashboard.recursos.gaf || dashboard.meusGafs.length > 0 || dashboard.temDiario) && (
             <FeatureTile icon={<UsersRound size={16} />} title={t.tiles.gaf.title} subtitle={dashboard.meusGafs.length ? dashboard.meusGafs.map((g) => g.nome).join(", ") : t.tiles.gaf.subtitle} onClick={() => setModal("gaf")} />
           )}
           {dashboard.gruposDeEstudo.length > 0 && (
@@ -687,7 +688,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           {modal === "estudos" && <StudyAreaPanel mostrarAcropolePlay={dashboard.recursos.acropole_play} mostrarApostilas={dashboard.recursos.apostilas} mostrarBastioes={dashboard.bibliotecaLiberada} />}
           {modal === "voluntariado" && <VolunteerPanel memberId={member.id} />}
           {modal === "ajuda" && <HelpPanel whatsapp={schoolWhatsapp} />}
-          {modal === "gaf" && <GafPanel memberId={member.id} gafs={dashboard.meusGafs} disponiveis={dashboard.gafsDisponiveis} />}
+          {modal === "gaf" && <GafPanel memberId={member.id} gafs={dashboard.meusGafs} disponiveis={dashboard.gafsDisponiveis} temDiario={dashboard.temDiario} />}
           {modal === "grupos_estudo" && <GruposEstudoPanel grupos={dashboard.gruposDeEstudo} />}
           {modal === "jornada" && (
             <JornadaPanel

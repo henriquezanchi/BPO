@@ -19,6 +19,20 @@ export async function participaDeGdve(m: Parameters<typeof meusGrupos>[0]) {
   return (await meusGrupos(m, ["GDVE"])).map((g) => g.id);
 }
 
+/** Algum registro de FV (dia ou ficha): com ele, o diário de FV fica mesmo depois de a pessoa sair do GDVE. */
+export async function temRegistroFv(memberId: string) {
+  const [dia, ficha] = await Promise.all([
+    db.diarioFvDia.findFirst({ where: { memberId }, select: { id: true } }),
+    db.diarioFvFicha.findUnique({ where: { memberId }, select: { id: true } }),
+  ]);
+  return !!(dia || ficha);
+}
+
+/** Quem tem o diário de FV (pedido do usuário 2026-10-31): aparece ao entrar num GDVE e não some depois do primeiro registro. */
+export async function temDiarioFv(m: Parameters<typeof meusGrupos>[0]) {
+  return (await temRegistroFv(m.id)) || (await participaDeGdve(m)).length > 0;
+}
+
 const comoFicha = (f: DiarioFvFicha | null) => ({
   unidade: f?.unidade ?? null,
   condicao: f?.condicao ?? null,

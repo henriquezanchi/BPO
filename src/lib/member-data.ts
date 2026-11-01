@@ -23,6 +23,7 @@ import { destaqueDeOportunidades } from "@/lib/oportunidades";
 import { minhaTurmaDePedagogos } from "@/lib/escala-pedagogos";
 import { avisosDosGrupos, meusGrupos } from "@/lib/grupos-dados";
 import { ehFV, gruposDaAgenda } from "@/lib/grupos-portal";
+import { temRegistroFv } from "@/lib/fv/dados";
 import { PRAZO_EVENTO_CANCELADO_MS } from "@/lib/evento-cancelado";
 import { rubricaIncluivelPeloMembro, rubricaVisivelPara } from "@/lib/rubrica-visibilidade";
 import type { ActivityType, Contribution, ContributionCompositionItem } from "@prisma/client";
@@ -176,6 +177,8 @@ export async function getMemberDashboard(memberId: string) {
     pedagogos,
     [streakMeses, badges, levelHistory, integrationCourses, eventHistory],
     souFV,
+    registroNoDiario,
+    temDiarioFv,
   ] = await Promise.all([
     db.mercurioSyncTask.findMany({
       where: {
@@ -234,6 +237,9 @@ export async function getMemberDashboard(memberId: string) {
       ),
     // "CRM com traje completo" é sigla interna de FV: só quem é FV vê na Agenda (pedido do usuário 2026-10-31).
     ehFV(memberId),
+    // Diários (2026-10-31): depois do primeiro registro continuam no Portal, mesmo fora do GAF ou do GDVE.
+    db.diarioDia.findFirst({ where: { memberId }, select: { id: true } }),
+    temRegistroFv(memberId),
   ]);
   const gruposComTarefaPendente = new Set(
     tarefasComposicaoPendentes.map((t) => (t.payload as { mercurioGroupId: string }).mercurioGroupId),
@@ -472,6 +478,9 @@ export async function getMemberDashboard(memberId: string) {
     // "Membros" dos eventos; N1 e programa complementar não veem (pedido do usuário 2026-10-21; link próprio em 29/10).
     bibliotecaLiberada: publicosDaPessoa(member).includes("membros"),
     meusGafs,
+    // O diário aparece ao entrar num GAF e não some depois do primeiro registro (pedido do usuário 2026-10-31).
+    temDiario: meusGafs.length > 0 || !!registroNoDiario,
+    temDiarioFv,
     gruposDeEstudo,
     pedagogos,
     gafsDisponiveis,

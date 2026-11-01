@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { datasPermitidas, PRATICA_TRATAK } from "@/lib/diario";
 import { hojeDaPessoa } from "@/lib/diario-dados";
 import { CHAVES_DEGRAU, CHAVES_PRATICA_FV, CONDICOES, ETAPAS_TEMPLO, minutosDe, PERGUNTAS_PRESENCA, pareceLeitura, UNIDADES, type Calendario, type ChavePresenca, type TarefaGdve } from "@/lib/fv/comum";
-import { carregarHistoricoFv, diasDaCarta, participaDeGdve } from "@/lib/fv/dados";
+import { carregarHistoricoFv, diasDaCarta, temDiarioFv } from "@/lib/fv/dados";
 import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -20,7 +20,7 @@ class FvErro extends Error {}
 async function eu() {
   const m = await getAuthenticatedMember();
   if (!m) throw new FvErro("Entre no Portal.");
-  if (!(await participaDeGdve(m)).length) throw new FvErro("O diário de FV é para quem participa de um GDVE.");
+  if (!(await temDiarioFv(m))) throw new FvErro("O diário de FV é para quem participa de um GDVE.");
   return m;
 }
 
@@ -34,6 +34,7 @@ async function executar(fn: () => Promise<void>): Promise<Resultado> {
   try {
     await fn();
     revalidatePath("/grupos/[id]", "page");
+    revalidatePath("/diario/fv");
     return { ok: true };
   } catch (e) {
     console.error("Diário de FV:", e instanceof Error ? e.message : e);

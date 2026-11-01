@@ -23,6 +23,7 @@ export const FUNCOES_PORTAL: FuncaoPortal[] = [
   { id: "gaf", titulo: "GAF", descricao: "Grupo de Acompanhamento Filosófico: participar ou ver o seu grupo", palavras: ["acompanhamento filosófico", "grupo", "participar", "texto de trabalho"] },
   { id: "diario", titulo: "Meu diário", descricao: "Prólogo pela manhã, Epílogo à noite e o Fogo Interno", palavras: ["prólogo", "epílogo", "reflexão", "virtude", "fogo interno", "consciência", "escrever", "introspecção", "autoconhecimento"] },
   { id: "diario_historico", titulo: "Histórico do diário", descricao: "Registros do diário mês a mês", palavras: ["dias anteriores", "registros antigos", "mês passado"] },
+  { id: "diario_fv", titulo: "Meu diário de FV", descricao: "Forja, Degrau, Balanço, Carta e relatório do ciclo", palavras: ["fv", "gdve", "carta", "degrau", "forja", "templo", "câmara", "relatório mensal", "discipulado"] },
   { id: "grupos_estudo", titulo: "Grupos de estudo", descricao: "Estudos e leituras comentadas abertos", palavras: ["leitura comentada", "estudo em grupo", "participar"] },
   { id: "voluntariado", titulo: "Voluntariado", descricao: "Oportunidades de ajudar a escola e oferecer apoio", palavras: ["ajudar", "voluntário", "servir", "colaborar", "oportunidade", "apoiar"] },
   { id: "area_voluntario", titulo: "Área do Voluntário", descricao: "Seus grupos, secretarias e funções de voluntário", palavras: ["secretaria", "grupo", "voluntário", "trabalho", "funções"] },

@@ -1,7 +1,6 @@
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
-import { carregarHistorico, hojeDaPessoa } from "@/lib/diario-dados";
-import { meusGrupos } from "@/lib/grupos-dados";
+import { carregarHistorico, hojeDaPessoa, temDiario } from "@/lib/diario-dados";
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Lock, Moon, Pencil, Sunrise } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,7 +14,7 @@ const nomeDoDia = (data: string) => new Date(`${data}T12:00:00Z`).toLocaleDateSt
 export default async function HistoricoDiarioPage(props: { searchParams: Promise<{ mes?: string }> }) {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/diario/historico");
-  if (!(await meusGrupos(member, ["GAF"])).length) redirect("/portal");
+  if (!(await temDiario(member))) redirect("/portal");
   const { mes: mesPedido } = await props.searchParams;
   const { mes, meses, dias } = await carregarHistorico(member, mesPedido);
   const hoje = hojeDaPessoa(member);

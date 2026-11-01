@@ -454,14 +454,14 @@ export async function avisosDoDiarioFv(agora = new Date()) {
   });
   let total = 0;
   for (const p of pessoas) {
+    // Quem saiu do GDVE e segue usando o diário de FV recebe o aviso das práticas, com o diário fora do grupo.
     const grupos = p.classMemberships.map((c) => c.classGroupId);
-    if (!grupos.length) continue;
     const fuso = fusoDaEscola(p.school?.uf);
     const partes = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: fuso, year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", hourCycle: "h23" }).formatToParts(agora).map((x) => [x.type, x.value]));
     if (Number(partes.hour) !== 20) continue;
     const hoje = `${partes.year}-${partes.month}-${partes.day}`;
     const dias = [0, 1, 2].map((n) => new Date(Date.parse(`${hoje}T12:00:00Z`) - n * 864e5).toISOString().slice(0, 10));
-    const url = `/grupos/${grupos[0]}?aba=diariofv`;
+    const url = grupos.length ? `/grupos/${grupos[0]}?aba=diariofv` : "/diario/fv";
 
     const [fv, comuns] = await Promise.all([
       db.diarioFvDia.findMany({ where: { memberId: p.id, data: { in: dias } }, select: { praticas: true } }),
@@ -472,6 +472,7 @@ export async function avisosDoDiarioFv(agora = new Date()) {
       total += (await enviarPush([p.id], { titulo: "Práticas de FV", corpo: "Já são 3 dias sem registrar práticas.", url, etiqueta: `fv-praticas-${hoje}` })).pessoas;
     }
 
+    if (!grupos.length) continue;
     const daquiAUmaSemana = new Date(Date.parse(`${hoje}T12:00:00Z`) + 7 * 864e5).toISOString().slice(0, 10);
     const reunioes = await db.groupMeeting.findMany({ where: { classGroupId: { in: grupos }, status: "agendada", startsAt: { gte: agora, lte: new Date(agora.getTime() + 9 * 864e5) } }, select: { startsAt: true } });
     const naSemana = reunioes.some((r) => r.startsAt.toLocaleDateString("en-CA", { timeZone: fuso }) === daquiAUmaSemana);
