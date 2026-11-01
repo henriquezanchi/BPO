@@ -6,6 +6,7 @@ import { MemberDetailPanel } from "@/components/director/member-detail-panel";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { getFortunaBalancesForDirector, type FortunaBalancesForDirector } from "@/lib/actions/fortuna-actions";
 import type { DirectorDashboard } from "@/lib/director-data";
+import type { DadosCafe, DadosEscolastica } from "@/lib/dados-por-area";
 import { whatsappHref } from "@/lib/format";
 import { Search } from "lucide-react";
 import Link from "next/link";
@@ -70,7 +71,7 @@ export function VisaoFilial({ schoolId, data, comRelatorio = true }: { schoolId:
 }
 
 /** Café: Caixa Fortuna. */
-export function CafeArea({ schoolId, data }: { schoolId: string; data: DirectorDashboard }) {
+export function CafeArea({ schoolId, data }: { schoolId: string; data: DadosCafe }) {
   const { saldos, carregando } = useSaldosFortuna(schoolId);
   return <FortunaTab schoolId={schoolId} data={data} balances={saldos} carregando={carregando} />;
 }
@@ -81,7 +82,7 @@ export function SituacaoContribuicao({ schoolId, data, status }: { schoolId: str
 }
 
 /** Escolástica → membros, sem dados financeiros (esses ficam na Economia). */
-export function MembrosEscolastica({ schoolId, data }: { schoolId: string; data: DirectorDashboard }) {
+export function MembrosEscolastica({ schoolId, data }: { schoolId: string; data: DadosEscolastica }) {
   const [busca, setBusca] = useState("");
   const [aberto, setAberto] = useState<{ id: string; name: string } | null>(null);
   const lista = data.membros.filter((m) => m.mercurioAtivo && m.name.toLowerCase().includes(busca.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));

@@ -7,6 +7,7 @@ import {salvarEvento,excluirEvento,definirRecepcaoEvento,definirPostagemOficial}
 import {ABERTURAS,EVENT_AUDIENCES} from '@/lib/event-policy';
 import {AberturaEvento,PublicosEvento} from './publicos-abertura-evento';
 import type {DirectorDashboard} from '@/lib/director-data';
+import type {DadosEventos} from "@/lib/dados-por-area";
 import {formatBRL} from '@/lib/format';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
@@ -20,7 +21,7 @@ const field='w-full min-w-0 rounded-lg border border-gray-300 bg-transparent p-2
 const button='rounded-lg bg-na-green px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50';
 type EventView=DirectorDashboard['eventos'][number];
 function localDate(date:Date){const d=new Date(date);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
-export function EventosTab({schoolId,data}:{schoolId:string;data:DirectorDashboard}){
+export function EventosTab({schoolId,data}:{schoolId:string;data:DadosEventos}){
  const [cancelling,setCancelling]=useState<EventView|null>(null),[refund,setRefund]=useState(false);
  const [editing,setEditing]=useState<EventView|null>(null),[message,setMessage]=useState(''),[pending,start]=useTransition();const [posterUploading,setPosterUploading]=useState(false),[formGeneration,setFormGeneration]=useState(0);const router=useRouter();
  function save(form:FormData){start(async()=>{try{

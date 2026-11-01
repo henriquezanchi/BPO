@@ -8,6 +8,7 @@ import { exigirArea } from "@/lib/area-trabalho";
 import { FRASES_PADRAO } from "@/lib/telas-frases";
 import { db } from "@/lib/db";
 import { getDirectorDashboard } from "@/lib/director-data";
+import { paraEventos } from "@/lib/dados-por-area";
 import { headers } from "next/headers";
 
 const ABAS_EVENTOS = [
@@ -63,7 +64,7 @@ export default async function EventosAreaPage(props: { searchParams: Promise<{ a
           frases={await frasesDaFilial(member.schoolId)}
         />
       ) : (
-        <EventosTab schoolId={member.schoolId} data={await getDirectorDashboard(member.schoolId)} />
+        <EventosTab schoolId={member.schoolId} data={paraEventos(await getDirectorDashboard(member.schoolId))} />
       )}
     </ShellTrabalho>
   );

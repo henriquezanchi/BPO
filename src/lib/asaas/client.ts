@@ -36,9 +36,23 @@ async function chamarApi<T>(path: string, init?: RequestInit, conta?: ContaAsaas
       return chamarApi<T>(path, init);
     }
     const corpo = await res.text();
-    throw Object.assign(new Error(`Asaas API ${path} -> HTTP ${res.status}: ${corpo}`), { status: res.status });
+    throw Object.assign(new Error(`Asaas API ${path.split("?")[0]} -> HTTP ${res.status}: ${resumoDoErro(corpo)}`), { status: res.status });
   }
   return res.json() as Promise<T>;
+}
+
+/**
+ * Só as descrições do erro, sem dados pessoais (01/11/2026): a mensagem vai para os registros da Vercel, para o banco
+ * (ErrorNotification) e para o alerta de WhatsApp (CallMeBot); antes levava o CPF da consulta e o corpo inteiro da
+ * resposta. Números longos (CPF, CNPJ, telefone) e e-mails saem mascarados.
+ */
+function resumoDoErro(corpo: string) {
+  let texto = corpo;
+  try {
+    const j = JSON.parse(corpo) as { errors?: { code?: string; description?: string }[] };
+    if (Array.isArray(j.errors) && j.errors.length) texto = j.errors.map((e) => [e.code, e.description].filter(Boolean).join(": ")).join("; ");
+  } catch {}
+  return texto.replace(/\d[\d.\-/]{9,}\d/g, "[número]").replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "[e-mail]").slice(0, 300);
 }
 
 export interface AsaasCustomer {

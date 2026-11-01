@@ -5,6 +5,7 @@ import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { exigirArea } from "@/lib/area-trabalho";
 import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
 import { getDirectorDashboard } from "@/lib/director-data";
+import { paraEscolastica } from "@/lib/dados-por-area";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function EscolasticaPage(props: { searchParams: Promise<{ a
     <ShellTrabalho>
       {cabecalho}
       {aba === "membros" ? (
-        <MembrosEscolastica schoolId={member.schoolId} data={await getDirectorDashboard(member.schoolId)} />
+        <MembrosEscolastica schoolId={member.schoolId} data={paraEscolastica(await getDirectorDashboard(member.schoolId))} />
       ) : (
         <div className="max-w-3xl">
           <EscolasticaPanel schoolId={member.schoolId} />

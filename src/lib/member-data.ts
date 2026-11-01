@@ -445,9 +445,29 @@ export async function getMemberDashboard(memberId: string) {
     ),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
+  // O que vai ao navegador do membro (01/11/2026): sem as anotações internas da Economia nem identificadores e dados
+  // internos (login, cliente no Asaas, autorização do Pix Automático, cliente do Fortuna, CNPJ, carteira e caixa da
+  // filial, canais do Slack dos grupos). O Portal não mostra nada disso, mas tudo ia junto na página.
+  /* eslint-disable @typescript-eslint/no-unused-vars -- campos retirados de propósito */
+  const {
+    economicNotes: _notas,
+    economicNotesSyncedAt: _notasEm,
+    authUserId: _login,
+    asaasCustomerId: _clienteAsaas,
+    pixAutomaticAuthorizationId: _autorizacaoPix,
+    fortunaClientId: _clienteFortuna,
+    school: { cnpj: _cnpj, mercurioCaixaLancamento: _caixa, asaasWalletId: _carteira, mercuryBranchId: _filialMercury, ...escolaPublica },
+    classMemberships: vinculos,
+    ...memberPublico
+  } = member;
+  const vinculosPublicos = vinculos.map(({ classGroup: { slackChannelId: _canal, slackTeamId: _time, ...grupo }, ...v }) => ({ ...v, classGroup: grupo }));
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+
   return {
     member: {
-      ...member,
+      ...memberPublico,
+      school: escolaPublica,
+      classMemberships: vinculosPublicos,
       contributions: member.contributions.map(serializeContribution),
       compositionItems: member.compositionItems.map((i) => serializeCompositionItem(i, gruposComTarefaPendente)),
       avatarUrl: getAvatarUrl(member.avatarPath),

@@ -1,6 +1,6 @@
 import "server-only";
 import { PAGO, clienteNaSubconta, cobrancaNaSubconta, pixDaCobranca, situacaoDaCobranca } from "@/lib/asaas/subconta";
-import { cifrarCpf, cpfValido } from "@/lib/cpf-cifrado";
+import { cifrarCpf, cpfValido, decifrarCpf } from "@/lib/cpf-cifrado";
 import { subcontaAprovada } from "@/lib/asaas/conta-escola";
 import { db } from "@/lib/db";
 import { avisarFinanceiroSemEsperar, whatsappFinanceiroAtivo } from "@/lib/whatsapp/financeiro";
@@ -77,23 +77,35 @@ export const dadosMatricula = z.object({
 });
 export type DadosMatricula = z.input<typeof dadosMatricula>;
 
+/** Mensagem que pode ser mostrada a quem está se matriculando; qualquer outro erro vira uma mensagem genérica. */
+export class MatriculaErro extends Error {}
+
 /** Grava a matrícula e, se a filial cobra pelo site, cria a cobrança na subconta. */
 export async function criarMatricula(token: string, entrada: unknown) {
   // Campo-isca invisível (26/10/2026): só robô preenche. Resposta genérica, sem dizer o motivo.
-  if (entrada && typeof entrada === "object" && String((entrada as Record<string, unknown>).site ?? "").trim()) throw new Error("Não foi possível concluir agora. Tente de novo em instantes.");
+  if (entrada && typeof entrada === "object" && String((entrada as Record<string, unknown>).site ?? "").trim()) throw new MatriculaErro("Não foi possível concluir agora. Tente de novo em instantes.");
   const a = await aberturaPorToken(token);
-  if (!a || !a.disponivel) throw new Error("As matrículas desta turma não estão abertas.");
-  if (a.lotada) throw new Error("As vagas desta turma estão preenchidas.");
+  if (!a || !a.disponivel) throw new MatriculaErro("As matrículas desta turma não estão abertas.");
+  if (a.lotada) throw new MatriculaErro("As vagas desta turma estão preenchidas.");
   const d = dadosMatricula.parse(entrada);
   const jaPaga = await db.matriculaOnline.findFirst({ where: { aberturaId: a.id, cpfInicio: d.cpf.slice(0, 6), email: d.email, status: { in: ["paga", "lancada"] } }, select: { id: true } });
-  if (jaPaga) throw new Error("Já existe uma matrícula paga com estes dados nesta turma.");
+  if (jaPaga) throw new MatriculaErro("Já existe uma matrícula paga com estes dados nesta turma.");
   // Mesma pessoa reenviando (voltou, fechou a tela): reaproveita a cobrança em aberto em vez de criar outra.
   const pendente = await db.matriculaOnline.findFirst({
     where: { aberturaId: a.id, cpfInicio: d.cpf.slice(0, 6), email: d.email, status: "aguardando_pagamento", asaasPaymentId: { not: null }, createdAt: { gte: new Date(Date.now() - 3 * 864e5) } },
     orderBy: { createdAt: "desc" },
-    select: { id: true, asaasPaymentId: true },
+    select: { id: true, asaasPaymentId: true, cpfCifrado: true },
   });
-  if (pendente && a.cobraOnline) {
+  // A cobrança em aberto só volta para quem tem o CPF inteiro igual (01/11/2026): com e-mail e o começo do CPF de
+  // alguém, outra pessoa recebia o Pix e o link de pagamento dessa matrícula.
+  const mesmaPessoa = (() => {
+    try {
+      return !!pendente?.cpfCifrado && decifrarCpf(pendente.cpfCifrado).replace(/\D/g, "") === d.cpf.replace(/\D/g, "");
+    } catch {
+      return false;
+    }
+  })();
+  if (pendente && mesmaPessoa && a.cobraOnline) {
     const apiKey = a.school.asaasSubaccountApiKey!;
     const [cobranca, pix] = await Promise.all([situacaoDaCobranca(apiKey, pendente.asaasPaymentId!), pixDaCobranca(apiKey, pendente.asaasPaymentId!).catch(() => null)]);
     if (!PAGO.has(cobranca.status) && cobranca.status !== "DELETED")
@@ -105,7 +117,7 @@ export async function criarMatricula(token: string, entrada: unknown) {
     db.matriculaOnline.count({ where: { aberturaId: a.id, createdAt: { gte: umaHora } } }),
     db.matriculaOnline.count({ where: { email: d.email, createdAt: { gte: umaHora } } }),
   ]);
-  if (naTurma >= 30 || doEmail >= 3) throw new Error("Recebemos muitos envios em pouco tempo. Tente de novo daqui a alguns minutos ou fale com a secretaria.");
+  if (naTurma >= 30 || doEmail >= 3) throw new MatriculaErro("Recebemos muitos envios em pouco tempo. Tente de novo daqui a alguns minutos ou fale com a secretaria.");
   const valorCentavos = a.valorContribuicaoCentavos ?? 0;
   const m = await db.matriculaOnline.create({
     data: {

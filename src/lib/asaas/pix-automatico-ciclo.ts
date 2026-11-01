@@ -127,7 +127,7 @@ export async function criarCicloPixAutomatico() {
       });
       criadas++;
     } catch (e) {
-      console.error(`${membro.name}: falha ao criar cobrança automática — ${(e as Error).message}`);
+      console.error(`Membro ${membro.id}: falha ao criar cobrança automática — ${(e as Error).message}`);
     }
   }
 

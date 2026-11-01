@@ -10,7 +10,7 @@ import {
   vincularMembroFortuna,
   type FortunaBalancesForDirector,
 } from "@/lib/actions/fortuna-actions";
-import type { DirectorDashboard } from "@/lib/director-data";
+import type { DadosCafe } from "@/lib/dados-por-area";
 import { formatBRL, formatDateBR } from "@/lib/format";
 import type { FortunaClient } from "@/lib/fortuna/client";
 import { CircleCheck, Coffee, Link2, Loader2 } from "lucide-react";
@@ -24,7 +24,7 @@ export function FortunaTab({
   carregando,
 }: {
   schoolId: string;
-  data: DirectorDashboard;
+  data: DadosCafe;
   balances: FortunaBalancesForDirector;
   carregando: boolean;
 }) {

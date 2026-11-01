@@ -1,6 +1,6 @@
 "use server";
 
-import { conferirPagamentoDaTela, criarMatricula } from "@/lib/matricula-online";
+import { conferirPagamentoDaTela, criarMatricula, MatriculaErro } from "@/lib/matricula-online";
 import { db } from "@/lib/db";
 import { headers } from "next/headers";
 import { ZodError } from "zod";
@@ -13,7 +13,8 @@ export async function enviarMatricula(token: string, dados: unknown) {
   } catch (e) {
     if (e instanceof ZodError) return { ok: false as const, error: e.issues[0]?.message ?? "Confira os dados." };
     console.error("[Matrícula] falha", e instanceof Error ? e.message : e);
-    return { ok: false as const, error: e instanceof Error && !e.message.startsWith("Asaas") ? e.message : "Não foi possível concluir agora. Tente de novo em instantes." };
+    // Só mensagens próprias da matrícula chegam ao visitante; erro de banco, rede ou Asaas vira mensagem genérica.
+    return { ok: false as const, error: e instanceof MatriculaErro ? e.message : "Não foi possível concluir agora. Tente de novo em instantes." };
   }
 }
 
