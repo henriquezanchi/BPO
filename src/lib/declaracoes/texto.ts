@@ -8,7 +8,7 @@
 export type Secao = "matricula" | "instrucao" | "voluntariado" | "cursos";
 export const SECOES: { id: Secao; rotulo: string; descricao: string }[] = [
   { id: "matricula", rotulo: "Matrícula", descricao: "Desde quando, unidade, nível e turma." },
-  { id: "instrucao", rotulo: "Instrução", descricao: "Matérias que ministra e formação de instrutores." },
+  { id: "instrucao", rotulo: "Instrução", descricao: "Desde quando dá aula, dias e horários, formação de instrutores." },
   { id: "voluntariado", rotulo: "Voluntariado", descricao: "Funções na escola e corpo de voluntários." },
   { id: "cursos", rotulo: "Cursos e seminários", descricao: "Cursos da Nova Acrópole de que participou." },
 ];
@@ -24,7 +24,7 @@ export type DadosDeclaracao = {
   nivelDesde: string | null; // data de entrada no 2º nível (cad_2o_nivel)
   formatura: string | null;
   turma: { nome: string; dia: string | null; horario: string | null; inicio: string | null } | null;
-  aulas: { materia: string; turma: string; nivel: string | null; inicio: string | null }[];
+  aulas: { inicio: string | null; dia: string | null; horario: string | null }[];
   pedagogo: "formacao" | "instrutor" | null;
   funcoes: { nome: string; atual: boolean; inicio: string | null; termino: string | null }[];
   voluntariado: { situacao: "brigadista" | "provacionista"; corpo: string } | null;
@@ -92,7 +92,11 @@ function cnpj(c: string | null) {
   return n.length === 14 ? `${n.slice(0, 2)}.${n.slice(2, 5)}.${n.slice(5, 8)}/${n.slice(8, 12)}-${n.slice(12)}` : null;
 }
 
-export function montarDeclaracao(d: DadosDeclaracao, secoes: Secao[], opcoes: { finalidade?: string; hoje?: Date } = {}): Declaracao {
+export function montarDeclaracao(
+  d: DadosDeclaracao,
+  secoes: Secao[],
+  opcoes: { finalidade?: string; hoje?: Date; assinatura?: { nome: string; cargo: string } } = {},
+): Declaracao {
   const a = d.feminino ? "a" : "o";
   const escola = `Organização Nova Acrópole ${titulo(d.unidade.nome)}`;
   const doc = cnpj(d.unidade.cnpj);
@@ -118,10 +122,14 @@ export function montarDeclaracao(d: DadosDeclaracao, secoes: Secao[], opcoes: { 
 
   if (secoes.includes("instrucao")) {
     const partes: string[] = [];
-    if (d.aulas.length)
+    // Sem matérias nem nomes de turma (pedido do usuário 02/11/2026): só desde quando dá aula, dias e horários.
+    if (d.aulas.length) {
+      const desde = d.aulas.map((x) => x.inicio).filter((x): x is string => !!x).sort()[0] ?? null;
+      const horarios = [...new Set(d.aulas.map((x) => [x.dia ? DIAS[x.dia.toUpperCase()] : "", hora(x.horario)].filter(Boolean).join(", ")).filter(Boolean))];
       partes.push(
-        `Atua como instrutor${d.feminino ? "a" : ""} voluntári${a} da escola, ministrando ${lista(d.aulas.map((x) => `${titulo(x.materia)}, na turma ${titulo(x.turma)}${x.nivel ? ` (${x.nivel})` : ""}${x.inicio ? `, desde ${data(x.inicio)}` : ""}`))}.`,
+        `Atua como instrutor${d.feminino ? "a" : ""} voluntári${a} da escola${desde ? ` desde ${data(desde)}` : ""}${horarios.length ? `, com aulas ${lista(horarios)}` : ""}. Os dias e horários de aula podem variar de acordo com a necessidade da escola e dos alunos.`,
       );
+    }
     if (d.pedagogo === "formacao") partes.push(`Participa do curso de formação de instrutores da Nova Acrópole.`);
     if (d.pedagogo === "instrutor") partes.push(`É instrutor${d.feminino ? "a" : ""} habilitad${a} pela Nova Acrópole.`);
     if (partes.length) paragrafos.push(partes.join(" "));
@@ -153,6 +161,6 @@ export function montarDeclaracao(d: DadosDeclaracao, secoes: Secao[], opcoes: { 
     titulo: "Declaração",
     paragrafos,
     localData: `${titulo(d.unidade.cidade)}/${d.unidade.uf}, ${dataPorExtenso(opcoes.hoje ?? new Date())}.`,
-    assinatura: d.diretor ? { nome: d.diretor.nome, cargo: d.diretor.feminino ? "Diretora" : "Diretor" } : null,
+    assinatura: opcoes.assinatura ?? (d.diretor ? { nome: d.diretor.nome, cargo: d.diretor.feminino ? "Diretora" : "Diretor" } : null),
   };
 }

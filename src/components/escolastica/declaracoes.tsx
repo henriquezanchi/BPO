@@ -18,6 +18,8 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
   const [pessoa, setPessoa] = useState<Pessoa | null>(null);
   const [secoes, setSecoes] = useState<Secao[]>(["matricula"]);
   const [finalidade, setFinalidade] = useState("");
+  const [assinoEu, setAssinoEu] = useState(false);
+  const [meuCargo, setMeuCargo] = useState("");
   const [declaracao, setDeclaracao] = useState<Declaracao | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [gerando, iniciar] = useTransition();
@@ -36,7 +38,7 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
     if (!pessoa) return;
     setErro(null);
     iniciar(async () => {
-      const r = await gerarDeclaracao(schoolId, pessoa.id, secoes, finalidade);
+      const r = await gerarDeclaracao(schoolId, pessoa.id, secoes, finalidade, assinoEu ? meuCargo : "");
       if (r.ok) setDeclaracao(r.declaracao);
       else {
         setDeclaracao(null);
@@ -124,10 +126,31 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
           />
         </label>
 
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1.5 text-[12px] font-semibold text-gray-700 dark:text-gray-300">Quem assina</legend>
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-gray-900 dark:text-gray-100">
+            <input type="radio" name="assinatura" checked={!assinoEu} onChange={() => setAssinoEu(false)} className="h-4 w-4 accent-[#086357]" />
+            Direção da unidade (Mercúrio)
+          </label>
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-gray-900 dark:text-gray-100">
+            <input type="radio" name="assinatura" checked={assinoEu} onChange={() => setAssinoEu(true)} className="h-4 w-4 accent-[#086357]" />
+            Eu
+          </label>
+          {assinoEu && (
+            <input
+              value={meuCargo}
+              onChange={(e) => setMeuCargo(e.target.value)}
+              maxLength={80}
+              placeholder="Seu cargo na escola (ex.: Vice-Diretor)"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            />
+          )}
+        </fieldset>
+
         <button
           type="button"
           onClick={gerar}
-          disabled={!pessoa || gerando}
+          disabled={!pessoa || gerando || (assinoEu && !meuCargo.trim())}
           className="flex items-center justify-center gap-2 rounded-lg bg-na-green px-4 py-2.5 text-sm font-bold text-white transition hover:bg-na-green-dark disabled:opacity-50"
         >
           {gerando && <Loader2 size={16} className="animate-spin" />}

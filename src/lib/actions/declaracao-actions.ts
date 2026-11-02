@@ -2,7 +2,7 @@
 
 import { requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { dadosDaDeclaracao, DeclaracaoErro } from "@/lib/declaracoes/dados";
+import { dadosDaDeclaracao, DeclaracaoErro, nomeNoMercurio } from "@/lib/declaracoes/dados";
 import { montarDeclaracao, SECOES, type Declaracao, type Secao } from "@/lib/declaracoes/texto";
 
 /**
@@ -14,8 +14,10 @@ export async function gerarDeclaracao(
   memberId: string,
   secoes: Secao[],
   finalidade: string,
+  // Sem cargo, assina a direção da unidade (Mercúrio). Com cargo, assina quem está gerando (pedido do usuário 02/11/2026).
+  meuCargo?: string,
 ): Promise<{ ok: true; declaracao: Declaracao } | { ok: false; error: string }> {
-  await requireArea(schoolId, "escolastica");
+  const eu = await requireArea(schoolId, "escolastica");
   const [pessoa, escola] = await Promise.all([
     db.member.findFirst({ where: { id: memberId, schoolId }, select: { mercurioId: true } }),
     db.school.findUnique({ where: { id: schoolId }, select: { mercurioUnidade: true } }),
@@ -25,7 +27,9 @@ export async function gerarDeclaracao(
   const validas = SECOES.map((s) => s.id).filter((s) => secoes.includes(s));
   try {
     const dados = await dadosDaDeclaracao(pessoa.mercurioId, escola.mercurioUnidade);
-    return { ok: true, declaracao: montarDeclaracao(dados, validas, { finalidade: finalidade.slice(0, 200) }) };
+    const cargo = meuCargo?.trim().slice(0, 80);
+    const assinatura = cargo ? { nome: (await nomeNoMercurio(eu.mercurioId)) ?? eu.name, cargo } : undefined;
+    return { ok: true, declaracao: montarDeclaracao(dados, validas, { finalidade: finalidade.slice(0, 200), assinatura }) };
   } catch (e) {
     if (e instanceof DeclaracaoErro) return { ok: false, error: e.message };
     console.error("[Declaração] falha ao ler o Mercúrio:", e instanceof Error ? e.message : e);

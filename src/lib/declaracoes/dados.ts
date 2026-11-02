@@ -26,7 +26,7 @@ export async function dadosDaDeclaracao(matricula: string, unidade: string): Pro
     consultarMercurio(`SELECT snv_sigla, snv_descricao FROM sig_niveis`),
     c.cad_turma ? consultarMercurio(`SELECT tur_turma, tur_dia, tur_horario, tur_inicio FROM turmas WHERE tur_unidade=${uni} AND tur_turma=${sqlTexto(c.cad_turma)} LIMIT 1`) : Promise.resolve([]),
     consultarMercurio(
-      `SELECT tm.tma_turma, tm.tma_inicio, m.sma_materia, t.tur_nivel FROM turmas_materias tm LEFT JOIN sig_materias m ON m.sma_sigla=tm.tma_materia LEFT JOIN turmas t ON t.tur_unidade=tm.tma_unidade AND t.tur_turma=tm.tma_turma WHERE tm.tma_instrutor=${matr} AND tm.tma_unidade=${uni} ORDER BY tm.tma_inicio`,
+      `SELECT tm.tma_inicio, t.tur_dia, t.tur_horario FROM turmas_materias tm LEFT JOIN turmas t ON t.tur_unidade=tm.tma_unidade AND t.tur_turma=tm.tma_turma WHERE tm.tma_instrutor=${matr} AND tm.tma_unidade=${uni} ORDER BY tm.tma_inicio`,
     ),
     consultarMercurio(
       `SELECT f.dfn_funcao, f.dfn_descricao, f.dfn_inicio, f.dfn_termino, f.dfn_atual, s.sdf_descricao FROM dirigente_funcoes f LEFT JOIN sig_dirigente_funcoes s ON s.sdf_sigla=f.dfn_funcao WHERE f.dfn_matr=${matr} ORDER BY f.dfn_inicio`,
@@ -56,7 +56,7 @@ export async function dadosDaDeclaracao(matricula: string, unidade: string): Pro
     nivelDesde: c.cad_nivel === "N2" ? vazia(c.cad_2o_nivel) : null,
     formatura: vazia(c.cad_formatura),
     turma: t ? { nome: t.tur_turma ?? "", dia: vazia(t.tur_dia), horario: vazia(t.tur_horario), inicio: vazia(t.tur_inicio) } : null,
-    aulas: aulas.map((a) => ({ materia: (a.sma_materia ?? "").replace(/\s+NOVO FORMATO$/i, ""), turma: a.tma_turma ?? "", nivel: nivel(a.tur_nivel), inicio: vazia(a.tma_inicio) })).filter((a) => a.materia),
+    aulas: aulas.map((a) => ({ inicio: vazia(a.tma_inicio), dia: vazia(a.tur_dia), horario: vazia(a.tur_horario) })),
     pedagogo: c.cad_cad_pedagogo === "FOR" ? "formacao" : c.cad_cad_pedagogo === "INS" ? "instrutor" : null,
     funcoes: funcoes
       .map((f) => ({ nome: vazia(f.dfn_descricao) ?? vazia(f.sdf_descricao) ?? "", atual: f.dfn_atual === "S" && !vazia(f.dfn_termino), inicio: vazia(f.dfn_inicio), termino: vazia(f.dfn_termino) }))
@@ -65,4 +65,11 @@ export async function dadosDaDeclaracao(matricula: string, unidade: string): Pro
     cursos: cursos.filter((x) => x.sdu_descricao).map((x) => ({ nome: x.sdu_descricao!, data: vazia(x.dcr_data) })),
     diretor: diretor?.cad_nome ? { nome: diretor.cad_nome, feminino: diretor.cad_sexo === "F" } : null,
   };
+}
+
+/** Nome de quem assina como "eu" (cadastro do Mercúrio; sem ele, o nome do Portal). */
+export async function nomeNoMercurio(matricula: string | null): Promise<string | null> {
+  if (!matricula || !/^\d+$/.test(matricula)) return null;
+  const [c] = await consultarMercurio(`SELECT cad_nome FROM cadastro WHERE cad_matr=${sqlNumero(matricula)} LIMIT 1`);
+  return c?.cad_nome ?? null;
 }

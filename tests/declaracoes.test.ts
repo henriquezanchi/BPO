@@ -14,8 +14,9 @@ const base: DadosDeclaracao = {
   formatura: null,
   turma: { nome: "HILARION", dia: "QUARTA", horario: "20:00:00", inicio: "2024-01-22" },
   aulas: [
-    { materia: "PRÁTICA DE PSICOLOGIA I", turma: "EXTRA", nivel: "Nível 2", inicio: "2026-08-25" },
-    { materia: "ÉTICA", turma: "XESOTRIS", nivel: "Nível 1", inicio: "2026-08-25" },
+    { inicio: "2026-08-25", dia: "TERÇA", horario: "18:30:00" },
+    { inicio: "2026-09-01", dia: "TERÇA", horario: "18:30:00" },
+    { inicio: "2026-09-02", dia: "QUINTA", horario: "20:00:00" },
   ],
   pedagogo: "formacao",
   funcoes: [
@@ -37,7 +38,8 @@ test("matrícula com unidade, CNPJ, datas, nível e turma, no feminino", () => {
 test("instrução, voluntariado e cursos com todas as datas; só as seções pedidas", () => {
   const d = montarDeclaracao(base, ["matricula", "instrucao", "voluntariado", "cursos"], { hoje, finalidade: "comprovação no trabalho." });
   const texto = d.paragrafos.join("\n");
-  assert.match(texto, /instrutora voluntária da escola, ministrando Prática de Psicologia I, na turma Extra \(Nível 2\), desde 25\/08\/2026; e Ética/);
+  assert.match(texto, /instrutora voluntária da escola desde 25\/08\/2026, com aulas às terças-feiras, às 18h30; e às quintas-feiras, às 20h\. Os dias e horários de aula podem variar de acordo com a necessidade da escola e dos alunos\./);
+  assert.doesNotMatch(texto, /Psicologia|Xesotris|Extra/);
   assert.match(texto, /Participa do curso de formação de instrutores/);
   assert.match(texto, /a função de Colaborador de Eventos, desde 01\/06\/2025\./);
   assert.match(texto, /Exerceu anteriormente Secretário de Filial \(de 01\/01\/2023 a 31\/12\/2024\)\./);
@@ -46,6 +48,7 @@ test("instrução, voluntariado e cursos com todas as datas; só as seções ped
   assert.match(texto, /a pedido da interessada, para fins de comprovação no trabalho\.$/);
   assert.equal(d.localData, "Barra do Garças/MT, 2 de novembro de 2026.");
   assert.deepEqual(d.assinatura, { nome: "FULANA DIRETORA", cargo: "Diretora" });
+  assert.deepEqual(montarDeclaracao(base, ["matricula"], { hoje, assinatura: { nome: "QUEM GEROU", cargo: "Vice-Diretor" } }).assinatura, { nome: "QUEM GEROU", cargo: "Vice-Diretor" });
   const so = montarDeclaracao(base, ["matricula"], { hoje }).paragrafos.join("\n");
   assert.doesNotMatch(so, /instrutora|brigadista|Participou/);
 });
