@@ -35,7 +35,11 @@ export async function atualizarResumos(limite = 4) {
   const feitas: string[] = [];
   const falhas: string[] = [];
   let semConexao = false;
+  // A função da Vercel tem 300 s e uma consulta pode levar até 90 s (filiais grandes): depois de 150 s não começa
+  // outro resumo; o que sobrar fica para a rodada seguinte, 15 minutos depois.
+  const inicio = Date.now();
   for (const t of vencidas.slice(0, limite)) {
+    if (Date.now() - inicio > 150_000) break;
     try {
       await t.rodar();
       feitas.push(t.nome);

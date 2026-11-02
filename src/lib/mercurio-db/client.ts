@@ -42,7 +42,8 @@ async function requisicao(cookies: Map<string, string>, path: string, init: Requ
   const pedir = () =>
     fetch(url + path, {
       ...init,
-      // Mercúrio fora do ar não segura o login de quem entra pela primeira vez (01/11/2026).
+      // Mercúrio fora do ar não segura o login de quem entra pela primeira vez (01/11/2026): 20 s para abrir a
+      // sessão. As consultas passam o próprio limite, maior (ver consultarMercurio).
       signal: init.signal ?? AbortSignal.timeout(20_000),
       redirect: "manual",
       cache: "no-store",
@@ -127,6 +128,9 @@ export async function consultarMercurio(sql: string, tentativa = 0): Promise<Lin
   const s = sessao && Date.now() - sessao.criadaEm < VALIDADE_SESSAO_MS ? sessao : await abrirSessao();
   const res = await requisicao(s.cookies, "/index.php?route=/sql", {
     method: "POST",
+    // Os resumos de filiais grandes (BSB, LGS, GYN) levam mais de 20 s no phpMyAdmin: com o limite de 20 s do login,
+    // falharam a noite inteira em 02/11/2026. A sessão já abriu (o servidor responde), então a consulta pode esperar.
+    signal: AbortSignal.timeout(90_000),
     headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" },
     body: new URLSearchParams({
       token: s.token,
