@@ -1,13 +1,12 @@
 /**
- * Cria (ou atualiza) o login do Portal pra um membro: senha inicial = 6
- * primeiros dígitos do CPF, lido direto do Mercúrio (não fica guardado no
- * nosso banco, só usado aqui pra derivar a senha). O membro pode trocar a
- * senha depois pelo Portal.
+ * Cria o login do Portal pra um membro (senha aleatória desde 02/11/2026; a
+ * pessoa entra pelo login unificado da Acrópole). O CPF, lido do Mercúrio,
+ * só confirma a identidade e não fica guardado.
  *
  * Uso: npx tsx --env-file=.env scripts/provision-member-auth.ts <mercurioId> [--nome=<regex alternativa>]
  */
 import { db } from "../src/lib/db";
-import { provisionarLoginComSenha } from "../src/lib/mercurio/auth-provisioning";
+import { provisionarLogin } from "../src/lib/mercurio/auth-provisioning";
 import {
   abrirCirculoDeAmigos,
   abrirFichaDaListaAtivos,
@@ -59,13 +58,13 @@ async function main() {
   }
 
   if (cpf.length < 6) throw new Error(`CPF não encontrado ou incompleto no Mercúrio (valor lido: "${cpf}").`);
-  const senhaInicial = cpf.slice(0, 6);
 
   console.log(`Provisionando login (e-mail: ${member.email})...`);
-  const { criado } = await provisionarLoginComSenha(member.id, member.email, senhaInicial);
-  console.log(criado ? "Usuário criado e vinculado ao Member." : "Usuário já existia — senha redefinida e vínculo confirmado.");
+  const { criado } = await provisionarLogin(member.id, member.email);
+  console.log(criado ? "Usuário criado e vinculado ao Member." : "Usuário já existia — senha preservada e vínculo confirmado.");
 
-  console.log(`\n✅ Login pronto: ${member.email} / ${senhaInicial} (6 primeiros dígitos do CPF — repassar ao membro, não é secreto além disso)`);
+  console.log(`
+✅ Login pronto: ${member.email}. A pessoa entra pelo login unificado da Acrópole (ou "Esqueci minha senha").`);
 }
 
 main()

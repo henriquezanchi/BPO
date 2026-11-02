@@ -16,8 +16,8 @@
  * CPF vem em documents[] SEM o zero à esquerda (confirmado ao vivo
  * 2026-10-15 contra a matrícula 21596 — bug de armazenamento do lado do
  * Mercúrio, CPF virou número em algum ponto) — sempre completa com
- * padStart(11, "0") antes de derivar a senha inicial, senão a senha fica
- * errada pra quem tem CPF começando com 0.
+ * padStart(11, "0") antes de conferir o CPF (até 02/11/2026 ele também
+ * gerava a senha inicial; hoje a senha é aleatória).
  *
  * Situação mensal da contribuição NÃO vem daqui: confirmado ao vivo
  * 2026-10-16 que os dados de tesouraria da Mercury API estão parados no
@@ -29,7 +29,7 @@
  */
 import { db } from "../src/lib/db";
 import { supabaseAdmin } from "../src/lib/supabase/admin";
-import { provisionarLoginComSenha } from "../src/lib/mercurio/auth-provisioning";
+import { provisionarLogin } from "../src/lib/mercurio/auth-provisioning";
 import { mercuryGetBranchStaff, mercuryGetDossier, mercuryGetInstructors, mercuryGetPeople } from "../src/lib/mercury/client";
 
 function soDigitos(s: string | null | undefined): string {
@@ -125,8 +125,7 @@ async function main() {
         continue;
       }
 
-      const senhaInicial = cpf.slice(0, 6);
-      const { criado } = await provisionarLoginComSenha(member.id, member.email, senhaInicial, authData.users);
+      const { criado } = await provisionarLogin(member.id, member.email, authData.users);
       console.log(`✓ ${member.name} (${member.email}): login ${criado ? "criado" : "atualizado"}.`);
       loginsProvisionados++;
     } catch (e) {

@@ -10,14 +10,14 @@
  * Cria/atualiza o Member (endereço, telefone, e-mail, dados pessoais e RG
  * — abas ENDEREÇOS/PESSOAIS/IDENTIFICAÇÃO da mesma ficha, sem navegação
  * extra) e, se tiver e-mail e CPF legíveis, provisiona o login (senha
- * inicial = 6 primeiros dígitos do CPF, nunca guardado no nosso banco).
+ * aleatória desde 02/11/2026; o CPF não é guardado no nosso banco).
  * Erro em 1 ativo não para os demais.
  *
  * Uso: npx tsx --env-file=.env scripts/onboard-filial-lote.ts "<mercurioFilialLabel>"
  */
 import { db } from "../src/lib/db";
 import { supabaseAdmin } from "../src/lib/supabase/admin";
-import { provisionarLoginComSenha } from "../src/lib/mercurio/auth-provisioning";
+import { provisionarLogin } from "../src/lib/mercurio/auth-provisioning";
 import {
   abrirFichaDaListaAtivos,
   abrirListaAtivos,
@@ -126,8 +126,7 @@ async function main() {
           continue;
         }
 
-        const senhaInicial = cpf.slice(0, 6);
-        const { criado } = await provisionarLoginComSenha(member.id, member.email, senhaInicial, authData.users);
+        const { criado } = await provisionarLogin(member.id, member.email, authData.users);
         console.log(`✓ ${member.name} (${member.email}): login ${criado ? "criado" : "atualizado"}.`);
         loginsProvisionados++;
       } catch (e) {

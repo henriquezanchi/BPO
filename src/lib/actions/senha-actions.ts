@@ -1,23 +1,14 @@
 "use server";
 
-import { ehAdministradorNacional } from "@/lib/acesso-voluntario";
-import { getAuthenticatedMember } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { consultarMercurio } from "@/lib/mercurio-db/client";
-import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
-import { filiaisAdministradas, podeAdministrar } from "@/lib/recursos-filial";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 
 /**
- * "Esqueci minha senha" (pedido do usuário 2026-10-19), por dois caminhos:
- *  1. Link por e-mail (Supabase Auth). Só entrega de verdade quando houver um
- *     provedor de e-mail (SMTP próprio) configurado no Supabase — sem ele, o
- *     Supabase só envia para a equipe do projeto e no máximo 2 por hora.
- *  2. A administração da filial volta a senha da pessoa para a inicial (6
- *     primeiros números do CPF, lido na hora do banco de consulta do
- *     Mercúrio — o CPF não fica guardado no Portal). Funciona já.
+ * "Esqueci minha senha" (pedido do usuário 2026-10-19): link por e-mail (Supabase Auth). Só entrega de verdade
+ * quando houver um provedor de e-mail (SMTP próprio) configurado no Supabase — sem ele, o Supabase só envia para a
+ * equipe do projeto e no máximo 2 por hora. O caminho principal de entrada é o login unificado da Acrópole.
+ * A volta da senha para os 6 primeiros números do CPF pela administração foi retirada em 02/11/2026 (pedido do
+ * usuário: "pode excluir senha pela inicial do cpf").
  */
 
 /** Sempre a mesma resposta, exista ou não o e-mail (não revela quem tem cadastro). */
@@ -29,29 +20,5 @@ export async function pedirLinkDeSenha(email: string): Promise<{ ok: boolean }> 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(e, { redirectTo: `${origem}/auth/redefinir` });
   if (error) console.warn("[Senha] envio do link falhou:", error.status, error.code);
-  return { ok: true };
-}
-
-export async function voltarSenhaInicial(memberId: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  const eu = await getAuthenticatedMember();
-  if (!eu) return { ok: false, error: "Entre no Portal." };
-  const alvo = await db.member.findUnique({ where: { id: memberId }, select: { id: true, schoolId: true, authUserId: true, mercurioId: true, mercurioAtivo: true, isDiretor: true, isSubChefe: true, filiaisChefiadas: true } });
-  if (!alvo) return { ok: false, error: "Pessoa não encontrada." };
-  const nacional = await ehAdministradorNacional(eu);
-  if (!(await podeAdministrar(eu, alvo.schoolId)) && !nacional) return { ok: false, error: "Só a administração da filial redefine senhas." };
-  // Ninguém redefine a senha de quem está acima ou no mesmo nível (01/11/2026): um administrador da filial voltaria
-  // a senha do Diretor para a inicial e entraria na conta dele. Direção e administração só pela administração
-  // nacional; o dono do sistema, só ele mesmo.
-  if (ehDonoDoSistema(alvo) && !ehDonoDoSistema(eu)) return { ok: false, error: "Essa senha não pode ser redefinida por aqui." };
-  const alvoAdministra = alvo.isDiretor || alvo.isSubChefe || (await ehAdministradorNacional(alvo)) || (await filiaisAdministradas({ ...alvo, mercurioId: alvo.mercurioId })).length > 0;
-  if (alvoAdministra && !nacional) return { ok: false, error: "A senha de quem dirige ou administra a filial só é redefinida pela administração nacional." };
-  if (!alvo.authUserId) return { ok: false, error: "Essa pessoa ainda não tem login no Portal." };
-  if (!alvo.mercurioId || !/^\d+$/.test(alvo.mercurioId)) return { ok: false, error: "Matrícula do Mercúrio não encontrada." };
-  const [linha] = await consultarMercurio(`SELECT cad_cpf FROM cadastro WHERE cad_matr=${Number(alvo.mercurioId)} LIMIT 1`);
-  const cpf = String(linha?.cad_cpf ?? "").replace(/\D/g, "");
-  if (cpf.length < 6) return { ok: false, error: "CPF ausente no Mercúrio: corrija o cadastro antes de redefinir." };
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(alvo.authUserId, { password: cpf.slice(0, 6) });
-  if (error) return { ok: false, error: "Não foi possível redefinir agora. Tente de novo." };
-  await db.redefinicaoSenha.create({ data: { memberId: alvo.id, porId: eu.id } });
   return { ok: true };
 }

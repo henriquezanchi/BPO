@@ -9,8 +9,7 @@ import { Prisma } from "@prisma/client";
  * ainda falta. Cada item se confere sozinho e some do lembrete quando resolvido; sem nada pendente, não envia.
  */
 const REPOSITORIO = "henriquezanchi/BPO";
-// Filiais com o Portal aberto em 01/11/2026. A senha inicial pelo CPF só vira pendência quando abrir para mais.
-const FILIAIS_ABERTAS_HOJE = Number(process.env.PENDENCIA_SENHA_CPF_FILIAIS ?? 2);
+// A senha inicial pelo CPF saiu da lista em 02/11/2026: logins novos têm senha aleatória e a volta para o CPF foi retirada.
 
 async function repositorioPublico() {
   try {
@@ -29,9 +28,6 @@ export async function pendenciasDoDono() {
     lista.push("Tornar privado o repositório do Portal no GitHub (Settings → Danger Zone → Change visibility). Hoje qualquer pessoa lê o código e a documentação.");
   if (!process.env.TURNSTILE_SECRET_KEY || !process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
     lista.push("Proteção contra robôs na matrícula: criar o widget Turnstile no Cloudflare e colocar TURNSTILE_SECRET_KEY e NEXT_PUBLIC_TURNSTILE_SITE_KEY na Vercel.");
-  const abertas = await db.school.count({ where: { portalAberto: true } });
-  if (abertas > FILIAIS_ABERTAS_HOJE)
-    lista.push(`O Portal já está aberto em ${abertas} filiais: resolver a senha inicial pelo CPF (o Supabase ainda aceita e-mail + 6 primeiros dígitos do CPF fora da tela de login).`);
   return lista;
 }
 

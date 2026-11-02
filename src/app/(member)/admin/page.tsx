@@ -1,6 +1,5 @@
 import { AdminFilialPanel } from "@/components/admin/admin-filial-panel";
 import { AcessosSubchefe } from "@/components/admin/acessos-subchefe";
-import { SenhasAdmin } from "@/components/admin/senhas-admin";
 import { ehAdministradorNacional, escolasChefiadas } from "@/lib/acesso-voluntario";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
@@ -14,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 // Secretarias e GAF têm páginas próprias (/secretarias, /grupos); Liberar acessos é a outra aba (AbasAdmin).
 const ABAS = [
-  { id: "recursos", rotulo: "Recursos e administradores", descricao: "O que aparece para os alunos no Portal, quem mais administra a filial e senhas esquecidas." },
+  { id: "recursos", rotulo: "Recursos e administradores", descricao: "O que aparece para os alunos no Portal, e quem mais administra a filial." },
 ] as const;
 type Aba = (typeof ABAS)[number]["id"];
 
@@ -73,7 +72,6 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
           pessoas={pessoas.filter((p) => p.id !== member.id)}
         />
         {chefe && <AcessosSubchefe schoolId={escola.id} subchefes={subchefes} />}
-        <SenhasAdmin pessoas={pessoas} />
       </div>
     );
   }

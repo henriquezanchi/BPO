@@ -1,7 +1,7 @@
 /**
  * Abre uma filial no Portal a partir do banco de consulta do Mercúrio (sem
  * robô): importa todos os ativos e cria o login de quem tem e-mail e CPF
- * (senha inicial = 6 primeiros números do CPF). Pedido do usuário 2026-10-19
+ * (senha aleatória desde 02/11/2026; entra pelo login unificado). Pedido do usuário 2026-10-19
  * (Lago Sul).
  *
  * Cuidados:
@@ -13,7 +13,7 @@
  *      (sem --gravar só simula e mostra os números)
  */
 import { db } from "../src/lib/db";
-import { provisionarLoginComSenha } from "../src/lib/mercurio/auth-provisioning";
+import { provisionarLogin } from "../src/lib/mercurio/auth-provisioning";
 import { consultarTudo, sincronizarUnidade } from "../src/lib/mercurio-db/importar";
 import { supabaseAdmin } from "../src/lib/supabase/admin";
 
@@ -70,7 +70,7 @@ async function main() {
       emailEmUso.push(`${m.name} (${email})`);
       continue;
     }
-    const { criado } = await provisionarLoginComSenha(m.id, email, cpf.slice(0, 6), usuarios);
+    const { criado } = await provisionarLogin(m.id, email, usuarios);
     if (criado) {
       criados++;
       emailsAuth.add(email);
