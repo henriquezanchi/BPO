@@ -14,6 +14,9 @@ export const onRequestError: Instrumentation.onRequestError = async (error, requ
   if (process.env.NEXT_RUNTIME === "nodejs") {
     try {
       const message = error instanceof Error ? error.message : String(error);
+      // Recusa de acesso (sessão encerrada ou sem permissão, de lib/auth.ts) é o Portal funcionando, não erro: com os
+      // logins derrubados em 02/11/2026, uma tela da Escolástica aberta virou alerta no WhatsApp. Não avisa o suporte.
+      if (message.startsWith("Não autenticado ou sem permissão")) return;
       const digest = typeof error === "object" && error !== null && "digest" in error ? String((error as { digest: unknown }).digest) : undefined;
       const stack = error instanceof Error ? error.stack : undefined;
 
