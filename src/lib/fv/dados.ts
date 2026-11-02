@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { datasPermitidas, PRATICA_TRATAK, somarDias } from "@/lib/diario";
 import { hojeDaPessoa } from "@/lib/diario-dados";
-import { fusoDaEscola } from "@/lib/fuso-escola";
+import { fusoDaEscola, instanteNoFuso } from "@/lib/fuso-escola";
 import { minutosDeAula, type Calendario, type DiaDoCiclo, type ItensDegrau, type Presencas, type TarefaGdve } from "@/lib/fv/comum";
 import type { DiaDaCarta } from "@/lib/fv/historico-carta";
 import { meusGrupos } from "@/lib/grupos-dados";
@@ -109,7 +109,7 @@ export async function carregarDiarioFv(m: Pessoa, dataPedida?: string) {
       gdveTarefas: (dia?.gdveTarefas ?? {}) as Record<string, number>,
       gdvePresenca: dia?.gdvePresenca ?? false,
     },
-    proximaReuniao: reuniao?.startsAt.toISOString() ?? (ficha.proximaReuniao ? ficha.proximaReuniao : null),
+    proximaReuniao: reuniao?.startsAt.toISOString() ?? (ficha.proximaReuniao ? instanteNoFuso(ficha.proximaReuniao, fuso) : null),
     reuniaoDoPortal: !!reuniao,
     ciclo,
     livroAtual: livro ? `${livro.titulo}${livro.autor ? ` (${livro.autor})` : ""}` : null,

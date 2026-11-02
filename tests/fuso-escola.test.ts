@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fusoDaEscola, mesNoFuso } from "../src/lib/fuso-escola";
+import { fusoDaEscola, mesNoFuso, instanteNoFuso } from "../src/lib/fuso-escola";
 
 test("fuso da filial pela UF", () => {
   assert.equal(fusoDaEscola("MT"), "America/Cuiaba");
@@ -29,4 +29,11 @@ test("deslocamento ISO do fuso", async () => {
   const { deslocamentoNoFuso } = await import("../src/lib/fuso-escola");
   assert.equal(deslocamentoNoFuso("America/Sao_Paulo"), "-03:00");
   assert.equal(deslocamentoNoFuso("America/Cuiaba"), "-04:00");
+});
+
+test("hora sem fuso vale como hora da filial; com fuso passa igual", () => {
+  assert.equal(instanteNoFuso("2025-06-16T08:30", "America/Sao_Paulo"), "2025-06-16T11:30:00.000Z");
+  assert.equal(instanteNoFuso("2025-06-16T08:30", "America/Cuiaba"), "2025-06-16T12:30:00.000Z");
+  assert.equal(instanteNoFuso("2025-06-16T08:30:00Z", "America/Sao_Paulo"), "2025-06-16T08:30:00Z");
+  assert.equal(instanteNoFuso("qualquer", "America/Sao_Paulo"), "qualquer");
 });
