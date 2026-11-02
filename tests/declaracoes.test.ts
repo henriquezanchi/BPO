@@ -36,9 +36,9 @@ test("matrícula com unidade, CNPJ, datas, nível e turma, no feminino", () => {
 });
 
 test("instrução, voluntariado e cursos com todas as datas; só as seções pedidas", () => {
-  const d = montarDeclaracao(base, ["matricula", "instrucao", "voluntariado", "cursos"], { hoje, finalidade: "comprovação no trabalho." });
+  const d = montarDeclaracao(base, ["matricula", "instrucao", "voluntariado", "cursos"], { hoje, finalidade: "comprovação no trabalho.", instrutorDesde: "2025-03-10" });
   const texto = d.paragrafos.join("\n");
-  assert.match(texto, /instrutora voluntária da escola desde 25\/08\/2026, com aulas às terças-feiras, às 18h30; e às quintas-feiras, às 20h\. Os dias e horários de aula podem variar de acordo com a necessidade da escola e dos alunos\./);
+  assert.match(texto, /instrutora voluntária da escola desde 10\/03\/2025, com aulas às terças-feiras, às 18h30; e às quintas-feiras, às 20h\. Os dias e horários de aula podem variar de acordo com a necessidade da escola e dos alunos\./);
   assert.doesNotMatch(texto, /Psicologia|Xesotris|Extra/);
   assert.match(texto, /Participa do curso de formação de instrutores/);
   assert.match(texto, /a função de Colaborador de Eventos, desde 01\/06\/2025\./);
@@ -49,6 +49,9 @@ test("instrução, voluntariado e cursos com todas as datas; só as seções ped
   assert.equal(d.localData, "Barra do Garças/MT, 2 de novembro de 2026.");
   assert.deepEqual(d.assinatura, { nome: "FULANA DIRETORA", cargo: "Diretora" });
   assert.deepEqual(montarDeclaracao(base, ["matricula"], { hoje, assinatura: { nome: "QUEM GEROU", cargo: "Vice-Diretor" } }).assinatura, { nome: "QUEM GEROU", cargo: "Vice-Diretor" });
+  const semData = montarDeclaracao(base, ["instrucao"], { hoje }).paragrafos.join("\n");
+  assert.match(semData, /instrutora voluntária da escola, com aulas às terças-feiras/);
+  assert.doesNotMatch(semData, /25\/08\/2026/);
   const so = montarDeclaracao(base, ["matricula"], { hoje }).paragrafos.join("\n");
   assert.doesNotMatch(so, /instrutora|brigadista|Participou/);
 });

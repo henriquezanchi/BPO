@@ -20,6 +20,7 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
   const [finalidade, setFinalidade] = useState("");
   const [assinoEu, setAssinoEu] = useState(false);
   const [meuCargo, setMeuCargo] = useState("");
+  const [instrutorDesde, setInstrutorDesde] = useState("");
   const [declaracao, setDeclaracao] = useState<Declaracao | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [gerando, iniciar] = useTransition();
@@ -38,7 +39,7 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
     if (!pessoa) return;
     setErro(null);
     iniciar(async () => {
-      const r = await gerarDeclaracao(schoolId, pessoa.id, secoes, finalidade, assinoEu ? meuCargo : "");
+      const r = await gerarDeclaracao(schoolId, pessoa.id, secoes, finalidade, assinoEu ? meuCargo : "", secoes.includes("instrucao") ? instrutorDesde : "");
       if (r.ok) setDeclaracao(r.declaracao);
       else {
         setDeclaracao(null);
@@ -114,6 +115,19 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
             </label>
           ))}
         </fieldset>
+
+        {secoes.includes("instrucao") && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Dá aula desde (opcional)</span>
+            <input
+              type="date"
+              value={instrutorDesde}
+              onChange={(e) => setInstrutorDesde(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            />
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">O Mercúrio só guarda as turmas atuais, não quando a pessoa começou a dar aula.</span>
+          </label>
+        )}
 
         <label className="flex flex-col gap-1.5">
           <span className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Finalidade (opcional)</span>

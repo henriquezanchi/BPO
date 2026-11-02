@@ -95,7 +95,7 @@ function cnpj(c: string | null) {
 export function montarDeclaracao(
   d: DadosDeclaracao,
   secoes: Secao[],
-  opcoes: { finalidade?: string; hoje?: Date; assinatura?: { nome: string; cargo: string } } = {},
+  opcoes: { finalidade?: string; hoje?: Date; assinatura?: { nome: string; cargo: string }; instrutorDesde?: string } = {},
 ): Declaracao {
   const a = d.feminino ? "a" : "o";
   const escola = `Organização Nova Acrópole ${titulo(d.unidade.nome)}`;
@@ -122,9 +122,11 @@ export function montarDeclaracao(
 
   if (secoes.includes("instrucao")) {
     const partes: string[] = [];
-    // Sem matérias nem nomes de turma (pedido do usuário 02/11/2026): só desde quando dá aula, dias e horários.
-    if (d.aulas.length) {
-      const desde = d.aulas.map((x) => x.inicio).filter((x): x is string => !!x).sort()[0] ?? null;
+    // Sem matérias nem nomes de turma (pedido do usuário 02/11/2026): só dias e horários. "Desde quando" não vem do
+    // Mercúrio: tma_inicio é o início na turma ATUAL (as turmas encerradas somem do banco de consulta), então quem
+    // gera informa a data, se souber.
+    if (d.aulas.length || opcoes.instrutorDesde) {
+      const desde = opcoes.instrutorDesde ?? null;
       const horarios = [...new Set(d.aulas.map((x) => [x.dia ? DIAS[x.dia.toUpperCase()] : "", hora(x.horario)].filter(Boolean).join(", ")).filter(Boolean))];
       partes.push(
         `Atua como instrutor${d.feminino ? "a" : ""} voluntári${a} da escola${desde ? ` desde ${data(desde)}` : ""}${horarios.length ? `, com aulas ${lista(horarios)}` : ""}. Os dias e horários de aula podem variar de acordo com a necessidade da escola e dos alunos.`,
