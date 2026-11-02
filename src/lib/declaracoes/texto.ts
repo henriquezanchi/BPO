@@ -17,7 +17,7 @@ export type DadosDeclaracao = {
   nome: string;
   matricula: string;
   feminino: boolean;
-  unidade: { nome: string; cnpj: string | null; cidade: string; uf: string };
+  unidade: { nome: string; cnpj: string | null; endereco: { logradouro: string; bairro: string | null; cep: string | null } | null; cidade: string; uf: string };
   ingresso: string | null; // AAAA-MM-DD
   reingresso: string | null;
   nivel: string | null; // "Nível 2"
@@ -87,6 +87,15 @@ function lista(itens: string[]): string {
   return `${itens.slice(0, -1).join(sep)}${sep === "; " ? "; e " : " e "}${itens[itens.length - 1]}`;
 }
 
+/** Sede pelo cadastro da unidade no Mercúrio (o usuário confirmou em 02/11/2026 que o de BGA está certo). */
+function sede(u: DadosDeclaracao["unidade"]) {
+  const e = u.endereco;
+  if (!e) return "";
+  const cep = (e.cep ?? "").replace(/\D/g, "");
+  const partes = [titulo(e.logradouro), e.bairro ? titulo(e.bairro) : "", u.cidade ? `${titulo(u.cidade)}/${u.uf}` : "", cep.length === 8 ? `CEP ${cep.slice(0, 5)}-${cep.slice(5)}` : ""];
+  return `, com sede na ${partes.filter(Boolean).join(", ")}`;
+}
+
 function cnpj(c: string | null) {
   const n = (c ?? "").replace(/\D/g, "");
   return n.length === 14 ? `${n.slice(0, 2)}.${n.slice(2, 5)}.${n.slice(5, 8)}/${n.slice(8, 12)}-${n.slice(12)}` : null;
@@ -105,7 +114,7 @@ export function montarDeclaracao(
 
   // Abertura sempre identifica a pessoa e a escola; as seções escolhidas acrescentam o resto.
   if (secoes.includes("matricula")) {
-    let p = `Declaramos, para os devidos fins, que ${quem}, é alun${a} regularmente matriculad${a} na ${escola}${doc ? `, inscrita no CNPJ sob o nº ${doc}` : ""}, desde ${data(d.ingresso)}`;
+    let p = `Declaramos, para os devidos fins, que ${quem}, é alun${a} regularmente matriculad${a} na ${escola}${doc ? `, inscrita no CNPJ sob o nº ${doc}` : ""}${sede(d.unidade)}, desde ${data(d.ingresso)}`;
     p += d.reingresso ? `, com reingresso em ${data(d.reingresso)}.` : ".";
     const atual: string[] = [];
     if (d.nivel) atual.push(`cursa atualmente o ${d.nivel}${d.nivelDesde ? `, no qual ingressou em ${data(d.nivelDesde)}` : ""}`);
@@ -117,7 +126,7 @@ export function montarDeclaracao(
     if (d.formatura) p += ` Concluiu o curso de Filosofia à Maneira Clássica em ${data(d.formatura)}.`;
     paragrafos.push(p);
   } else {
-    paragrafos.push(`Declaramos, para os devidos fins, que ${quem}, integra a ${escola}${doc ? `, inscrita no CNPJ sob o nº ${doc}` : ""}.`);
+    paragrafos.push(`Declaramos, para os devidos fins, que ${quem}, integra a ${escola}${doc ? `, inscrita no CNPJ sob o nº ${doc}` : ""}${sede(d.unidade)}.`);
   }
 
   if (secoes.includes("instrucao")) {

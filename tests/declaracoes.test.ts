@@ -6,7 +6,7 @@ const base: DadosDeclaracao = {
   nome: "MARIA DE TESTE",
   matricula: "12345",
   feminino: true,
-  unidade: { nome: "BARRA DO GARÇAS", cnpj: "42640546000157", cidade: "BARRA DO GARÇAS", uf: "MT" },
+  unidade: { nome: "BARRA DO GARÇAS", cnpj: "42640546000157", endereco: { logradouro: "RUA SIMIÃO ARRAYA, 305", bairro: "CENTRO", cep: "78600001" }, cidade: "BARRA DO GARÇAS", uf: "MT" },
   ingresso: "2024-09-04",
   reingresso: null,
   nivel: "Nível 2",
@@ -31,7 +31,7 @@ const hoje = new Date("2026-11-02T15:00:00Z");
 
 test("matrícula com unidade, CNPJ, datas, nível e turma, no feminino", () => {
   const [p] = montarDeclaracao(base, ["matricula"], { hoje }).paragrafos;
-  assert.match(p, /é aluna regularmente matriculada na Organização Nova Acrópole Barra do Garças, inscrita no CNPJ sob o nº 42\.640\.546\/0001-57, desde 04\/09\/2024\./);
+  assert.match(p, /é aluna regularmente matriculada na Organização Nova Acrópole Barra do Garças, inscrita no CNPJ sob o nº 42\.640\.546\/0001-57, com sede na Rua Simião Arraya, 305, Centro, Barra do Garças\/MT, CEP 78600-001, desde 04\/09\/2024\./);
   assert.match(p, /Nível 2, no qual ingressou em 02\/04\/2025, na turma Hilarion \(turma iniciada em 22\/01\/2024\), com aulas às quartas-feiras, às 20h\./);
 });
 

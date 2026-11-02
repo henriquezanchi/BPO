@@ -22,7 +22,7 @@ export async function dadosDaDeclaracao(matricula: string, unidade: string): Pro
   if (c.cad_situacao !== "ATI") throw new DeclaracaoErro("A matrícula não está ativa no Mercúrio: não é possível declarar vínculo atual.");
 
   const [u, niveis, turmas, aulas, funcoes, cursos] = await Promise.all([
-    consultarMercurio(`SELECT uni_nome, uni_cnpj, uni_cidade, uni_uf, uni_diretor FROM unidades WHERE uni_id=${uni} LIMIT 1`).then((r) => r[0]),
+    consultarMercurio(`SELECT uni_nome, uni_cnpj, uni_logradouro, uni_bairro, uni_cep, uni_cidade, uni_uf, uni_diretor FROM unidades WHERE uni_id=${uni} LIMIT 1`).then((r) => r[0]),
     consultarMercurio(`SELECT snv_sigla, snv_descricao FROM sig_niveis`),
     c.cad_turma ? consultarMercurio(`SELECT tur_turma, tur_dia, tur_horario, tur_inicio FROM turmas WHERE tur_unidade=${uni} AND tur_turma=${sqlTexto(c.cad_turma)} LIMIT 1`) : Promise.resolve([]),
     consultarMercurio(
@@ -48,7 +48,13 @@ export async function dadosDaDeclaracao(matricula: string, unidade: string): Pro
     nome: c.cad_nome ?? "",
     matricula: c.cad_matr ?? matricula,
     feminino: c.cad_sexo === "F",
-    unidade: { nome: u?.uni_nome ?? unidade, cnpj: u?.uni_cnpj ?? null, cidade: u?.uni_cidade ?? "", uf: u?.uni_uf ?? "" },
+    unidade: {
+      nome: u?.uni_nome ?? unidade,
+      cnpj: u?.uni_cnpj ?? null,
+      endereco: vazia(u?.uni_logradouro) ? { logradouro: u!.uni_logradouro!, bairro: vazia(u?.uni_bairro), cep: vazia(u?.uni_cep) } : null,
+      cidade: u?.uni_cidade ?? "",
+      uf: u?.uni_uf ?? "",
+    },
     ingresso: vazia(c.cad_ingresso),
     reingresso: vazia(c.cad_reingresso),
     nivel: nivel(c.cad_nivel),
