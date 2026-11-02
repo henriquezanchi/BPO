@@ -384,7 +384,8 @@ function CabecalhoOrdenavel({
 
 export function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string; data: DirectorDashboard; filtroInicial?: string }) {
   const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState<string>(filtroInicial ?? "todos");
+  // Inativos escondidos por padrão (pedido do usuário 02/11/2026); aparecem em "Inativo" ou "Todos, com inativos".
+  const [statusFiltro, setStatusFiltro] = useState<string>(filtroInicial ?? "ativos");
   const [composicaoFiltro, setComposicaoFiltro] = useState<string>("todas");
   const [ordenarPor, setOrdenarPor] = useState<OrdenacaoMembros>("nome");
   const [ordemAsc, setOrdemAsc] = useState(true);
@@ -394,7 +395,7 @@ export function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string
 
   const filtrados = data.membros
     .filter((m) => m.name.toLowerCase().includes(busca.toLowerCase()))
-    .filter((m) => statusFiltro === "todos" || statusEfetivo(m) === statusFiltro)
+    .filter((m) => statusFiltro === "todos" || (statusFiltro === "ativos" ? statusEfetivo(m) !== "inativo" : statusEfetivo(m) === statusFiltro))
     .filter((m) => composicaoFiltro === "todas" || m.compositionLabels.includes(composicaoFiltro))
     .sort((a, b) => {
       let cmp = 0;
@@ -431,8 +432,11 @@ export function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string
           onChange={(e) => setStatusFiltro(e.target.value)}
           className="rounded-lg border border-gray-300 bg-white py-2 px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
         >
+          <option value="ativos" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">
+            Todos os ativos
+          </option>
           <option value="todos" className="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">
-            Todos os status
+            Todos, com inativos
           </option>
           {Object.entries(STATUS_LABEL).map(([valor, label]) => (
             <option key={valor} value={valor} className="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100">
