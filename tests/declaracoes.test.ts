@@ -36,11 +36,11 @@ test("matrícula com unidade, CNPJ, datas, nível e turma, no feminino", () => {
 });
 
 test("instrução, voluntariado e cursos com todas as datas; só as seções pedidas", () => {
-  const d = montarDeclaracao(base, ["matricula", "instrucao", "voluntariado", "cursos"], { hoje, finalidade: "comprovação no trabalho.", instrutorDesde: "2025-03-10" });
+  const d = montarDeclaracao(base, ["matricula", "instrucao", "voluntariado", "cursos"], { hoje, finalidade: "comprovação no trabalho.", instrutorDesde: "2025-03-10", formacaoDesde: "2025-05-07" });
   const texto = d.paragrafos.join("\n");
   assert.match(texto, /instrutora voluntária da escola desde 10\/03\/2025, com aulas às terças-feiras, às 18h30; e às quintas-feiras, às 20h\. Os dias e horários de aula podem variar de acordo com a necessidade da escola e dos alunos\./);
   assert.doesNotMatch(texto, /Psicologia|Xesotris|Extra/);
-  assert.match(texto, /Participa do curso de formação de instrutores/);
+  assert.match(texto, /Participa do curso de formação de instrutores da Nova Acrópole desde 07\/05\/2025\./);
   assert.match(texto, /a função de Colaborador de Eventos, desde 01\/06\/2025\./);
   assert.match(texto, /Exerceu anteriormente Secretário de Filial \(de 01\/01\/2023 a 31\/12\/2024\)\./);
   assert.match(texto, /brigadista \(Brigada Feminina\)/);

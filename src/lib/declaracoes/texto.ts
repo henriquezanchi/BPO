@@ -95,7 +95,7 @@ function cnpj(c: string | null) {
 export function montarDeclaracao(
   d: DadosDeclaracao,
   secoes: Secao[],
-  opcoes: { finalidade?: string; hoje?: Date; assinatura?: { nome: string; cargo: string }; instrutorDesde?: string } = {},
+  opcoes: { finalidade?: string; hoje?: Date; assinatura?: { nome: string; cargo: string }; instrutorDesde?: string; formacaoDesde?: string } = {},
 ): Declaracao {
   const a = d.feminino ? "a" : "o";
   const escola = `Organização Nova Acrópole ${titulo(d.unidade.nome)}`;
@@ -132,7 +132,9 @@ export function montarDeclaracao(
         `Atua como instrutor${d.feminino ? "a" : ""} voluntári${a} da escola${desde ? ` desde ${data(desde)}` : ""}${horarios.length ? `, com aulas ${lista(horarios)}` : ""}. Os dias e horários de aula podem variar de acordo com a necessidade da escola e dos alunos.`,
       );
     }
-    if (d.pedagogo === "formacao") partes.push(`Participa do curso de formação de instrutores da Nova Acrópole.`);
+    // Início na formação de instrutores também não está no Mercúrio: vem de quem gera (pedido do usuário 02/11/2026).
+    if (d.pedagogo === "formacao" || opcoes.formacaoDesde)
+      partes.push(`Participa do curso de formação de instrutores da Nova Acrópole${opcoes.formacaoDesde ? ` desde ${data(opcoes.formacaoDesde)}` : ""}.`);
     if (d.pedagogo === "instrutor") partes.push(`É instrutor${d.feminino ? "a" : ""} habilitad${a} pela Nova Acrópole.`);
     if (partes.length) paragrafos.push(partes.join(" "));
   }

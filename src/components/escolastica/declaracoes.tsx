@@ -21,6 +21,7 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
   const [assinoEu, setAssinoEu] = useState(false);
   const [meuCargo, setMeuCargo] = useState("");
   const [instrutorDesde, setInstrutorDesde] = useState("");
+  const [formacaoDesde, setFormacaoDesde] = useState("");
   const [declaracao, setDeclaracao] = useState<Declaracao | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [gerando, iniciar] = useTransition();
@@ -39,7 +40,7 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
     if (!pessoa) return;
     setErro(null);
     iniciar(async () => {
-      const r = await gerarDeclaracao(schoolId, pessoa.id, secoes, finalidade, assinoEu ? meuCargo : "", secoes.includes("instrucao") ? instrutorDesde : "");
+      const r = await gerarDeclaracao(schoolId, pessoa.id, secoes, finalidade, assinoEu ? meuCargo : "", secoes.includes("instrucao") ? instrutorDesde : "", secoes.includes("instrucao") ? formacaoDesde : "");
       if (r.ok) setDeclaracao(r.declaracao);
       else {
         setDeclaracao(null);
@@ -125,7 +126,18 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
               onChange={(e) => setInstrutorDesde(e.target.value)}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
             />
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">O Mercúrio só guarda as turmas atuais, não quando a pessoa começou a dar aula.</span>
+          </label>
+        )}
+        {secoes.includes("instrucao") && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Na formação de instrutores desde (opcional)</span>
+            <input
+              type="date"
+              value={formacaoDesde}
+              onChange={(e) => setFormacaoDesde(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            />
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">O Mercúrio não guarda essas duas datas: preencha se souber.</span>
           </label>
         )}
 

@@ -9,6 +9,8 @@ import { montarDeclaracao, SECOES, type Declaracao, type Secao } from "@/lib/dec
  * Gera o texto de uma declaração (Escolástica ou direção da filial) com os dados do Mercúrio lidos na hora. A pessoa
  * precisa ser da filial de quem pede. O texto volta para a tela, que deixa ajustar antes de imprimir; nada é guardado.
  */
+const dataValida = (d?: string) => (d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : undefined);
+
 export async function gerarDeclaracao(
   schoolId: string,
   memberId: string,
@@ -18,6 +20,8 @@ export async function gerarDeclaracao(
   meuCargo?: string,
   // Data em que começou a dar aula (AAAA-MM-DD), informada por quem gera: o Mercúrio não guarda esse histórico.
   instrutorDesde?: string,
+  // Início no curso de formação de instrutores (AAAA-MM-DD), também informado por quem gera.
+  formacaoDesde?: string,
 ): Promise<{ ok: true; declaracao: Declaracao } | { ok: false; error: string }> {
   const eu = await requireArea(schoolId, "escolastica");
   const [pessoa, escola] = await Promise.all([
@@ -31,7 +35,7 @@ export async function gerarDeclaracao(
     const dados = await dadosDaDeclaracao(pessoa.mercurioId, escola.mercurioUnidade);
     const cargo = meuCargo?.trim().slice(0, 80);
     const assinatura = cargo ? { nome: (await nomeNoMercurio(eu.mercurioId)) ?? eu.name, cargo } : undefined;
-    return { ok: true, declaracao: montarDeclaracao(dados, validas, { finalidade: finalidade.slice(0, 200), assinatura, instrutorDesde: instrutorDesde && /^\d{4}-\d{2}-\d{2}$/.test(instrutorDesde) ? instrutorDesde : undefined }) };
+    return { ok: true, declaracao: montarDeclaracao(dados, validas, { finalidade: finalidade.slice(0, 200), assinatura, instrutorDesde: dataValida(instrutorDesde), formacaoDesde: dataValida(formacaoDesde) }) };
   } catch (e) {
     if (e instanceof DeclaracaoErro) return { ok: false, error: e.message };
     console.error("[Declaração] falha ao ler o Mercúrio:", e instanceof Error ? e.message : e);
