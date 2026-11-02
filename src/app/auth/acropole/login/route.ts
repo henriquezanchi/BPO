@@ -33,9 +33,9 @@ export async function GET(req: Request) {
     response_type: "code",
     client_id: KEYCLOAK.clientId,
     redirect_uri: enderecoRetorno(url.origin),
-    // KEYCLOAK_OFFLINE=1 pede sessão offline (renovável por semanas, para o Ágora não sumir da Agenda). Só ligar depois
-    // de o Marcos confirmar que o client portal-aluno tem o escopo offline_access e os alunos o papel: sem isso, o
-    // Keycloak recusa a troca do código e o login falha.
+    // KEYCLOAK_OFFLINE=1 pede sessão offline (renovável por semanas, para o Ágora não sumir da Agenda). Testado em
+    // 02/11/2026 depois da atualização do Keycloak: com offline_access o refresh vale 30 dias (renovados a cada uso) e o
+    // Ágora aceita o token do portal-aluno direto, sem troca de token.
     scope: process.env.KEYCLOAK_OFFLINE === "1" ? "openid profile email offline_access" : "openid profile email",
     state,
     nonce,
