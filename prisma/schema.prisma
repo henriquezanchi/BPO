@@ -192,6 +192,8 @@ model School {
   whatsappEnvios WhatsappEnvio[]
   redesSociais RedeSocialFilial[]
   oportunidadesVoluntariado OportunidadeVoluntariado[]
+  espelhoMercury EspelhoMercuryConfig?
+  espelhoMercuryItens EspelhoMercuryItem[]
 }
 
 model Member {
@@ -2409,4 +2411,52 @@ model DiarioFvFicha {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt
   member         Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+// Espelho Mercury → Mercúrio antigo (pedido do usuário 04/11/2026, docs/PLANO-ESPELHO-MERCURY-MERCURIO.md): escola
+// que já lança no Mercúrio novo tem o que foi lançado lá copiado para o antigo. Tabela própria (não colunas em School)
+// para o código poder ir ao ar antes da migração ser aplicada. modo: "desligado" não lê nada; "relatorio" só lista
+// as diferenças; "aprovacao" o robô faz o que alguém aprovar; "automatico" aprova sozinho o que o robô sabe fazer e
+// não é revisão. `desde` (AAAA-MM-DD) = primeiro dia no novo: dinheiro anterior não é copiado (o antigo era a fonte).
+model EspelhoMercuryConfig {
+  schoolId  String    @id
+  school    School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  modo      String    @default("desligado")
+  desde     String
+  rodada    DateTime?
+  erro      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// Uma diferença entre o Mercúrio novo e o antigo, e o que foi feito com ela (src/lib/espelho-mercury). `chave` é a
+// mesma enquanto a diferença for a mesma (comparar.ts): item feito não volta, mesmo que o banco de consulta do antigo
+// (cópia diária) ainda não mostre a correção. `dados` = o que lançar, campo a campo; `robo` = { tipo, payload } quando
+// o robô sabe fazer. status: pendente | aprovado | feito_robo | feito_manual | resolvido (sumiu sozinho) | ignorado | erro.
+model EspelhoMercuryItem {
+  id          String    @id @default(cuid())
+  schoolId    String
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  chave       String
+  tipo        String
+  area        String
+  matricula   String?
+  nome        String?
+  resumo      String
+  dados       Json
+  robo        Json?
+  revisao     Boolean   @default(false)
+  status      String    @default("pendente")
+  tentativas  Int       @default(0)
+  ultimoErro  String?
+  vistoEm     DateTime  @default(now())
+  decididoPor String?
+  decididoEm  DateTime?
+  observacao  String?
+  feitoEm     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([schoolId, chave])
+  @@index([schoolId, status])
 }

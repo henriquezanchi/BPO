@@ -523,3 +523,22 @@ Combinado com o Marcos (27/10): o Ágora aceita o token do login unificado do cl
   `MERCURY_API_KEY` atual dá 401 nela (é da base de teste): falta a chave de produção.
 - Risco a decidir antes de sexta: a fila atual lança pagamentos do Asaas direto no antigo. Com o espelho ligado, BGA
   lançaria em dobro.
+
+## 04/11/2026 — Espelho Mercury → Mercúrio antigo: código pronto, EM ESPERA
+
+- Pedido do usuário: "pode fazer todo o código, e deixar em stand by até a migração do mercúrio ser concluída", e que
+  fique registrado tudo o que precisa ser feito no antigo, para fazer à mão se o robô não puder.
+- Código em `src/lib/espelho-mercury/` (ler-novo, ler-antigo, comparar [pura], manual, rodar, aplicar), tela
+  `/espelho-mercurio`, ações em `src/lib/actions/espelho-mercury-actions.ts`, rotina `/api/cron/espelho-mercury`
+  (noturna, já no vercel.json) e gravação aprovada dentro de `/api/cron/fila-mercurio`. 17 testes em
+  `tests/espelho-mercury.test.ts`; tsc, eslint e `next build` limpos.
+- **Em espera por três travas:** `ESPELHO_MERCURY_LIGADO` não definido (tudo retorna antes de tocar no banco); migração
+  `20261104200000_espelho_mercury` **não aplicada**; nenhuma linha em `EspelhoMercuryConfig`. Configuração em tabela
+  própria (não colunas em `School`) para o deploy não quebrar consultas de escola antes da migração.
+- `src/lib/mercury/client.ts`: base da API agora vem de `MERCURY_API_URL` (sem ela, a de teste de sempre). Produção:
+  `https://mercury-api.newacropolis-usa.org/external/v1`, ainda sem chave.
+- Passo a passo manual de cada tipo de diferença: `docs/ESPELHO-MERCURIO-PROCEDIMENTOS.md`, gerado de
+  `src/lib/espelho-mercury/manual.ts` (manter os dois iguais). Telas que o robô ainda não percorreu estão marcadas
+  "A CONFIRMAR".
+- Como ligar (9 passos, inclusive `School.sistemaRegistro = "mercury"` para BGA, que impede lançamento em dobro):
+  `docs/PLANO-ESPELHO-MERCURY-MERCURIO.md`.

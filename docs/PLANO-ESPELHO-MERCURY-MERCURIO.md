@@ -2,7 +2,10 @@
 
 Situação em 04/11/2026: o Gabriel vai migrar a base de BGA e, a partir de sexta, 06/11/2026, a escola passa a lançar só no
 Mercúrio novo. As outras escolas e os dirigentes continuam lendo o Mercúrio antigo, então tudo o que BGA lançar no novo
-precisa aparecer também no antigo. **O novo é sempre a fonte da verdade.** Este documento só planeja: nada está ligado.
+precisa aparecer também no antigo. **O novo é sempre a fonte da verdade.**
+
+**Situação: código pronto e EM ESPERA (04/11/2026).** Nada lê nem grava até os passos de "Como ligar", lá embaixo. O
+que fazer à mão no antigo, item por item: [ESPELHO-MERCURIO-PROCEDIMENTOS.md](ESPELHO-MERCURIO-PROCEDIMENTOS.md).
 
 ## Como funciona (resumo)
 
@@ -11,8 +14,8 @@ precisa aparecer também no antigo. **O novo é sempre a fonte da verdade.** Est
    **falta pedir ao Gabriel uma chave de produção.**
 2. **Ler o antigo** pelo banco de consulta (oinabview), que é barato e não abre navegador.
 3. **Comparar** os dois por matrícula, normalizando para um formato comum, e gerar a lista de diferenças.
-4. **Gravar no antigo** com o robô (Playwright), reaproveitando a fila `MercurioSyncTask` e a rotina
-   `/api/cron/fila-mercurio` (a cada 10 min), com a mesma trava de concorrência.
+4. **Gravar no antigo** com o robô (Playwright), dentro da rotina `/api/cron/fila-mercurio` (a cada 10 min), com a
+   mesma trava de concorrência. O que o robô não sabe ou não consegue fazer fica para a secretaria, com o passo a passo.
 5. **Registrar** o que foi espelhado (com o "carimbo" do estado do novo) para não lançar duas vezes.
 
 ## O que espelhar, por ordem de prioridade
@@ -53,21 +56,64 @@ Os itens 1, 3 e 7 são os que os dirigentes mais olham (economia, alunos novos e
    como foi feito com `scripts/mercurio-write-test.ts`.
 4. **Automático**, com aprovação mantida só para dinheiro com divergência.
 
-Há um botão de desligar por escola (`School`), e o espelho só roda para escolas marcadas como "já no Mercúrio novo".
+Há um botão de desligar por escola (`EspelhoMercuryConfig.modo`) e outro geral (`ESPELHO_MERCURY_LIGADO`).
 
-## Peças de código (quando for implementar)
+## Código (pronto, em espera)
 
-- `src/lib/espelho-mercury/ler-novo.ts`: busca no Mercury o que mudou desde o último espelhamento
-  (`updatedSince`; recibos e movimentos do mês) e normaliza.
-- `src/lib/espelho-mercury/ler-antigo.ts`: mesma normalização a partir do oinabview.
-- `src/lib/espelho-mercury/comparar.ts`: função pura que recebe os dois lados e devolve a lista de ações. É a parte que
-  mais merece testes.
-- `src/lib/espelho-mercury/aplicar.ts`: transforma as ações aprovadas em tarefas da fila `MercurioSyncTask` (novos
-  `taskType`).
-- Tabela nova `EspelhoMercuryItem` (com RLS): tipo, chave no novo, chave no antigo, carimbo do estado, situação
-  (pendente, aprovado, espelhado, revisão, erro). Obs.: `MercurioSyncTask.memberId` é obrigatório, e aluno novo ainda não
-  é `Member`; a tabela nova resolve isso.
-- Tela `/escolastica/espelho-mercurio` com o relatório diário e o botão de aprovar.
+| Arquivo | O que faz |
+|---|---|
+| `src/lib/espelho-mercury/tipos.ts` | Formato comum dos dois lados e das ações |
+| `src/lib/espelho-mercury/ler-novo.ts` | Lê a filial na API do Mercury (ativos completos; inativos que mudaram) |
+| `src/lib/espelho-mercury/ler-antigo.ts` | Lê a unidade no oinabview (cadastro, composição, recibos, turmas, funções, produtos) |
+| `src/lib/espelho-mercury/comparar.ts` | Função pura: compara e devolve as ações (testes em `tests/espelho-mercury.test.ts`) |
+| `src/lib/espelho-mercury/manual.ts` | Passo a passo manual de cada tipo (o mesmo do documento de procedimentos) |
+| `src/lib/espelho-mercury/rodar.ts` | Rodada noturna: lê, compara, grava em `EspelhoMercuryItem` |
+| `src/lib/espelho-mercury/aplicar.ts` | Robô: grava no antigo os itens aprovados (dentro da rotina `fila-mercurio`) |
+| `src/app/api/cron/espelho-mercury/route.ts` | Rotina noturna (02:30 UTC), já no `vercel.json`; em espera só registra que rodou |
+| `src/app/(member)/espelho-mercurio/page.tsx` + `src/components/espelho-mercury/painel.tsx` | Tela: aprovar para o robô, "Fiz no antigo", "Não fazer" (com motivo), histórico |
+| `src/lib/actions/espelho-mercury-actions.ts` | Aprovação e marcações: Escolástica decide cadastro, Economia decide dinheiro e composição, direção decide tudo |
+| `prisma/migrations/20261104200000_espelho_mercury` | Tabelas `EspelhoMercuryConfig` e `EspelhoMercuryItem` (com RLS). **Não aplicada** |
+
+Ciclo de um item: `pendente` → (`aprovado` → `feito_robo` ou `erro`) ou `feito_manual` / `ignorado`. Se a diferença
+some sozinha, vira `resolvido`; se volta depois, reabre. Item feito não volta, mesmo que o banco de consulta do antigo
+(cópia diária) demore a mostrar. Se continuar aparecendo 2 dias depois de feito, a tela avisa para conferir. O robô
+não usa a fila `MercurioSyncTask` (que exige `Member`, e aluno novo ainda não é); grava direto a partir do item.
+
+Limites conhecidos:
+
+- O banco de consulta do antigo só tem **ativos**. Um aluno ativo no novo que não aparece no antigo pode ser novo ou
+  estar inativo lá. A pendência diz para procurar em Inativos antes de cadastrar.
+- O Mercury só dá o **total por rubrica** do movimento do mês, não cada despesa. A pendência mostra os totais, e os
+  detalhes saem do próprio Mercúrio novo.
+- Os nomes dos itens da composição são casados pelo texto com o catálogo do antigo. Se nenhum nome bater, nada é
+  excluído e a pessoa vai para "conferir antes".
+- A rotina tem 300 s. Se a leitura não couber (filial grande), ela falha inteira, avisa, e é preciso dividir a rodada.
+- O robô lança a contribuição no caixa do **dia do pagamento**. Se o antigo já fechou o dia, o item vai para a
+  secretaria.
+
+## Como ligar (quando a migração da base de BGA terminar)
+
+1. **Chave de produção** do Gabriel. Na Vercel: `MERCURY_API_URL=https://mercury-api.newacropolis-usa.org/external/v1`
+   e `MERCURY_API_KEY=<chave nova>`. Atenção: isso também troca a base das outras leituras do Mercury no Portal
+   (filiais dos EUA e escolas com `sistemaRegistro = "mercury"`), que passam a ler produção. É o desejado.
+2. Refazer a medição de defasagem com a chave nova (a base deve estar em dia).
+3. **Aplicar a migração** (com autorização do usuário):
+   `npx prisma db execute --file prisma/migrations/20261104200000_espelho_mercury/migration.sql` e depois
+   `npx prisma migrate resolve --applied 20261104200000_espelho_mercury`.
+4. BGA: `School.sistemaRegistro = "mercury"`. Com isso o Portal **para de gravar direto no antigo** (pagamentos do
+   Asaas, composição, cadastro), e não há lançamento em dobro. Enquanto a API do Mercury não grava, pagamento do Asaas
+   precisa ser lançado à mão no novo; o espelho leva para o antigo.
+5. Conferir `School.mercuryBranchId = "52"`, `mercurioUnidade = "BGA"`, `mercurioFilialLabel` e
+   `mercurioCaixaLancamento` de BGA.
+6. Criar a configuração: `INSERT INTO "EspelhoMercuryConfig" ("schoolId", modo, desde, "updatedAt") VALUES
+   ('<id de BGA>', 'relatorio', '<primeiro dia no novo, AAAA-MM-DD>', now());`
+7. Na Vercel: `ESPELHO_MERCURY_LIGADO=1` e redeploy.
+8. Rodar a primeira comparação na mão: `GET /api/cron/espelho-mercury` com `Authorization: Bearer <CRON_SECRET>`.
+   Conferir a lista em `/espelho-mercurio` (a página ainda não tem link no menu; incluir quando ligar).
+9. Depois de uma ou duas semanas de lista conferida: `modo = 'aprovacao'` (o robô faz o que alguém aprovar). Mais
+   adiante, se tudo bater, `modo = 'automatico'`.
+
+Para desligar a qualquer momento: `ESPELHO_MERCURY_LIGADO` vazio (para tudo) ou `modo = 'desligado'` (só a escola).
 
 ## Riscos e perguntas para o Gabriel
 
@@ -88,5 +134,5 @@ composição e de dados feitas no Portal. Com BGA no novo:
 - esses lançamentos precisam ir **para o Mercury** (se a API ganhar gravação) ou ser feitos à mão no novo;
 - e o espelho vai trazê-los de volta para o antigo. Se a fila antiga continuar ligada para BGA, **vai lançar em dobro**.
 
-Decisão necessária antes de sexta: desligar, para BGA, o lançamento direto no antigo (`School.mercurioCaixaLancamento`
-= null) e deixar o antigo ser alimentado só pelo espelho.
+Decisão: trocar `School.sistemaRegistro` de BGA para `"mercury"` (passo 4 de "Como ligar"). O Portal para de gravar
+direto no antigo, e o antigo passa a ser alimentado só pelo espelho.

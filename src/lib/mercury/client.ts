@@ -25,7 +25,9 @@
  * coberto por `coverage` como ausência real de dado — é "não modelado",
  * diferente de "modelado e vazio".
  */
-const BASE_URL = "https://sincere-passion-production-416b.up.railway.app/external/v1";
+// Produção (Gabriel, 04/11/2026): https://mercury-api.newacropolis-usa.org/external/v1, com chave própria. Sem
+// MERCURY_API_URL fica a base de teste de sempre (railway), que estava congelada em 02/09/2026.
+const BASE_URL = (process.env.MERCURY_API_URL ?? "https://sincere-passion-production-416b.up.railway.app/external/v1").replace(/\/$/, "");
 
 export interface MercuryPage<T> {
   data: T[];
