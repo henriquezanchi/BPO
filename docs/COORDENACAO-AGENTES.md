@@ -510,3 +510,16 @@ Combinado com o Marcos (27/10): o Ágora aceita o token do login unificado do cl
 - 2026-11-02 (Claude) — **Conferência logada em produção** (autorizada pelo usuário; sessão aberta por link gerado no servidor e encerrada no fim, sem tocar senha; diário só conferido por erro, sem captura): /portal, /escolastica (pendências e membros), /voluntario/eventos, /voluntario/cafe, /economia, /admin e os diários abrem sem erro. Achados: (1) `/escolastica/declaracoes` dava 404 porque as publicações do Portal ficaram na fila atrás das do projeto semperia (plano gratuito, uma publicação por vez, ~13 min cada); (2) erro de hidratação no diário de FV: `proximaReuniao` importada do Firebase sem fuso ("2025-06-16T08:30") era lida em UTC no servidor e em Brasília no navegador. Corrigido com `instanteNoFuso` (`lib/fuso-escola.ts`), usado em `fv/dados.ts`; reproduzido e conferido com `next dev` em TZ=UTC.
 - 2026-11-02 (Claude) — **Declarações com a sede da escola**: o usuário confirmou que o endereço de BGA no Mercúrio (Rua Simião Arraya, 305) é o correto, e não o do edital da assembleia de 15/01/2026 (Rua Araguaia, 83). A declaração agora traz ", com sede na <logradouro>, <bairro>, <cidade>/<UF>, CEP <cep>" depois do CNPJ, lido de `unidades.uni_logradouro/uni_bairro/uni_cep`; sem logradouro no Mercúrio, a frase sai sem sede.
 - 2026-11-04 (Claude) — **Swagger completo do Ágora** (Marcos, 04/11: "a parte interna pode ser modificada sem se preocupar com a compatibilidade"). Lido com o token do `portal-aluno` em `/v3/api-docs` (112 rotas, só leitura + buscas POST; nenhuma rota de inscrição/pagamento para escrever). Estável: `/api/v1/pub/{sedes,eventos(sedeId,ini,fim),inscricoes(eventoId),atividades,categorias-pagamento}` (Bearer). Interna, pode mudar: `/api/eventos/acoes` e `/periodo` (já usadas), `/eventos/inscricoes/minha?somentePendPag=`, `/pagamentos/pix/imagem`, `/pagamentos/boleto/linha-digitavel`. **Login do "Inscrever-se" já é SSO**: a rota `#/e/:slug` tem guarda; sem sessão vai a `#/auth/login?nextRoute=…`, que em 1 s chama `/api/sso-url` e redireciona ao Keycloak, voltando ao evento. Só pede senha quando a sessão do Keycloak no navegador venceu (~12 h, o mesmo prazo do refresh sem `offline_access`); quem resolve é o Heitor (sessão SSO mais longa ou "lembrar de mim"), não o Ágora.
+
+## 04/11/2026 — Plano: espelhar o Mercúrio novo (Mercury) no antigo (só planejamento)
+
+- Pedido do usuário: BGA passa a usar o Mercury a partir de sexta (06/11/2026). Enquanto as outras escolas não migram,
+  tudo o que for lançado no novo precisa ir para o antigo, para os dirigentes continuarem vendo os dados. O novo é sempre
+  a fonte da verdade. **Só planejar, sem implementar.**
+- Plano completo em [docs/PLANO-ESPELHO-MERCURY-MERCURIO.md](PLANO-ESPELHO-MERCURY-MERCURIO.md): ler o novo pela API,
+  ler o antigo pelo oinabview, comparar por matrícula, gravar com o robô pela fila `MercurioSyncTask`. Fases: relatório
+  → grava o que o robô já sabe, com aprovação → mapear telas novas → automático.
+- Base de produção do Mercury (Gabriel, 04/11/2026): `https://mercury-api.newacropolis-usa.org/external/v1`. A
+  `MERCURY_API_KEY` atual dá 401 nela (é da base de teste): falta a chave de produção.
+- Risco a decidir antes de sexta: a fila atual lança pagamentos do Asaas direto no antigo. Com o espelho ligado, BGA
+  lançaria em dobro.
