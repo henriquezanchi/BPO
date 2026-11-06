@@ -595,3 +595,12 @@ entram no resumo diário da filial (`ResumoFilial.dados`, JSON), e a entrega das
   `ler-antigo.ts` e texto de "aluno novo" corrigidos.
 - Testes: `tests/aniversarios-canais.test.ts`; `npm test` com 186 passando. Consultas novas conferidas só leitura em
   BGA.
+
+## 06/11/2026 — Rio Verde: Portal liberado para Fernando Vieira Paixão
+
+Pedido do usuário ("libere o portal para o fernando paixão de rio verde usar também"). Gravado em produção por script
+de uso único (apagado): `garantirEscola("RVD")` criou "Nova Acrópole - Rio Verde" com `portalAberto=false`;
+`importarMembro("2597")` trouxe só ele (ativo, N3); `provisionarLogin` criou o login (senha aleatória, sem e-mail
+enviado). Ele entra pelo login unificado da Acrópole com o e-mail do Mercúrio. Atenção: o primeiro acesso por e-mail
+(`primeiro-acesso.ts`) só confere se a unidade tem escola no Portal, não `portalAberto`; com a escola criada, outro
+ativo de RVD que entrar pelo login unificado também é importado.
