@@ -604,3 +604,14 @@ de uso único (apagado): `garantirEscola("RVD")` criou "Nova Acrópole - Rio Ver
 enviado). Ele entra pelo login unificado da Acrópole com o e-mail do Mercúrio. Atenção: o primeiro acesso por e-mail
 (`primeiro-acesso.ts`) só confere se a unidade tem escola no Portal, não `portalAberto`; com a escola criada, outro
 ativo de RVD que entrar pelo login unificado também é importado.
+
+## 06/11/2026 — Direção liberada pelo dono do sistema
+
+Pedido do usuário: "libere função de diretor" para Fernando Vieira Paixão (2597, RVD), Heitor de Lima Matos (3450, JAM),
+Carlos Rangel Neves Otto (3006, FOR), Ana Beatriz Camara Silva Gama Pignataro (3097, BSB) e Luis Carlos Marques Fonseca
+(101, BSB). `isDiretor` é recalculado do Mercúrio a cada sincronização, então a liberação é uma lista em
+`lib/dono-do-sistema.ts` (`temDirecaoLiberada`, variável `DIRECAO_LIBERADA` para trocar sem deploy), somada em
+`mercurio-db/importar.ts` (grava `isDiretor` na próxima rodada) e em `getAuthenticatedMember` (vale já no login, como o
+dono do sistema). Cada um é diretor da **própria** filial. Para valer também nas consultas que leem o banco direto antes
+da próxima sincronização, o usuário roda `UPDATE "Member" SET "isDiretor"=true, "liberaTestadores"=true WHERE
+"mercurioId" IN ('2597','3450','3006','3097','101');` (a escrita direta foi barrada para o agente).

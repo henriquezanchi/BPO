@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { temDirecaoLiberada } from "@/lib/dono-do-sistema";
 import { TIPOS_GRUPO, ehTipoGrupo } from "@/lib/grupos-comum";
 import { parseLogradouro } from "@/lib/mercurio/parse-logradouro";
 import type { ContributionMonthStatus } from "@prisma/client";
@@ -273,7 +274,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     const textoCargos = cargos.join(" ").toUpperCase();
     // Chefe de Filial: diretor da unidade ou função atual "CF".
     const filiaisChefiadas = chefiadasPor.get(matr) ?? [];
-    const isDiretor = unidade?.uni_diretor === matr || siglas.has("CF");
+    const isDiretor = unidade?.uni_diretor === matr || siglas.has("CF") || temDirecaoLiberada(matr);
     const isSubChefe = unidade?.uni_subchefe === matr || [...siglas].some((s) => CARGOS_SUBCHEFE.has(s));
     const nivel = c.cad_nivel ?? "";
     const { street, number, complement } = parseLogradouro(c.cad_res_logradouro ?? "");

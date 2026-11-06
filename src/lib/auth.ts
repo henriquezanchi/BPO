@@ -4,7 +4,7 @@ import { ehTipoGrupo } from "@/lib/grupos-comum";
 import { papelNoGrupo } from "@/lib/grupos-portal";
 import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { db } from "@/lib/db";
-import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
+import { ehDonoDoSistema, temDirecaoLiberada } from "@/lib/dono-do-sistema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -26,7 +26,8 @@ export const getAuthenticatedMember = cache(async () => {
 
   const member = await db.member.findUnique({ where: { authUserId: user.id }, include: { school: true } });
   // Dono do sistema também responde como direção da própria filial (ver dono-do-sistema.ts).
-  return member && ehDonoDoSistema(member) ? { ...member, isDiretor: true } : member;
+  // Idem para a direção liberada pelo dono (temDirecaoLiberada).
+  return member && (ehDonoDoSistema(member) || temDirecaoLiberada(member.mercurioId)) ? { ...member, isDiretor: true } : member;
 });
 
 /**
