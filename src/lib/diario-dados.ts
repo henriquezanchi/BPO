@@ -2,12 +2,15 @@ import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { datasPermitidas, fogoInterno, hojeNoFuso, PRATICA_TRATAK, praticaNoDia } from "@/lib/diario";
 import { meusGrupos } from "@/lib/grupos-dados";
+import { ehFV } from "@/lib/grupos-portal";
 
 /**
  * Quem tem o diário (pedido do usuário 2026-10-31): ele aparece quando a pessoa entra num GAF e não some mais depois do
- * primeiro registro, mesmo que ela saia do grupo. Sem registro e sem GAF, não há diário.
+ * primeiro registro, mesmo que ela saia do grupo. Sem registro e sem GAF, não há diário. Quem é FV usa só o diário de
+ * FV (pedido do usuário 2026-11-06): o de aluno some, e o que já tinha sido escrito nele fica guardado.
  */
 export async function temDiario(m: Parameters<typeof meusGrupos>[0]) {
+  if (await ehFV(m.id)) return false;
   if (await db.diarioDia.findFirst({ where: { memberId: m.id }, select: { id: true } })) return true;
   return (await meusGrupos(m, ["GAF"])).length > 0;
 }

@@ -4,7 +4,7 @@ import { fusoDaEscola } from "@/lib/atendimentos";
 import { ehFV } from "@/lib/grupos-portal";
 import { db } from "@/lib/db";
 import { agendaUlissesBranchWhere, eventAudienceWhere, eventScopeWhere } from "@/lib/event-policy";
-import { TIPOS_DO_PORTAL, dispensaAcessoVoluntario } from "@/lib/grupos-comum";
+import { TIPOS_DO_PORTAL, TIPOS_FV, dispensaAcessoVoluntario } from "@/lib/grupos-comum";
 import { prazoDoPlano } from "@/lib/escala-pedagogos";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import { enviarPush } from "@/lib/push";
@@ -429,11 +429,12 @@ export async function avisosDePlanosDeAula() {
 // Lembretes do diário como avisos do Portal (pedido do usuário 2026-10-29; antes o diário antigo mandava os próprios):
 // Prólogo às 7h e Epílogo às 21h, no fuso da escola, para quem usou o diário nos últimos 14 dias e ainda não fez a
 // parte do dia. Uma vez por dia cada (PushEnviado).
+// Quem é FV não recebe: usa só o diário de FV (pedido do usuário 2026-11-06, ver temDiario em diario-dados.ts).
 
 export async function avisosDoDiario(agora = new Date()) {
   const desde = new Date(agora.getTime() - 14 * 24 * 60 * MIN);
   const pessoas = await db.member.findMany({
-    where: { ...comPush, diarioDias: { some: { updatedAt: { gte: desde } } } },
+    where: { ...comPush, diarioDias: { some: { updatedAt: { gte: desde } } }, classMemberships: { none: { classGroup: { tipo: { in: [...TIPOS_FV] } } } } },
     select: { id: true, school: { select: { uf: true } } },
   });
   let total = 0;

@@ -499,7 +499,8 @@ export async function getMemberDashboard(memberId: string) {
     bibliotecaLiberada: publicosDaPessoa(member).includes("membros"),
     meusGafs,
     // O diário aparece ao entrar num GAF e não some depois do primeiro registro (pedido do usuário 2026-10-31).
-    temDiario: meusGafs.length > 0 || !!registroNoDiario,
+    // Quem é FV fica só com o diário de FV (2026-11-06; mesma regra de temDiario em diario-dados.ts).
+    temDiario: !souFV && (meusGafs.length > 0 || !!registroNoDiario),
     temDiarioFv: temDiarioFv && souFV,
     gruposDeEstudo,
     pedagogos,

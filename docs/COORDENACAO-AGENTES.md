@@ -542,3 +542,12 @@ Combinado com o Marcos (27/10): o Ágora aceita o token do login unificado do cl
   "A CONFIRMAR".
 - Como ligar (9 passos, inclusive `School.sistemaRegistro = "mercury"` para BGA, que impede lançamento em dobro):
   `docs/PLANO-ESPELHO-MERCURY-MERCURIO.md`.
+
+## 06/11/2026 — Quem é FV vê só o diário de FV
+
+- Pedido do usuário: "se o usuário for FV, não mostrar o diário de aluno, só o diário de FV".
+- `temDiario` (src/lib/diario-dados.ts) devolve falso para quem é FV (`ehFV`: está em algum grupo de tipo FV). Isso
+  esconde `/diario`, o histórico, o quadro do GAF, o atalho "Meu diário" no diário de FV e bloqueia a gravação. Quem
+  abre `/diario` sendo FV vai para `/diario/fv`. O que já estava escrito no diário de aluno fica guardado.
+- `member-data.ts`: `temDiario` do Portal também exige não ser FV. `avisosDoDiario` (notificacoes-agendadas.ts) não
+  manda Prólogo/Epílogo para FV.
