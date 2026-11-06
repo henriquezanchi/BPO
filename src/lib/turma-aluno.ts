@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { salaLegivel } from "@/lib/sala-legivel";
 import type { ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
 
 export type MinhaTurma = { nome: string; sala: string | null; conclusao: string | null };
@@ -17,10 +18,5 @@ export async function minhaTurma(schoolId: string, turma: string, hoje = new Dat
   return { nome: turma, sala: salaLegivel(t?.sala ?? null), conclusao: conclusao && conclusao >= hojeIso ? conclusao : null };
 }
 
-/** "PLATAO" → "Platão"; "ONLINE" → "Online". O Mercúrio grava em maiúsculas e às vezes sem acento. */
-export function salaLegivel(sala: string | null): string | null {
-  if (!sala) return null;
-  const s = sala.trim().toLowerCase();
-  const conhecidas: Record<string, string> = { platao: "Platão", "platão": "Platão", online: "Online" };
-  return conhecidas[s] ?? s.replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase());
-}
+
+export { salaLegivel };

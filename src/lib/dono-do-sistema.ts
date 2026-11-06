@@ -23,3 +23,6 @@ const DIRECAO_LIBERADA = new Set((process.env.DIRECAO_LIBERADA ?? "2597,3450,300
 export function temDirecaoLiberada(mercurioId: string | null | undefined): boolean {
   return !!mercurioId && DIRECAO_LIBERADA.has(mercurioId);
 }
+
+/** Matrículas da lista acima (para consultas no banco). */
+export const matriculasComDirecaoLiberada = () => [...DIRECAO_LIBERADA];

@@ -56,6 +56,7 @@ export function ContributionStatusPanel({
   pixAutomaticoDisponivel = false,
   somenteConsulta,
   emBreve,
+  comprovanteAnual = false,
 }: {
   memberId: string;
   monthlyStatus: ContributionMonthlyStatus[];
@@ -68,6 +69,8 @@ export function ContributionStatusPanel({
   somenteConsulta?: boolean;
   /** Filial brasileira ainda sem pagamento pelo Portal (School.mercurioEscrita). */
   emBreve?: boolean;
+  /** Link para o comprovante anual (06/11/2026): filiais brasileiras que usam o Mercúrio. */
+  comprovanteAnual?: boolean;
 }) {
   const [recibo, setRecibo] = useState<{ recId: string; texto: string } | null>(null);
   const [mesPagamento, setMesPagamento] = useState<number | null>(null);
@@ -165,6 +168,14 @@ export function ContributionStatusPanel({
         {!monthlyStatus.length && <p>Ainda não temos a situação da escola.</p>}
         {!!received.length && <p>{received.length} pagamento(s) feito(s) pelo Portal, ainda sendo registrado(s) na escola.</p>}
         <p className="text-xs text-gray-600 dark:text-gray-300">Já pagou na escola e não aparece? Peça a conferência antes de pagar de novo.</p>
+        {comprovanteAnual && (
+          <p className="text-xs">
+            <a href={`/portal/comprovante/${new Date().getFullYear()}`} className="font-semibold text-na-green-dark underline-offset-2 hover:underline dark:text-na-green-light">
+              Comprovante anual de contribuições
+            </a>
+            <span className="text-gray-600 dark:text-gray-300"> · todos os recibos do ano, para imprimir ou salvar em PDF</span>
+          </p>
+        )}
       </section>
 
       {/* A importação do Mercúrio traz só o ano corrente: o seletor aparece apenas se houver mais de um ano. */}

@@ -716,6 +716,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               pixAutomaticoDisponivel={dashboard.pixAutomaticoDisponivel}
               somenteConsulta={somenteConsulta}
               emBreve={emBreve}
+              comprovanteAnual={member.school.language !== "en" && member.school.sistemaRegistro === "mercurio"}
             />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}

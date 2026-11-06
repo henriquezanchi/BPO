@@ -626,3 +626,31 @@ da próxima sincronização, o usuário roda `UPDATE "Member" SET "isDiretor"=tr
   uso); não usar como barreira de acesso sem antes acertar o valor de cada filial.
 - Resumos da filial sem erro desde 02/11; Rio Verde já gerado com `canais` (código de 06/11); as outras filiais pegam os
   dados novos na próxima geração (~20 h).
+
+## 06/11/2026 — Resumo semanal da direção, aluno sumindo, correção dos alertas, lembrete da aula e comprovante anual
+
+Pedido do usuário ("ok, faça tudo"). Sem migração.
+
+- **Resumo da semana para a direção** (`lib/avisos-direcao.ts` → `resumoSemanalDaDirecao`): segunda, 8h da filial, push
+  para diretor, sub-chefe e direção liberada (`matriculasComDirecaoLiberada`). Entradas e saídas dos últimos 7 dias
+  (Mercúrio, ao vivo), pessoas com contribuição em atraso (resumo da filial) e pendências da Escolástica (abertas e
+  vencidas). Abre `/diretor`. Só filiais com `sistemaRegistro = "mercurio"`.
+- **Aluno sumindo** (`avisosDeAlunosSumindo`): segunda, 9h da filial. O Mercúrio não tem faltas; o sinal é a
+  contribuição: ativo que tem recibo nos últimos 12 meses e nenhum há 60 dias (recibos são view ao vivo; `fichas` pode
+  estar atrasada). Entradas recentes e quem não teve recibo no ano ficam de fora. Vira `ScholasticPendency` tipo
+  `aluno_sumindo` ("Fazer contato: ...", prazo 7 dias, matrícula nas notas), no máximo 15 por semana, sem repetir a
+  mesma matrícula em 90 dias; push para quem tem a área Escolástica. BGA em 06/11: 1 de 31.
+- **Corrigir alertas de cadastro** (`components/escolastica/alertas-cadastro.tsx`, `botao-ja-corrigi.tsx`,
+  `lib/alertas/corrigidos.ts`, `actions/alertas-cadastro-actions.ts`): "Como corrigir no Mercúrio" com o passo a passo
+  de cada tipo, botão para copiar a matrícula e "Já corrigi", que esconde o item até o próximo resumo (se a correção não
+  pegou, volta). Guardado em `ResumoNacional` "alertas-corrigidos:<schoolId>". Os nomes exatos das telas do Mercúrio
+  não foram percorridos pelo robô; o texto descreve o caminho sem nomes de botão.
+- **Lembrete da aula** (`lib/lembrete-aula.ts`): dia, horário e sala da tabela `turmas` (resumo da filial); 3 h antes da
+  aula, nunca antes das 7h, para alunos e professores da turma com notificação ativa. Um por pessoa, turma e dia.
+  `salaLegivel` foi para `lib/sala-legivel.ts` (sem `server-only`, para testes).
+- **Comprovante anual de contribuições** (`lib/comprovante-anual.ts`, `/portal/comprovante/[ano]`): recibos emitidos em
+  nome da pessoa no ano, ao vivo do Mercúrio, sem cancelados, com total; nome e CNPJ da filial; imprimir ou salvar em
+  PDF. Link no quadro "Suas contribuições" (filiais brasileiras no Mercúrio). Só a própria pessoa; ano atual e até 5
+  anteriores.
+- As três tarefas novas estão em `/api/cron/notificacoes` (`aulas`, `semanaDirecao`, `alunosSumindo`).
+- Testes: `tests/avisos-semanais.test.ts`; `npm test` 193 passando; `next build` ok. Conferido só leitura em BGA.

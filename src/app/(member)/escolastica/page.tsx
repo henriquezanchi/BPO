@@ -7,6 +7,7 @@ import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
 import { getDirectorDashboard } from "@/lib/director-data";
 import { paraEscolastica } from "@/lib/dados-por-area";
 import { AlertasCadastro } from "@/components/escolastica/alertas-cadastro";
+import { escondidos, lerCorrigidos } from "@/lib/alertas/corrigidos";
 import { db } from "@/lib/db";
 import type { ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
 
@@ -14,7 +15,7 @@ import type { ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
 async function AlertasDoResumo({ schoolId }: { schoolId: string }) {
   const r = await db.resumoFilial.findUnique({ where: { schoolId } });
   const alertas = (r?.dados as unknown as ResumoFilialDados | undefined)?.alertas ?? [];
-  return r ? <AlertasCadastro alertas={alertas} geradoEm={r.geradoEm} /> : null;
+  return r ? <AlertasCadastro alertas={alertas} geradoEm={r.geradoEm} schoolId={schoolId} escondidos={escondidos(await lerCorrigidos(schoolId), r.geradoEm)} /> : null;
 }
 
 

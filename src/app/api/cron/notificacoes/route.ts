@@ -1,4 +1,6 @@
 import { avisosDeAniversario } from "@/lib/aniversarios";
+import { avisosDeAlunosSumindo, resumoSemanalDaDirecao } from "@/lib/avisos-direcao";
+import { lembretesDeAula } from "@/lib/lembrete-aula";
 import { processarListaDeEspera } from "@/lib/event-waitlist";
 import { avisosDeAtendimentos, avisosDoDiario, avisosDoDiarioFv, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
 import { pushConfigurado } from "@/lib/push";
@@ -29,6 +31,11 @@ export async function GET(req: Request) {
         diarioFv: () => avisosDoDiarioFv(),
         // Aniversários (06/11/2026): parabéns em nome da Nova Acrópole, aviso à turma e aniversário de casa, às 8h da filial.
         aniversarios: () => avisosDeAniversario(),
+        // 06/11/2026: lembrete da aula (3 h antes, com a sala), resumo da semana para a direção (segunda, 8h) e alunos
+        // sem contribuição há 60 dias viram pendência da Escolástica (segunda, 9h).
+        aulas: () => lembretesDeAula(),
+        semanaDirecao: () => resumoSemanalDaDirecao(),
+        alunosSumindo: () => avisosDeAlunosSumindo(),
       }
     : { push: async () => ({ aviso: "Chaves VAPID não configuradas; avisos no celular não enviados." }) };
   const r = await executarRotina("notificacoes", { ...avisos, listaDeEspera: () => processarListaDeEspera() });
