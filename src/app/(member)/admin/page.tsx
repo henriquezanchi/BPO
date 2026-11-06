@@ -6,6 +6,8 @@ import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ehDirecaoDaFilial, filiaisAdministradas, recursosDaFilial, RECURSOS } from "@/lib/recursos-filial";
 import { AbasAdmin } from "@/components/admin/abas-admin";
+import { LiberarPortal } from "@/components/admin/liberar-portal";
+import { consultarMercurio, sqlNumero } from "@/lib/mercurio-db/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -23,6 +25,22 @@ type Aba = (typeof ABAS)[number]["id"];
  * No computador: menu lateral; no celular: abas no topo. Toda ação é
  * reconferida no servidor.
  */
+/** Filial fechada (07/11/2026): quem a direção liberou para o primeiro acesso. null se a filial está aberta. */
+async function liberadosDaFilialFechada(schoolId: string) {
+  const escola = await db.school.findUnique({ where: { id: schoolId }, select: { portalAberto: true, mercurioUnidade: true } });
+  if (!escola || escola.portalAberto || !escola.mercurioUnidade) return null;
+  const lista = await db.testadorLiberado.findMany({ where: { unidade: escola.mercurioUnidade }, orderBy: { liberadoEm: "desc" } });
+  if (!lista.length) return [];
+  const matrs = lista.map((l) => l.mercurioId);
+  const [nomes, noPortal] = await Promise.all([
+    consultarMercurio(`SELECT cad_matr, cad_nome FROM cadastro WHERE cad_matr IN (${matrs.map(sqlNumero).join(",")})`).catch(() => []),
+    db.member.findMany({ where: { mercurioId: { in: matrs } }, select: { mercurioId: true } }),
+  ]);
+  const nome = new Map(nomes.map((n) => [n.cad_matr, (n.cad_nome ?? "").trim()]));
+  const port = new Set(noPortal.map((m) => m.mercurioId));
+  return lista.map((l) => ({ matricula: l.mercurioId, nome: nome.get(l.mercurioId) || `Matrícula ${l.mercurioId}`, noPortal: port.has(l.mercurioId) }));
+}
+
 export default async function AdminFilialPage(props: { searchParams: Promise<{ filial?: string; aba?: string }> }) {
   const member = await getAuthenticatedMember();
   if (!member) redirect("/login?next=/admin");
@@ -61,6 +79,7 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
           })),
         )
       : [];
+    const liberacao = direcao ? await liberadosDaFilialFechada(escola.id) : null;
     conteudo = (
       <div className="flex max-w-2xl flex-col gap-3">
         <AdminFilialPanel
@@ -72,6 +91,7 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
           pessoas={pessoas.filter((p) => p.id !== member.id)}
         />
         {chefe && <AcessosSubchefe schoolId={escola.id} subchefes={subchefes} />}
+        {liberacao && <LiberarPortal schoolId={escola.id} liberados={liberacao} />}
       </div>
     );
   }

@@ -654,3 +654,17 @@ Pedido do usuário ("ok, faça tudo"). Sem migração.
   anteriores.
 - As três tarefas novas estão em `/api/cron/notificacoes` (`aulas`, `semanaDirecao`, `alunosSumindo`).
 - Testes: `tests/avisos-semanais.test.ts`; `npm test` 193 passando; `next build` ok. Conferido só leitura em BGA.
+
+## 07/11/2026 — Filiais abertas e liberação individual do Portal
+
+Decisão do usuário: **abertas BOA, GYN, BGA, BSB, RVD, LGS e JAM**; as demais (hoje GAR e STO) fechadas.
+
+- `School.portalAberto` volta a valer: `mercurio-db/primeiro-acesso.ts` (`podeEntrarNaFilial`, testes em
+  `tests/primeiro-acesso.test.ts`). Filial aberta: qualquer ativo faz o primeiro acesso pelo login unificado. Fechada:
+  só dirigentes (`cad_dirigente = 'S'`), direção liberada pelo dono (`DIRECAO_LIBERADA`), o dono e quem a direção liberou
+  (`TestadorLiberado`, tabela de 18/10 que estava sem uso). Quem já está no Portal não é afetado.
+- Tela da direção (`components/admin/liberar-portal.tsx`, `actions/portal-liberacao-actions.ts`), em Administração →
+  Recursos, só em filial fechada: busca ativo da filial no Mercúrio por nome ou matrícula, libera e retira.
+- Ordem obrigatória: **primeiro** acertar os sinais no banco (a escrita foi barrada para o agente; o usuário roda), **só
+  depois** publicar o código, senão filiais em uso marcadas `false` (GYN, BGA) param de aceitar primeiro acesso:
+  `UPDATE "School" SET "portalAberto" = ("mercurioUnidade" IN ('BOA','GYN','BGA','BSB','RVD','LGS','JAM'));`
