@@ -5,7 +5,8 @@ import type { LadoAntigo, PessoaAntigo } from "./tipos";
 
 /**
  * Lê a unidade no banco de consulta do Mercúrio antigo (oinabview, só leitura). Atenção a dois limites dele:
- *  - `cadastro` só tem ATIVOS (importar.ts): quem está inativo no antigo simplesmente não aparece;
+ *  - `cadastro` traz ativos e inativos (conferido em 06/11/2026: 53 mil linhas no país; a nota de importar.ts sobre
+ *    "só ativos" é de 18/10/2026, antes de virar view), então reingresso aparece como "reativar";
  *  - `cadastro` é cópia diária; `reciboc`/`reciboi` são views online. Um lançamento feito hoje aparece nos recibos na
  *    hora, mas uma alteração de cadastro só no dia seguinte (por isso o registro de itens feitos em rodar.ts).
  */

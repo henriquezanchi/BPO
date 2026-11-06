@@ -1,4 +1,5 @@
 "use client";
+import { CanaisDeEntrada } from "@/components/relatorios/canais-entrada";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { useState } from "react";
@@ -34,6 +35,7 @@ export function InteressadosTab({ data, abertura }: { data: PainelAberturas; abe
       </CollapsibleSection></section>
 
       <GraficoCustoConversao data={data} />
+      {data.canais && data.canais.length > 0 && <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">De onde vêm os alunos</h2>}><p className="mb-3 text-sm text-gray-500 dark:text-gray-400">Como os alunos dos últimos 3 anos conheceram a escola, segundo o Mercúrio, e quantos continuaram.</p><CanaisDeEntrada canais={data.canais} /></CollapsibleSection></section>}
 
       <section className={CARD}><CollapsibleSection title={<h2 className="font-black text-gray-950 dark:text-white">Fila de interessados</h2>}>
         <div className="mb-3 flex items-center justify-between gap-3"><div><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">A avaliação considera somente sinais e registros desta abertura selecionada.</p></div><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{data.crm.leads.length}</span></div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDateBR } from "@/lib/format";
-import { Award, BookOpen, ChevronDown, Flame, MapPin } from "lucide-react";
+import { Award, BookOpen, ChevronDown, DoorOpen, Flame, MapPin } from "lucide-react";
 import { useState } from "react";
 
 interface JornadaPanelProps {
@@ -12,7 +12,22 @@ interface JornadaPanelProps {
   badges: { badgeType: string; label: string; description: string; earnedAt: Date }[];
   eventHistory?: {title:string;date:Date}[];
   integrationCourses: { courseName: string; instructor: string; date: Date }[];
+  turma?: { nome: string; sala: string | null; conclusao: string | null } | null;
 }
+
+/** "2 anos e 3 meses" (pedido do usuário 06/11/2026: tempo de casa). Menos de um mês: "menos de um mês". */
+export function tempoDeCasa(entrada: Date, hoje = new Date()) {
+  let meses = (hoje.getUTCFullYear() - entrada.getUTCFullYear()) * 12 + (hoje.getUTCMonth() - entrada.getUTCMonth());
+  if (hoje.getUTCDate() < entrada.getUTCDate()) meses--;
+  if (meses < 1) return "menos de um mês";
+  const anos = Math.floor(meses / 12);
+  const resto = meses % 12;
+  const a = anos ? `${anos} ${anos === 1 ? "ano" : "anos"}` : "";
+  const m = resto ? `${resto} ${resto === 1 ? "mês" : "meses"}` : "";
+  return [a, m].filter(Boolean).join(" e ");
+}
+
+const MESES_EXTENSO = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 /**
  * Conquistas cuja data de concessão é só quando o PORTAL percebeu a
@@ -30,8 +45,10 @@ const SEM_DATA_REAL = new Set(["streak_3", "streak_6", "streak_12", "streak_24",
  * da ficha; "1 ano de casa" é calculado da entrada. Sem data de entrada
  * conhecida, NÃO usa a data de entrada no Portal como aproximação.
  */
-export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, levelHistory, badges, integrationCourses, eventHistory=[] }: JornadaPanelProps) {
-  const umAnoDeCasa = dataEntrada ? new Date(Date.UTC(dataEntrada.getUTCFullYear() + 1, dataEntrada.getUTCMonth(), dataEntrada.getUTCDate(), 12)) : null;
+export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, levelHistory, badges, integrationCourses, eventHistory=[], turma = null }: JornadaPanelProps) {
+  // Aniversário de N anos de casa na data real (entrada + N anos), como o de 1 ano.
+  const anosDepois = (n: number) => (dataEntrada ? new Date(Date.UTC(dataEntrada.getUTCFullYear() + n, dataEntrada.getUTCMonth(), dataEntrada.getUTCDate(), 12)) : null);
+  const umAnoDeCasa = anosDepois(1);
 
   const eventos = [
     ...eventHistory.map(e=>({data:e.date,titulo:e.title,subtitulo:"Participação conferida pela recepção",tipo:"curso" as const})),
@@ -42,6 +59,11 @@ export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, level
       .filter((b) => !SEM_DATA_REAL.has(b.badgeType))
       .flatMap((b) => {
         if (b.badgeType === "um_ano_casa") return umAnoDeCasa ? [{ data: umAnoDeCasa, titulo: b.label, subtitulo: b.description, tipo: "conquista" as const }] : [];
+        const casa = b.badgeType.match(/^casa_(\d+)$/);
+        if (casa) {
+          const data = anosDepois(Number(casa[1]));
+          return data ? [{ data, titulo: b.label, subtitulo: b.description, tipo: "conquista" as const }] : [];
+        }
         return [{ data: b.earnedAt, titulo: b.label, subtitulo: b.description, tipo: "conquista" as const }];
       }),
     ...integrationCourses.map((c) => ({ data: c.date, titulo: c.courseName, subtitulo: c.instructor ? `Instrutor: ${c.instructor}` : undefined, tipo: "curso" as const })),
@@ -70,7 +92,25 @@ export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, level
 
   return (
     <div className="text-left">
+      {(dataEntrada || turma) && (
+        <div className="mb-4 flex flex-col gap-1 rounded-xl border border-na-green/30 bg-na-green-light/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+          {dataEntrada && (
+            <p className="flex items-center gap-2 text-sm font-bold text-na-green-dark dark:text-emerald-300">
+              <DoorOpen size={18} className="shrink-0" /> Na Nova Acrópole há {tempoDeCasa(dataEntrada)}
+            </p>
+          )}
+          {dataEntrada && <p className="text-[11px] text-na-green-dark/80 dark:text-emerald-400/80">Desde {formatDateBR(dataEntrada)}</p>}
+          {turma && (
+            <p className="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
+              Turma <span className="font-semibold">{turma.nome}</span>
+              {turma.sala && <> · {turma.sala === "Online" ? "aulas online" : `sala ${turma.sala}`}</>}
+              {turma.conclusao && <> · conclusão prevista para {MESES_EXTENSO[Number(turma.conclusao.slice(5, 7)) - 1]} de {turma.conclusao.slice(0, 4)}</>}
+            </p>
+          )}
+        </div>
+      )}
       {streakMeses > 0 && (
+
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
           <Flame size={24} className="shrink-0 text-na-warning" />
           <div>

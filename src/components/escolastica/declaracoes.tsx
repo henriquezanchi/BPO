@@ -1,8 +1,9 @@
 "use client";
 
-import { gerarDeclaracao } from "@/lib/actions/declaracao-actions";
+import { entregarDeclaracao, gerarDeclaracao } from "@/lib/actions/declaracao-actions";
 import { SECOES, type Declaracao, type Secao } from "@/lib/declaracoes/texto";
-import { FileText, Loader2, Printer, Search } from "lucide-react";
+import { FileText, Loader2, Printer, Search, Send, Store } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 type Pessoa = { id: string; nome: string; matricula: string };
@@ -13,11 +14,13 @@ const normalizar = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-
  * Gerador de declarações da Escolástica: escolhe a pessoa e o que declarar; o texto vem do Mercúrio, pode ser
  * ajustado na própria folha (clique no parágrafo) e sai pela impressão do navegador, que também salva em PDF.
  */
-export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pessoas: Pessoa[] }) {
+export function GeradorDeclaracoes({ schoolId, pessoas, pedido = null }: { schoolId: string; pessoas: Pessoa[]; pedido?: { id: string; pessoaId: string; finalidade: string } | null }) {
+  const router = useRouter();
   const [busca, setBusca] = useState("");
-  const [pessoa, setPessoa] = useState<Pessoa | null>(null);
+  const [pessoa, setPessoa] = useState<Pessoa | null>(() => (pedido ? (pessoas.find((p) => p.id === pedido.pessoaId) ?? null) : null));
   const [secoes, setSecoes] = useState<Secao[]>(["matricula"]);
-  const [finalidade, setFinalidade] = useState("");
+  const [finalidade, setFinalidade] = useState(pedido?.finalidade ?? "");
+  const [entregue, setEntregue] = useState<string | null>(null);
   const [assinoEu, setAssinoEu] = useState(false);
   const [meuCargo, setMeuCargo] = useState("");
   const [instrutorDesde, setInstrutorDesde] = useState("");
@@ -31,6 +34,28 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
     if (q.length < 2) return [];
     return pessoas.filter((p) => normalizar(p.nome).includes(q) || p.matricula.startsWith(q)).slice(0, 8);
   }, [busca, pessoas]);
+
+  /** Entrega o pedido do aluno com o texto como está na folha (inclusive o que foi ajustado à mão). */
+  function entregar(modo: "portal" | "retirar") {
+    if (!pedido || !declaracao) return;
+    const folha = document.getElementById("folha-declaracao");
+    const texto = (sel: string) => [...(folha?.querySelectorAll<HTMLElement>(sel) ?? [])].map((el) => el.innerText.trim());
+    const final: Declaracao = {
+      titulo: declaracao.titulo,
+      paragrafos: texto("[data-parte=paragrafo]"),
+      localData: texto("[data-parte=local]")[0] ?? declaracao.localData,
+      assinatura: declaracao.assinatura
+        ? { nome: texto("[data-parte=assinatura-nome]")[0] ?? declaracao.assinatura.nome, cargo: texto("[data-parte=assinatura-cargo]")[0] ?? declaracao.assinatura.cargo }
+        : null,
+    };
+    setErro(null);
+    iniciar(async () => {
+      const r = await entregarDeclaracao(schoolId, pedido.id, modo, modo === "portal" ? final : undefined);
+      if (!r.ok) return setErro(r.error);
+      setEntregue(modo === "portal" ? "Entregue: o aluno já pode abrir no Portal e foi avisado no celular." : "Pronto: o aluno foi avisado de que pode retirar na secretaria.");
+      router.refresh();
+    });
+  }
 
   function alternar(s: Secao) {
     setSecoes((atual) => (atual.includes(s) ? atual.filter((x) => x !== s) : [...atual, s]));
@@ -189,31 +214,47 @@ export function GeradorDeclaracoes({ schoolId, pessoas }: { schoolId: string; pe
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
             <p className="text-[12px] text-gray-500 dark:text-gray-400">Confira o texto. Para ajustar, clique no parágrafo e edite antes de imprimir.</p>
+            {pedido && !entregue && (
+              <span className="flex flex-wrap gap-2">
+                <button type="button" disabled={gerando} onClick={() => entregar("portal")} className="flex items-center gap-2 rounded-lg bg-na-green px-3 py-2 text-sm font-semibold text-white hover:bg-na-green-dark disabled:opacity-50">
+                  <Send size={16} /> Entregar pelo Portal
+                </button>
+                <button type="button" disabled={gerando} onClick={() => entregar("retirar")} className="flex items-center gap-2 rounded-lg border border-na-green px-3 py-2 text-sm font-semibold text-na-green-dark disabled:opacity-50 dark:text-emerald-400">
+                  <Store size={16} /> Imprimi e assinei: avisar para retirar
+                </button>
+              </span>
+            )}
             <button type="button" onClick={() => window.print()} className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
               <Printer size={16} /> Imprimir ou salvar em PDF
             </button>
           </div>
+          {pedido && (
+            <p className={`rounded-lg px-3 py-2 text-[13px] print:hidden ${entregue ? "bg-na-green-light text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"}`}>
+              {entregue ?? "Pedido feito pelo próprio aluno. Depois de conferir, entregue pelo Portal (ele imprime) ou imprima, assine e avise para retirar."}
+            </p>
+          )}
           <article id="folha-declaracao" className="mx-auto w-full max-w-[210mm] rounded-sm border border-gray-200 bg-white px-[14mm] py-[16mm] font-serif text-[15px] leading-[1.75] text-gray-900 shadow-sm">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/na-logo.png" alt="Nova Acrópole" className="mx-auto mb-10 h-16 w-auto" />
             <h2 className="mb-10 text-center font-sans text-[18px] font-bold uppercase tracking-[0.2em]">{declaracao.titulo}</h2>
             <div className="flex flex-col gap-5 text-justify">
               {declaracao.paragrafos.map((p, i) => (
-                <p key={`${pessoa?.id}-${i}`} contentEditable suppressContentEditableWarning className="indent-10 outline-none focus:bg-amber-50">
+                <p key={`${pessoa?.id}-${i}`} data-parte="paragrafo" contentEditable suppressContentEditableWarning className="indent-10 outline-none focus:bg-amber-50">
                   {p}
                 </p>
               ))}
             </div>
-            <p contentEditable suppressContentEditableWarning className="mt-10 text-right outline-none focus:bg-amber-50">
+            <p data-parte="local" contentEditable suppressContentEditableWarning className="mt-10 text-right outline-none focus:bg-amber-50">
               {declaracao.localData}
             </p>
             {declaracao.assinatura && (
               <div className="mt-20 flex flex-col items-center">
                 <span className="w-72 border-t border-gray-800" />
-                <span contentEditable suppressContentEditableWarning className="mt-2 font-sans text-[14px] font-semibold outline-none focus:bg-amber-50">
+                <span data-parte="assinatura-nome" contentEditable suppressContentEditableWarning className="mt-2 font-sans text-[14px] font-semibold outline-none focus:bg-amber-50">
                   {declaracao.assinatura.nome}
                 </span>
-                <span contentEditable suppressContentEditableWarning className="font-sans text-[13px] text-gray-600 outline-none focus:bg-amber-50">
+                <span data-parte="assinatura-cargo" contentEditable suppressContentEditableWarning className="font-sans text-[13px] text-gray-600 outline-none focus:bg-amber-50">
+
                   {declaracao.assinatura.cargo}
                 </span>
               </div>

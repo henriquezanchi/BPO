@@ -81,8 +81,8 @@ não usa a fila `MercurioSyncTask` (que exige `Member`, e aluno novo ainda não 
 
 Limites conhecidos:
 
-- O banco de consulta do antigo só tem **ativos**. Um aluno ativo no novo que não aparece no antigo pode ser novo ou
-  estar inativo lá. A pendência diz para procurar em Inativos antes de cadastrar.
+- O banco de consulta do antigo traz ativos e inativos (conferido em 06/11/2026), então reingresso vira "reativar"
+  e aluno novo é só quem não existe lá. A pendência ainda manda conferir em Inativos antes de cadastrar.
 - O Mercury só dá o **total por rubrica** do movimento do mês, não cada despesa. A pendência mostra os totais, e os
   detalhes saem do próprio Mercúrio novo.
 - Os nomes dos itens da composição são casados pelo texto com o catálogo do antigo. Se nenhum nome bater, nada é

@@ -1,5 +1,6 @@
 "use client";
 
+import { MinhasDeclaracoes } from "@/components/member/minhas-declaracoes";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logout } from "@/lib/actions/auth-actions";
@@ -11,7 +12,9 @@ import { PAGINA_BOLETIM_AURORA, type EdicaoAurora } from "@/lib/boletim-aurora";
 import {
   BookOpen,
   BookOpenText,
+  Cake,
   CalendarCheck,
+
   CheckCircle2,
   Coffee,
   ClipboardCheck,
@@ -280,6 +283,32 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   };
 
   const destaques = ([
+    // Aniversário e aniversário de casa (06/11/2026): o destaque do dia, em nome da Nova Acrópole.
+    dashboard.celebracao && {
+      id: "celebracao",
+      conteudo:
+        dashboard.celebracao.tipo === "aniversario" ? (
+          <Anuncio
+            tom="ouro"
+            icone={<Cake size={20} />}
+            rotulo="Nova Acrópole"
+            titulo={`Feliz aniversário, ${member.name.trim().split(/\s+/)[0]}!`}
+            texto="A Nova Acrópole celebra com você o seu dia. Que este novo ciclo traga ainda mais sabedoria, coragem e ideais vividos."
+            acao="Ver minha jornada"
+            onClick={() => setModal("jornada")}
+          />
+        ) : (
+          <Anuncio
+            tom="verde"
+            icone={<Cake size={20} />}
+            rotulo="Tempo de casa"
+            titulo={`Hoje faz ${dashboard.celebracao.anos} ${dashboard.celebracao.anos === 1 ? "ano" : "anos"} que você entrou na Nova Acrópole`}
+            texto="Obrigado por fazer parte desta caminhada."
+            acao="Ver minha jornada"
+            onClick={() => setModal("jornada")}
+          />
+        ),
+    },
     contribuicaoUrgente && { id: "contribuicao", conteudo: cartaoContribuicao },
     // Pedagogo com apresentação marcada e plano ainda por entregar (2026-10-29).
     dashboard.pedagogos?.proxima &&
@@ -645,6 +674,12 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               avatarUrl={member.avatarUrl}
             />
           )}
+          {/* Declaração de matrícula pedida pelo próprio aluno (06/11/2026); só nas filiais do Brasil. */}
+          {modal === "cadastro" && member.school.language !== "en" && (
+            <div className="mt-4">
+              <MinhasDeclaracoes />
+            </div>
+          )}
           {modal === "economia" && (
             <div className="flex flex-col gap-4">
               {cartaoContribuicao}
@@ -699,6 +734,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               badges={dashboard.badges}
               integrationCourses={dashboard.integrationCourses}
               eventHistory={dashboard.eventHistory}
+              turma={dashboard.minhaTurma}
             />
           )}
           {modal === "transparencia" && <TransparenciaPanel memberId={member.id} />}

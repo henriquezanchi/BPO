@@ -7,6 +7,16 @@ import { db } from "@/lib/db";
  * uma vez ganha, não some se a condição deixar de valer depois (ex: perder
  * o streak não tira a conquista "3 meses em dia" já ganha).
  */
+/** Marcos de tempo de casa além do primeiro ano (o de 1 ano é "um_ano_casa", mais antigo). */
+export const ANOS_DE_CASA = [2, 3, 5, 7, 10, 15, 20, 25, 30, 35, 40] as const;
+
+/** Anos completos desde a entrada (pelo calendário, não por 365 dias). */
+export function anosDeCasa(entrada: Date, hoje = new Date()) {
+  let anos = hoje.getUTCFullYear() - entrada.getUTCFullYear();
+  if (hoje.getUTCMonth() < entrada.getUTCMonth() || (hoje.getUTCMonth() === entrada.getUTCMonth() && hoje.getUTCDate() < entrada.getUTCDate())) anos--;
+  return Math.max(0, anos);
+}
+
 export const BADGE_CATALOG: Record<string, { label: string; description: string }> = {
   streak_3: { label: "3 meses em dia", description: "3 contribuições seguidas em dia" },
   streak_6: { label: "6 meses em dia", description: "6 contribuições seguidas em dia" },
@@ -18,6 +28,8 @@ export const BADGE_CATALOG: Record<string, { label: string; description: string 
   voluntario: { label: "Coração voluntário", description: "Ofereceu apoio voluntário à escola" },
   gaf: { label: "Caminho filosófico", description: "Demonstrou interesse no GAF" },
   um_ano_casa: { label: "1 ano de casa", description: "1 ano desde que entrou na escola" },
+  // Tempo de casa (pedido do usuário 06/11/2026): marcos depois do primeiro ano, com a data real (entrada + N anos).
+  ...Object.fromEntries(ANOS_DE_CASA.map((n) => [`casa_${n}`, { label: `${n} anos de casa`, description: `${n} anos desde que entrou na escola` }])),
 };
 
 /**
@@ -69,6 +81,11 @@ export async function verificarEAtribuirConquistas(memberId: string): Promise<vo
   if (voluntario) elegiveis.push("voluntario");
   // Só com a data REAL de entrada na escola — nunca a de entrada no Portal.
   if (member.dataEntradaEscola && Date.now() - member.dataEntradaEscola.getTime() >= UM_ANO_MS) elegiveis.push("um_ano_casa");
+  if (member.dataEntradaEscola) {
+    const anos = anosDeCasa(member.dataEntradaEscola);
+    for (const n of ANOS_DE_CASA) if (anos >= n) elegiveis.push(`casa_${n}`);
+  }
+
 
   if (elegiveis.length === 0) return;
   await db.memberBadge.createMany({

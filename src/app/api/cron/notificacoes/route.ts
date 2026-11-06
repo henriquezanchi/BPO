@@ -1,3 +1,4 @@
+import { avisosDeAniversario } from "@/lib/aniversarios";
 import { processarListaDeEspera } from "@/lib/event-waitlist";
 import { avisosDeAtendimentos, avisosDoDiario, avisosDoDiarioFv, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
 import { pushConfigurado } from "@/lib/push";
@@ -26,6 +27,8 @@ export async function GET(req: Request) {
         diario: () => avisosDoDiario(),
         // Diário de FV (2026-10-31): práticas paradas há 3 dias e reunião do GDVE em 7 dias, às 20h da filial.
         diarioFv: () => avisosDoDiarioFv(),
+        // Aniversários (06/11/2026): parabéns em nome da Nova Acrópole, aviso à turma e aniversário de casa, às 8h da filial.
+        aniversarios: () => avisosDeAniversario(),
       }
     : { push: async () => ({ aviso: "Chaves VAPID não configuradas; avisos no celular não enviados." }) };
   const r = await executarRotina("notificacoes", { ...avisos, listaDeEspera: () => processarListaDeEspera() });

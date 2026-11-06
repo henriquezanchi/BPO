@@ -21,6 +21,9 @@ import { destinosDaPessoa } from "@/lib/area-trabalho";
 import { boasVindasDoVoluntario } from "@/lib/boas-vindas-voluntario";
 import { destaqueDeOportunidades } from "@/lib/oportunidades";
 import { minhaTurmaDePedagogos } from "@/lib/escala-pedagogos";
+import { minhaTurma } from "@/lib/turma-aluno";
+import { celebracaoDeHoje } from "@/lib/aniversarios";
+
 import { avisosDosGrupos, meusGrupos } from "@/lib/grupos-dados";
 import { ehFV, gruposDaAgenda } from "@/lib/grupos-portal";
 import { temRegistroFv } from "@/lib/fv/dados";
@@ -260,7 +263,9 @@ export async function getMemberDashboard(memberId: string) {
   const fortunaBalances: FortunaBalanceView[] = [];
 
   const gruposVisiveis = new Set(groupIds);
+  const turmaDoAluno = member.classMemberships.find((cm) => cm.role === "aluno" && cm.classGroup.tipo === "turma" && cm.classGroup.arquivadoEm === null);
   const studentClassGroupIds = member.classMemberships
+
     .filter((cm) => cm.role === "aluno" && (cm.classGroup.tipo === "turma" || gruposVisiveis.has(cm.classGroupId)))
     .map((cm) => cm.classGroupId);
 
@@ -526,6 +531,10 @@ export async function getMemberDashboard(memberId: string) {
       instructor: c.instructor,
       date: c.courseDate ?? c.syncedAt,
     })),
+    // No dia do aniversário ou do aniversário de casa, um destaque no topo do Portal (06/11/2026).
+    celebracao: celebracaoDeHoje(hojeNoFuso(fusoDaEscola(member.school.uf)), member.birthDate, member.dataEntradaEscola),
+    // Sala e previsão de conclusão da turma (06/11/2026), do resumo diário da filial.
+    minhaTurma: turmaDoAluno ? await minhaTurma(member.schoolId, turmaDoAluno.classGroup.mercurioClassId ?? turmaDoAluno.classGroup.name).catch(() => null) : null,
   };
 }
 

@@ -83,8 +83,7 @@ function pessoaSoNoNovo(p: PessoaNovo, antigo: LadoAntigo): Acao[] {
       matricula: p.matricula,
       nome: p.nome,
       area: "escolastica",
-      // O banco de consulta do antigo só tem ativos: pode ser aluno novo ou alguém inativo lá (aí é reingresso).
-      resumo: `Ativo no novo e fora dos ativos do antigo: cadastrar com a mesma matrícula (ou reativar, se ela já existir inativa)`,
+      resumo: `Aluno novo: cadastrar no Mercúrio antigo com a mesma matrícula`,
       dados,
       robo: null,
       revisao: false,

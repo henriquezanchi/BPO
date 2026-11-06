@@ -38,7 +38,8 @@ export type IconeDestino =
   | "calendario"
   | "aberturas"
   | "secretarias"
-  | "oportunidades";
+  | "oportunidades"
+  | "trajetoria";
 
 export type Destino = { href: string; rotulo: string; descricao: string; icone: IconeDestino; secao: "Meu trabalho" | "Secretarias" | "Gestão da filial" | "Nacional"; pendentes?: number };
 
@@ -99,6 +100,8 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       secao: "Meu trabalho",
       pendentes: interessados,
     },
+    // Minha trajetória (pedido do usuário 06/11/2026): funções, distinções e marcos registrados no Mercúrio.
+    (acesso || fv || temGrupo > 0 || chefe) && { href: "/voluntario/trajetoria", rotulo: "Minha trajetória", descricao: "Funções, distinções e marcos no Mercúrio", icone: "trajetoria", secao: "Meu trabalho" },
     { href: "/voluntario/termo", rotulo: "Termo de voluntariado", descricao: "Como assinar o termo com a filial", icone: "termo", secao: "Meu trabalho" },
     // Secretarias da filial, à parte de Grupos (pedido do usuário 2026-10-25).
     (administra.length > 0 || emSecretaria > 0) && { href: "/secretarias", rotulo: "Secretarias da filial", descricao: "Responsáveis, equipes e atividades de cada secretaria", icone: "secretarias", secao: "Secretarias" },

@@ -559,3 +559,39 @@ Combinado com o Marcos (27/10): o Ágora aceita o token do login unificado do cl
   do item abaixo).
 - `package.json`: novo `npm test` (`node --experimental-test-module-mocks --import tsx --test`). Sem a opção, 11
   arquivos `.mjs` falhavam por `mock.module is not a function`. Com ela, 180 testes passam.
+
+## 06/11/2026 — Do mapa do Mercúrio: canais de entrada, alertas, turma, tempo de casa, declaração pedida pelo aluno, trajetória e aniversários
+
+Pedido do usuário, depois de `docs/OPORTUNIDADES-MERCURIO-2026-11-06.md`. Nenhuma migração: os dados novos do Mercúrio
+entram no resumo diário da filial (`ResumoFilial.dados`, JSON), e a entrega das declarações fica em `ResumoNacional`.
+
+- **De onde vêm os alunos** (`resumo-filial.ts` → `canais`, função pura `calcularCanais`): entradas dos últimos 36 meses
+  por `cad_midia_ingresso` (`sig_minscr`), ativos e quantos ficaram 3, 6 e 12 meses (só conta na base quem já teve o
+  tempo). Tela: `components/relatorios/canais-entrada.tsx`, no relatório da direção (`relatorio-tab.tsx`) e na aba
+  Investimentos das aberturas de turma (`crm-investimentos.tsx`, `aberturas-data.ts` → `canais`).
+- **Alertas de cadastro** (`resumo-filial.ts` → `alertas`): turma com previsão de conclusão vencida, ativo de N1+ sem
+  turma, entrada dos últimos 12 meses sem canal. Tela: `components/escolastica/alertas-cadastro.tsx`, no topo das
+  pendências da Escolástica.
+- **Turma do aluno**: `resumo-filial.ts` agora guarda `sala`; `lib/turma-aluno.ts` dá sala e previsão de **conclusão**
+  (pedido: "não use formatura, mas conclusão"; previsão vencida não aparece). Mostrado em "Minha jornada"
+  (`jornada-panel.tsx`). No relatório da direção, "Formatura prevista" virou "Conclusão prevista".
+- **Tempo de casa**: "Na Nova Acrópole há X anos e Y meses" no topo de "Minha jornada"; conquistas `casa_2` até
+  `casa_40` (`badges.ts`, `ANOS_DE_CASA`), na linha do tempo com a data real; destaque no topo do Portal no dia.
+- **Declaração pedida pelo aluno** (`lib/declaracoes/pedidos.ts`): em "Meu cadastro" (`components/member/minhas-declaracoes.tsx`)
+  o aluno pede, com finalidade opcional; vira `ScholasticPendency` tipo `pedido_declaracao` e avisa a Escolástica no
+  celular (`avisosDePedidosNovos`). Na pendência, "Gerar declaração" abre `/escolastica/declaracoes?pedido=<id>` com a
+  pessoa e a finalidade; a secretaria confere e escolhe "Entregar pelo Portal" (guarda o texto da folha, inclusive o que
+  foi editado, em `ResumoNacional` "declaracao:<id>") ou "Imprimi e assinei: avisar para retirar". O aluno é avisado e
+  abre `/portal/declaracao/<id>` para imprimir. Um pedido aberto por vez.
+- **Minha trajetória** (`lib/trajetoria.ts`, `/voluntario/trajetoria`, atalho no menu da Área do Voluntário): marcos,
+  funções (`dirigente_funcoes`, alcance da filial ou nacional, conselho), distinções (`dirigente_condecoracoes` e
+  `condecoracoes`: Machado, Tocha, Ordem ao Mérito, Caduceu de Ouro, Brigadista do Ano) e aulas que ministra. Lido
+  na hora, só da própria matrícula.
+- **Aniversários** (`lib/aniversarios.ts`, dentro de `/api/cron/notificacoes`): às 8h no fuso da filial, parabéns ao
+  aniversariante em nome da Nova Acrópole; um aviso por pessoa aos colegas e professores das turmas dele; aviso de
+  aniversário de casa. Usa `Member.birthDate` e `dataEntradaEscola` (do Mercúrio). Quem nasceu em 29/02 recebe em
+  28/02 nos anos não bissextos. Cada aviso é reservado em `PushEnviado`. Destaque no topo do Portal no dia.
+- Espelho Mercury: o `cadastro` do oinabview traz ativos e inativos (53 mil linhas no país); comentário de
+  `ler-antigo.ts` e texto de "aluno novo" corrigidos.
+- Testes: `tests/aniversarios-canais.test.ts`; `npm test` com 186 passando. Consultas novas conferidas só leitura em
+  BGA.

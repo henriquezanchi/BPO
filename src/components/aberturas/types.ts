@@ -1,3 +1,4 @@
+import type { CanalEntrada } from "@/lib/mercurio-db/resumo-filial";
 export type JsonRecord = Record<string, unknown>;
 
 export type Pessoa = { id: string; name: string };
@@ -81,6 +82,7 @@ export type PainelAberturas = {
   disponibilidades: Disponibilidade[];
   eventos: CalendarioItem[];
   turmas: JsonRecord[];
+  canais?: CanalEntrada[];
   escalas: EscalaSecretaria[];
   crm: {
     status: string;

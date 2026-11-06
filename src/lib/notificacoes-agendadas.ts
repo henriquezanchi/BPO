@@ -127,19 +127,24 @@ async function responsaveisDaArea(schoolId: string, area: AreaFilial) {
 
 async function avisarPedidos(
   pedidos: { id: string; member: { name: string; schoolId: string } }[],
-  tipo: "cadastro" | "composicao",
+  tipo: "cadastro" | "composicao" | "declaracao",
 ) {
   const novos: typeof pedidos = [];
   for (const p of pedidos) if (await reservar(`pedido-${tipo}:${p.id}`)) novos.push(p);
   const porFilial = Map.groupBy(novos, (p) => p.member.schoolId);
   let pessoas = 0;
   for (const [schoolId, lista] of porFilial) {
-    const area = tipo === "cadastro" ? "escolastica" : "economia";
+    const area = tipo === "composicao" ? "economia" : "escolastica";
     const quem = lista.length === 1 ? lista[0].member.name.split(" ").slice(0, 2).join(" ") : `${lista.length} pessoas`;
+    const texto = {
+      cadastro: { titulo: "Alteração de cadastro aguardando", corpo: `${quem} pediu para alterar o cadastro.`, url: "/escolastica" },
+      composicao: { titulo: "Pedido de contribuição aguardando", corpo: `${quem} pediu para diminuir ou remover um item da contribuição.`, url: "/economia?aba=composicao" },
+      declaracao: { titulo: "Pedido de declaração de matrícula", corpo: `${quem} pediu uma declaração de matrícula.`, url: "/escolastica" },
+    }[tipo];
     const r = await enviarPush(await responsaveisDaArea(schoolId, area), {
-      titulo: tipo === "cadastro" ? "Alteração de cadastro aguardando" : "Pedido de contribuição aguardando",
-      corpo: tipo === "cadastro" ? `${quem} pediu para alterar o cadastro.` : `${quem} pediu para diminuir ou remover um item da contribuição.`,
-      url: tipo === "cadastro" ? "/escolastica" : "/economia?aba=composicao",
+      titulo: texto.titulo,
+      corpo: texto.corpo,
+      url: texto.url,
       etiqueta: `pedidos-${tipo}-${schoolId}`,
     });
     pessoas += r.pessoas;
@@ -150,11 +155,18 @@ async function avisarPedidos(
 export async function avisosDePedidosNovos() {
   const desde = new Date(Date.now() - 24 * 60 * MIN);
   const sel = { id: true, member: { select: { name: true, schoolId: true } } } as const;
-  const [cadastro, composicao] = await Promise.all([
+  const [cadastro, composicao, declaracoes] = await Promise.all([
     db.contactChangeLog.findMany({ where: { status: "pendente", createdAt: { gte: desde } }, select: sel }),
     db.compositionChangeRequest.findMany({ where: { status: "pendente", createdAt: { gte: desde } }, select: sel }),
+    // Declaração pedida pelo próprio aluno (06/11/2026): pendência da Escolástica ligada à pessoa.
+    db.scholasticPendency.findMany({ where: { tipo: "pedido_declaracao", completedAt: null, createdAt: { gte: desde }, member: { isNot: null } }, select: { id: true, member: { select: { name: true, schoolId: true } } } }),
   ]);
-  return { cadastro: await avisarPedidos(cadastro, "cadastro"), composicao: await avisarPedidos(composicao, "composicao") };
+  return {
+    cadastro: await avisarPedidos(cadastro, "cadastro"),
+    composicao: await avisarPedidos(composicao, "composicao"),
+    declaracao: await avisarPedidos(declaracoes.filter((d) => d.member).map((d) => ({ id: d.id, member: d.member! })), "declaracao"),
+  };
+
 }
 
 // ───────────────────────── Evento novo ─────────────────────────

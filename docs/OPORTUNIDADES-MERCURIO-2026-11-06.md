@@ -53,3 +53,10 @@ baixa, níveis, unidades.
   `--experimental-test-module-mocks` do Node. Agora há `npm test`, que roda todos do jeito certo.
 - Sugestão: um GitHub Actions que rode `tsc`, `lint` e `npm test` a cada envio, antes do deploy da Vercel. Hoje
   nada impede subir código com teste quebrando.
+
+## Situação (06/11/2026, mesmo dia)
+
+Implementados a pedido do usuário: 1 (de onde vêm os alunos), 2 (alertas de cadastro), 3 (sala e previsão de
+**conclusão**, não "formatura"), 4 (tempo de casa), 5 (declaração pedida pelo aluno) e 6 (minha trajetória, com
+distinções). Também: parabéns de aniversário em nome da Nova Acrópole e aviso aos colegas e professores da turma.
+Detalhes em `docs/COORDENACAO-AGENTES.md`.

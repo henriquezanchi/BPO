@@ -1,6 +1,7 @@
 "use client";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
+import { CanaisDeEntrada } from "@/components/relatorios/canais-entrada";
 import { PainelProfissoes } from "@/components/relatorios/painel-profissoes";
 import { getProfissoesFilial } from "@/lib/actions/profissoes-actions";
 import { getRelatorioFilial, type RelatorioFilial } from "@/lib/actions/relatorio-filial-actions";
@@ -182,6 +183,12 @@ export function RelatorioTab({ schoolId, children }: { schoolId: string; childre
           )}
         </Cartao>
 
+        {d.canais && (
+          <Cartao titulo="De onde vêm os alunos">
+            <CanaisDeEntrada canais={d.canais} />
+          </Cartao>
+        )}
+
         <Cartao
           titulo={`Contribuição de ${rotuloMes(d.mesReferencia)}`}
           aviso={`Pago até o dia ${DIA_LIMITE_DESCONTO}: em dia, com desconto. Depois do dia ${DIA_LIMITE_DESCONTO} sem pagamento: perdeu o desconto, mas só fica em atraso quando o mês termina.`}
@@ -266,7 +273,7 @@ export function RelatorioTab({ schoolId, children }: { schoolId: string; childre
               {semInstrutor.length > 0 && <li>Sem instrutor no Mercúrio: {semInstrutor.map((t) => t.turma).join(", ")}</li>}
               {formaturasProximas.length > 0 && (
                 <li>
-                  Formatura prevista em até 90 dias:{" "}
+                  Conclusão prevista em até 90 dias:{" "}
                   {formaturasProximas.map((t) => `${t.turma} (${new Date(t.previsaoFormatura!).toLocaleDateString("pt-BR", { timeZone: "UTC" })})`).join(", ")}
                 </li>
               )}

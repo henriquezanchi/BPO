@@ -10,7 +10,8 @@ import {
   rejeitarSolicitacaoCadastro,
 } from "@/lib/actions/escolastica-actions";
 import { formatDateBR } from "@/lib/format";
-import { Check, CheckCircle2, Loader2, Plus, X } from "lucide-react";
+import { Check, CheckCircle2, FileText, Loader2, Plus, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 
 const TIPOS = [
@@ -226,6 +227,15 @@ export function EscolasticaPanel({ schoolId }: { schoolId: string }) {
                 </p>
                 {p.notes && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{p.notes}</p>}
               </div>
+              {/* Pedido do próprio aluno (06/11/2026): abre o gerador já com a pessoa e a finalidade; entregar conclui. */}
+              {p.tipo === "pedido_declaracao" ? (
+                <Link
+                  href={`/escolastica/declaracoes?pedido=${p.id}`}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-na-green px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark"
+                >
+                  <FileText size={12} /> Gerar declaração
+                </Link>
+              ) : (
               <button
                 onClick={() => handleConcluir(p.id)}
                 disabled={isPending}
@@ -233,6 +243,7 @@ export function EscolasticaPanel({ schoolId }: { schoolId: string }) {
               >
                 <CheckCircle2 size={12} /> Marcar como feito
               </button>
+              )}
             </div>
           );
         })}

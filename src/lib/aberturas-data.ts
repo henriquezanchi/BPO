@@ -1,4 +1,5 @@
 import "server-only";
+import type { CanalEntrada } from "@/lib/mercurio-db/resumo-filial";
 
 import { experienciasDaRede } from "@/lib/aberturas/experiencias";
 import { avaliarFatos } from "@/lib/aberturas/avaliacao";
@@ -214,6 +215,8 @@ export async function getPainelAberturas(requestedSchoolId?: string) {
     })),
     eventos: eventosDb.map((evento) => ({ id: evento.id, title: evento.title, startDate: evento.startsAt.toISOString(), endDate: iso(evento.endsAt) })),
     turmas: turmaResumo(resumo?.dados),
+    // De onde vêm os alunos (06/11/2026): mesmo cálculo do relatório da direção (resumo-filial.ts).
+    canais: ((resumo?.dados as { canais?: CanalEntrada[] } | undefined)?.canais ?? []) as CanalEntrada[],
     escalas: escalasDb.map((escala) => ({
       id: escala.id,
       secretaria: escala.secretaria,

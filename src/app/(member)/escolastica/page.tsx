@@ -6,6 +6,17 @@ import { exigirArea } from "@/lib/area-trabalho";
 import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
 import { getDirectorDashboard } from "@/lib/director-data";
 import { paraEscolastica } from "@/lib/dados-por-area";
+import { AlertasCadastro } from "@/components/escolastica/alertas-cadastro";
+import { db } from "@/lib/db";
+import type { ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
+
+/** Alertas de cadastro do resumo diário da filial (06/11/2026). Resumo antigo, sem alertas: nada aparece. */
+async function AlertasDoResumo({ schoolId }: { schoolId: string }) {
+  const r = await db.resumoFilial.findUnique({ where: { schoolId } });
+  const alertas = (r?.dados as unknown as ResumoFilialDados | undefined)?.alertas ?? [];
+  return r ? <AlertasCadastro alertas={alertas} geradoEm={r.geradoEm} /> : null;
+}
+
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +49,8 @@ export default async function EscolasticaPage(props: { searchParams: Promise<{ a
       {aba === "membros" ? (
         <MembrosEscolastica schoolId={member.schoolId} data={paraEscolastica(await getDirectorDashboard(member.schoolId))} />
       ) : (
-        <div className="max-w-3xl">
+        <div className="flex max-w-3xl flex-col gap-4">
+          <AlertasDoResumo schoolId={member.schoolId} />
           <EscolasticaPanel schoolId={member.schoolId} />
         </div>
       )}
