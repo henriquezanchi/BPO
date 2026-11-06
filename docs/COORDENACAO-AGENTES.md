@@ -615,3 +615,14 @@ Carlos Rangel Neves Otto (3006, FOR), Ana Beatriz Camara Silva Gama Pignataro (3
 dono do sistema). Cada um é diretor da **própria** filial. Para valer também nas consultas que leem o banco direto antes
 da próxima sincronização, o usuário roda `UPDATE "Member" SET "isDiretor"=true, "liberaTestadores"=true WHERE
 "mercurioId" IN ('2597','3450','3006','3097','101');` (a escrita direta foi barrada para o agente).
+
+## 06/11/2026 — Checagem automática (GitHub Actions) e conferências
+
+- `.github/workflows/checagem.yml`: a cada envio para `master` (e em PR) roda `next typegen` + `tsc --noEmit`,
+  `eslint --quiet` (só erros; hoje há 189 avisos e 0 erros) e `npm test`. Sem banco nem segredos (URLs de mentira só
+  para o `prisma generate`). Não bloqueia a Vercel: um X vermelho no GitHub avisa que subiu algo quebrado. Primeira
+  rodada verde em 06/11.
+- Conferido (só leitura): `portalAberto` está desatualizado como sinal (GYN, com 310 membros, e BGA estão `false` e em
+  uso); não usar como barreira de acesso sem antes acertar o valor de cada filial.
+- Resumos da filial sem erro desde 02/11; Rio Verde já gerado com `canais` (código de 06/11); as outras filiais pegam os
+  dados novos na próxima geração (~20 h).
