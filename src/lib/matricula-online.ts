@@ -1,4 +1,5 @@
 import "server-only";
+import { lerCodigoDeConvite } from "@/lib/carteirinha";
 import { PAGO, clienteNaSubconta, cobrancaNaSubconta, pixDaCobranca, situacaoDaCobranca } from "@/lib/asaas/subconta";
 import { cifrarCpf, cpfValido, decifrarCpf } from "@/lib/cpf-cifrado";
 import { subcontaAprovada } from "@/lib/asaas/conta-escola";
@@ -81,6 +82,14 @@ export type DadosMatricula = z.input<typeof dadosMatricula>;
 export class MatriculaErro extends Error {}
 
 /** Grava a matrícula e, se a filial cobra pelo site, cria a cobrança na subconta. */
+async function quemIndicou(entrada: unknown) {
+  const codigo = entrada && typeof entrada === "object" ? String((entrada as Record<string, unknown>).indicacao ?? "") : "";
+  const matricula = codigo ? lerCodigoDeConvite(codigo) : null;
+  if (!matricula) return null;
+  const quem = await db.member.findFirst({ where: { mercurioId: matricula, mercurioAtivo: true }, select: { name: true } });
+  return quem ? `Indicação de ${quem.name.trim()} (matrícula ${matricula})`.slice(0, 200) : null;
+}
+
 export async function criarMatricula(token: string, entrada: unknown) {
   // Campo-isca invisível (26/10/2026): só robô preenche. Resposta genérica, sem dizer o motivo.
   if (entrada && typeof entrada === "object" && String((entrada as Record<string, unknown>).site ?? "").trim()) throw new MatriculaErro("Não foi possível concluir agora. Tente de novo em instantes.");
@@ -88,6 +97,9 @@ export async function criarMatricula(token: string, entrada: unknown) {
   if (!a || !a.disponivel) throw new MatriculaErro("As matrículas desta turma não estão abertas.");
   if (a.lotada) throw new MatriculaErro("As vagas desta turma estão preenchidas.");
   const d = dadosMatricula.parse(entrada);
+  // Indicar um amigo (07/11/2026): o convite assinado de um aluno ativo registra quem indicou em "como conheceu".
+  const indicacao = await quemIndicou(entrada);
+  if (indicacao) d.comoConheceu = indicacao;
   const jaPaga = await db.matriculaOnline.findFirst({ where: { aberturaId: a.id, cpfInicio: d.cpf.slice(0, 6), email: d.email, status: { in: ["paga", "lancada"] } }, select: { id: true } });
   if (jaPaga) throw new MatriculaErro("Já existe uma matrícula paga com estes dados nesta turma.");
   // Mesma pessoa reenviando (voltou, fechou a tela): reaproveita a cobrança em aberto em vez de criar outra.

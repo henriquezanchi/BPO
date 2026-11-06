@@ -9,8 +9,9 @@ const DIAS = ["domingos", "segundas-feiras", "terças-feiras", "quartas-feiras",
 const hora = (m: number) => `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, "0") : ""}`;
 
 /** Site público de matrícula de uma abertura de turma (pedido do usuário 2026-10-25). */
-export default async function MatriculaPage(props: { params: Promise<{ token: string }> }) {
+export default async function MatriculaPage(props: { params: Promise<{ token: string }>; searchParams: Promise<{ indicacao?: string }> }) {
   const { token } = await props.params;
+  const { indicacao } = await props.searchParams;
   const a = await aberturaPorToken(token);
   const filial = a?.school.name.replace(/^Nova Acrópole\s*-\s*/i, "") ?? "";
 
@@ -42,6 +43,7 @@ export default async function MatriculaPage(props: { params: Promise<{ token: st
             token={token}
             vagas={a.capacidade - a.pagas}
             valorCentavos={a.cobraOnline ? (a.valorContribuicaoCentavos ?? 0) : null}
+            indicacao={typeof indicacao === "string" ? indicacao.slice(0, 40) : undefined}
           />
         )}
         <p className="text-center text-[11px] text-gray-500 dark:text-gray-400">

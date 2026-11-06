@@ -4,6 +4,7 @@ import { deslocamentoNoFuso, fusoDaEscola } from "@/lib/fuso-escola";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import type { ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
 import type { Publico } from "@/lib/calendario-comum";
+import { salaLegivel } from "@/lib/sala-legivel";
 
 /**
  * Calendário inteligente do chefe (pedido do usuário 2026-10-19): junta
@@ -26,6 +27,8 @@ export interface ItemCalendario {
   publicos: Publico[];
   pessoas: number | null;
   adminHref?: string;
+  /** Sala ou local (07/11/2026, agenda da sala): turma (Mercúrio), abertura, evento da filial ou grupo. */
+  sala?: string | null;
 }
 
 const DURACAO_AULA_MIN = 120; // o Mercúrio só tem o horário de início das turmas
@@ -68,7 +71,7 @@ async function feriados(ano: number): Promise<{ data: string; nome: string }[]> 
 /** Todos os itens do calendário da filial entre `de` e `ate`. */
 export async function itensDoCalendario(schoolId: string, de: Date, ate: Date): Promise<ItemCalendario[]> {
   // Sem grupos encerrados nem GDVE (o GDVE é visto só por FV).
-  const grupos = await db.classGroup.findMany({ where: { schoolId, tipo: { notIn: ["turma", "GDVE"] }, arquivadoEm: null }, select: { id: true, name: true, _count: { select: { memberships: true } } } });
+  const grupos = await db.classGroup.findMany({ where: { schoolId, tipo: { notIn: ["turma", "GDVE"] }, arquivadoEm: null }, select: { id: true, name: true, local: true, modalidade: true, _count: { select: { memberships: true } } } });
   // Mesma geração preguiçosa das rotinas semanais usada no resto do Portal.
   await ensureGroupMeetingWindow(grupos.map((g) => g.id)).catch(() => null);
 
@@ -91,7 +94,7 @@ export async function itensDoCalendario(schoolId: string, de: Date, ate: Date): 
       if(new Date(dataBR+"T12:00:00Z").getUTCDay()!==abertura.diaSemana)continue;
       const inicio=new Date(dataBR+"T00:00:00"+TZ);inicio.setTime(inicio.getTime()+abertura.inicioMinuto*60000);
       if(inicio<abertura.primeiraAula)continue;
-      itens.push({id:`abertura-${abertura.id}-${dataBR}`,camada:"aula",titulo:`Turma planejada · ${abertura.titulo}`,inicio:inicio.toISOString(),fim:new Date(inicio.getTime()+7200000).toISOString(),diaInteiro:false,detalhe:`Planejamento · ${abertura.sala}`,publicos:["todos"],pessoas:null});
+      itens.push({id:`abertura-${abertura.id}-${dataBR}`,camada:"aula",titulo:`Turma planejada · ${abertura.titulo}`,inicio:inicio.toISOString(),fim:new Date(inicio.getTime()+7200000).toISOString(),diaInteiro:false,detalhe:`Planejamento · ${abertura.sala}`,publicos:["todos"],pessoas:null,sala:abertura.sala||null});
     }
     for(const registro of abertura.registros){const p=registro.dados as {inicio?:string;fim?:string;titulo?:string;eventoId?:string};if(p.eventoId||!p.inicio||new Date(p.inicio)<de||new Date(p.inicio)>ate)continue;itens.push({id:`ciclo-${registro.id}`,camada:"evento_filial",titulo:`Ciclo cultural · ${p.titulo||abertura.titulo}`,inicio:p.inicio,fim:p.fim||null,diaInteiro:false,detalhe:abertura.titulo,publicos:["todos"],pessoas:null});}
   }
@@ -113,6 +116,7 @@ export async function itensDoCalendario(schoolId: string, de: Date, ate: Date): 
         detalhe: `${t.nivel} · ${t.alunos} alunos`,
         publicos: publicosDaTurma(t.nivel),
         pessoas: t.alunos,
+        sala: salaLegivel(t.sala ?? null),
       });
     }
   }
@@ -121,10 +125,10 @@ export async function itensDoCalendario(schoolId: string, de: Date, ate: Date): 
   for (const r of reunioes) {
     const g = nomeGrupo.get(r.classGroupId);
     // Nome do grupo no título (pedido do usuário 2026-10-25: "GAF Online", não "Reunião semanal"); o nome da reunião vai no detalhe.
-    itens.push({ id: `reuniao-${r.id}`, camada: "reuniao_grupo", titulo: g?.name ?? r.title, inicio: r.startsAt.toISOString(), fim: r.endsAt.toISOString(), diaInteiro: false, detalhe: g?.name ? r.title : null, publicos: ["fv"], pessoas: g?._count.memberships ?? null });
+    itens.push({ id: `reuniao-${r.id}`, camada: "reuniao_grupo", titulo: g?.name ?? r.title, inicio: r.startsAt.toISOString(), fim: r.endsAt.toISOString(), diaInteiro: false, detalhe: g?.name ? r.title : null, publicos: ["fv"], pessoas: g?._count.memberships ?? null, sala: g?.modalidade === "online" ? "Online" : (g?.local ?? null) });
   }
   for (const e of eventosFilial) {
-    itens.push({ id: `evento-${e.id}`, adminHref: `/voluntario/eventos?aba=eventos#evento-${e.id}`, camada: "evento_filial", titulo: e.title, inicio: e.startsAt.toISOString(), fim: e.endsAt?.toISOString() ?? null, diaInteiro: e.allDay, detalhe: e.location, publicos: publicosDoEvento(e.publicos, e.audience), pessoas: null });
+    itens.push({ id: `evento-${e.id}`, adminHref: `/voluntario/eventos?aba=eventos#evento-${e.id}`, camada: "evento_filial", titulo: e.title, inicio: e.startsAt.toISOString(), fim: e.endsAt?.toISOString() ?? null, diaInteiro: e.allDay, detalhe: e.location, publicos: publicosDoEvento(e.publicos, e.audience), pessoas: null, sala: e.location });
   }
   for (const e of eventosExternos) {
     // O calendário nacional ainda não diz a quem o evento se destina nem se o chefe deve estar (virá do Ágora): tratado como "todos".

@@ -2,7 +2,7 @@
 
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import type { Destino, IconeDestino } from "@/lib/area-trabalho";
-import { ArrowLeft, Award, Banknote, CalendarClock, CalendarDays, ClipboardCheck, Coffee, Crown, FileSignature, Globe2, GraduationCap, HandHeart, Home, KeyRound, Menu, Settings, Ticket, Users, X } from "lucide-react";
+import { ArrowLeft, Award, Banknote, CalendarClock, CalendarDays, ClipboardCheck, Coffee, Crown, FileSignature, Globe2, GraduationCap, HandHeart, Home, KeyRound, Menu, Settings, Ticket, Users, X, DoorOpen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -22,6 +22,7 @@ const ICONES: Record<IconeDestino, typeof Home> = {
   nacional: Globe2,
   termo: FileSignature,
   calendario: CalendarDays,
+  salas: DoorOpen,
   aberturas: GraduationCap,
   secretarias: Users,
   oportunidades: HandHeart,

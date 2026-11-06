@@ -36,6 +36,7 @@ export type IconeDestino =
   | "nacional"
   | "termo"
   | "calendario"
+  | "salas"
   | "aberturas"
   | "secretarias"
   | "oportunidades"
@@ -89,6 +90,14 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       rotulo: "Calendário",
       descricao: "Aulas, reuniões, eventos e feriados da filial",
       icone: "calendario",
+      secao: "Meu trabalho",
+    },
+    // Agenda da sala (07/11/2026): o que ocupa cada sala e os choques de horário.
+    (tem("eventos") || tem("direcao")) && {
+      href: "/voluntario/salas",
+      rotulo: "Agenda das salas",
+      descricao: "O que ocupa cada sala e os choques de horário",
+      icone: "salas",
       secao: "Meu trabalho",
     },
     // Oportunidades de voluntariado (pedido do usuário 2026-10-29): Direção e responsáveis de secretarias e grupos.

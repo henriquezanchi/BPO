@@ -1,6 +1,7 @@
 import 'server-only';
 import {db} from '@/lib/db';
 import {consultarCrmAberturas} from './crm';
+import {avisarInteressadosNovos,interessadosNovos} from './recepcao-interessados';
 import type {Prisma} from '@prisma/client';
 export async function sincronizarAberturasEscola(schoolId:string){
  const aberturas=await db.aberturaTurma.findMany({where:{schoolId},include:{registros:{where:{tipo:'avaliacao'},orderBy:{createdAt:'asc'}}}});
@@ -13,6 +14,8 @@ export async function sincronizarAberturasEscola(schoolId:string){
   }await enviar();
  }
  const dados=await consultarCrmAberturas(schoolId);
+ // Recepção do interessado novo (07/11/2026): compara com a cópia anterior antes de gravar a nova.
+ const anterior=await db.aberturaCrmCache.findUnique({where:{schoolId},select:{dados:true}});
  await db.aberturaCrmCache.upsert({where:{schoolId},create:{schoolId,dados},update:{dados,sincronizadoEm:new Date()}});
  let incorporadas=0;
  const matriculas=Array.isArray(dados.matriculas)?dados.matriculas as Record<string,unknown>[]:[];
@@ -21,5 +24,7 @@ export async function sincronizarAberturasEscola(schoolId:string){
   const rows=matriculas.filter(m=>String(m.turmaId)===a.mercurioTurmaId&&typeof m.data==='string'&&Date.parse(m.data.slice(0,10)+'T00:00:00-03:00')>=de&&Date.parse(m.data.slice(0,10)+'T00:00:00-03:00')<=ate&&m.mercurioId).map(m=>({id:`crm-${a.id}-${m.mercurioId}-${String(m.data).slice(0,10)}`,aberturaId:a.id,autorId:'sistema:crm',tipo:'resultado',dados:{mercurioId:String(m.mercurioId),...(m.leadId?{leadId:String(m.leadId)}:{}),turmaId:a.mercurioTurmaId,data:String(m.data).slice(0,10),status:'matriculado',fonte:'mercurio',confirmadoEm:new Date().toISOString()} as Prisma.InputJsonValue}));
   if(rows.length){const result=await db.$transaction(async tx=>{const inserted=await tx.aberturaRegistro.createMany({data:rows,skipDuplicates:true});if(inserted.count)await tx.aberturaTurma.update({where:{id:a.id},data:{revisao:{increment:1}}});return inserted;});incorporadas+=result.count;}
  }
- return {incorporadas};
+ const novos=interessadosNovos(anterior?.dados,dados);
+ const avisados=await avisarInteressadosNovos(schoolId,novos).catch(e=>{console.error('Aberturas: aviso de interessados novos falhou:',e instanceof Error?e.message:e);return 0;});
+ return {incorporadas,interessadosNovos:novos.length,avisados};
 }

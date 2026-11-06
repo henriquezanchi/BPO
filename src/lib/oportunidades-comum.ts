@@ -16,3 +16,17 @@ export function estaAberta(op: { encerradaEm: Date | null; abertaAte: string | n
   if (op.abertaAte && op.abertaAte < hoje) return false;
   return !(op.tipo === "pontual" && op.data && op.data < hoje);
 }
+
+/** Dia AAAA-MM-DD somado de n dias (datas das oportunidades são texto, sem fuso). */
+export const somarDias = (dia: string, n: number) => new Date(new Date(`${dia}T12:00:00Z`).getTime() + n * 864e5).toISOString().slice(0, 10);
+
+/** Aviso de segunda-feira (07/11/2026): uma tarefa pelo nome; várias, a contagem e até 3 no corpo. */
+export function textoVoluntariadoDaSemana(ops: { titulo: string; tipo: string; data: string | null; horario: string | null }[]) {
+  if (ops.length === 1) return { titulo: "Voluntariado esta semana", corpo: `${ops[0].titulo} (${quandoDaOportunidade(ops[0])}) precisa de ajuda. Toque para se oferecer.` };
+  const linhas = ops.slice(0, 3).map((o) => `${o.titulo} (${quandoDaOportunidade(o)})`);
+  return { titulo: `${ops.length} tarefas de voluntariado esta semana`, corpo: `${linhas.join("; ")}${ops.length > 3 ? "..." : ""}. Toque para se oferecer.` };
+}
+
+export function textoLembreteVoluntariado(op: { titulo: string; horario: string | null }) {
+  return { titulo: `Amanhã: ${op.titulo}`, corpo: `Você se ofereceu para ajudar${op.horario ? `, ${op.horario}` : ""}. Obrigado! Se não puder ir, avise o responsável.` };
+}

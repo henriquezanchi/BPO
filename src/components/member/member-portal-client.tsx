@@ -32,8 +32,11 @@ import {
   TriangleAlert,
   UsersRound,
   Wallet,
+  IdCard,
+  HeartHandshake,
 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { situacaoGeral } from "@/lib/situacao-contribuicao";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -103,6 +106,7 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
 }
 
 export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { dashboard: MemberDashboard; eventoId?: string; abrir?: "voluntariado"; boletim?: EdicaoAurora | null }) {
+  const router = useRouter();
   const { member, availableToAdd } = dashboard;
   // Eventos públicos do Ulisses lidos pelo navegador (ver lib/ulisses/navegador.ts).
   const agendaItems = useAgendaComUlisses(dashboard.agendaItems, member.school.ulissesFilialId, member.schoolId);
@@ -278,6 +282,8 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
     jornada: abrirModal("jornada"),
     transparencia: dashboard.recursos.transparencia && abrirModal("transparencia"),
     cadastro: abrirModal("cadastro"),
+    carteirinha: { href: "/portal/carteirinha" },
+    indicar: { href: "/portal/indicar" },
     whatsapp: !!schoolWhatsapp && { href: whatsappHref(schoolWhatsapp), externo: true },
     boletim: { href: boletim?.link ?? PAGINA_BOLETIM_AURORA, externo: true },
   };
@@ -494,7 +500,16 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
                 <span className="text-sm font-bold">{member.name.charAt(0)}</span>
               )}
             </div>
-            <span className="text-base font-bold">{member.name}</span>
+            <span className="min-w-0 text-base font-bold">{member.name}</span>
+            {/* Carteirinha digital (07/11/2026): QR para a recepção dos eventos. */}
+            {member.school.language !== "en" && (
+              <a
+                href="/portal/carteirinha"
+                className="ml-auto flex shrink-0 items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[10px] font-semibold whitespace-nowrap transition hover:bg-white/25"
+              >
+                <IdCard size={12} /> Carteirinha
+              </a>
+            )}
           </div>
           <div className="flex justify-between border-t border-white/15 pt-2.5 text-[11px] text-white/85">
             <span>{member.school.city ?? member.school.name}</span>
@@ -585,6 +600,10 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
                 {dashboard.pedagogos.proxima ? `Apresenta em ${dataCurta(dashboard.pedagogos.proxima.data)}` : "Escala e planos de aula"}
               </span>
             </Link>
+          )}
+          {/* Indicar um amigo (07/11/2026): convite com as próximas turmas da filial. */}
+          {member.school.language !== "en" && (
+            <FeatureTile icon={<HeartHandshake size={16} />} title="Indicar um amigo" subtitle="Convite para as próximas turmas" onClick={() => router.push("/portal/indicar")} />
           )}
           <FeatureTile icon={<LifeBuoy size={16} />} title={t.tiles.ajuda.title} subtitle={t.tiles.ajuda.subtitle} onClick={() => setModal("ajuda")} />
           <FeatureTile

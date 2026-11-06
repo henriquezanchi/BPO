@@ -1,6 +1,8 @@
 import { avisosDeAniversario } from "@/lib/aniversarios";
 import { avisosDeAlunosSumindo, resumoSemanalDaDirecao } from "@/lib/avisos-direcao";
 import { lembretesDeAula } from "@/lib/lembrete-aula";
+import { avisosDeVoluntariado } from "@/lib/avisos-voluntariado";
+import { avisosDeChegadaDeInteressados } from "@/lib/aberturas/recepcao-interessados";
 import { processarListaDeEspera } from "@/lib/event-waitlist";
 import { avisosDeAtendimentos, avisosDoDiario, avisosDoDiarioFv, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
 import { pushConfigurado } from "@/lib/push";
@@ -36,6 +38,10 @@ export async function GET(req: Request) {
         aulas: () => lembretesDeAula(),
         semanaDirecao: () => resumoSemanalDaDirecao(),
         alunosSumindo: () => avisosDeAlunosSumindo(),
+        // 07/11/2026: voluntariado da semana (segunda, 10h) e lembrete na véspera (18h) para quem foi aceito.
+        voluntariado: () => avisosDeVoluntariado(),
+        // 07/11/2026: no dia da primeira aula de uma abertura, quem são os interessados esperados.
+        chegadaInteressados: () => avisosDeChegadaDeInteressados(),
       }
     : { push: async () => ({ aviso: "Chaves VAPID não configuradas; avisos no celular não enviados." }) };
   const r = await executarRotina("notificacoes", { ...avisos, listaDeEspera: () => processarListaDeEspera() });

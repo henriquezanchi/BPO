@@ -17,7 +17,7 @@ const COMO = ["Instagram", "Indicação de amigo", "Palestra", "Passei na frente
 type Pagamento = { invoiceUrl: string; pixPayload: string | null; pixImagem: string | null };
 
 /** Formulário público da matrícula (dados do cadastro do Mercúrio) e o pagamento da 1ª contribuição. */
-export function FormMatricula({ token, vagas, valorCentavos }: { token: string; vagas: number; valorCentavos: number | null }) {
+export function FormMatricula({ token, vagas, valorCentavos, indicacao }: { token: string; vagas: number; valorCentavos: number | null; indicacao?: string }) {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [feito, setFeito] = useState<{ id: string; pagamento: Pagamento | null } | null>(null);
@@ -119,6 +119,8 @@ export function FormMatricula({ token, vagas, valorCentavos }: { token: string; 
   return (
     <form onSubmit={enviar} className="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 dark:border-gray-800 dark:bg-gray-900">
       {/* Campo-isca contra robôs: fora da tela e da navegação; pessoas não veem nem preenchem. */}
+      {/* Convite de um aluno (Indicar um amigo, 07/11/2026): conferido no servidor. */}
+      {indicacao && <input type="hidden" name="indicacao" value={indicacao} />}
       <input type="text" name="site" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <p className="rounded-xl bg-na-green-light px-3 py-2 text-[13px] text-na-green-dark dark:bg-emerald-950/30 dark:text-emerald-300">
         {vagas} vaga{vagas === 1 ? "" : "s"} · {valorCentavos ? `1ª contribuição de ${reais(valorCentavos)}, paga ao final` : "a escola combina a 1ª contribuição com você"}

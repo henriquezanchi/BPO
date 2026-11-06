@@ -668,3 +668,32 @@ Decisão do usuário: **abertas BOA, GYN, BGA, BSB, RVD, LGS e JAM**; as demais 
 - Ordem obrigatória: **primeiro** acertar os sinais no banco (a escrita foi barrada para o agente; o usuário roda), **só
   depois** publicar o código, senão filiais em uso marcadas `false` (GYN, BGA) param de aceitar primeiro acesso:
   `UPDATE "School" SET "portalAberto" = ("mercurioUnidade" IN ('BOA','GYN','BGA','BSB','RVD','LGS','JAM'));`
+
+## 07/11/2026 — Carteirinha, indicar um amigo, voluntariado da semana, agenda das salas e recepção do interessado novo
+
+Pedido do usuário (sim para 4, 6, 7, 9 e 10 da lista de ideias; não para presença por QR, aula cancelada e "perdi a
+aula"). Sem migração.
+
+- **Carteirinha digital** (`/portal/carteirinha`, `lib/carteirinha.ts`): foto, nome, matrícula, filial, nível e situação
+  de agora; QR `NAC1.<matrícula>.<HMAC>` (segredo `CARTEIRINHA_SEGREDO`, ou derivado do `CRON_SECRET`). Botão
+  "Carteirinha" no cartão de boas-vindas e na busca. **Recepção dos eventos** (`/eventos/[id]/recepcao`): "Ler
+  carteirinha" abre a câmera (`components/member/leitor-carteirinha.tsx`, biblioteca `jsqr` 1.4.0) e marca a presença
+  por `actions/carteirinha-actions.ts` → `marcarPresencaEvento` (mesmas travas). Evento do Ulisses: mostra o nome e
+  pede para marcar na lista. `next.config.ts`: `Permissions-Policy` passou a `camera=(self)` (antes bloqueava a câmera).
+- **Indicar um amigo** (`/portal/indicar`, quadro na página inicial e na busca): link pessoal `/convite/<matrícula>.<HMAC>`
+  (página pública, `app/convite/[codigo]`) com o primeiro nome de quem convidou e as próximas aberturas planejadas ou em
+  curso (`lib/convite.ts`); "Quero me matricular" leva a `/matricula/<token>?indicacao=<código>`, e `criarMatricula`
+  grava em `comoConheceu` "Indicação de <nome> (matrícula X)". O aluno vê quantos já se matricularam pelo convite.
+- **Voluntariado da semana** (`lib/avisos-voluntariado.ts`, sobre as Oportunidades): segunda, 10h da filial, push com as
+  tarefas pontuais dos próximos 7 dias com vaga, para quem pode ver oportunidades e ainda não se ofereceu; véspera, 18h,
+  lembrete para quem foi aceito. Textos em `oportunidades-comum.ts`.
+- **Agenda das salas** (`/voluntario/salas`, menu "Agenda das salas", mesmo acesso do calendário; `lib/agenda-salas.ts`):
+  `ItemCalendario` ganhou `sala` (turma do Mercúrio, abertura, local do evento, local ou "Online" do grupo); agrupa por
+  sala normalizada (Sala Platão = PLATAO) e aponta choques de horário. Semana a semana.
+- **Recepção do interessado novo** (`lib/aberturas/recepcao-interessados.ts`): o CRM não informa data de inscrição;
+  novo = lead que não estava na cópia anterior (`AberturaCrmCache`). Depois de cada sincronização, push aos professores
+  da abertura escolhida e a quem tem a área Escolástica, com os nomes; no dia da primeira aula, 8h, quem são os
+  interessados esperados. A rotina `/api/cron/aberturas` passou a sincronizar também filiais com abertura em
+  **rascunho** (antes as cópias estavam paradas desde 23-25/10 porque a única abertura, de BGA, está em rascunho).
+  Mensagem ao próprio interessado depende de modelo de WhatsApp aprovado pela Meta: não feito.
+- Testes: `tests/carteirinha-convite-salas.test.ts`; `npm test` 202; `next build` ok.
