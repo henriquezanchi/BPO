@@ -551,3 +551,11 @@ Combinado com o Marcos (27/10): o Ágora aceita o token do login unificado do cl
   abre `/diario` sendo FV vai para `/diario/fv`. O que já estava escrito no diário de aluno fica guardado.
 - `member-data.ts`: `temDiario` do Portal também exige não ser FV. `avisosDoDiario` (notificacoes-agendadas.ts) não
   manda Prólogo/Epílogo para FV.
+
+## 06/11/2026 — Mapa do Mercúrio e saúde do código
+
+- Pedido do usuário: verificar melhorias do código e mapear o Mercúrio para ver o que mais mostrar ao aluno e ao
+  voluntário. Resultado em `docs/OPORTUNIDADES-MERCURIO-2026-11-06.md` (só leitura no oinabview; nada implementado além
+  do item abaixo).
+- `package.json`: novo `npm test` (`node --experimental-test-module-mocks --import tsx --test`). Sem a opção, 11
+  arquivos `.mjs` falhavam por `mock.module is not a function`. Com ela, 180 testes passam.
