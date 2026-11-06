@@ -20,14 +20,15 @@ jobs:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
       - run: npm ci
       - name: Tipos
-        run: npx tsc --noEmit
+        # PageProps/LayoutProps são gerados pelo Next 16 (next typegen); sem isso o tsc não os acha.
+        run: npx next typegen && npx tsc --noEmit
       - name: Lint
         run: npx eslint --quiet
       - name: Testes
