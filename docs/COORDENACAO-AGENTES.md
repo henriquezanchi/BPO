@@ -789,3 +789,6 @@ Pedido do usuário ("ao liberar o acesso, verifique qual é a área do voluntár
   Fortuna: dos 30 ativos de BGA no Portal, 6 ligados; os outros 24 não existem no Fortuna (busca por CPF, só
   leitura). A API de integração não cria cliente: o cadastro é do lado do Fortuna; a carteira da filial abre sozinha
   no primeiro crédito.
+- 09/11: ponte da Cloudflare publicada pelo usuário (versão 3a56c780): repassa `idempotency-key` e devolve
+  `retry-after`. Conferido: Fortuna (integração e `/api/branch`) e Ulisses respondem pela ponte. Crédito do Fortuna
+  voltou a repetir uma vez, com a mesma chave, em timeout ou erro 500.

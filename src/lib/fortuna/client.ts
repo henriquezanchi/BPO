@@ -194,7 +194,8 @@ export async function fortunaSearchClientsByName(name: string): Promise<FortunaC
 
 /**
  * Credita `amount` (o valor a somar, não o saldo final) na filial. `chave` identifica o pagamento: repetir a mesma chave
- * nunca credita de novo (Idempotency-Key do Fortuna), então "tentar de novo" é seguro.
+ * nunca credita de novo (Idempotency-Key do Fortuna), então "tentar de novo" é seguro. Timeout ou erro 500 repetem uma
+ * vez com a mesma chave.
  */
 export async function fortunaCreditarSaldo(clientId: number, branchId: number, amount: number, chave: string, method: string = "PIX"): Promise<FortunaCreditResult> {
   if (!integracaoConfigurada()) return legadoCreditarSaldo(clientId, branchId, amount, method);
@@ -205,9 +206,14 @@ export async function fortunaCreditarSaldo(clientId: number, branchId: number, a
       headers: { "Content-Type": "application/json", "Idempotency-Key": chave },
       body: JSON.stringify({ branchId, amount: amount.toFixed(2), method }),
     });
-  // Sem nova tentativa automática: a ponte da Cloudflare só repassa o Idempotency-Key depois de publicada a versão de
-  // 09/11/2026. Erro fica registrado e a "nova tentativa" do painel do Café usa a mesma chave.
-  return enviar();
+  // Timeout ou erro 500: uma nova tentativa com a MESMA chave (a ponte repassa o Idempotency-Key desde 09/11/2026);
+  // se o primeiro envio já tinha lançado, o Fortuna devolve o mesmo resultado, sem novo crédito.
+  try {
+    return await enviar();
+  } catch (e) {
+    if (e instanceof FortunaErro && e.status < 500) throw e;
+    return enviar();
+  }
 }
 
 export type Pagina<T> = { data: T[]; page: number; pageSize: number; hasMore: boolean };
