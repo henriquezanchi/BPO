@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
 import { publicosDaPessoa } from "@/lib/event-policy";
+import { areasDoNome } from "@/lib/areas-filial";
 import type { Member } from "@prisma/client";
 
 /**
@@ -23,7 +24,7 @@ type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "fil
 const ehChefeDeFilial = (m: Pessoa) => m.isDiretor || m.isSubChefe || m.filiaisChefiadas.length > 0;
 
 /** Filiais em que a pessoa libera acessos: as que chefia e, se é Sub-Chefe, a própria. */
-async function escolasQueLibera(m: Pessoa): Promise<string[]> {
+export async function escolasQueLibera(m: Pessoa): Promise<string[]> {
   const escolas = await escolasChefiadas(m);
   return m.isSubChefe && !escolas.includes(m.schoolId) ? [...escolas, m.schoolId] : escolas;
 }
@@ -148,6 +149,14 @@ export async function candidatosParaLiberar(liberador: Pessoa) {
       // Sugeridos no topo pro Chefe de Filial: chefes de grupo, sub-chefes, secretários.
       sugerido: chefia.length > 0 || p.isSubChefe || p.isSecretarioEscolastica || p.isSecretarioEconomia,
       liberado: liberados.has(p.id) || p.cargos.length > 0,
+      // Áreas de trabalho (09/11/2026): quem chefia a filial da pessoa dá ou tira a área por aqui. "porSecretaria" =
+      // responsável pela secretaria no Portal (dá para tirar); "porFuncao" = função no Mercúrio (só no Mercúrio).
+      areas: escolas.includes(p.schoolId)
+        ? {
+            porSecretaria: [...new Set(p.classMemberships.filter((c) => c.role === "professor" && c.classGroup.tipo === "SEC").flatMap((c) => areasDoNome(c.classGroup.name)))],
+            porFuncao: [...new Set(p.cargos.flatMap(areasDoNome))],
+          }
+        : null,
       // Função ativa no Mercúrio: entra sozinho (09/11/2026); a tela mostra "Pela função" em vez do botão.
       porFuncao: p.cargos.length > 0,
       funcoes: p.cargos,

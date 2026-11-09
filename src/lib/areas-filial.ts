@@ -22,7 +22,7 @@ import type { Member } from "@prisma/client";
 export const AREAS_FILIAL = ["direcao", "escolastica", "economia", "eventos", "cafe"] as const;
 export type AreaFilial = (typeof AREAS_FILIAL)[number];
 
-const AREA_DA_SECRETARIA: [AreaFilial, RegExp][] = [
+export const AREA_DA_SECRETARIA: [AreaFilial, RegExp][] = [
   ["escolastica", /ESCOLAST/],
   ["economia", /ECONOMIA|TESOURARIA/],
   ["eventos", /EVENTO/],
@@ -58,4 +58,14 @@ export async function areasNaFilial(m: Pessoa, schoolId: string): Promise<AreaFi
     for (const [area, re] of AREA_DA_SECRETARIA) if (re.test(nome)) areas.add(area);
   }
   return [...areas];
+}
+
+/** Áreas que se dão a uma pessoa por secretaria (07/11/2026: tela Liberar acessos), com o nome da secretaria criada. */
+export const AREAS_POR_SECRETARIA = { escolastica: "Escolástica", economia: "Economia", eventos: "Eventos", cafe: "Café" } as const;
+export type AreaPorSecretaria = keyof typeof AREAS_POR_SECRETARIA;
+
+/** Áreas que um nome (de secretaria ou de função) dá. */
+export function areasDoNome(nome: string): AreaFilial[] {
+  const n = normalizar(nome);
+  return AREA_DA_SECRETARIA.filter(([, re]) => re.test(n)).map(([a]) => a);
 }

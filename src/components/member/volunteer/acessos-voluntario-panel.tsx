@@ -4,6 +4,7 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { liberarAcessoVoluntario, revogarAcessoVoluntario } from "@/lib/actions/acesso-voluntario-actions";
 import { Check, Loader2, Search } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
+import { AreasDaPessoa } from "./areas-da-pessoa";
 
 interface Pessoa {
   id: string;
@@ -20,6 +21,8 @@ interface Pessoa {
   /** Tem função ativa no Mercúrio: entra sozinho (09/11/2026). */
   porFuncao?: boolean;
   funcoes?: string[];
+  /** Áreas de trabalho, só para quem chefia a filial da pessoa (09/11/2026). */
+  areas?: { porSecretaria: string[]; porFuncao: string[] } | null;
 }
 
 function normalizar(s: string) {
@@ -98,6 +101,7 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
           {(p.filial || p.papel.length > 0 || p.grupos.length > 0) && (
             <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{[...(p.filial ? [p.filial] : []), ...p.papel, ...p.grupos].join(" · ")}</p>
           )}
+          {p.areas && <AreasDaPessoa pessoaId={p.id} porSecretaria={p.areas.porSecretaria} porFuncao={p.areas.porFuncao} />}
         </div>
         {p.porFuncao ? (
           // Função ativa no Mercúrio (09/11/2026): entra sozinho; não há o que liberar nem retirar aqui.

@@ -734,3 +734,12 @@ liberou à mão entravam; com isso, 77 de 81 pessoas com função em BSB (74 de 
   gere a pesquisa de instrutores. Jakeline (BSB): criação da secretaria "Escolástica" com ela e a Enila como
   responsáveis barrada para o agente; SQL entregue ao usuário.
 - Saque e pagamento automático pelo Asaas: proposta em discussão com o usuário (precisa de migração e de decisões).
+
+## 09/11/2026 — Liberar acessos: dar ou tirar áreas de trabalho por pessoa
+
+Pedido do usuário (não conseguia mexer no acesso da Jakeline: a linha mostrava só "Pela função"). Em Administração →
+Liberar acessos, cada pessoa tem agora "Áreas: Escolástica · Economia · Eventos · Café" para quem chefia a filial dela
+(chefe, sub-chefe, administração nacional, dono). Ligar = vira responsável pela secretaria da área no Portal (criada se
+não existe, `acesso-voluntario-actions.ts` → `definirAreaDeTrabalho`); desligar = sai da responsabilidade. Área que vem
+da função no Mercúrio aparece fixa ("· função"). `areas-filial.ts` exporta `areasDoNome` e `AREAS_POR_SECRETARIA`;
+`acesso-voluntario.ts` exporta `escolasQueLibera` e devolve `areas` em `candidatosParaLiberar`.
