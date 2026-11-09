@@ -759,3 +759,10 @@ Pedido do usuário ("ao liberar o acesso, verifique qual é a área do voluntár
 - Tela Liberar acessos: sub-chefe aparece com as 4 áreas acesas "· direção" (`areas.porDirecao`).
 - Robô do Mercúrio: login recusado ("Identificação Inválida") em 09/11; senha a atualizar no cofre da ferramenta de
   raspagem (`ler_credencial_scraper`, GLOBAL). Mapeamento das permissões do painel do Diretor aguardando isso.
+
+## 09/11/2026 — Robô do Mercúrio com senha no ambiente; tela de Autorização mapeada
+
+- Senha do robô: `MERCURIO_ROBO_MATRICULA`/`MERCURIO_ROBO_SENHA` no `.env` e na Vercel (Production, Sensitive),
+  lidas antes do cofre (`scraper-credentials.ts`). Login conferido.
+- Tela DIRETOR → Autorização mapeada (só leitura): `docs/MERCURIO-AUTORIZACAO.md`. Próximo passo, a decidir com o
+  usuário: ler as autorizações todo dia, refletir no Portal, e dar ou tirar no Mercúrio pelo robô.
