@@ -76,7 +76,7 @@ export async function tentarNovamenteCreditoFortuna(schoolId: string, topUpCharg
   const reserva = await db.fortunaTopUpCharge.updateMany({ where: { id: topUpChargeId, launchedAt: null }, data: { launchedAt: new Date(), launchedBy: "Automático (nova tentativa)" } });
   if (!reserva.count) throw new Error("Esta recarga já foi lançada no Fortuna.");
   try {
-    await fortunaCreditarSaldo(charge.member.fortunaClientId, charge.branchId, Number(charge.amount));
+    await fortunaCreditarSaldo(charge.member.fortunaClientId, charge.branchId, Number(charge.amount), `recarga-${charge.id}`);
   } catch (e) {
     await db.fortunaTopUpCharge.update({ where: { id: topUpChargeId }, data: { launchedAt: null, launchedBy: null } });
     throw e;
@@ -117,7 +117,7 @@ export async function tentarNovamenteCreditoFortunaContribuicao(schoolId: string
   if (!reserva.count) throw new Error("Esta recarga já foi lançada no Fortuna.");
   try {
     const cliente = await fortunaGetClient(charge.member.fortunaClientId);
-    await fortunaCreditarSaldo(charge.member.fortunaClientId, cliente.branch.id, Number(charge.fortunaTopUpAmount));
+    await fortunaCreditarSaldo(charge.member.fortunaClientId, cliente.branch.id, Number(charge.fortunaTopUpAmount), `contribuicao-${charge.id}`);
   } catch (e) {
     await db.paymentCharge.update({ where: { id: chargeId }, data: { fortunaTopUpLaunchedAt: null, fortunaTopUpLaunchedBy: null } });
     throw e;

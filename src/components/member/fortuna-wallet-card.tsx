@@ -79,6 +79,10 @@ export function FortunaWalletCard({
             </button>
           </div>
           <div className="text-2xl font-bold text-na-green dark:text-emerald-400">{formatBRL(atual.amount)}</div>
+          {/* Extrato do Café (09/11/2026): consumo e créditos pela API de integração do Fortuna. */}
+          <a href="/portal/fortuna" className="text-[11px] font-semibold text-na-green-dark underline-offset-2 hover:underline dark:text-emerald-400">
+            Ver consumo e extrato
+          </a>
         </div>
         {onAdicionarCreditos && (
           <button

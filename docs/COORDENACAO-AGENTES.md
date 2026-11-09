@@ -769,3 +769,18 @@ Pedido do usuário ("ao liberar o acesso, verifique qual é a área do voluntár
 - 09/11 (ajuste do usuário): Patrimônio = inventário, secretaria própria "Patrimônio" (`secretarias.ts`, saiu de
   Economia); Recepção do Mercúrio → secretaria "Recepção e Portaria" (vai além dos eventos); Relatório Mensal mantém
   o nome e a função própria. `docs/MERCURIO-AUTORIZACAO.md` atualizado.
+
+## 09/11/2026 — Fortuna pela API de integração; extrato do Café
+
+- `lib/fortuna/client.ts`: mesmas funções (`fortunaGetClient`, `fortunaGetBranches`, `fortunaSearchClientsByName`,
+  `fortunaCreditarSaldo`), agora pela API de integração (`FORTUNA_API_KEY`, `FORTUNA_API_URL`, no `.env` e na Vercel).
+  Leituras caem no login antigo de gerente se a integração falhar; crédito só usa o login antigo se a integração não
+  estiver configurada (não contorna filial não autorizada nem repete crédito de resultado incerto). Crédito leva
+  `Idempotency-Key` por pagamento (`recarga-<id>`, `contribuicao-<id>`): a "nova tentativa" do painel do Café não
+  credita em dobro. Sem nova tentativa automática até a ponte repassar o cabeçalho.
+- Novas `fortunaExtrato` e `fortunaConsumo`; página `/portal/fortuna` (Extrato do Café: consumo e créditos de 30/90/180
+  dias), link "Ver consumo e extrato" no cartão do Fortuna. Conferido com dados reais (só leitura).
+- Ponte da Cloudflare (`infra/ponte-cloudflare/src/index.ts`): passa a repassar `idempotency-key` e devolver
+  `retry-after`. **Falta publicar** (`cd infra/ponte-cloudflare && npx wrangler deploy`; barrado para o agente).
+- Fortuna: Barra do Garças apareceu como filial 35 em 09/11. Crédito pela integração depende de o Fortuna autorizar
+  a filial (permissão `credits:write` por filial, do lado deles). A integração não cria filial.

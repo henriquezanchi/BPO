@@ -68,7 +68,7 @@ export async function confirmarPagamento(chargeId: string): Promise<void> {
       const member = await db.member.findUniqueOrThrow({ where: { id: charge.memberId } });
       if (!member.fortunaClientId) throw new Error("Membro sem fortunaClientId vinculado.");
       const cliente = await fortunaGetClient(member.fortunaClientId);
-      await fortunaCreditarSaldo(member.fortunaClientId, cliente.branch.id, Number(charge.fortunaTopUpAmount));
+      await fortunaCreditarSaldo(member.fortunaClientId, cliente.branch.id, Number(charge.fortunaTopUpAmount), `contribuicao-${charge.id}`);
       await db.paymentCharge.update({ where: { id: charge.id }, data: { fortunaTopUpLaunchedAt: new Date() } });
     } catch (e) {
       const message = (e as Error).message;

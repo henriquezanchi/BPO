@@ -23,7 +23,7 @@ export async function confirmarRecargaFortuna(chargeId: string): Promise<"pago" 
 
   try {
     if (!charge.member.fortunaClientId) throw new Error("Membro sem fortunaClientId vinculado.");
-    await fortunaCreditarSaldo(charge.member.fortunaClientId, charge.branchId, Number(charge.amount));
+    await fortunaCreditarSaldo(charge.member.fortunaClientId, charge.branchId, Number(charge.amount), `recarga-${chargeId}`);
     await db.fortunaTopUpCharge.update({ where: { id: chargeId }, data: { launchedAt: new Date(), launchedBy: "Automático (Asaas → Fortuna)" } });
   } catch (e) {
     const message = (e as Error).message;

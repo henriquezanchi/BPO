@@ -63,7 +63,7 @@ export default {
     if (alvo.protocol !== "https:" || !ALLOWED.includes(alvo.hostname)) return new Response("Destino não permitido.", { status: 403 });
 
     const cabecalhos = new Headers();
-    for (const h of ["accept", "content-type", "authorization", "cookie", "x-xsrf-token"]) {
+    for (const h of ["accept", "content-type", "authorization", "cookie", "x-xsrf-token", "idempotency-key"]) {
       const v = req.headers.get(h);
       if (v) cabecalhos.set(h, v);
     }
@@ -79,7 +79,7 @@ export default {
     // Ray ID da resposta do sistema de origem (o cf-ray desta resposta é o da própria ponte).
     const rayOrigem = r.headers.get("cf-ray");
     if (rayOrigem) resposta.set("x-origem-cf-ray", rayOrigem);
-    for (const h of ["content-type", "set-cookie", "location", "cf-mitigated"]) {
+    for (const h of ["content-type", "set-cookie", "location", "cf-mitigated", "retry-after"]) {
       const v = r.headers.get(h);
       if (v) resposta.set(h, v);
     }
