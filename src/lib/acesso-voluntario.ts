@@ -13,8 +13,11 @@ import type { Member } from "@prisma/client";
  *    integrantes desse grupo (vínculos que o sistema já conhece).
  * Voluntariado é para membros (2º nível em diante — pedido do usuário 2026-10-29): alguém do N1 só entra por
  * exceção aberta pelo Chefe de Filial; responsável de grupo não libera N1.
+ * Quem tem função ativa no Mercúrio (Member.cargos) entra sozinho (pedido do usuário 09/11/2026: "achei que isso já
+ * estava implementado"): a função já é a escola dizendo que a pessoa é voluntária. Os grupos continuam restritos a quem
+ * participa deles.
  */
-type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "filiaisChefiadas" | "mercurioId">;
+type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "filiaisChefiadas" | "mercurioId"> & { cargos?: string[] };
 
 // Sub-Chefe de Filial também libera (pedido do usuário 2026-10-25), só na própria filial.
 const ehChefeDeFilial = (m: Pessoa) => m.isDiretor || m.isSubChefe || m.filiaisChefiadas.length > 0;
@@ -43,6 +46,8 @@ export async function escolasChefiadas(m: Pessoa): Promise<string[]> {
 
 export async function temAcessoVoluntario(m: Pessoa): Promise<boolean> {
   if (ehChefeDeFilial(m) || (await ehAdministradorNacional(m))) return true;
+  const cargos = m.cargos ?? (await db.member.findUnique({ where: { id: m.id }, select: { cargos: true } }))?.cargos ?? [];
+  if (cargos.length) return true;
   return (await db.acessoVoluntario.count({ where: { memberId: m.id } })) > 0;
 }
 
@@ -51,7 +56,7 @@ export async function comAcessoVoluntario(memberIds: string[]): Promise<Set<stri
   if (!memberIds.length) return new Set();
   const [liberados, diretores] = await Promise.all([
     db.acessoVoluntario.findMany({ where: { memberId: { in: memberIds } }, select: { memberId: true } }),
-    db.member.findMany({ where: { id: { in: memberIds }, OR: [{ isDiretor: true }, { isSubChefe: true }, { filiaisChefiadas: { isEmpty: false } }] }, select: { id: true } }),
+    db.member.findMany({ where: { id: { in: memberIds }, OR: [{ isDiretor: true }, { isSubChefe: true }, { filiaisChefiadas: { isEmpty: false } }, { cargos: { isEmpty: false } }] }, select: { id: true } }),
   ]);
   return new Set([...liberados.map((l) => l.memberId), ...diretores.map((d) => d.id)]);
 }
@@ -142,7 +147,10 @@ export async function candidatosParaLiberar(liberador: Pessoa) {
       grupos,
       // Sugeridos no topo pro Chefe de Filial: chefes de grupo, sub-chefes, secretários.
       sugerido: chefia.length > 0 || p.isSubChefe || p.isSecretarioEscolastica || p.isSecretarioEconomia,
-      liberado: liberados.has(p.id),
+      liberado: liberados.has(p.id) || p.cargos.length > 0,
+      // Função ativa no Mercúrio: entra sozinho (09/11/2026); a tela mostra "Pela função" em vez do botão.
+      porFuncao: p.cargos.length > 0,
+      funcoes: p.cargos,
       // N1 ou programa complementar: liberar é uma exceção do Chefe de Filial.
       excecao: !ehMembro(p),
       liberadoEm: liberados.get(p.id)?.liberadoEm ?? null,

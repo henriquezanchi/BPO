@@ -15,7 +15,7 @@ import type { Member } from "@prisma/client";
  *  - eventos: gestão de eventos e calendário;
  *  - cafe: Caixa Fortuna.
  * Direção (chefe, sub-chefe, chefias e administração nacional) tem todas.
- * As demais: o cargo do Mercúrio (Secretaria de Escolástica/Economia) ou ser
+ * As demais: a função do Mercúrio (Escolástica, Economia/Tesouraria, Eventos, Café) ou ser
  * responsável pela secretaria com esse nome no Portal (Administração →
  * Secretarias). A equipe da secretaria não entra na área (dados sensíveis).
  */
@@ -29,7 +29,7 @@ const AREA_DA_SECRETARIA: [AreaFilial, RegExp][] = [
   ["cafe", /CAFE/],
 ];
 
-type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "isSecretarioEscolastica" | "isSecretarioEconomia" | "filiaisChefiadas" | "mercurioId" | "mercurioAtivo">;
+type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "isSecretarioEscolastica" | "isSecretarioEconomia" | "filiaisChefiadas" | "mercurioId" | "mercurioAtivo"> & { cargos?: string[] };
 
 export async function areasNaFilial(m: Pessoa, schoolId: string): Promise<AreaFilial[]> {
   if (!m.mercurioAtivo) return [];
@@ -43,6 +43,12 @@ export async function areasNaFilial(m: Pessoa, schoolId: string): Promise<AreaFi
   const areas = new Set<AreaFilial>();
   if (m.schoolId === schoolId && m.isSecretarioEscolastica) areas.add("escolastica");
   if (m.schoolId === schoolId && m.isSecretarioEconomia) areas.add("economia");
+  // Função ativa no Mercúrio libera a área correspondente na própria filial (09/11/2026): ex. Coordenador(a) de
+  // Eventos → Eventos; função do Café → Café. Mesmas palavras dos nomes de secretaria abaixo.
+  if (m.schoolId === schoolId) {
+    const cargos = m.cargos ?? (await db.member.findUnique({ where: { id: m.id }, select: { cargos: true } }))?.cargos ?? [];
+    for (const c of cargos) for (const [area, re] of AREA_DA_SECRETARIA) if (re.test(normalizar(c))) areas.add(area);
+  }
   const secretarias = await db.classMembership.findMany({
     where: { memberId: m.id, role: "professor", classGroup: { schoolId, tipo: "SEC", arquivadoEm: null } },
     select: { classGroup: { select: { name: true } } },

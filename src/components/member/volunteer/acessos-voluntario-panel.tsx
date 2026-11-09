@@ -17,6 +17,9 @@ interface Pessoa {
   sugerido: boolean;
   liberado: boolean;
   excecao?: boolean;
+  /** Tem função ativa no Mercúrio: entra sozinho (09/11/2026). */
+  porFuncao?: boolean;
+  funcoes?: string[];
 }
 
 function normalizar(s: string) {
@@ -96,6 +99,12 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
             <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{[...(p.filial ? [p.filial] : []), ...p.papel, ...p.grupos].join(" · ")}</p>
           )}
         </div>
+        {p.porFuncao ? (
+          // Função ativa no Mercúrio (09/11/2026): entra sozinho; não há o que liberar nem retirar aqui.
+          <span title={p.funcoes?.join(" · ")} className="shrink-0 rounded-lg bg-na-success-light px-3 py-1.5 text-[11px] font-semibold text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300">
+            Pela função
+          </span>
+        ) : (
         <button
           onClick={() => alternar(p)}
           disabled={emAndamento === p.id}
@@ -109,6 +118,7 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
           {emAndamento === p.id ? <Loader2 size={12} className="animate-spin" /> : ok ? <Check size={12} /> : null}
           {ok ? "Liberado" : "Liberar"}
         </button>
+        )}
       </li>
     );
   }

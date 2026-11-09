@@ -203,7 +203,8 @@ export async function carregarPanorama(escolas: Escola[], todas = false) {
     db.aberturaTurma.groupBy({ by: ["schoolId"], where: { schoolId: { in: ids }, status: { in: ["planejada", "em_curso"] } }, _count: { _all: true } }),
     db.aberturaCrmCache.findMany({ where: { schoolId: { in: ids } }, select: { schoolId: true, dados: true } }),
     db.acessoVoluntario.findMany({ select: { memberId: true } }).then(async (a) =>
-      db.member.groupBy({ by: ["schoolId"], where: { ...ativosNa, id: { in: a.map((x) => x.memberId) } }, _count: { _all: true } }),
+      // Com função ativa no Mercúrio também conta (entra sozinho desde 09/11/2026).
+      db.member.groupBy({ by: ["schoolId"], where: { ...ativosNa, OR: [{ id: { in: a.map((x) => x.memberId) } }, { cargos: { isEmpty: false } }] }, _count: { _all: true } }),
     ),
     db.classGroup.groupBy({ by: ["schoolId", "tipo"], where: { schoolId: { in: ids }, arquivadoEm: null, tipo: { not: "turma" } }, _count: { _all: true } }),
   ]);

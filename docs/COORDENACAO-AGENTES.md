@@ -707,3 +707,20 @@ aula"). Sem migração.
 - BSB ainda sem WhatsApp da secretaria (`School.whatsapp`), sem subconta Asaas e com `mercurioEscrita = false`: o
   Portal funciona em modo consulta para contribuição (sem pagamento pelo Portal).
 - Mercury medido de novo em 09/11: base de teste parada em 28/09, produção 401 com a chave atual.
+
+## 09/11/2026 — Função ativa no Mercúrio libera a Área do Voluntário e a área correspondente
+
+Pedido do usuário ("achei que isso já estava implementado"; "exato"). Antes só chefe, sub-chefe e quem a direção
+liberou à mão entravam; com isso, 77 de 81 pessoas com função em BSB (74 de 78 em GYN) estavam sem acesso.
+
+- `acesso-voluntario.ts`: `temAcessoVoluntario` e `comAcessoVoluntario` aceitam `Member.cargos` não vazio (funções
+  atuais do Mercúrio). Na tela "Liberar acessos", essas pessoas aparecem com "Pela função" no lugar do botão.
+  Também contam em `oportunidades.ts` (responsáveis possíveis) e `panorama.ts`.
+- `areas-filial.ts`: a função, na própria filial, dá a área pelas mesmas palavras dos nomes de secretaria:
+  Escolástica, Economia/Tesouraria, Eventos, Café. Conferido: só funções do próprio café da filial e das secretarias
+  casam. Com dados reais: BSB 81 com acesso, GYN 79, LGS 24, BOA 12, BGA 6. Jakeline Borges de Souza (BSB,
+  Coordenadora de Eventos): Área do Voluntário e área de Eventos.
+- Os grupos (Feminino, Masculino, Segurança) continuam restritos a quem participa deles.
+- Fortuna (09/11): `FORTUNA_API_URL` e `FORTUNA_API_KEY` no `.env`; a API de integração responde no domínio
+  `oinabnfortunaback.acropolebrasil.com.br/api/integration/v1`, mas recusa a chave ("Credencial inválida", 401):
+  pendente com a equipe do Fortuna.

@@ -65,7 +65,7 @@ export async function responsaveisPossiveis(m: { id: string; name: string }, g: 
     where: {
       schoolId,
       mercurioAtivo: true,
-      OR: [{ id: m.id }, { id: { in: liberados } }, { isDiretor: true }, { isSubChefe: true }, { isSecretarioEscolastica: true }, { isSecretarioEconomia: true }],
+      OR: [{ id: m.id }, { id: { in: liberados } }, { cargos: { isEmpty: false } }, { isDiretor: true }, { isSubChefe: true }, { isSecretarioEscolastica: true }, { isSecretarioEconomia: true }],
     },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
