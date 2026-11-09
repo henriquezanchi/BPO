@@ -766,3 +766,6 @@ Pedido do usuário ("ao liberar o acesso, verifique qual é a área do voluntár
   lidas antes do cofre (`scraper-credentials.ts`). Login conferido.
 - Tela DIRETOR → Autorização mapeada (só leitura): `docs/MERCURIO-AUTORIZACAO.md`. Próximo passo, a decidir com o
   usuário: ler as autorizações todo dia, refletir no Portal, e dar ou tirar no Mercúrio pelo robô.
+- 09/11 (ajuste do usuário): Patrimônio = inventário, secretaria própria "Patrimônio" (`secretarias.ts`, saiu de
+  Economia); Recepção do Mercúrio → secretaria "Recepção e Portaria" (vai além dos eventos); Relatório Mensal mantém
+  o nome e a função própria. `docs/MERCURIO-AUTORIZACAO.md` atualizado.

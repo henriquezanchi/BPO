@@ -17,6 +17,7 @@ export const SECRETARIAS_PADRAO = [
   "Biblioteca e Livraria",
   "Café",
   "Técnica e Manutenção",
+  "Patrimônio",
   "Eventos",
   "Assistência Social",
   "Recepção e Portaria",
@@ -29,7 +30,9 @@ export const SECRETARIAS_OFERTA = ["Economia", "Difusão e Comunicação", "Aber
 
 const CANONICAS: [string, RegExp][] = [
   ["Escolástica", /ESCOLAST/],
-  ["Economia", /ECONOMIA|TESOURARIA|CONTABIL|PATRIMONIO|INADIMPL|FINANC/],
+  // Patrimônio é inventário (09/11/2026, usuário): secretaria própria, separada de Economia e de Manutenção.
+  ["Patrimônio", /PATRIMONIO|INVENTARIO/],
+  ["Economia", /ECONOMIA|TESOURARIA|CONTABIL|INADIMPL|FINANC/],
   ["Integração", /INTEGRAC/],
   ["Abertura de Turma", /ABERTURA/],
   ["Difusão e Comunicação", /PROPAGANDA|DIFUS|IMAGEM|INTERNET|RELACOES PUBLICAS|COMUNICAC|FOTOGRAF|MARKETING/],

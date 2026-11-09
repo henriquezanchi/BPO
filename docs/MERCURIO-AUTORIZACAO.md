@@ -21,10 +21,10 @@ Códigos dos módulos (ordem das colunas):
 | UDIR | Diretor | Direção (a decidir: dá tudo) |
 | UEVT | Eventos | Eventos |
 | UINT | Integração | Secretaria Integração |
-| UPAT | Patrimônio | Secretaria Técnica e Manutenção / Economia |
-| UREC | Recepção | Recepção dos eventos |
+| UPAT | Patrimônio | Secretaria **Patrimônio** (inventário; não é manutenção — decisão do usuário 09/11) |
+| UREC | Recepção | Secretaria **Recepção e Portaria** (a recepção vai além dos eventos — decisão do usuário 09/11) |
 | URFV | Relatório FFVV | Grupos de FV (relatórios) |
-| UREL | Relatório Mensal | Direção (relatório) |
+| UREL | Relatório Mensal | **Relatório Mensal** (mantém o nome e a função própria — decisão do usuário 09/11) |
 | UTES | Tesouraria | Economia |
 
 Cuidados: clicar num link já grava (não há confirmação na tela); o robô só enxerga as filiais em que o usuário dele

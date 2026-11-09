@@ -90,3 +90,13 @@ test("secretarias automáticas: funções do catálogo viram secretaria; texto l
   assert.ok(NOMES_DO_CATALOGO.has("Técnica e Manutenção"));
   assert.ok(s.filter((x) => !NOMES_DO_CATALOGO.has(x.nome)).every((x) => x.nome !== "Técnica e Manutenção"));
 });
+
+test("Patrimônio é secretaria própria, separada de Manutenção e de Economia", async () => {
+  const { sugerirSecretarias } = await import("../src/lib/secretarias");
+  const nomes = sugerirSecretarias([
+    { matricula: "1", funcao: "X", descricao: "COORDENADOR DE PATRIMÔNIO" },
+    { matricula: "2", funcao: "X", descricao: "SECRETARIO DE TÉCNICAS E MANUTENÇÃO" },
+    { matricula: "3", funcao: "X", descricao: "SECRETÁRIO DE ECONOMIA" },
+  ]).map((s) => s.nome);
+  assert.ok(nomes.includes("Patrimônio") && nomes.includes("Técnica e Manutenção") && nomes.includes("Economia"));
+});
