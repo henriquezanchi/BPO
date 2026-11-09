@@ -1,4 +1,5 @@
 import { escolasChefiadas } from "@/lib/acesso-voluntario";
+import { areasNaFilial } from "@/lib/areas-filial";
 import { lerPerguntas, MINIMO_RESPOSTAS, QUESTIONARIO_BASE, type Pergunta, type Questionario } from "@/lib/avaliacao-comum";
 import { db } from "@/lib/db";
 import type { Member } from "@prisma/client";
@@ -14,11 +15,14 @@ import type { Member } from "@prisma/client";
  *  - relatórios só mostram recortes com pelo menos MINIMO_RESPOSTAS.
  */
 
-type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "isSecretarioEscolastica" | "filiaisChefiadas" | "mercurioId">;
+type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "isSecretarioEscolastica" | "filiaisChefiadas" | "mercurioId"> & { mercurioAtivo?: boolean; isSecretarioEconomia?: boolean; cargos?: string[] };
 
 export async function escolasQueGereAvaliacao(m: Pessoa): Promise<string[]> {
   const ids = new Set(await escolasChefiadas(m));
   if (m.isSubChefe || m.isSecretarioEscolastica) ids.add(m.schoolId);
+  // Quem tem a área de Escolástica na própria filial por outro caminho (responsável pela secretaria no Portal ou função
+  // no Mercúrio) também gere a pesquisa (09/11/2026).
+  else if ((await areasNaFilial({ isSecretarioEconomia: false, mercurioAtivo: true, ...m }, m.schoolId)).includes("escolastica")) ids.add(m.schoolId);
   return [...ids];
 }
 
