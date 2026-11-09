@@ -66,3 +66,19 @@ test("alerta marcado como corrigido some só até o próximo resumo", () => {
   assert.ok(escondidos(marcados, new Date("2026-11-06T10:00:00Z")).has(chave));
   assert.ok(!escondidos(marcados, new Date("2026-11-07T10:00:00Z")).has(chave));
 });
+
+test("contas a pagar: uma conta pelo nome; várias com total", async () => {
+  const { textoContasDoDia: bruto } = await import("../src/lib/avisos-contas");
+  // O formato de moeda usa espaço não separável entre "R$" e o valor.
+  const textoContasDoDia = (...a: Parameters<typeof bruto>) => {
+    const t = bruto(...a);
+    return { titulo: t.titulo.replace(/ /g, " "), corpo: t.corpo.replace(/ /g, " ") };
+  };
+  assert.deepEqual(textoContasDoDia([{ vendor: "Aluguel", amount: 2500, predicted: false }], "hoje"), {
+    titulo: "Conta vence hoje: Aluguel",
+    corpo: "R$ 2.500,00. Depois de pagar, marque como paga na Economia.",
+  });
+  const v = textoContasDoDia([{ vendor: "Luz", amount: 300, predicted: true }, { vendor: "Água", amount: 100.5, predicted: false }], "amanha");
+  assert.equal(v.titulo, "2 contas vencem amanhã · R$ 400,50");
+  assert.ok(v.corpo.startsWith("Luz R$ 300,00 (prevista); Água R$ 100,50"));
+});

@@ -724,3 +724,13 @@ liberou à mão entravam; com isso, 77 de 81 pessoas com função em BSB (74 de 
 - Fortuna (09/11): `FORTUNA_API_URL` e `FORTUNA_API_KEY` no `.env`; a API de integração responde no domínio
   `oinabnfortunaback.acropolebrasil.com.br/api/integration/v1`, mas recusa a chave ("Credencial inválida", 401):
   pendente com a equipe do Fortuna.
+
+## 09/11/2026 — Aviso das contas a pagar; pesquisa de instrutores para quem tem a área de Escolástica
+
+- Contas a pagar já existiam (Economia → aba Contas, `Payable`, `repasse-actions.ts`). Novo: `lib/avisos-contas.ts` na
+  rotina de avisos: às 8h da filial, push para quem tem a área de Economia com as contas em aberto que vencem hoje e
+  amanhã (previsões marcadas como "prevista"). Vencimento comparado pela data AAAA-MM-DD (gravado à meia-noite UTC).
+- `avaliacao.ts`: quem tem a área de Escolástica (responsável pela secretaria no Portal ou função no Mercúrio) também
+  gere a pesquisa de instrutores. Jakeline (BSB): criação da secretaria "Escolástica" com ela e a Enila como
+  responsáveis barrada para o agente; SQL entregue ao usuário.
+- Saque e pagamento automático pelo Asaas: proposta em discussão com o usuário (precisa de migração e de decisões).

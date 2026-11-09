@@ -2,6 +2,7 @@ import { avisosDeAniversario } from "@/lib/aniversarios";
 import { avisosDeAlunosSumindo, resumoSemanalDaDirecao } from "@/lib/avisos-direcao";
 import { lembretesDeAula } from "@/lib/lembrete-aula";
 import { avisosDeVoluntariado } from "@/lib/avisos-voluntariado";
+import { avisosDeContasAPagar } from "@/lib/avisos-contas";
 import { avisosDeChegadaDeInteressados } from "@/lib/aberturas/recepcao-interessados";
 import { processarListaDeEspera } from "@/lib/event-waitlist";
 import { avisosDeAtendimentos, avisosDoDiario, avisosDoDiarioFv, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
@@ -42,6 +43,8 @@ export async function GET(req: Request) {
         voluntariado: () => avisosDeVoluntariado(),
         // 07/11/2026: no dia da primeira aula de uma abertura, quem são os interessados esperados.
         chegadaInteressados: () => avisosDeChegadaDeInteressados(),
+        // 09/11/2026: contas a pagar da Economia, na véspera e no dia do vencimento, às 8h da filial.
+        contasAPagar: () => avisosDeContasAPagar(),
       }
     : { push: async () => ({ aviso: "Chaves VAPID não configuradas; avisos no celular não enviados." }) };
   const r = await executarRotina("notificacoes", { ...avisos, listaDeEspera: () => processarListaDeEspera() });
