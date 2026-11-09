@@ -43,7 +43,18 @@ async function main() {
     return;
   }
 
-  const { school, importados } = await sincronizarUnidade(uni, { matriculas: cadastros.map((c) => c.cad_matr!) });
+  // Em lotes (09/11/2026, BSB com 448 ativos): a lista inteira de recibos numa consulta só passou do limite do
+  // banco de consulta. A rotina diária (/api/cron/mercurio) também divide em lotes.
+  const matriculas = cadastros.map((c) => c.cad_matr!);
+  let importados = 0;
+  let school: Awaited<ReturnType<typeof sincronizarUnidade>>["school"] | null = null;
+  for (let i = 0; i < matriculas.length; i += 50) {
+    const r = await sincronizarUnidade(uni, { matriculas: matriculas.slice(i, i + 50) });
+    importados += r.importados;
+    school = r.school;
+    console.log(`  lote ${i / 50 + 1}: ${r.importados}`);
+  }
+  if (!school) throw new Error("Nenhum ativo para importar.");
   console.log(`importados/atualizados: ${importados} (${school.name})`);
   await db.school.update({ where: { id: school.id }, data: { portalAberto: true } });
 

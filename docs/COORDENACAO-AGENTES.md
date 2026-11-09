@@ -697,3 +697,13 @@ aula"). Sem migração.
   **rascunho** (antes as cópias estavam paradas desde 23-25/10 porque a única abertura, de BGA, está em rascunho).
   Mensagem ao próprio interessado depende de modelo de WhatsApp aprovado pela Meta: não feito.
 - Testes: `tests/carteirinha-convite-salas.test.ts`; `npm test` 202; `next build` ok.
+
+## 09/11/2026 — Sede Central (BSB) aberta para todos os ativos; Mercury conferido
+
+- Pedido do usuário ("libere a sede central para funcionar, e todos os ativos"). `scripts/abrir-filial-db.ts BSB --gravar`:
+  448 ativos importados, 428 logins criados (senha aleatória, sem e-mail enviado), 2 já tinham login; 6 sem e-mail no
+  Mercúrio e 12 com e-mail já usado por outra conta (ficam para a secretaria). `portalAberto` já estava `true` (07/11).
+- O script passou a importar em lotes de 50: a lista inteira de recibos numa consulta só falhou no banco de consulta.
+- BSB ainda sem WhatsApp da secretaria (`School.whatsapp`), sem subconta Asaas e com `mercurioEscrita = false`: o
+  Portal funciona em modo consulta para contribuição (sem pagamento pelo Portal).
+- Mercury medido de novo em 09/11: base de teste parada em 28/09, produção 401 com a chave atual.
