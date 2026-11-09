@@ -58,7 +58,17 @@ export async function createFortunaTopUpCharge(memberId: string, valor: number, 
   const dueDate = vencimento.toISOString().slice(0, 10);
 
   const split = await splitDoBpo(valor, conta);
-  const pagamento = await asaasCreatePixCharge(cliente.id, valor, `Recarga Fortuna — ${member.name}`, dueDate, split, conta);
+  let pagamento: Awaited<ReturnType<typeof asaasCreatePixCharge>>;
+  try {
+    pagamento = await asaasCreatePixCharge(cliente.id, valor, `Recarga Fortuna — ${member.name}`, dueDate, split, conta);
+  } catch (e) {
+    // Subconta da filial ainda em aprovação no Asaas (09/11/2026, Barra do Garças): aviso claro em vez do erro genérico
+    // (em produção o Next esconde a mensagem de erros lançados; por isso volta como resultado).
+    if (/precisa estar aprovada|não está disponível no momento/i.test((e as Error).message)) {
+      return { erro: "O pagamento pelo Portal ainda não está liberado nesta filial: a conta de recebimento está em aprovação. Tente de novo em alguns dias." };
+    }
+    throw e;
+  }
   const qrcode = await asaasGetPixQrCode(pagamento.id, conta);
 
   const charge = await db.fortunaTopUpCharge.create({

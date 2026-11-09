@@ -784,3 +784,8 @@ Pedido do usuário ("ao liberar o acesso, verifique qual é a área do voluntár
   `retry-after`. **Falta publicar** (`cd infra/ponte-cloudflare && npx wrangler deploy`; barrado para o agente).
 - Fortuna: Barra do Garças apareceu como filial 35 em 09/11. Crédito pela integração depende de o Fortuna autorizar
   a filial (permissão `credits:write` por filial, do lado deles). A integração não cria filial.
+- 09/11: recarga do Café em BGA falhava com o erro genérico: o Asaas recusa Pix na subconta de BGA ("sua conta precisa
+  estar aprovada"). `createFortunaTopUpCharge` devolve agora um aviso claro (conta de recebimento em aprovação).
+  Fortuna: dos 30 ativos de BGA no Portal, 6 ligados; os outros 24 não existem no Fortuna (busca por CPF, só
+  leitura). A API de integração não cria cliente: o cadastro é do lado do Fortuna; a carteira da filial abre sozinha
+  no primeiro crédito.

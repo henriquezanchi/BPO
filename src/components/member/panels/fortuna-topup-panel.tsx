@@ -52,7 +52,8 @@ export function FortunaTopUpPanel({ balances, memberId }: { balances: FortunaBal
     startTransition(async () => {
       try {
         const res = await createFortunaTopUpCharge(memberId, valorNumerico, cpfLimpo, branchId);
-        setCharge(res);
+        if (res.erro) setErro(res.erro);
+        else if (res.chargeId) setCharge({ chargeId: res.chargeId, pixPayload: res.pixPayload, pixQrCodeBase64: res.pixQrCodeBase64, amount: res.amount });
       } catch (e) {
         setErro(mensagemErroAmigavel(e));
       }
