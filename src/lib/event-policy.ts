@@ -162,3 +162,16 @@ export function safeEventRegistrationUrl(value:string|null|undefined) {
  if(!value)return null;
  try{const url=new URL(value);if(url.protocol!=="https:"||url.username||url.password)return null;return url.href;}catch{return null;}
 }
+
+/** Campos da pessoa usados para decidir quais eventos ela vê (avisos, agenda do Google). */
+export const camposPublico = { id: true, nivel: true, isMembroPrograma: true, isProvacionista: true, isHD: true, isDirigente: true, isFV: true, emProvacionismo: true, school: { select: { id: true, uf: true } } } as const;
+export type PessoaAviso = Prisma.MemberGetPayload<{ select: typeof camposPublico }>;
+
+/** Eventos publicados que a pessoa vê na Agenda (mesmo filtro de member-data.ts). */
+export function eventosQueAPessoaVe(p: PessoaAviso): Prisma.EventWhereInput {
+  return {
+    status: "publicado",
+    OR: [...(eventScopeWhere(p.school).OR ?? []), { scope: { in: ["nacional", "regional"] } }],
+    AND: [eventAudienceWhere(p), agendaUlissesBranchWhere(p.school.id)],
+  };
+}

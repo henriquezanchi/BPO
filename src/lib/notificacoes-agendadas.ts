@@ -3,7 +3,7 @@ import { areasNaFilial, type AreaFilial } from "@/lib/areas-filial";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { ehFV } from "@/lib/grupos-portal";
 import { db } from "@/lib/db";
-import { agendaUlissesBranchWhere, eventAudienceWhere, eventScopeWhere } from "@/lib/event-policy";
+import { agendaUlissesBranchWhere, camposPublico, eventAudienceWhere, eventScopeWhere, eventosQueAPessoaVe } from "@/lib/event-policy";
 import { TIPOS_DO_PORTAL, TIPOS_FV, dispensaAcessoVoluntario } from "@/lib/grupos-comum";
 import { prazoDoPlano } from "@/lib/escala-pedagogos";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
@@ -179,18 +179,6 @@ export async function avisosDePedidosNovos() {
 //  - eventos novos chegam numa notificação só por rodada ("3 eventos novos na Agenda"), entre 8h e 21h
 //    (a importação do Ulisses é às 6h; o aviso espera o horário);
 //  - toda segunda-feira, a partir das 8h, um resumo com os eventos da semana.
-
-const camposPublico = { id: true, nivel: true, isMembroPrograma: true, isProvacionista: true, isHD: true, isDirigente: true, isFV: true, emProvacionismo: true, school: { select: { id: true, uf: true } } } as const;
-type PessoaAviso = Prisma.MemberGetPayload<{ select: typeof camposPublico }>;
-
-/** Eventos publicados que a pessoa vê na Agenda (mesmo filtro de member-data.ts). */
-function eventosQueAPessoaVe(p: PessoaAviso): Prisma.EventWhereInput {
-  return {
-    status: "publicado",
-    OR: [...(eventScopeWhere(p.school).OR ?? []), { scope: { in: ["nacional", "regional"] } }],
-    AND: [eventAudienceWhere(p), agendaUlissesBranchWhere(p.school.id)],
-  };
-}
 
 /** Partes da data/hora em Brasília. */
 function agoraEmBrasilia(agora: Date) {

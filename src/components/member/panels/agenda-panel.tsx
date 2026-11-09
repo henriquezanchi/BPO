@@ -14,7 +14,7 @@ import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
-import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, MessagesSquare, PartyPopper, RefreshCw, Ticket, Users, UtensilsCrossed, Video } from "lucide-react";
+import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, MessagesSquare, PartyPopper, RefreshCw, Ticket, Users, UtensilsCrossed, Video, CalendarPlus } from "lucide-react";
 import { createContext, useContext, useMemo, useRef, useState, useTransition } from "react";
 import { pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
 
@@ -666,6 +666,25 @@ function LinkMeusEventos() {
   );
 }
 
+/** Eventos do Portal no Google Agenda (09/11/2026): assinatura por link pessoal. */
+function LinkAgendaGoogle() {
+  return (
+    <Link
+      href="/portal/agenda-google"
+      className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 transition hover:border-na-green/50 dark:border-gray-700"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-na-green/10 text-na-green-dark dark:text-emerald-400">
+        <CalendarPlus size={16} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">Levar para o Google Agenda</span>
+        <span className="block text-[11px] text-gray-600 dark:text-gray-400">Inscrições confirmadas e eventos a confirmar na agenda do celular</span>
+      </span>
+      <ChevronRight size={16} className="shrink-0 text-gray-400" />
+    </Link>
+  );
+}
+
 /** "FAZENDA NOVA ACRÓPOLE" -> "Fazenda Nova Acrópole" (sedes do Ágora vêm em maiúsculas). */
 const nomeDaSede = (t: string) =>
   t === t.toUpperCase() ? t.toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, e: string, l: string) => e + l.toUpperCase()).replace(/\s(De|Da|Do|Dos|Das|E)(?=\s)/g, (m) => m.toLowerCase()) : t;
@@ -824,6 +843,7 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
     return (
       <div className="flex flex-col gap-4">
         <LinkMeusEventos />
+        <LinkAgendaGoogle />
         {agoraReconectar && <ReconectarAgora />}
         {podeMarcarAtendimento && <LinkAtendimento />}
         {avisoEvento}
@@ -909,6 +929,7 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
         </section>
       )}
       <LinkMeusEventos />
+      <LinkAgendaGoogle />
       {agoraReconectar && <ReconectarAgora />}
       {podeMarcarAtendimento && <LinkAtendimento />}
       <div ref={calendario} className="scroll-mt-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">

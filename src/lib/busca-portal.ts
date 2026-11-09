@@ -34,6 +34,7 @@ export const FUNCOES_PORTAL: FuncaoPortal[] = [
   { id: "transparencia", titulo: "Transparência financeira", descricao: "Receitas e despesas da filial", palavras: ["contas da escola", "prestação de contas", "despesas", "receitas", "gastos"] },
   { id: "cadastro", titulo: "Editar meus dados", descricao: "Telefone, endereço, e-mail e foto do cadastro", palavras: ["cadastro", "telefone", "celular", "endereço", "email", "foto", "atualizar dados", "mudei"] },
   { id: "whatsapp", titulo: "Falar com a secretaria", descricao: "WhatsApp da escola", palavras: ["contato", "whatsapp", "secretaria", "atendimento", "falar com alguém", "telefone da escola"] },
+  { id: "agenda_google", titulo: "Eventos no Google Agenda", descricao: "Levar os eventos da escola para a agenda do celular", palavras: ["google agenda", "calendário do celular", "sincronizar", "outlook", "iphone", "lembrete", "agenda do google"] },
   { id: "carteirinha", titulo: "Carteirinha", descricao: "Carteirinha digital com QR para a recepção dos eventos", palavras: ["identidade", "crachá", "cartão de aluno", "qr code", "matrícula", "presença", "entrada"] },
   { id: "indicar", titulo: "Indicar um amigo", descricao: "Convite para as próximas aulas abertas da filial", palavras: ["convidar", "convite", "amigo", "trazer alguém", "indicação", "compartilhar"] },
   { id: "boletim", titulo: "Boletim Aurora", descricao: "Novidades mensais da Nova Acrópole no Brasil", palavras: ["notícias", "novidades", "jornal", "informativo"] },

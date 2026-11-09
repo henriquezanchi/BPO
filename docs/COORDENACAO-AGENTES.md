@@ -792,3 +792,14 @@ Pedido do usuário ("ao liberar o acesso, verifique qual é a área do voluntár
 - 09/11: ponte da Cloudflare publicada pelo usuário (versão 3a56c780): repassa `idempotency-key` e devolve
   `retry-after`. Conferido: Fortuna (integração e `/api/branch`) e Ulisses respondem pela ponte. Crédito do Fortuna
   voltou a repetir uma vez, com a mesma chave, em timeout ou erro 500.
+
+## 09/11/2026 — Eventos do Portal no Google Agenda (assinatura por link)
+
+Pedido do usuário ("caminho 1"). `/api/agenda/<memberId>.<HMAC>.ics` (`lib/agenda-ics.ts`, rota pública só com link
+assinado): inscritos = CONFIRMED; publicados para a pessoa e sem inscrição = TENTATIVE com "A confirmar:" no título,
+link de inscrição na descrição e sem ocupar a agenda; inscrito em evento cancelado = CANCELLED. Janela: 30 dias atrás
+a 6 meses à frente. Página `/portal/agenda-google` (botões Google Agenda e webcal para iPhone/Mac/Outlook, avisos),
+atalho "Levar para o Google Agenda" no painel da Agenda e na busca. `camposPublico` e `eventosQueAPessoaVe` foram de
+`notificacoes-agendadas.ts` para `event-policy.ts`. Limite: o Google atualiza agendas assinadas no ritmo dele (8 a 24
+h); confirmação de presença continua no Portal. Caminho 2 (gravar direto pela API do Google, com verificação do app)
+fica para depois. Conferido com a agenda real do dono: 3 eventos (1 confirmado, 1 a confirmar, 1 cancelado).

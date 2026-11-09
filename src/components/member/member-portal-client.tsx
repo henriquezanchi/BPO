@@ -283,6 +283,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
     transparencia: dashboard.recursos.transparencia && abrirModal("transparencia"),
     cadastro: abrirModal("cadastro"),
     carteirinha: { href: "/portal/carteirinha" },
+    agenda_google: { href: "/portal/agenda-google" },
     indicar: { href: "/portal/indicar" },
     whatsapp: !!schoolWhatsapp && { href: whatsappHref(schoolWhatsapp), externo: true },
     boletim: { href: boletim?.link ?? PAGINA_BOLETIM_AURORA, externo: true },

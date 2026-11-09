@@ -100,3 +100,24 @@ test("Patrimônio é secretaria própria, separada de Manutenção e de Economia
   ]).map((s) => s.nome);
   assert.ok(nomes.includes("Patrimônio") && nomes.includes("Técnica e Manutenção") && nomes.includes("Economia"));
 });
+
+test("agenda: link assinado e iCalendar com confirmados, a confirmar e cancelados", async () => {
+  const { codigoDaAgenda, lerCodigoDaAgenda, montarIcs } = await import("../src/lib/agenda-ics");
+  const c = codigoDaAgenda("cmabc1234567890", CHAVE);
+  assert.equal(lerCodigoDaAgenda(`${c}.ics`, CHAVE), "cmabc1234567890");
+  assert.equal(lerCodigoDaAgenda(c.replace("cmabc", "cmxyz"), CHAVE), null);
+  const ics = montarIcs(
+    [
+      { id: "e1", titulo: "Palestra, aberta", descricao: "Linha 1\nLinha 2", local: "Sala Platão", inicio: new Date("2026-11-20T22:00:00Z"), fim: null, diaInteiro: false, atualizadoEm: new Date("2026-11-01T00:00:00Z"), situacao: "inscrito" },
+      { id: "e2", titulo: "Ciclo", descricao: null, local: null, inicio: new Date("2026-11-21T15:00:00Z"), fim: null, diaInteiro: true, atualizadoEm: new Date("2026-11-01T00:00:00Z"), situacao: "a_confirmar" },
+    ],
+    { nome: "Nova Acrópole", urlEvento: (id) => `https://x/eventos/${id}`, fuso: "America/Sao_Paulo", agora: new Date("2026-11-09T12:00:00Z") },
+  );
+  assert.ok(ics.includes(String.raw`SUMMARY:Palestra\, aberta` + "\r\n"));
+  assert.match(ics, /STATUS:CONFIRMED/);
+  assert.match(ics, /SUMMARY:A confirmar: Ciclo/);
+  assert.match(ics, /STATUS:TENTATIVE/);
+  assert.match(ics, /DTSTART;VALUE=DATE:20261121\r\nDTEND;VALUE=DATE:20261122/);
+  assert.match(ics, /DTEND:20261121T000000Z/); // sem fim: 2 h depois
+  assert.ok(ics.split("\r\n").every((l) => Buffer.byteLength(l) <= 75));
+});
