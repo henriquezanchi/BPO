@@ -10,6 +10,13 @@ const reais = (v: string | number) => Number(v).toLocaleString("pt-BR", { style:
 const PERIODOS = [30, 90, 180] as const;
 const METODO: Record<string, string> = { PIX: "Pix", Dinheiro: "Dinheiro", Debito: "Débito", Credito: "Crédito", Transferencia: "Transferência", Estorno: "Estorno" };
 
+/** Período de `dias` até hoje, em AAAA-MM-DD no fuso de Brasília. */
+function periodo(dias: number) {
+  const agora = Date.now();
+  const dia = (t: number) => new Date(t).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  return { inicio: dia(agora - dias * 864e5), fim: dia(agora) };
+}
+
 /** Até 4 páginas de 50 (200 lançamentos): o suficiente para o período escolhido, sem estourar o limite da API. */
 async function todas<T>(buscar: (pagina: number) => Promise<{ data: T[]; hasMore: boolean }>) {
   const lista: T[] = [];
@@ -30,8 +37,7 @@ export default async function ExtratoFortunaPage(props: { searchParams: Promise<
   if (!member) redirect("/login?next=/portal/fortuna");
   const pedido = (await props.searchParams).dias;
   const dias = PERIODOS.find((d) => String(d) === pedido) ?? 30;
-  const fim = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  const inicio = new Date(Date.now() - dias * 864e5).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const { inicio, fim } = periodo(dias);
 
   let consumo: FortunaVenda[] = [];
   let recebimentos: FortunaRecebimento[] = [];
