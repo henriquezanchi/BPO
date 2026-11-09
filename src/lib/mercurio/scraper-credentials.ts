@@ -35,7 +35,15 @@ export async function verificarRodadaJaEmAndamento() {
   return data as { filial: string | null; etapa: string | null; atualizado_em: string };
 }
 
+/**
+ * Credencial do robô do Mercúrio. Primeiro o ambiente (09/11/2026, pedido do usuário: a senha muda a cada 2 meses e
+ * precisa ser fácil de trocar): MERCURIO_ROBO_MATRICULA + MERCURIO_ROBO_SENHA (login) e MERCURIO_HTTP_USUARIO +
+ * MERCURIO_HTTP_SENHA (a senha do navegador, antes da tela de login). Sem elas, o cofre da ferramenta de raspagem
+ * (Supabase próprio, RPC ler_credencial_scraper), que o robô da Tesouraria continua usando.
+ */
 export async function lerCredencialMercurio(sistema: "mercurio" | "mercurio_http") {
+  const [u, sen] = sistema === "mercurio" ? [process.env.MERCURIO_ROBO_MATRICULA, process.env.MERCURIO_ROBO_SENHA] : [process.env.MERCURIO_HTTP_USUARIO, process.env.MERCURIO_HTTP_SENHA];
+  if (u && sen) return { usuario: u.trim(), senha: sen };
   const { data, error } = await getScraperSupabase().rpc("ler_credencial_scraper", {
     p_sistema: sistema,
     p_filial: "GLOBAL",
