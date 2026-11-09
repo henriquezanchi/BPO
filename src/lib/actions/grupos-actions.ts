@@ -1,10 +1,12 @@
 "use server";
 
+import { funcoesDaUnidade } from "@/lib/secretarias-sync";
+
 import { ehAdministradorNacional, temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { candidatoElegivel, ehFV, filtroCandidatos, papelNoGrupo, podeCriarEstudo, podeCriarTurmaPedagogos, TIPOS_DO_PORTAL, type TipoDoPortal, type TipoGrupo } from "@/lib/grupos-portal";
-import { consultarMercurio } from "@/lib/mercurio-db/client";
+
 import { podeAdministrar } from "@/lib/recursos-filial";
 import { sugerirSecretarias, type FuncaoMercurio } from "@/lib/secretarias";
 import { revalidatePath } from "next/cache";
@@ -358,9 +360,7 @@ export async function getSugestoesSecretarias(schoolId: string): Promise<Sugesta
   const escola = await db.school.findUnique({ where: { id: schoolId }, select: { mercurioUnidade: true } });
   const uni = escola?.mercurioUnidade?.replace(/[^A-Z0-9]/gi, "");
   if (!uni) return [];
-  const funcoes = (await consultarMercurio(
-    `SELECT d.dfn_matr matricula, d.dfn_funcao funcao, d.dfn_descricao descricao FROM dirigente_funcoes d JOIN cadastro c ON c.cad_matr=d.dfn_matr AND c.cad_situacao='ATI' WHERE d.dfn_atual='S' AND d.dfn_unidade='${uni}'`,
-  )) as unknown as FuncaoMercurio[];
+  const funcoes = await funcoesDaUnidade(uni);
   const sugestoes = sugerirSecretarias(funcoes);
   const pessoas = await db.member.findMany({ where: { mercurioId: { in: [...new Set(funcoes.map((f) => f.matricula))] } }, select: { id: true, name: true, mercurioId: true, schoolId: true } });
   const porMatricula = new Map(pessoas.map((p) => [p.mercurioId, p]));

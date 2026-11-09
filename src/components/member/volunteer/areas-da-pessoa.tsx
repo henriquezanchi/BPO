@@ -16,7 +16,7 @@ type Area = (typeof AREAS)[number][0];
  * Áreas de trabalho de uma pessoa na tela Liberar acessos (09/11/2026): quem chefia a filial dela liga ou desliga cada
  * área (vira responsável pela secretaria da área no Portal). Área que vem da função no Mercúrio aparece fixa.
  */
-export function AreasDaPessoa({ pessoaId, porSecretaria, porFuncao }: { pessoaId: string; porSecretaria: string[]; porFuncao: string[] }) {
+export function AreasDaPessoa({ pessoaId, porSecretaria, porFuncao, porDirecao = false }: { pessoaId: string; porSecretaria: string[]; porFuncao: string[]; porDirecao?: boolean }) {
   const [ativas, setAtivas] = useState(() => new Set(porSecretaria));
   const [emAndamento, setEmAndamento] = useState<Area | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export function AreasDaPessoa({ pessoaId, porSecretaria, porFuncao }: { pessoaId
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5" aria-label="Áreas de trabalho">
       <span className="text-[10px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">Áreas</span>
       {AREAS.map(([area, rotulo]) => {
-        const fixa = porFuncao.includes(area);
+        const fixa = porDirecao || porFuncao.includes(area);
         const ligada = fixa || ativas.has(area);
         return (
           <button
@@ -34,7 +34,7 @@ export function AreasDaPessoa({ pessoaId, porSecretaria, porFuncao }: { pessoaId
             type="button"
             disabled={fixa || emAndamento !== null}
             aria-pressed={ligada}
-            title={fixa ? "Pela função no Mercúrio" : ligada ? `Tirar a área de ${rotulo}` : `Dar a área de ${rotulo}`}
+            title={porDirecao ? "Pela direção da filial" : fixa ? "Pela função no Mercúrio" : ligada ? `Tirar a área de ${rotulo}` : `Dar a área de ${rotulo}`}
             onClick={() => {
               setErro(null);
               setEmAndamento(area);
@@ -58,7 +58,7 @@ export function AreasDaPessoa({ pessoaId, porSecretaria, porFuncao }: { pessoaId
           >
             {emAndamento === area && <Loader2 size={10} className="animate-spin" />}
             {rotulo}
-            {fixa && <span className="font-normal"> · função</span>}
+            {fixa && <span className="font-normal"> · {porDirecao ? "direção" : "função"}</span>}
           </button>
         );
       })}

@@ -155,6 +155,8 @@ export async function candidatosParaLiberar(liberador: Pessoa) {
         ? {
             porSecretaria: [...new Set(p.classMemberships.filter((c) => c.role === "professor" && c.classGroup.tipo === "SEC").flatMap((c) => areasDoNome(c.classGroup.name)))],
             porFuncao: [...new Set(p.cargos.flatMap(areasDoNome))],
+            // Sub-chefe (ou quem chefia a filial) já tem todas as áreas pela direção (09/11/2026).
+            porDirecao: p.isSubChefe,
           }
         : null,
       // Função ativa no Mercúrio: entra sozinho (09/11/2026); a tela mostra "Pela função" em vez do botão.

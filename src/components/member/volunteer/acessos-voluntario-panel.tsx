@@ -22,7 +22,7 @@ interface Pessoa {
   porFuncao?: boolean;
   funcoes?: string[];
   /** Áreas de trabalho, só para quem chefia a filial da pessoa (09/11/2026). */
-  areas?: { porSecretaria: string[]; porFuncao: string[] } | null;
+  areas?: { porSecretaria: string[]; porFuncao: string[]; porDirecao?: boolean } | null;
 }
 
 function normalizar(s: string) {
@@ -101,7 +101,7 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
           {(p.filial || p.papel.length > 0 || p.grupos.length > 0) && (
             <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{[...(p.filial ? [p.filial] : []), ...p.papel, ...p.grupos].join(" · ")}</p>
           )}
-          {p.areas && <AreasDaPessoa pessoaId={p.id} porSecretaria={p.areas.porSecretaria} porFuncao={p.areas.porFuncao} />}
+          {p.areas && <AreasDaPessoa pessoaId={p.id} porSecretaria={p.areas.porSecretaria} porFuncao={p.areas.porFuncao} porDirecao={!!p.areas.porDirecao} />}
         </div>
         {p.porFuncao ? (
           // Função ativa no Mercúrio (09/11/2026): entra sozinho; não há o que liberar nem retirar aqui.

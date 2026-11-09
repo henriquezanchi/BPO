@@ -78,3 +78,15 @@ test("voluntariado da semana e lembrete da véspera", () => {
   assert.equal(textoVoluntariadoDaSemana(Array.from({ length: 4 }, (_, i) => ({ titulo: `T${i}`, tipo: "pontual", data: null, horario: null }))).titulo, "4 tarefas de voluntariado esta semana");
   assert.equal(textoLembreteVoluntariado({ titulo: "Montagem", horario: "8h às 12h" }).titulo, "Amanhã: Montagem");
 });
+
+test("secretarias automáticas: funções do catálogo viram secretaria; texto livre não", async () => {
+  const { sugerirSecretarias, NOMES_DO_CATALOGO } = await import("../src/lib/secretarias");
+  const s = sugerirSecretarias([
+    { matricula: "1", funcao: "X", descricao: "SECRETARIO DE TÉCNICAS E MANUTENÇÃO" },
+    { matricula: "2", funcao: "X", descricao: "COLABORADOR CGB" },
+  ]);
+  const manut = s.find((x) => x.nome === "Técnica e Manutenção");
+  assert.ok(manut && manut.responsaveis[0].matricula === "1");
+  assert.ok(NOMES_DO_CATALOGO.has("Técnica e Manutenção"));
+  assert.ok(s.filter((x) => !NOMES_DO_CATALOGO.has(x.nome)).every((x) => x.nome !== "Técnica e Manutenção"));
+});

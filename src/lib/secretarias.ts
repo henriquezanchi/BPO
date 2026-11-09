@@ -55,6 +55,9 @@ const CANONICAS: [string, RegExp][] = [
   ["Ecologia Ativa", /ECOLOGIA/],
 ];
 
+/** Nomes do catálogo (padrão e reconhecidos pelo texto da função): só esses são criados sozinhos (secretarias-sync.ts). */
+export const NOMES_DO_CATALOGO = new Set([...SECRETARIAS_PADRAO, ...CANONICAS.map(([n]) => n)]);
+
 // Funções que não são de secretaria da filial: direção, cargos nacionais/regionais e chefias de grupo de FV.
 const FUNCOES_FORA = new Set(["CF", "SCF", "SBF", "CN", "CE", "MN", "CZ", "SCN", "ASN", "CSN", "CMN", "SSC", "CBF", "CBR", "CMA", "CAR", "CFA", "SUB", "DN", "CCE"]);
 const FORA_PELO_TEXTO = /NACIONAL|SEGURANCA|\bSN\b|CHEFE|SUB ?CHEFE|BRIGADA|GRUPO (FEMININO|MASCULINO|DE SEGURANCA)|\bBF\b|\bBM\b|MANIPULO|MANDO|COORD(ENADOR)? DE ZONA|PROFESSOR|ACOMPANHAMENTO DE RELATORIOS|ORGANIZATIVA|CONSELHO/;

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sincronizarUnidade } from "@/lib/mercurio-db/importar";
+import { sincronizarSecretariasDaFilial } from "@/lib/secretarias-sync";
 
 /**
  * Sincronização diária do Mercúrio (pedido do usuário 2026-10-26: "faça tudo"; antes só rodava à mão, e a rotina do
@@ -52,6 +53,12 @@ export async function avancarSincronizacao(orcamentoMs = 200_000) {
       feito.push(`${uni}: ${lote.length} membro(s)`);
     } else {
       await sincronizarUnidade(uni, { apenasFechamento: true });
+      // Secretarias pelas funções do Mercúrio (09/11/2026): cria as que faltam e põe responsáveis e equipe.
+      const sec = await sincronizarSecretariasDaFilial(uni).catch((e) => {
+        console.error(`Secretarias de ${uni}:`, e instanceof Error ? e.message : e);
+        return null;
+      });
+      if (sec?.criadas || sec?.vinculos) feito.push(`${uni}: secretarias +${sec.criadas}, vínculos +${sec.vinculos}`);
       estado = { uni: null, pendentes: [], inicio: null, ultimas: { ...estado.ultimas, [uni]: new Date().toISOString() } };
       feito.push(`${uni}: fechamento`);
     }

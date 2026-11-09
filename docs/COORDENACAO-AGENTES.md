@@ -743,3 +743,19 @@ Liberar acessos, cada pessoa tem agora "Áreas: Escolástica · Economia · Even
 não existe, `acesso-voluntario-actions.ts` → `definirAreaDeTrabalho`); desligar = sai da responsabilidade. Área que vem
 da função no Mercúrio aparece fixa ("· função"). `areas-filial.ts` exporta `areasDoNome` e `AREAS_POR_SECRETARIA`;
 `acesso-voluntario.ts` exporta `escolasQueLibera` e devolve `areas` em `candidatosParaLiberar`.
+
+## 09/11/2026 — Secretarias criadas sozinhas pelas funções do Mercúrio; áreas da direção na tela de acessos
+
+Pedido do usuário ("ao liberar o acesso, verifique qual é a área do voluntário e crie na escola"; ex.: Licínio, GYN,
+"Secretário de Técnicas e Manutenção" → secretaria Técnica e Manutenção com ele como responsável).
+- `lib/secretarias-sync.ts` (`sincronizarSecretariasDaFilial`), chamado no fechamento diário de cada filial
+  (`mercurio-db/rotina-diaria.ts`): lê `dirigente_funcoes` da unidade, usa o mesmo sugeridor da tela de Secretarias
+  (`sugerirSecretarias`) e cria as secretarias que faltam, com responsáveis (role professor) e equipe (aluno). Só nomes
+  do catálogo (`NOMES_DO_CATALOGO` em `secretarias.ts`); nomes de texto livre ("Cgb", "Traducao") ficam como sugestão
+  na tela. Só acrescenta; secretaria arquivada pela direção não volta. Simulação em 09/11: LGS 12, GYN 17 novas,
+  BSB 25, BOA 6, BGA 1, RVD 1 (antes do filtro do catálogo).
+- Grupos Feminino, Masculino e de Segurança já vinham do cadastro (`cad_raio_fv`, importar.ts): o Ramon (GYN) já era
+  responsável pelo Grupo Masculino.
+- Tela Liberar acessos: sub-chefe aparece com as 4 áreas acesas "· direção" (`areas.porDirecao`).
+- Robô do Mercúrio: login recusado ("Identificação Inválida") em 09/11; senha a atualizar no cofre da ferramenta de
+  raspagem (`ler_credencial_scraper`, GLOBAL). Mapeamento das permissões do painel do Diretor aguardando isso.
