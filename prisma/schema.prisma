@@ -1444,6 +1444,10 @@ model SugestaoPortal {
   memberId        String
   schoolId        String
   categoria       String
+  /// Subcategoria, assunto curto e contexto (turma ou evento escolhido) — pedido do usuário 10/11/2026.
+  subcategoria    String?
+  titulo          String?
+  contexto        Json?
   texto           String
   anonima         Boolean   @default(false)
   aparelho        Json?

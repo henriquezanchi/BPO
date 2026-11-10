@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CaixaSugestoes } from "@/components/member/caixa-sugestoes";
 import { getAuthenticatedMember } from "@/lib/auth";
-import { minhasSugestoes } from "@/lib/sugestoes";
+import { minhasSugestoes, opcoesDeContexto } from "@/lib/sugestoes";
 import { ehCategoria } from "@/lib/sugestoes-comum";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export default async function SugestoesPage(props: { searchParams: Promise<Recor
   if (!member) redirect("/login?next=/portal/sugestoes");
   const sp = await props.searchParams;
   const inicial = ehCategoria(sp.categoria) ? sp.categoria : null;
-  const minhas = await minhasSugestoes(member.id);
+  const [minhas, opcoes] = await Promise.all([minhasSugestoes(member.id), opcoesDeContexto(member)]);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
@@ -30,7 +30,7 @@ export default async function SugestoesPage(props: { searchParams: Promise<Recor
           direção da sua filial.
         </p>
       </header>
-      <CaixaSugestoes inicial={inicial} minhas={minhas} />
+      <CaixaSugestoes inicial={inicial} minhas={minhas} opcoes={opcoes} />
     </main>
   );
 }

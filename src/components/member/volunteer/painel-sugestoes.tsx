@@ -2,7 +2,7 @@
 
 import { mudarStatusSugestao, responderSugestao } from "@/lib/actions/sugestoes-actions";
 import type { SugestaoParaLer } from "@/lib/sugestoes";
-import { CATEGORIAS, RESPOSTA_MAX, ROTULO_STATUS, categoria as acharCategoria, destinoDa, type StatusSugestao } from "@/lib/sugestoes-comum";
+import { CATEGORIAS, RESPOSTA_MAX, ROTULO_STATUS, destinoDa, rotuloCompleto, type StatusSugestao } from "@/lib/sugestoes-comum";
 import { ChevronDown, Loader2, Monitor } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -85,12 +85,14 @@ export function PainelSugestoes({ sugestoes, variasFiliais }: { sugestoes: Suges
               <button type="button" onClick={() => setAberta(aberta === s.id ? null : s.id)} aria-expanded={aberta === s.id} className="flex w-full items-start gap-3 p-3 text-left">
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
-                    <span className="font-semibold text-gray-700 dark:text-gray-200">{acharCategoria(s.categoria)?.rotulo ?? s.categoria}</span>
+                    <span className="font-semibold text-gray-700 dark:text-gray-200">{rotuloCompleto(s.categoria, s.subcategoria)}</span>
                     <span>{s.autor ? s.autor.nome : "Sem nome"}</span>
                     {variasFiliais && s.filial && <span>{s.filial}</span>}
                     <span>{data(s.criadaEm)}</span>
                   </span>
-                  <span className={`mt-1 block text-[13px] text-gray-900 dark:text-gray-100 ${aberta === s.id ? "whitespace-pre-line" : "line-clamp-2"}`}>{s.texto}</span>
+                  {s.titulo && <span className="mt-1 block text-[14px] font-semibold text-gray-900 dark:text-gray-100">{s.titulo}</span>}
+                  {s.contexto && <span className="mt-0.5 block text-[11px] font-medium text-na-green-dark dark:text-emerald-400">{s.contexto}</span>}
+                  <span className={`mt-1 block text-[13px] text-gray-800 dark:text-gray-200 ${aberta === s.id ? "whitespace-pre-line" : "line-clamp-2"}`}>{s.texto}</span>
                 </span>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${COR[s.status]}`}>{ROTULO_STATUS[s.status]}</span>
                 <ChevronDown size={16} className={`mt-0.5 shrink-0 text-gray-400 transition ${aberta === s.id ? "rotate-180" : ""}`} />

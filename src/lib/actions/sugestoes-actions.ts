@@ -3,20 +3,46 @@
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { enviarPush } from "@/lib/push";
-import { acessoSugestoes } from "@/lib/sugestoes";
-import { LIMITE_DIA, RESPOSTA_MAX, categoria, ehCategoria, ehStatus, lerAparelho, lerTexto, podeLer } from "@/lib/sugestoes-comum";
+import { acessoSugestoes, opcoesDeContexto, type ContextoGuardado } from "@/lib/sugestoes";
+import { LIMITE_DIA, RESPOSTA_MAX, ehStatus, lerAparelho, lerClassificacao, lerTexto, podeLer, rotuloCompleto } from "@/lib/sugestoes-comum";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 /** Caixa de sugestões (lib/sugestoes.ts). Cada ação reconfere quem é a pessoa e o que ela pode ler. */
 const erro = (error: string) => ({ ok: false as const, error });
 
-export async function enviarSugestao(dados: { categoria: string; texto: string; anonima: boolean; largura?: number; app?: boolean }) {
+export async function enviarSugestao(dados: {
+  categoria: string;
+  subcategoria?: string | null;
+  titulo?: string;
+  turmaId?: string | null;
+  eventoId?: string | null;
+  texto: string;
+  anonima: boolean;
+  largura?: number;
+  app?: boolean;
+}) {
   const eu = await getAuthenticatedMember();
   if (!eu) return erro("Entre no Portal de novo para enviar.");
-  if (!ehCategoria(dados?.categoria)) return erro("Escolha uma categoria.");
+  const cls = lerClassificacao(dados ?? {});
+  if (!cls.ok) return erro(cls.erro);
   const t = lerTexto(dados?.texto);
   if (!t.ok) return erro(t.erro);
+  // Turma ou evento: só os que a pessoa pode citar (os mesmos da tela); guardado com o nome, para quem lê.
+  let contexto: ContextoGuardado | null = null;
+  if (cls.contexto) {
+    const op = await opcoesDeContexto(eu);
+    if (cls.contexto === "turma" && op.turmas.length) {
+      const turma = op.turmas.find((x) => x.id === dados.turmaId);
+      if (!turma) return erro("Escolha a turma.");
+      contexto = { turma };
+    }
+    if (cls.contexto === "evento") {
+      const evento = op.eventos.find((x) => x.id === dados.eventoId);
+      if (!evento) return erro("Escolha o evento.");
+      contexto = { evento };
+    }
+  }
   const desde = new Date(Date.now() - 24 * 3600_000);
   if ((await db.sugestaoPortal.count({ where: { memberId: eu.id, createdAt: { gte: desde } } })) >= LIMITE_DIA)
     return erro("Você já enviou várias sugestões hoje. Tente de novo amanhã.");
@@ -25,7 +51,10 @@ export async function enviarSugestao(dados: { categoria: string; texto: string; 
     data: {
       memberId: eu.id,
       schoolId: eu.schoolId,
-      categoria: dados.categoria,
+      categoria: cls.categoria,
+      subcategoria: cls.subcategoria,
+      titulo: cls.titulo,
+      ...(contexto ? { contexto } : {}),
       texto: t.texto,
       anonima: !!dados.anonima,
       aparelho: lerAparelho(ua, Number(dados?.largura) || null, !!dados?.app),
@@ -62,7 +91,7 @@ export async function responderSugestao(id: string, resposta: string) {
   await db.sugestaoPortal.update({ where: { id }, data: { resposta: texto, status: "respondida", respondidaEm: new Date(), respondidaPorId: ok.eu.id } });
   await enviarPush([ok.reg.memberId], {
     titulo: "Sua sugestão foi respondida",
-    corpo: `${categoria(ok.reg.categoria)?.rotulo ?? "Sugestão"}: ${texto.slice(0, 120)}${texto.length > 120 ? "…" : ""}`,
+    corpo: `${ok.reg.titulo ?? rotuloCompleto(ok.reg.categoria, ok.reg.subcategoria)}: ${texto.slice(0, 120)}${texto.length > 120 ? "…" : ""}`,
     url: "/portal/sugestoes",
     etiqueta: `sugestao-${id}`,
   }).catch(() => null);

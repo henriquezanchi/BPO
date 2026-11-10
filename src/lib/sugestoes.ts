@@ -37,6 +37,9 @@ export function ondeLe(a: AcessoSugestoes): Prisma.SugestaoPortalWhereInput {
 export type SugestaoParaLer = {
   id: string;
   categoria: Categoria;
+  subcategoria: string | null;
+  titulo: string | null;
+  contexto: string;
   texto: string;
   status: StatusSugestao;
   anonima: boolean;
@@ -64,6 +67,9 @@ export async function listarSugestoes(a: AcessoSugestoes): Promise<SugestaoParaL
     return {
       id: r.id,
       categoria: r.categoria as Categoria,
+      subcategoria: r.subcategoria,
+      titulo: r.titulo,
+      contexto: descreverContexto(r.contexto),
       texto: r.texto,
       status: ehStatus(r.status) ? r.status : "nova",
       anonima: r.anonima,
@@ -84,12 +90,57 @@ export async function sugestoesNovas(a: AcessoSugestoes): Promise<number> {
   return db.sugestaoPortal.count({ where: { AND: [ondeLe(a), { status: "nova" }] } });
 }
 
+/**
+ * Turmas e eventos que a pessoa pode citar numa sugestão (10/11/2026): as turmas em que estuda e os eventos da filial
+ * (ou nacionais) dos últimos 90 dias e dos próximos 60. É também a lista que o servidor usa para conferir o envio.
+ */
+export async function opcoesDeContexto(m: Pick<Member, "id" | "schoolId">) {
+  const agora = Date.now();
+  const [turmas, eventos] = await Promise.all([
+    db.classMembership.findMany({
+      where: { memberId: m.id, role: "aluno", classGroup: { arquivadoEm: null } },
+      select: { classGroup: { select: { id: true, name: true } } },
+    }),
+    db.event.findMany({
+      where: {
+        OR: [{ schoolId: m.schoolId }, { scope: "nacional" }],
+        status: "publicado",
+        startsAt: { gte: new Date(agora - 90 * 864e5), lte: new Date(agora + 60 * 864e5) },
+      },
+      select: { id: true, title: true, startsAt: true, allDay: true },
+      orderBy: { startsAt: "desc" },
+      take: 60,
+    }),
+  ]);
+  return {
+    turmas: turmas.map((t) => ({ id: t.classGroup.id, nome: t.classGroup.name })),
+    eventos: eventos.map((e) => ({
+      id: e.id,
+      titulo: e.title,
+      data: e.startsAt.toLocaleDateString("pt-BR", { timeZone: e.allDay ? "UTC" : "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric" }),
+    })),
+  };
+}
+export type OpcoesDeContexto = Awaited<ReturnType<typeof opcoesDeContexto>>;
+export type ContextoGuardado = { turma?: { id: string; nome: string }; evento?: { id: string; titulo: string; data: string } };
+
+/** "Turma: N1 Terça" / "Evento: Palestra X (20/11/2026)". */
+export function descreverContexto(c: unknown): string {
+  const x = (c ?? {}) as ContextoGuardado;
+  if (x.turma) return `Turma: ${x.turma.nome}`;
+  if (x.evento) return `Evento: ${x.evento.titulo} (${x.evento.data})`;
+  return "";
+}
+
 /** As sugestões que a própria pessoa enviou (inclusive as anônimas: o nome só fica escondido de quem lê). */
 export async function minhasSugestoes(memberId: string) {
   const regs = await db.sugestaoPortal.findMany({ where: { memberId }, orderBy: { createdAt: "desc" }, take: 30 });
   return regs.map((r) => ({
     id: r.id,
     categoria: r.categoria as Categoria,
+    subcategoria: r.subcategoria,
+    titulo: r.titulo,
+    contexto: descreverContexto(r.contexto),
     texto: r.texto,
     status: (ehStatus(r.status) ? r.status : "nova") as StatusSugestao,
     anonima: r.anonima,

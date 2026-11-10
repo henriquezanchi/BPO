@@ -41,3 +41,24 @@ test("quem lê: Portal para a administração nacional, escola para a direção 
   assert.equal(semAcessoSugestoes({ portal: false, escolas: [] }), true);
   assert.equal(semAcessoSugestoes(chefe), false);
 });
+
+test("classificação: subcategoria obrigatória, assunto curto e contexto pedido", async () => {
+  const { lerClassificacao, rotuloCompleto, textoDoProblema } = await import("../src/lib/sugestoes-comum");
+  assert.equal(lerClassificacao({ categoria: "aulas", titulo: "Ritmo rápido" }).ok, false);
+  assert.equal(lerClassificacao({ categoria: "aulas", subcategoria: "nao_existe", titulo: "Ritmo rápido" }).ok, false);
+  assert.equal(lerClassificacao({ categoria: "aulas", subcategoria: "didatica", titulo: "oi" }).ok, false);
+  assert.deepEqual(lerClassificacao({ categoria: "aulas", subcategoria: "didatica", titulo: "  Ritmo   rápido " }), {
+    ok: true,
+    categoria: "aulas",
+    subcategoria: "didatica",
+    titulo: "Ritmo rápido",
+    contexto: "turma",
+  });
+  const ev = lerClassificacao({ categoria: "eventos", subcategoria: "evento", titulo: "Palestra de sábado" });
+  assert.equal(ev.ok && ev.contexto, "evento");
+  // "Outro assunto" não tem subcategoria.
+  const outro = lerClassificacao({ categoria: "outro", titulo: "Assunto livre" });
+  assert.equal(outro.ok && outro.subcategoria, null);
+  assert.equal(rotuloCompleto("espaco", "sala"), "Espaço da escola › Sala de aula (cadeiras, som, luz, temperatura)");
+  assert.equal(textoDoProblema(" abri ", " travou "), "O que tentei fazer: abri\n\nO que aconteceu: travou");
+});

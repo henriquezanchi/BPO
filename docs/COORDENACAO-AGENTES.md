@@ -861,3 +861,13 @@ America/Cuiaba, mas a filial funciona no horário de Brasília (MT saiu do mapa;
 eventos era lida no fuso de quem vê. Regra única em `lib/data-evento.ts`: dia inteiro vale pela data gravada (UTC); com
 horário, no fuso de onde acontece (`AgendaItem.fusoLocal`: filial do evento pela UF, Ágora = Brasília). Aplicada no
 calendário, nos próximos eventos da Agenda, no destaque da tela inicial e na vitrine.
+
+## 10/11/2026 — Sugestões com subcategoria, assunto e contexto; link por rodada da avaliação; pedidos de GAF
+
+- Sugestões (migração `20261110190000_sugestao_subcategoria`: `subcategoria`, `titulo`, `contexto`): formulário em
+  etapas (categoria, subcategoria com pergunta-guia, turma ou evento quando a subcategoria pede, assunto curto
+  obrigatório, texto; problema no Portal em dois campos, "o que tentei" e "o que aconteceu"). Regras em
+  `lerClassificacao` (sugestoes-comum.ts); turma e evento conferidos no servidor por `opcoesDeContexto`.
+- Avaliação: link por rodada (`/avaliacao?rodada=<id>`), usado no convite do WhatsApp; sem ele, abre a próxima pendente.
+- GAF: pedidos para participar com Aceitar/Recusar na lista da aba GAF (`decidirPedidoGaf`), com escolha do GAF quando o
+  aluno não escolheu.
