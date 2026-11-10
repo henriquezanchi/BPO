@@ -818,3 +818,19 @@ monitor não); função nacional do programa ou mandato de secretaria que cite M
 território do mandato); administração nacional (tudo). Validade = data + 6 meses (fim de mês ajustado); "vencendo" =
 até 30 dias. Guarda só datas e tribunal, nunca o documento. Sugestões vêm das funções do Mercúrio (9 pessoas hoje).
 Pendente: a função que o João criou no Mercúrio não aparece na oinabview; quando aparecer, sincronizar.
+
+## 10/11/2026 — Caixa de sugestões por categoria
+
+Pedido do usuário após o relato de um aluno de BGA (não conseguia alterar o cadastro no computador, só no celular).
+Tabela `SugestaoPortal` (migração `20261110120000_sugestao_portal`, RLS ligada, sem FK). Regras puras em
+`lib/sugestoes-comum.ts` (testes em `tests/sugestoes.test.ts`), servidor em `lib/sugestoes.ts`, ações em
+`lib/actions/sugestoes-actions.ts`. Aluno: `/portal/sugestoes` (atalho "Sugestões" no Portal, item na busca, link
+"Algo não funciona no Portal?" na Ajuda com `?categoria=portal_problema`), com "Minhas sugestões" e as respostas.
+Categorias: "Algo não funciona no Portal" e "Ideia para o Portal" vão para a administração nacional; Aulas, Eventos,
+Atendimento, Espaço e Outro, para Chefe/Sub-Chefe da filial (`escolasQueLibera`). Opção "sem mostrar meu nome": quem
+lê não recebe nome nem matrícula; o autor fica guardado só para acompanhar a resposta e para o limite de 5 por dia.
+Aparelho, sistema, navegador, largura da tela e app instalado vão junto (user-agent lido no servidor). Leitura em
+`/voluntario/sugestoes` (Gestão da filial, número de novas): filtros por situação, categoria e filial; responder
+(aviso push para quem enviou), marcar em análise, arquivar, reabrir.
+Relato do cadastro: o painel Editar Dados foi testado num Chromium em tela de 1440px com dados fictícios e todos os
+campos aceitaram digitação; não reproduzido. Falta saber navegador e campo exatos do aluno.

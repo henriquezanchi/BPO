@@ -1436,6 +1436,29 @@ model VoluntarioInfantojuvenil {
   @@index([schoolId, programa])
 }
 
+/// Caixa de sugestões do Portal (pedido do usuário 10/11/2026). Categorias do Portal vão para a administração
+/// nacional; as da escola, para a direção da filial. "anonima" esconde o nome de quem lê; o autor fica guardado só para
+/// ele acompanhar a resposta e para o limite diário (regras em lib/sugestoes-comum.ts).
+model SugestaoPortal {
+  id              String    @id @default(cuid())
+  memberId        String
+  schoolId        String
+  categoria       String
+  texto           String
+  anonima         Boolean   @default(false)
+  aparelho        Json?
+  status          String    @default("nova")
+  resposta        String?
+  respondidaEm    DateTime?
+  respondidaPorId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([schoolId, status])
+  @@index([categoria, status])
+  @@index([memberId, createdAt])
+}
+
 model AcessoVoluntario {
   memberId      String   @id
   liberadoPorId String

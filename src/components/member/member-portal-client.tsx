@@ -26,6 +26,7 @@ import {
   LifeBuoy,
   LogOut,
   MessageCircle,
+  MessageSquareText,
   Newspaper,
   Pencil,
   PiggyBank,
@@ -285,6 +286,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
     carteirinha: { href: "/portal/carteirinha" },
     agenda_google: { href: "/portal/agenda-google" },
     indicar: { href: "/portal/indicar" },
+    sugestoes: { href: "/portal/sugestoes" },
     whatsapp: !!schoolWhatsapp && { href: whatsappHref(schoolWhatsapp), externo: true },
     boletim: { href: boletim?.link ?? PAGINA_BOLETIM_AURORA, externo: true },
   };
@@ -605,6 +607,10 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           {/* Indicar um amigo (07/11/2026): convite com as próximas turmas da filial. */}
           {member.school.language !== "en" && (
             <FeatureTile icon={<HeartHandshake size={16} />} title="Indicar um amigo" subtitle="Convite para as próximas turmas" onClick={() => router.push("/portal/indicar")} />
+          )}
+          {/* Caixa de sugestões (10/11/2026): escola ou Portal, por categoria. */}
+          {member.school.language !== "en" && (
+            <FeatureTile icon={<MessageSquareText size={16} />} title="Sugestões" subtitle="Ideias, elogios e problemas" onClick={() => router.push("/portal/sugestoes")} />
           )}
           <FeatureTile icon={<LifeBuoy size={16} />} title={t.tiles.ajuda.title} subtitle={t.tiles.ajuda.subtitle} onClick={() => setModal("ajuda")} />
           <FeatureTile

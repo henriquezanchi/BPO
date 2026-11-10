@@ -8,6 +8,8 @@ import { escolasAberturas } from "@/lib/aberturas/permissoes";
 import { ehFV } from "@/lib/grupos-portal";
 import { acessoInfantojuvenil, pendenciasInfantojuvenil } from "@/lib/infantojuvenil";
 import { acessoVazio } from "@/lib/infantojuvenil-comum";
+import { acessoSugestoes, sugestoesNovas } from "@/lib/sugestoes";
+import { semAcessoSugestoes } from "@/lib/sugestoes-comum";
 import { filiaisAdministradas } from "@/lib/recursos-filial";
 import { gestaoDeOportunidades } from "@/lib/oportunidades";
 import type { Member } from "@prisma/client";
@@ -42,7 +44,8 @@ export type IconeDestino =
   | "aberturas"
   | "secretarias"
   | "oportunidades"
-  | "trajetoria";
+  | "trajetoria"
+  | "sugestoes";
 
 export type Destino = { href: string; rotulo: string; descricao: string; icone: IconeDestino; secao: "Meu trabalho" | "Secretarias" | "Gestão da filial" | "Nacional"; pendentes?: number };
 
@@ -79,6 +82,9 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
   // Merlin e Janos (09/11/2026): só para quem dirige o programa; pendências = certidões vencidas, vencendo ou faltando.
   const infanto = await acessoInfantojuvenil(m);
   const pendInfanto = acessoVazio(infanto) ? 0 : await pendenciasInfantojuvenil(infanto).catch(() => 0);
+  // Caixa de sugestões (10/11/2026): a direção lê as da filial; a administração nacional, também as do Portal.
+  const sug = await acessoSugestoes(m);
+  const novasSug = semAcessoSugestoes(sug) ? 0 : await sugestoesNovas(sug).catch(() => 0);
   const d: (Destino | false)[] = [
     { href: "/voluntario", rotulo: "Início", descricao: "Seus grupos, secretarias e encontros", icone: "inicio", secao: "Meu trabalho" },
     // Grupos num lugar só (pedido do usuário 2026-10-25): ver, criar e coordenar.
@@ -149,6 +155,14 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       icone: "secretarias",
       secao: "Gestão da filial",
       pendentes: pendInfanto,
+    },
+    !semAcessoSugestoes(sug) && {
+      href: "/voluntario/sugestoes",
+      rotulo: "Sugestões",
+      descricao: novasSug ? `${novasSug} sugest${novasSug === 1 ? "ão nova" : "ões novas"}` : "O que alunos e membros enviaram",
+      icone: "sugestoes",
+      secao: "Gestão da filial",
+      pendentes: novasSug,
     },
     // Quem administra a filial libera acessos pela Administração (aba); responsáveis de grupo, por aqui.
     !(administra.length && (chefe || m.isSubChefe)) && (chefe || m.isSubChefe || lideraFV > 0) && { href: "/voluntario/acessos", rotulo: "Liberar acessos", descricao: "Quem vê a área de voluntários", icone: "acessos", secao: "Gestão da filial" },

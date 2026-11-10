@@ -412,6 +412,15 @@ export function HelpPanel({ whatsapp }: { whatsapp: string }) {
         <AtivarNotificacoes variante="ajustes" />
       </div>
 
+      {/* Caixa de sugestões (10/11/2026): problema no Portal chega à equipe com o aparelho e o navegador. */}
+      <a
+        href="/portal/sugestoes?categoria=portal_problema"
+        className="mb-4 block rounded-xl border border-gray-200 p-3 text-[12px] text-gray-700 transition hover:border-na-gold dark:border-gray-700 dark:text-gray-300"
+      >
+        <span className="block font-semibold text-gray-900 dark:text-gray-100">Algo não funciona no Portal?</span>
+        Conte pela caixa de sugestões. A equipe que cuida do sistema recebe, junto com o tipo de aparelho e navegador.
+      </a>
+
       <div className="rounded-xl border border-gray-200 p-3 text-center dark:border-gray-700">
         <p className="mb-3 text-[11px] text-gray-500 dark:text-gray-400">Não achou o que precisava? Fale com a Economia:</p>
         <a
