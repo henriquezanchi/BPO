@@ -57,6 +57,7 @@ export function ContributionStatusPanel({
   somenteConsulta,
   emBreve,
   comprovanteAnual = false,
+  abrirEmAberto = false,
 }: {
   memberId: string;
   monthlyStatus: ContributionMonthlyStatus[];
@@ -71,14 +72,17 @@ export function ContributionStatusPanel({
   emBreve?: boolean;
   /** Link para o comprovante anual (06/11/2026): filiais brasileiras que usam o Mercúrio. */
   comprovanteAnual?: boolean;
+  /** "Pagar agora" na página inicial (10/11/2026): abre direto o pagamento do mês mais antigo em aberto. */
+  abrirEmAberto?: boolean;
 }) {
   const [recibo, setRecibo] = useState<{ recId: string; texto: string } | null>(null);
-  const [mesPagamento, setMesPagamento] = useState<number | null>(null);
+  const emAbertoInicial = abrirEmAberto && !somenteConsulta ? oldestOpenContribution(monthlyStatus, confirmedCharges) : null;
+  const [mesPagamento, setMesPagamento] = useState<number | null>(emAbertoInicial?.month ?? null);
   const [carregandoMes, setCarregandoMes] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState(emAbertoInicial?.year ?? new Date().getFullYear());
   const [confirmedLocally, setConfirmedLocally] = useState<ChargeLedger[]>([]);
   const payments = [...confirmedCharges, ...confirmedLocally];
   const firstOpen = oldestOpenContribution(monthlyStatus, payments);
@@ -360,49 +364,7 @@ function RealPaymentScreen({
 
   return (
     <div className="text-left">
-      {fortunaNudge && !verificandoPendente && !falhaPendente && !charge && !pago && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex w-full max-w-sm flex-col gap-2.5 rounded-2xl border border-na-gold/40 bg-white p-4 dark:bg-gray-900">
-            <div className="flex items-start gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-na-gold/20 text-na-gold-dark">
-                <HeartHandshake size={16} />
-              </div>
-              <div>
-                <h3 className="text-[13px] font-bold text-gray-900 dark:text-gray-100">{fortunaNudge.titulo}</h3>
-                <p className="text-[12px] text-gray-600 dark:text-gray-400">{fortunaNudge.descricao}</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {fortunaNudge.opcoes.map((opcao) => (
-                <button
-                  key={opcao.label}
-                  onClick={() => responderFortunaNudge("sim", opcao.valor)}
-                  disabled={respondendoNudge}
-                  className="rounded-lg bg-na-green px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
-                >
-                  {respondendoNudge ? <Loader2 size={13} className="animate-spin" /> : fortunaNudge.opcoes.length === 1 ? "Sim" : opcao.label}
-                </button>
-              ))}
-              <button
-                onClick={() => responderFortunaNudge("depois")}
-                disabled={respondendoNudge}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-[12px] font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-              >
-                Lembrar mês que vem
-              </button>
-              <button
-                onClick={() => responderFortunaNudge("nao")}
-                disabled={respondendoNudge}
-                className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-gray-500 transition hover:bg-gray-100 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-800"
-              >
-                Não
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <button onClick={onVoltar} className="mb-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+      <button onClick={onVoltar} className="mb-2 -ml-2 flex min-h-11 items-center px-2 text-[13px] font-semibold text-gray-600 dark:text-gray-300">
         ← Voltar
       </button>
 
@@ -435,8 +397,9 @@ function RealPaymentScreen({
         </div>
       ) : pago ? (
         <div className="rounded-xl border border-na-success/40 bg-na-success-light p-4 text-center text-sm text-na-success-dark dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
-          Pagamento confirmado! O lançamento no Mercúrio foi disparado automaticamente
-          {recargaEfetiva > 0 && ", e a recarga no Fortuna também."}
+          <strong className="block text-[15px]">Pagamento confirmado. Obrigado!</strong>
+          Sua contribuição de {MESES[mes - 1]}/{year} está registrada
+          {recargaEfetiva > 0 ? ` e os ${formatBRL(recargaEfetiva)} de recarga entram no seu Fortuna.` : "."}
         </div>
       ) : charge?.metodo === "PIX" ? (
         <div className="flex flex-col items-center gap-3">
@@ -444,7 +407,7 @@ function RealPaymentScreen({
           <img src={`data:image/png;base64,${charge.pixQrCodeBase64}`} alt="QR Code PIX" className="h-56 w-56 rounded-lg border border-gray-200" />
           <CopyButton key={charge.pixPayload} value={charge.pixPayload} />
           <PaymentStatus state={polling.state} onRetry={polling.retry} />
-          <button onClick={handleCancelarEGerarNova} disabled={isPending} className="text-[11px] font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
+          <button onClick={handleCancelarEGerarNova} disabled={isPending} className="min-h-11 px-2 text-[12px] font-semibold text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             Cancelar essa cobrança e gerar outra
           </button>
           {erro && <p role="alert" className="text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
@@ -463,7 +426,7 @@ function RealPaymentScreen({
             Seus dados de cartão são digitados direto no ambiente seguro do Asaas — nunca passam pelo Portal.
           </p>
           <PaymentStatus state={polling.state} onRetry={polling.retry} />
-          <button onClick={handleCancelarEGerarNova} disabled={isPending} className="text-[11px] font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
+          <button onClick={handleCancelarEGerarNova} disabled={isPending} className="min-h-11 px-2 text-[12px] font-semibold text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             Cancelar essa cobrança e gerar outra
           </button>
           {erro && <p role="alert" className="text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
@@ -474,7 +437,8 @@ function RealPaymentScreen({
             <button
               type="button"
               onClick={() => setMetodo("PIX")}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[12px] font-semibold transition ${
+              aria-pressed={metodo === "PIX"}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] font-semibold transition ${
                 metodo === "PIX"
                   ? "border-na-green bg-na-green/10 text-na-green-dark dark:text-emerald-400"
                   : "border-gray-300 text-gray-500 dark:border-gray-700 dark:text-gray-400"
@@ -485,7 +449,8 @@ function RealPaymentScreen({
             <button
               type="button"
               onClick={() => setMetodo("CREDIT_CARD")}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[12px] font-semibold transition ${
+              aria-pressed={metodo === "CREDIT_CARD"}
+              className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] font-semibold transition ${
                 metodo === "CREDIT_CARD"
                   ? "border-na-green bg-na-green/10 text-na-green-dark dark:text-emerald-400"
                   : "border-gray-300 text-gray-500 dark:border-gray-700 dark:text-gray-400"
@@ -502,8 +467,8 @@ function RealPaymentScreen({
 
           {podeRecarregarFortuna && (
             <div className="rounded-lg border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">
-                <Coffee size={13} /> Aproveite e recarregue o Fortuna junto (evita fila na lanchonete)
+              <p className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-na-warning-dark dark:text-amber-300">
+                <Coffee size={13} /> Recarregar o Fortuna neste mesmo pagamento? (evita fila no café)
               </p>
               <div className="flex gap-1.5">
                 {RECARGA_SUGERIDA.map((v) => (
@@ -511,7 +476,8 @@ function RealPaymentScreen({
                     key={v}
                     type="button"
                     onClick={() => setRecargaFortuna(v)}
-                    className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition ${
+                    aria-pressed={recargaFortuna === v}
+                    className={`min-h-10 flex-1 rounded-lg border px-2 py-1.5 text-[12px] font-semibold transition ${
                       recargaFortuna === v
                         ? "border-na-warning bg-na-warning-light text-na-warning-dark dark:bg-amber-900/40 dark:text-amber-200"
                         : "border-na-warning/40 bg-white text-na-warning-dark dark:border-amber-900 dark:bg-transparent dark:text-amber-400"
@@ -524,9 +490,44 @@ function RealPaymentScreen({
             </div>
           )}
 
+          {/* Crédito mensal do Fortuna (10/11/2026): antes era uma janela por cima do pagamento; agora fica no formulário,
+              sem interromper, e some quando a pessoa responde. */}
+          {fortunaNudge && (
+            <div className="flex flex-col gap-2 rounded-lg border border-na-gold/40 bg-na-gold/10 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+              <p className="flex items-start gap-1.5 text-[12px] text-gray-800 dark:text-gray-200">
+                <HeartHandshake size={14} className="mt-0.5 shrink-0 text-na-gold-dark dark:text-amber-300" />
+                <span>
+                  <strong className="block">{fortunaNudge.titulo}</strong>
+                  {fortunaNudge.descricao}
+                </span>
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {fortunaNudge.opcoes.map((opcao) => (
+                  <button
+                    key={opcao.label}
+                    type="button"
+                    onClick={() => responderFortunaNudge("sim", opcao.valor)}
+                    disabled={respondendoNudge}
+                    className="min-h-10 rounded-lg bg-na-green px-3 text-[12px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
+                  >
+                    {respondendoNudge ? <Loader2 size={13} className="animate-spin" /> : fortunaNudge.opcoes.length === 1 ? "Sim, incluir" : opcao.label}
+                  </button>
+                ))}
+                <button type="button" onClick={() => responderFortunaNudge("depois")} disabled={respondendoNudge} className="min-h-10 rounded-lg border border-gray-300 px-3 text-[12px] font-semibold text-gray-700 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300">
+                  Mês que vem
+                </button>
+                <button type="button" onClick={() => responderFortunaNudge("nao")} disabled={respondendoNudge} className="min-h-10 rounded-lg px-3 text-[12px] font-semibold text-gray-600 disabled:opacity-60 dark:text-gray-400">
+                  Não
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">CPF de quem vai pagar</label>
+            <label htmlFor="cpf-pagador" className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">CPF de quem vai pagar</label>
             <input
+              id="cpf-pagador"
+              autoComplete="off"
               value={cpf}
               onChange={(e) => setCpf(e.target.value)}
               placeholder="000.000.000-00"

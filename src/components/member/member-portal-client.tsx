@@ -21,15 +21,15 @@ import {
   ClipboardCheck,
   Compass,
   HandHeart,
-  Heart,
   Presentation,
   Leaf,
   LifeBuoy,
   LogOut,
+  ChevronRight,
   MessageCircle,
+  UserRound,
   MessageSquareText,
   Newspaper,
-  Pencil,
   PiggyBank,
   TriangleAlert,
   UsersRound,
@@ -38,7 +38,6 @@ import {
   HeartHandshake,
 } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { situacaoGeral } from "@/lib/situacao-contribuicao";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -108,11 +107,12 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
 }
 
 export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { dashboard: MemberDashboard; eventoId?: string; abrir?: "voluntariado"; boletim?: EdicaoAurora | null }) {
-  const router = useRouter();
   const { member, availableToAdd } = dashboard;
   // Eventos públicos do Ulisses lidos pelo navegador (ver lib/ulisses/navegador.ts).
   const agendaItems = useAgendaComUlisses(dashboard.agendaItems, member.school.ulissesFilialId, member.schoolId);
   const [modal, setModal] = useState<ModalKey | null>(eventoId ? "agenda" : abrir && dashboard.voluntariadoVisivel ? abrir : null);
+  // "Pagar agora" abre o painel da situação direto no pagamento do mês em aberto.
+  const [pagarAgora, setPagarAgora] = useState(false);
   const [fortunaBalances, setFortunaBalances] = useState(dashboard.fortunaBalances);
   const [fortunaCarregando, setFortunaCarregando] = useState(true);
   const [tourVisivel, setTourVisivel] = useState(!eventoId && !abrir && !member.tourCompletedAt);
@@ -137,7 +137,8 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   const situacao = situacaoGeral(member.monthlyStatus, member.status);
   const isDelayed = situacao === "em_atraso";
   const semDesconto = situacao === "sem_desconto";
-  const schoolWhatsapp = member.school.whatsapp ?? member.whatsapp;
+  // Só o WhatsApp da filial (10/11/2026): antes, sem número da filial, o botão abria conversa com o próprio aluno.
+  const schoolWhatsapp = member.school.whatsapp ?? "";
   const compositionTotal = member.compositionItems.reduce((soma, i) => soma + i.amount, 0);
   const proximoVencimento = calcularProximoVencimento(member.monthlyStatus, dashboard.hoje);
   const t = getDictionary(member.school.language);
@@ -150,6 +151,9 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   const somenteConsulta = member.school.language === "en" || !member.school.mercurioEscrita;
   // Pagamento pelo Portal: escrita no Mercúrio liberada E conta Asaas da filial ligada (cobrança sempre pela subconta).
   const emBreve = member.school.language !== "en" && (!member.school.mercurioEscrita || !dashboard.cobraOnline);
+  // "Pagar agora" (10/11/2026): com algo em aberto e pagamento pelo Portal liberado, o botão já paga o mês mais antigo.
+  const podePagarAgora = !somenteConsulta && !emBreve && (isDelayed || semDesconto || situacao === "a_vencer");
+  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   // Cartões da contribuição e do Fortuna: no quadro "Economia" e, quando for o caso, no acesso rápido (2026-10-29).
   const cartaoContribuicao = (
@@ -201,8 +205,11 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       </div>
 
       <button
-        onClick={() => setModal("situacao")}
-        className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13px] font-semibold transition ${
+        onClick={() => {
+          setPagarAgora(podePagarAgora);
+          setModal("situacao");
+        }}
+        className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[14px] font-semibold transition ${
           isDelayed
             ? "bg-na-danger text-white hover:bg-na-danger-dark"
             : semDesconto
@@ -210,9 +217,14 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               : "bg-white/70 text-na-success-dark hover:bg-white dark:bg-black/20 dark:text-emerald-300"
         }`}
       >
-        {t.home.verSituacao}
+        {podePagarAgora ? `Pagar agora · ${brl(compositionTotal)}` : t.home.verSituacao}
       </button>
-      {!somenteConsulta && (
+      {podePagarAgora && (
+        <button type="button" onClick={() => setModal("situacao")} className="-mt-1 min-h-10 text-[12px] font-semibold text-gray-600 underline underline-offset-2 dark:text-gray-300">
+          Ver todos os meses e comprovantes
+        </button>
+      )}
+      {!somenteConsulta && !podePagarAgora && (
         <p className="text-center text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
           Pelo Portal, sua contribuição é atualizada assim que o pagamento é confirmado.
         </p>
@@ -253,8 +265,6 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
 
   // Vitrine do centro (pedido do usuário 2026-10-29): um destaque por vez, trocando a cada 5 segundos.
   const saldoFortuna = fortunaBalances.find((b) => b.isHome) ?? fortunaBalances[0];
-  const podeIncluirCrianca = !somenteConsulta && availableToAdd.some((i) => /crian[cç]a.*bem/i.test(i.label));
-  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   // Busca de funções (pedido do usuário 2026-10-29): só o que a pessoa tem no Portal, com o mesmo destino dos quadros.
   const abrirModal = (m: ModalKey) => ({ abrir: () => setModal(m) });
   const destinosBusca: Record<string, DestinoBusca | false> = {
@@ -319,7 +329,6 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           />
         ),
     },
-    contribuicaoUrgente && { id: "contribuicao", conteudo: cartaoContribuicao },
     // Pedagogo com apresentação marcada e plano ainda por entregar (2026-10-29).
     dashboard.pedagogos?.proxima &&
       ["no_prazo", "atrasado", "devolvido"].includes(dashboard.pedagogos.proxima.situacao) && {
@@ -388,20 +397,6 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
         />
       ),
     },
-    {
-      id: "crianca",
-      conteudo: (
-        <Anuncio
-          tom="ouro"
-          icone={<Heart size={20} />}
-          rotulo="Criança para o Bem"
-          titulo="Uma doação que muda o dia de uma criança"
-          texto="Você pode ajudar com o transporte, com as oficinas e o lanche, ou apadrinhar uma criança."
-          acao={podeIncluirCrianca ? "Incluir na minha contribuição" : "Conhecer o projeto"}
-          {...(podeIncluirCrianca ? { onClick: () => setModal("contribuicao") } : { href: "https://criancaparaobem.org.br/", externo: true })}
-        />
-      ),
-    },
     dashboard.meusGafs.length === 0 && (dashboard.recursos.gaf || dashboard.gafsDisponiveis.length > 0) && {
       id: "gaf",
       conteudo: (
@@ -448,25 +443,15 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
         />
       ),
     },
-    !contribuicaoUrgente && {
-      id: "contribuicao",
-      conteudo: (
-        <Anuncio
-          icone={<Wallet size={20} />}
-          rotulo="Minha contribuição"
-          titulo={t.home.contribuicaoEmDia}
-          texto={proximoVencimento.diasRestantes > 0 ? t.home.proximoVencimento(proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes, proximoVencimento.diasRestantes) : undefined}
-          acao={t.home.verSituacao}
-          onClick={() => setModal("economia")}
-        />
-      ),
-    },
-  ] as (Destaque | false | null | undefined | "")[]).filter((d): d is Destaque => !!d);
+  ] as (Destaque | false | null | undefined | "")[])
+    .filter((d): d is Destaque => !!d)
+    // Enxuto (avaliação de design, 10/11/2026): no máximo 3 destaques, sem troca automática.
+    .slice(0, 3);
   const emPortugues = member.school.language !== "en";
 
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
+    <div className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
       {tourVisivel && <OnboardingTour memberId={member.id} onFechar={() => setTourVisivel(false)} />}
       {!tourVisivel && dashboard.boasVindasVoluntario && <BoasVindasVoluntario memberId={member.id} nome={member.name.split(" ")[0]} dados={dashboard.boasVindasVoluntario} />}
       <header className="relative border-b border-gray-100 bg-white px-5 pt-6 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
@@ -487,13 +472,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
 
         <div data-tour-id="welcome" className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-left text-white">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-semibold tracking-wide text-na-gold uppercase">{/* "Membro" só para membros (2º nível em diante); N1 e programa complementar veem "Aluno" — pedido do usuário 2026-10-22. */}{dashboard.bibliotecaLiberada ? t.home.portalDoMembro : t.home.portalDoAluno}</span>
-            <button
-              onClick={() => setModal("cadastro")}
-              className="flex shrink-0 items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[10px] font-semibold whitespace-nowrap transition hover:bg-white/25"
-            >
-              <Pencil size={11} /> {t.home.editarDados}
-            </button>
+            <span className="text-[11px] font-semibold tracking-wide text-na-gold uppercase">{/* "Membro" só para membros (2º nível em diante); N1 e programa complementar veem "Aluno" — pedido do usuário 2026-10-22. */}{dashboard.bibliotecaLiberada ? t.home.portalDoMembro : t.home.portalDoAluno}</span>
           </div>
           <div className="mt-3 mb-1 flex items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/30 bg-white/15">
@@ -505,25 +484,27 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               )}
             </div>
             <span className="min-w-0 text-base font-bold">{member.name}</span>
-            {/* Carteirinha digital (07/11/2026): QR para a recepção dos eventos. */}
-            {member.school.language !== "en" && (
-              <a
-                href="/portal/carteirinha"
-                className="ml-auto flex shrink-0 items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[10px] font-semibold whitespace-nowrap transition hover:bg-white/25"
-              >
-                <IdCard size={12} /> Carteirinha
-              </a>
-            )}
           </div>
-          <div className="flex justify-between border-t border-white/15 pt-2.5 text-[11px] text-white/85">
+          <div className="mt-3 flex justify-between border-t border-white/15 pt-2.5 text-[12px] text-white/85">
             <span>{member.school.city ?? member.school.name}</span>
             <span>
               {t.home.matricula}: <strong>#{member.registrationNo ?? "—"}</strong>
             </span>
           </div>
+          {/* Meus dados e Carteirinha lado a lado e do mesmo tamanho (pedido do usuário 10/11/2026). */}
+          <div className={`mt-3 grid gap-2 ${member.school.language !== "en" ? "grid-cols-2" : "grid-cols-1"}`}>
+            <button type="button" onClick={() => setModal("cadastro")} className={BOTAO_CARTAO}>
+              <UserRound size={14} /> {t.home.editarDados}
+            </button>
+            {member.school.language !== "en" && (
+              <a href="/portal/carteirinha" className={BOTAO_CARTAO}>
+                <IdCard size={14} /> Carteirinha
+              </a>
+            )}
+          </div>
           {dashboard.areaVoluntario && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
-              <Link href="/voluntario" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/90 transition hover:bg-white/25">
+              <Link href="/voluntario" className="flex min-h-9 items-center gap-1 rounded-full bg-white/15 px-3 text-[12px] font-semibold text-white/90 transition hover:bg-white/25">
                 <HandHeart size={11} /> {t.home.portalDoVoluntario}
                 {dashboard.pendenciasVoluntario > 0 && (
                   <span className="ml-0.5 rounded-full bg-na-danger px-1.5 text-[9px] font-bold text-white" aria-label={`${dashboard.pendenciasVoluntario} pedidos aguardando`}>
@@ -546,8 +527,10 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
 
         {/* Acesso rápido (pedido do usuário 2026-10-29): contribuição perto do vencimento, o quadro mais usado ou,
             sem nada a destacar, a frase do dia (alternando com o Acrópole Play) e os próximos eventos. */}
+        {/* Contribuição a pagar: fixa no topo, fora do carrossel (avaliação de design, 10/11/2026). */}
+        {emPortugues && contribuicaoUrgente && cartaoContribuicao}
         {emPortugues ? (
-          <Vitrine destaques={destaques} />
+          <Vitrine destaques={destaques} automatico={false} />
         ) : (
           <section aria-label="Acesso rápido" className="flex flex-col gap-3">
             {contribuicaoUrgente && cartaoContribuicao}
@@ -559,107 +542,82 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           </section>
         )}
 
-        {/* Grid de funcionalidades */}
-        <section className="grid grid-cols-2 gap-2.5">
+        {/* Avaliação aberta: tarefa com prazo, em destaque antes dos atalhos. */}
+        {dashboard.avaliacao && (
+          <Anuncio tom="ouro" icone={<ClipboardCheck size={20} />} rotulo="Avaliação dos instrutores" titulo="Sua opinião sobre as aulas" texto="Anônima · poucos minutos" acao="Responder" href="/avaliacao" />
+        )}
+
+        {/* Quatro atalhos principais (avaliação de design, 10/11/2026); o resto em listas agrupadas abaixo. */}
+        <section aria-label="Atalhos" className="grid grid-cols-2 gap-2.5">
           <FeatureTile
             tourId="economia"
-            icon={<Wallet size={16} />}
+            icon={<Wallet size={18} />}
             title={t.tiles.economia.title}
             subtitle={isDelayed ? t.home.contribuicaoPendente : semDesconto ? t.home.contribuicaoSemDesconto : t.tiles.economia.subtitle}
             onClick={() => setModal("economia")}
           />
           <FeatureTile
             tourId="agenda"
-            icon={<CalendarCheck size={16} />}
+            icon={<CalendarCheck size={18} />}
             title={t.tiles.agenda.title}
             subtitle={agendaItems.length > 0 ? t.tiles.agenda.subtitleComItens(agendaItems.length) : t.tiles.agenda.subtitleSemItens}
             onClick={() => setModal("agenda")}
           />
-          <FeatureTile icon={<BookOpen size={16} />} title={t.tiles.estudos.title} subtitle={t.tiles.estudos.subtitle} onClick={() => setModal("estudos")} />
-          {/* Voluntariado, GAF e Transparência só aparecem se a filial liberou (Administração da filial). */}
-          {dashboard.voluntariadoVisivel && (
-            <FeatureTile icon={<HandHeart size={16} />} title={t.tiles.voluntariado.title} subtitle={t.tiles.voluntariado.subtitle} onClick={() => setModal("voluntariado")} />
-          )}
-          {(dashboard.recursos.gaf || dashboard.meusGafs.length > 0 || dashboard.temDiario) && (
-            <FeatureTile icon={<UsersRound size={16} />} title={t.tiles.gaf.title} subtitle={dashboard.meusGafs.length ? dashboard.meusGafs.map((g) => g.nome).join(", ") : t.tiles.gaf.subtitle} onClick={() => setModal("gaf")} />
-          )}
-          {dashboard.gruposDeEstudo.length > 0 && (
-            <FeatureTile
-              icon={<BookOpenText size={16} />}
-              title="Grupos de estudo"
-              subtitle={dashboard.gruposDeEstudo.some((g) => g.participo) ? dashboard.gruposDeEstudo.filter((g) => g.participo).map((g) => g.nome).join(", ") : "Estudos e leituras comentadas abertos"}
-              onClick={() => setModal("grupos_estudo")}
-            />
-          )}
-          {dashboard.pedagogos && (
-            <Link
-              href={`/grupos/${dashboard.pedagogos.grupoId}?aba=escala`}
-              className="flex flex-col items-start gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold dark:border-gray-800 dark:bg-gray-900"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
-                <Presentation size={16} />
-              </span>
-              <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">Turma de pedagogos</span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                {dashboard.pedagogos.proxima ? `Apresenta em ${dataCurta(dashboard.pedagogos.proxima.data)}` : "Escala e planos de aula"}
-              </span>
-            </Link>
-          )}
-          {/* Indicar um amigo (07/11/2026): convite com as próximas turmas da filial. */}
-          {member.school.language !== "en" && (
-            <FeatureTile icon={<HeartHandshake size={16} />} title="Indicar um amigo" subtitle="Convite para as próximas turmas" onClick={() => router.push("/portal/indicar")} />
-          )}
-          {/* Caixa de sugestões (10/11/2026): escola ou Portal, por categoria. */}
-          {member.school.language !== "en" && (
-            <FeatureTile icon={<MessageSquareText size={16} />} title="Sugestões" subtitle="Ideias, elogios e problemas" onClick={() => router.push("/portal/sugestoes")} />
-          )}
-          <FeatureTile icon={<LifeBuoy size={16} />} title={t.tiles.ajuda.title} subtitle={t.tiles.ajuda.subtitle} onClick={() => setModal("ajuda")} />
+          <FeatureTile icon={<BookOpen size={18} />} title={t.tiles.estudos.title} subtitle={t.tiles.estudos.subtitle} onClick={() => setModal("estudos")} />
           <FeatureTile
-            icon={<Compass size={16} />}
+            icon={<Compass size={18} />}
             title={t.tiles.jornada.title}
             subtitle={dashboard.streakMeses > 0 ? t.tiles.jornada.subtitleComStreak(dashboard.streakMeses) : t.tiles.jornada.subtitleSemStreak}
             onClick={() => setModal("jornada")}
           />
-          {dashboard.avaliacao && (
-            <Link
-              href="/avaliacao"
-              className="flex flex-col items-start gap-2 rounded-2xl border border-na-gold/50 bg-na-gold/10 p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold dark:border-amber-900 dark:bg-amber-950/20"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-gold/20 text-na-gold-dark dark:text-amber-300">
-                <ClipboardCheck size={16} />
-              </span>
-              <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">Avaliação dos instrutores</span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400">Anônima · poucos minutos</span>
-            </Link>
-          )}
-          {dashboard.recursos.transparencia && (
-            <FeatureTile
-              icon={<PiggyBank size={16} />}
-              title={t.tiles.transparencia.title}
-              subtitle={t.tiles.transparencia.subtitle}
-              onClick={() => setModal("transparencia")}
-            />
-          )}
         </section>
 
-        {/* Boletim Aurora (pedido do usuário 2026-10-26): novidades mensais da Nova Acrópole, edição mais recente. */}
-        {member.school.language !== "en" && (
-          <a
-            href={boletim?.link ?? PAGINA_BOLETIM_AURORA}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2.5 flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 transition hover:-translate-y-0.5 hover:border-na-gold dark:border-gray-800 dark:bg-gray-900"
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
-              <Newspaper size={16} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Boletim Aurora{boletim ? ` · ${boletim.titulo}` : ""}</span>
-              <span className="mt-0.5 line-clamp-2 block text-xs text-gray-700 dark:text-gray-300">{boletim?.resumo || "Novidades e ações da Nova Acrópole no Brasil, todo mês."}</span>
-              <span className="mt-1 block text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">Ler a edição →</span>
-            </span>
-          </a>
-        )}
+        {/* Comunidade: só o que a filial liberou ou a pessoa participa. */}
+        {(() => {
+          const comunidade = [
+            (dashboard.recursos.gaf || dashboard.meusGafs.length > 0 || dashboard.temDiario) && (
+              <LinhaAtalho key="gaf" icon={<UsersRound size={16} />} title={t.tiles.gaf.title} subtitle={dashboard.meusGafs.length ? dashboard.meusGafs.map((g) => g.nome).join(", ") : t.tiles.gaf.subtitle} onClick={() => setModal("gaf")} />
+            ),
+            dashboard.gruposDeEstudo.length > 0 && (
+              <LinhaAtalho
+                key="grupos"
+                icon={<BookOpenText size={16} />}
+                title="Grupos de estudo"
+                subtitle={dashboard.gruposDeEstudo.some((g) => g.participo) ? dashboard.gruposDeEstudo.filter((g) => g.participo).map((g) => g.nome).join(", ") : "Estudos e leituras comentadas abertos"}
+                onClick={() => setModal("grupos_estudo")}
+              />
+            ),
+            dashboard.voluntariadoVisivel && <LinhaAtalho key="vol" icon={<HandHeart size={16} />} title={t.tiles.voluntariado.title} subtitle={t.tiles.voluntariado.subtitle} onClick={() => setModal("voluntariado")} />,
+            dashboard.pedagogos && (
+              <LinhaAtalho
+                key="ped"
+                icon={<Presentation size={16} />}
+                title="Turma de pedagogos"
+                subtitle={dashboard.pedagogos.proxima ? `Apresenta em ${dataCurta(dashboard.pedagogos.proxima.data)}` : "Escala e planos de aula"}
+                href={`/grupos/${dashboard.pedagogos.grupoId}?aba=escala`}
+              />
+            ),
+            emPortugues && <LinhaAtalho key="ind" icon={<HeartHandshake size={16} />} title="Indicar um amigo" subtitle="Convite para as próximas turmas" href="/portal/indicar" />,
+          ].filter(Boolean);
+          return comunidade.length ? <ListaAtalhos titulo="Comunidade">{comunidade}</ListaAtalhos> : null;
+        })()}
+
+        <ListaAtalhos titulo="Ajuda e escola">
+          <LinhaAtalho icon={<LifeBuoy size={16} />} title={t.tiles.ajuda.title} subtitle={t.tiles.ajuda.subtitle} onClick={() => setModal("ajuda")} />
+          {emPortugues && <LinhaAtalho icon={<MessageSquareText size={16} />} title="Sugestões" subtitle="Ideias, elogios e problemas" href="/portal/sugestoes" />}
+          {dashboard.recursos.transparencia && <LinhaAtalho icon={<PiggyBank size={16} />} title={t.tiles.transparencia.title} subtitle={t.tiles.transparencia.subtitle} onClick={() => setModal("transparencia")} />}
+          {/* Boletim Aurora (pedido do usuário 2026-10-26): novidades mensais da Nova Acrópole, edição mais recente. */}
+          {emPortugues && (
+            <LinhaAtalho
+              icon={<Newspaper size={16} />}
+              title={`Boletim Aurora${boletim ? ` · ${boletim.titulo}` : ""}`}
+              subtitle={boletim?.resumo || "Novidades e ações da Nova Acrópole no Brasil, todo mês."}
+              href={boletim?.link ?? PAGINA_BOLETIM_AURORA}
+              externo
+            />
+          )}
+        </ListaAtalhos>
+
         {/* Frase do dia (pedido do usuário 2026-10-29), embaixo de tudo, quando não está no acesso rápido. */}
         {/* A frase do dia fica sempre no fim: a vitrine do centro não a mostra mais. */}
         {emPortugues && (
@@ -673,18 +631,20 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
         )}
       </main>
 
-      <a
-        href={whatsappHref(schoolWhatsapp)}
-        target="_blank"
-        rel="noreferrer"
-        aria-label={t.home.falarNoWhatsapp}
-        className="fixed bottom-6 right-6 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg transition hover:scale-105 sm:absolute"
-      >
-        <MessageCircle size={26} />
-      </a>
+      {schoolWhatsapp && (
+        <a
+          href={whatsappHref(schoolWhatsapp)}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={t.home.falarNoWhatsapp}
+          className="fixed right-5 bottom-5 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg transition hover:scale-105 sm:absolute"
+        >
+          <MessageCircle size={26} />
+        </a>
+      )}
 
       {modal && (
-        <BottomSheet open onOpenChange={(open) => !open && setModal(null)} title={modal === "gaf" && dashboard.meusGafs.length ? (dashboard.meusGafs.length === 1 ? dashboard.meusGafs[0].nome : "Meus GAFs") : t.modalTitles[modal]}>
+        <BottomSheet open onOpenChange={(open) => { if (!open) { setModal(null); setPagarAgora(false); } }} title={modal === "gaf" && dashboard.meusGafs.length ? (dashboard.meusGafs.length === 1 ? dashboard.meusGafs[0].nome : "Meus GAFs") : t.modalTitles[modal]}>
           {modal === "cadastro" && (
             <ProfileEditPanel
               memberId={member.id}
@@ -744,6 +704,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               somenteConsulta={somenteConsulta}
               emBreve={emBreve}
               comprovanteAnual={member.school.language !== "en" && member.school.sistemaRegistro === "mercurio"}
+              abrirEmAberto={pagarAgora}
             />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
@@ -772,6 +733,11 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   );
 }
 
+/** Botões do cartão de boas-vindas: mesmo tamanho, lado a lado. */
+const BOTAO_CARTAO =
+  "flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 text-[12px] font-semibold whitespace-nowrap text-white transition hover:bg-white/25";
+
+/** Atalho principal da página inicial (só quatro). */
 function FeatureTile({
   icon,
   title,
@@ -789,13 +755,52 @@ function FeatureTile({
     <button
       data-tour-id={tourId}
       onClick={onClick}
-      className="flex flex-col items-start gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold dark:border-gray-800 dark:bg-gray-900"
+      className="flex min-h-[112px] flex-col items-start gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-na-gold dark:border-gray-800 dark:bg-gray-900"
     >
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
-        {icon}
-      </div>
-      <h5 className="text-xs font-semibold text-gray-900 dark:text-gray-100">{title}</h5>
-      <p className="text-[11px] text-gray-500 dark:text-gray-400">{subtitle}</p>
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">{icon}</span>
+      <span className="text-[14px] leading-tight font-semibold text-gray-900 dark:text-gray-100">{title}</span>
+      <span className="line-clamp-2 text-[12px] leading-snug text-gray-600 dark:text-gray-400">{subtitle}</span>
     </button>
+  );
+}
+
+/** Lista agrupada de atalhos secundários (Comunidade, Ajuda e escola). */
+function ListaAtalhos({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <section aria-label={titulo} className="flex flex-col gap-1.5">
+      <h2 className="px-1 text-[12px] font-bold text-gray-600 dark:text-gray-300">{titulo}</h2>
+      <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">{children}</ul>
+    </section>
+  );
+}
+
+function LinhaAtalho({ icon, title, subtitle, onClick, href, externo }: { icon: React.ReactNode; title: string; subtitle: string; onClick?: () => void; href?: string; externo?: boolean }) {
+  const corpo = (
+    <>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14px] font-semibold text-gray-900 dark:text-gray-100">{title}</span>
+        <span className="block truncate text-[12px] text-gray-600 dark:text-gray-400">{subtitle}</span>
+      </span>
+      <ChevronRight size={16} className="shrink-0 text-gray-400" aria-hidden />
+    </>
+  );
+  const classe = "flex min-h-14 w-full items-center gap-3 px-3.5 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800/60";
+  return (
+    <li>
+      {href && externo ? (
+        <a href={href} target="_blank" rel="noreferrer" className={classe}>
+          {corpo}
+        </a>
+      ) : href ? (
+        <Link href={href} className={classe}>
+          {corpo}
+        </Link>
+      ) : (
+        <button type="button" onClick={onClick} className={classe}>
+          {corpo}
+        </button>
+      )}
+    </li>
   );
 }

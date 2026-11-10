@@ -25,7 +25,8 @@ interface ProfileEditPanelProps {
 // Classe repetida nos inputs de texto do formulário.
 const INPUT_CLASS =
   "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100";
-const LABEL_CLASS = "text-[11px] font-semibold text-gray-800 dark:text-gray-300";
+const LABEL_CLASS = "text-[12px] font-semibold text-gray-800 dark:text-gray-300";
+const SECAO_CLASS = "mb-1.5 text-[12px] font-bold text-gray-900 dark:text-gray-100";
 
 /** Foto de perfil — pedido do usuário 2026-09-30: deixa o Portal mais pessoal e ajuda a diretoria a reconhecer quem é quem. */
 function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; avatarUrl: string | null }) {
@@ -169,9 +170,9 @@ function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; 
           <button
             type="button"
             onClick={() => setEditando(true)}
-            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-3 text-[12px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
           >
-            <Pencil size={11} /> Solicitar correção
+            <Pencil size={12} /> Pedir correção
           </button>
         </div>
       )}
@@ -192,6 +193,18 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ changed: boolean; alerted: boolean } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // "Meus dados" em modo leitura (avaliação de design e relato de aluno, 10/11/2026): o endereço só vira formulário
+  // depois de "Pedir correção", para não parecer editável na hora.
+  const [corrigindoEndereco, setCorrigindoEndereco] = useState(false);
+  const enderecoTexto = [
+    [props.addressStreet, props.addressNumber].filter(Boolean).join(", "),
+    props.addressComplement,
+    props.addressNeighborhood,
+    [props.addressCity, props.addressState].filter(Boolean).join(" - "),
+    props.addressZip ? `CEP ${props.addressZip}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   function handleSubmit(formData: FormData) {
     setErro(null);
@@ -212,6 +225,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         addressZip: campo("addressZip"),
       });
       setResult(res);
+      if (res.changed) setCorrigindoEndereco(false);
       } catch (e) {
         setErro(mensagemErroAmigavel(e));
       }
@@ -227,33 +241,44 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       <AvatarUploader memberId={memberId} avatarUrl={avatarUrl} />
 
       {/* Pedido do usuário 2026-10-19: deixar claro que TODO dado do cadastro muda só por solicitação, não só o contato. */}
-      <div className="mb-4 flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-[11px] text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
+      <div className="mb-4 flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
         <Clock size={14} className="mt-0.5 shrink-0 text-gray-400" />
         <span>
-          <strong className="text-gray-800 dark:text-gray-100">Nenhuma alteração muda seu cadastro na hora.</strong> Contato, endereço e os dados de &quot;Mais Dados&quot; viram uma
-          solicitação: a secretaria confere e só então atualiza seu cadastro na escola.
+          Estes são os dados do seu cadastro na escola. Para corrigir algo, toque em <strong className="text-gray-800 dark:text-gray-100">Pedir correção</strong>: a secretaria confere e
+          atualiza o cadastro.
         </span>
       </div>
 
-      <div className="mb-3 flex flex-col gap-1">
-        <label className={LABEL_CLASS}>Nome Completo</label>
-        <input
-          disabled
-          defaultValue={name}
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-[13px] text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
-        />
+      <div className="mb-4">
+        <p className={SECAO_CLASS}>Nome</p>
+        <p className="text-[14px] text-gray-900 dark:text-gray-100">{name}</p>
+        <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">Para corrigir o nome, fale com a secretaria levando um documento.</p>
       </div>
 
-      <div className="mb-1 text-[11px] font-bold text-gray-900 dark:text-gray-100">Contato</div>
+      <p className={SECAO_CLASS}>Contato</p>
       <ContatoSensivelCard memberId={memberId} whatsapp={props.whatsapp} email={props.email} />
 
-      <div className="text-[11px] font-bold text-gray-900 dark:text-gray-100">Endereço</div>
-      <p className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">Corrija o que precisar e toque em &quot;Solicitar alteração do endereço&quot; no fim da página.</p>
+      <p className={SECAO_CLASS}>Endereço</p>
+      {!corrigindoEndereco ? (
+        <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+          <p className="min-w-0 text-[14px] text-gray-900 dark:text-gray-100">{enderecoTexto || <span className="text-gray-500 dark:text-gray-400">Sem endereço cadastrado</span>}</p>
+          <button
+            type="button"
+            onClick={() => setCorrigindoEndereco(true)}
+            className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-3 text-[12px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <Pencil size={12} /> Pedir correção
+          </button>
+        </div>
+      ) : (
+      <div className="mb-5 flex flex-col rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+      <p className="mb-3 text-[12px] text-gray-600 dark:text-gray-400">Corrija o que estiver errado e envie. O endereço muda no cadastro depois que a secretaria conferir.</p>
 
       <div className="mb-3 grid grid-cols-3 gap-2">
         <div className="col-span-2 flex flex-col gap-1">
-          <label className={LABEL_CLASS}>Rua</label>
+          <label htmlFor="end-addressStreet" className={LABEL_CLASS}>Rua</label>
           <input
+            id="end-addressStreet"
             name="addressStreet"
             autoComplete="address-line1"
             defaultValue={props.addressStreet ?? ""}
@@ -261,8 +286,9 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className={LABEL_CLASS}>Número</label>
+          <label htmlFor="end-addressNumber" className={LABEL_CLASS}>Número</label>
           <input
+            id="end-addressNumber"
             name="addressNumber"
             inputMode="numeric"
             defaultValue={props.addressNumber ?? ""}
@@ -272,8 +298,9 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       </div>
 
       <div className="mb-3 flex flex-col gap-1">
-        <label className={LABEL_CLASS}>Complemento</label>
+        <label htmlFor="end-addressComplement" className={LABEL_CLASS}>Complemento</label>
         <input
+          id="end-addressComplement"
           name="addressComplement"
           autoComplete="address-line2"
           placeholder="Apto, bloco, ponto de referência..."
@@ -284,8 +311,9 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
 
       <div className="mb-3 grid grid-cols-2 gap-2">
         <div className="flex flex-col gap-1">
-          <label className={LABEL_CLASS}>Bairro</label>
+          <label htmlFor="end-addressNeighborhood" className={LABEL_CLASS}>Bairro</label>
           <input
+            id="end-addressNeighborhood"
             name="addressNeighborhood"
             autoComplete="address-level3"
             defaultValue={props.addressNeighborhood ?? ""}
@@ -293,8 +321,9 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className={LABEL_CLASS}>CEP</label>
+          <label htmlFor="end-addressZip" className={LABEL_CLASS}>CEP</label>
           <input
+            id="end-addressZip"
             name="addressZip"
             inputMode="numeric"
             autoComplete="postal-code"
@@ -306,8 +335,9 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
 
       <div className="mb-5 grid grid-cols-3 gap-2">
         <div className="col-span-2 flex flex-col gap-1">
-          <label className={LABEL_CLASS}>Cidade</label>
+          <label htmlFor="end-addressCity" className={LABEL_CLASS}>Cidade</label>
           <input
+            id="end-addressCity"
             name="addressCity"
             autoComplete="address-level2"
             defaultValue={props.addressCity ?? ""}
@@ -315,8 +345,9 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className={LABEL_CLASS}>UF</label>
+          <label htmlFor="end-addressState" className={LABEL_CLASS}>UF</label>
           <input
+            id="end-addressState"
             name="addressState"
             maxLength={2}
             autoComplete="address-level1"
@@ -326,30 +357,37 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         </div>
       </div>
 
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
+        >
+          {isPending && <Loader2 size={14} className="animate-spin" />}
+          {isPending ? "Enviando..." : "Enviar correção do endereço"}
+        </button>
+        <button type="button" onClick={() => setCorrigindoEndereco(false)} className="min-h-11 rounded-xl px-3 text-[13px] font-semibold text-gray-600 dark:text-gray-300">
+          Cancelar
+        </button>
+      </div>
+      </div>
+      )}
+
       <Link
         href={`/portal/mais-dados?memberId=${memberId}`}
         className="mb-5 flex items-center justify-between rounded-xl border border-gray-200 p-3 text-[13px] font-medium text-gray-800 transition hover:border-na-gold dark:border-gray-700 dark:text-gray-200"
       >
         <span>
-          Mais Dados
-          <span className="block text-[11px] font-normal text-gray-500 dark:text-gray-400">Nascimento, documentos, profissão… — também por solicitação</span>
+          Mais dados
+          <span className="block text-[12px] font-normal text-gray-500 dark:text-gray-400">Nascimento, documentos, profissão (correção também por pedido)</span>
         </span>
         <ChevronRight size={16} className="text-gray-400 dark:text-gray-500" />
       </Link>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
-      >
-        {isPending && <Loader2 size={14} className="animate-spin" />}
-        {isPending ? "Enviando..." : "Solicitar alteração do endereço"}
-      </button>
-
       {result?.changed && (
         <div className="mt-3 flex items-start gap-2 rounded-lg bg-na-success-light p-3 text-[11px] text-na-success-dark dark:bg-green-950/30 dark:text-green-300">
           <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-          <span>Solicitação enviada. A secretaria vai conferir — o endereço só muda no seu cadastro depois da aprovação.</span>
+          <span>Pedido enviado. A secretaria vai conferir; o endereço muda no seu cadastro depois da aprovação.</span>
         </div>
       )}
 

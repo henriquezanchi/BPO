@@ -96,7 +96,7 @@ const pt: Dictionary = {
     entrar: "Entrar",
   },
   modalTitles: {
-    cadastro: "Atualizar Cadastro",
+    cadastro: "Meus dados",
     contribuicao: "Minha Contribuição",
     situacao: "Situação da Contribuição",
     fortuna_recarga: "Adicionar Créditos",
@@ -107,14 +107,14 @@ const pt: Dictionary = {
     gaf: "Conhecer o GAF",
     grupos_estudo: "Grupos de estudo e leituras",
     transparencia: "Transparência Financeira",
-    economia: "Economia",
+    economia: "Pagamentos",
     jornada: "Minha Jornada",
   },
   home: {
     portalDoMembro: "PORTAL DO MEMBRO",
     portalDoAluno: "PORTAL DO ALUNO",
     portalDoVoluntario: "Área do Voluntário",
-    editarDados: "Editar Dados",
+    editarDados: "Meus dados",
     matricula: "Matrícula",
     sair: "Sair",
     contribuicaoPendente: "Contribuição em Atraso",
@@ -133,7 +133,7 @@ const pt: Dictionary = {
   },
   tiles: {
     contribuicao: { title: "Minha Contribuição", subtitle: "Composição e apoios" },
-    economia: { title: "Economia", subtitle: "Contribuição e carteira Fortuna" },
+    economia: { title: "Pagamentos", subtitle: "Contribuição e carteira Fortuna" },
     agenda: {
       title: "Agenda & Eventos",
       subtitleComItens: (n) => `${n} próximos`,
@@ -142,7 +142,7 @@ const pt: Dictionary = {
     estudos: { title: "Área de Estudos", subtitle: "Biblioteca, apostilas e Acrópole Play" },
     voluntariado: { title: "Voluntariado", subtitle: "Secretarias e mutirões" },
     gaf: { title: "Grupo de Acompanhamento", subtitle: "Conheça e faça sua adesão ao GAF" },
-    ajuda: { title: "Central de Ajuda", subtitle: "Fale com a Economia" },
+    ajuda: { title: "Central de Ajuda", subtitle: "Dúvidas frequentes e como resolver" },
     jornada: {
       title: "Minha Jornada",
       subtitleComStreak: (n) => `${n} meses em dia`,
@@ -173,7 +173,7 @@ const en: Dictionary = {
     entrar: "Sign in",
   },
   modalTitles: {
-    cadastro: "Update Profile",
+    cadastro: "My profile",
     contribuicao: "My Contribution",
     situacao: "Contribution Status",
     fortuna_recarga: "Add Credits",
@@ -191,7 +191,7 @@ const en: Dictionary = {
     portalDoMembro: "MEMBER PORTAL",
     portalDoAluno: "STUDENT PORTAL",
     portalDoVoluntario: "Volunteer Area",
-    editarDados: "Edit Profile",
+    editarDados: "My profile",
     matricula: "Member ID",
     sair: "Log out",
     contribuicaoPendente: "Contribution Overdue",

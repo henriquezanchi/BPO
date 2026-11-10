@@ -881,3 +881,22 @@ calendário, nos próximos eventos da Agenda, no destaque da tela inicial e na v
   poderia aperfeiçoar"); "Prefiro não responder" em discordância, faixa etária, escolaridade e convivência
   (`PREFIRO_NAO_RESPONDER`, fora das comparações da análise). Não altera questionários próprios (Barra do Garças tem um)
   nem rodadas já abertas (guardam cópia).
+
+## 10/11/2026 — Portal do Aluno enxuto (avaliação de design 24/40)
+
+Avaliação Impeccable (`.impeccable/critique/`) e pedido do usuário "rode tudo":
+- Página inicial: contribuição a pagar fixa no topo, com "Pagar agora · R$ X" que abre direto o pagamento do mês mais
+  antigo em aberto (`ContributionStatusPanel abrirEmAberto`); carrossel parado (`Vitrine automatico={false}`), no máximo
+  3 destaques, sem os slides fixos da Criança para o Bem e da contribuição; 4 atalhos (Pagamentos, Agenda, Estudos,
+  Jornada); Comunidade e "Ajuda e escola" em listas agrupadas (`ListaAtalhos`/`LinhaAtalho`); avaliação aberta em
+  destaque; Boletim na lista.
+- "Economia" virou "Pagamentos" (dicionário, busca e tour); "Editar Dados" virou "Meus dados", lado a lado com a
+  Carteirinha e do mesmo tamanho (pedido do usuário).
+- Pagamento: oferta do crédito mensal do Fortuna saiu da janela por cima e foi para dentro do formulário; recarga só no
+  próprio pagamento (pedido do usuário: nada depois); confirmação sem "Mercúrio"; PIX/Cartão e recarga com aria-pressed;
+  Voltar e Cancelar com área de toque.
+- "Meus dados" em modo leitura: nome como texto, endereço com "Pedir correção" que abre o formulário, rótulos ligados.
+- WhatsApp só o da filial (antes caía no número do aluno); botão some sem número; no computador fica dentro da coluna.
+- X das janelas com 44 px; foco visível global na cor da marca; seleção de texto em dourado.
+Pendente: anúncio da Acrópole Play levar à série (falta o endereço de cada série na área de membros e saber se o link
+automático da Cademi aceita destino).

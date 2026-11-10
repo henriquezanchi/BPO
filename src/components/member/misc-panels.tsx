@@ -421,8 +421,10 @@ export function HelpPanel({ whatsapp }: { whatsapp: string }) {
         Conte pela caixa de sugestões. A equipe que cuida do sistema recebe, junto com o tipo de aparelho e navegador.
       </a>
 
+      {/* Só com o WhatsApp da filial (10/11/2026): sem ele, o link abria conversa com o próprio aluno. */}
+      {whatsapp && (
       <div className="rounded-xl border border-gray-200 p-3 text-center dark:border-gray-700">
-        <p className="mb-3 text-[11px] text-gray-500 dark:text-gray-400">Não achou o que precisava? Fale com a Economia:</p>
+        <p className="mb-3 text-[12px] text-gray-600 dark:text-gray-400">Não achou o que precisava? Fale com a secretaria:</p>
         <a
           href={whatsappHref(whatsapp, "Olá, preciso de ajuda com o Portal do Aluno")}
           target="_blank"
@@ -432,6 +434,7 @@ export function HelpPanel({ whatsapp }: { whatsapp: string }) {
           Chamar no WhatsApp
         </a>
       </div>
+      )}
     </div>
   );
 }

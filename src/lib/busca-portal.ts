@@ -7,7 +7,7 @@
 export type FuncaoPortal = { id: string; titulo: string; descricao: string; palavras: string[] };
 
 export const FUNCOES_PORTAL: FuncaoPortal[] = [
-  { id: "economia", titulo: "Economia", descricao: "Contribuição mensal e carteira Fortuna num lugar só", palavras: ["mensalidade", "pagar", "pagamento", "boleto", "pix", "cartão", "financeiro", "dinheiro", "valor"] },
+  { id: "economia", titulo: "Pagamentos", descricao: "Pagar a contribuição e recarregar o Fortuna", palavras: ["economia", "mensalidade", "pagar", "pagamento", "boleto", "pix", "cartão", "financeiro", "dinheiro", "valor"] },
   { id: "situacao", titulo: "Situação da contribuição", descricao: "Meses pagos e em aberto, comprovantes, pagar com Pix ou cartão, débito automático", palavras: ["atrasado", "atraso", "em dia", "comprovante", "recibo", "segunda via", "vencimento", "pix automático", "débito automático", "quanto devo", "pagar mês"] },
   { id: "contribuicao", titulo: "Minha contribuição", descricao: "Composição da contribuição: incluir, aumentar ou diminuir apoios", palavras: ["composição", "apoio", "doação", "doar", "criança para o bem", "aumentar", "diminuir", "ajudar a escola", "itens"] },
   { id: "fortuna", titulo: "Adicionar créditos no Fortuna", descricao: "Carteira do Café: saldo e recarga", palavras: ["café", "lanche", "cantina", "carteira", "saldo", "crédito", "recarga", "comprar", "lanchonete"] },

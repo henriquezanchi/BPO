@@ -13,8 +13,8 @@ const PASSOS = [
   },
   {
     icon: Wallet,
-    titulo: "Economia",
-    texto: "Sua contribuição e a carteira Fortuna da lanchonete ficam aqui. Perto do vencimento, a contribuição aparece logo no topo.",
+    titulo: "Pagamentos",
+    texto: "Aqui você paga a contribuição e recarrega o Fortuna do café. Quando houver algo a pagar, o botão “Pagar agora” aparece logo no topo.",
     alvo: "economia",
   },
   {

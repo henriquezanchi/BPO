@@ -162,3 +162,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .diario-animado, .diario-animado * { animation: none !important; }
 }
+
+/* Foco visível para quem navega pelo teclado (avaliação de design, 10/11/2026): anel na cor da marca, só no teclado. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--na-green, #0b6b5c);
+  outline-offset: 2px;
+}
+::selection {
+  background: color-mix(in srgb, var(--na-gold, #d4a017) 35%, transparent);
+}

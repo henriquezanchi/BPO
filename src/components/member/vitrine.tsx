@@ -15,7 +15,8 @@ const INTERVALO_MS = 5000;
 
 export type Destaque = { id: string; conteudo: ReactNode };
 
-export function Vitrine({ destaques }: { destaques: Destaque[] }) {
+/** `automatico={false}` (10/11/2026): a pessoa escolhe pelos pontos ou deslizando; nada troca sozinho. */
+export function Vitrine({ destaques, automatico = true }: { destaques: Destaque[]; automatico?: boolean }) {
   const [atual, setAtual] = useState(0);
   const [pausado, setPausado] = useState(false);
   const [parado, setParado] = useState(false); // mouse em cima, foco dentro ou aba escondida
@@ -24,10 +25,10 @@ export function Vitrine({ destaques }: { destaques: Destaque[] }) {
   const i = n ? atual % n : 0;
 
   useEffect(() => {
-    if (n < 2 || pausado || parado) return;
+    if (!automatico || n < 2 || pausado || parado) return;
     const t = setInterval(() => setAtual((a) => a + 1), INTERVALO_MS);
     return () => clearInterval(t);
-  }, [n, pausado, parado]);
+  }, [automatico, n, pausado, parado]);
 
   useEffect(() => {
     const mudou = () => setParado(document.visibilityState === "hidden");
@@ -79,11 +80,12 @@ export function Vitrine({ destaques }: { destaques: Destaque[] }) {
               onClick={() => setAtual(k)}
               aria-label={`Ver destaque ${k + 1} de ${n}`}
               aria-current={k === i}
-              className="flex h-6 items-center px-0.5"
+              className="flex h-11 min-w-8 items-center justify-center px-1"
             >
               <span className={`block h-1.5 rounded-full transition-all ${k === i ? "w-5 bg-na-green" : "w-1.5 bg-gray-300 dark:bg-gray-700"}`} />
             </button>
           ))}
+          {automatico && (
           <button
             onClick={() => setPausado(!pausado)}
             aria-label={pausado ? "Continuar a troca dos destaques" : "Pausar a troca dos destaques"}
@@ -91,6 +93,7 @@ export function Vitrine({ destaques }: { destaques: Destaque[] }) {
           >
             {pausado ? <Play size={11} /> : <Pause size={11} />}
           </button>
+          )}
         </div>
       )}
     </section>
@@ -164,7 +167,7 @@ export function Anuncio({
     <>
       {capa ?? (icone && <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${c.icone}`}>{icone}</span>)}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className={`text-[10px] font-bold tracking-wide uppercase ${c.rotulo}`}>{rotulo}</span>
+        <span className={`text-[11px] font-bold tracking-wide uppercase ${c.rotulo}`}>{rotulo}</span>
         <span className={`text-[15px] leading-snug font-bold text-balance ${c.titulo}`}>{titulo}</span>
         {texto && <span className={`text-[12px] leading-relaxed ${c.texto}`}>{texto}</span>}
         {extra}
