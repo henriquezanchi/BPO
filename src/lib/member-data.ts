@@ -104,6 +104,8 @@ export type AgendaItem =
       lancheCompartilhado?: boolean;
       postagemOficial?: string | null;
       cartazLeitura?: { data: boolean; horario: boolean; local: boolean; inscricao: boolean } | null;
+      /** Fuso de onde o evento acontece (10/11/2026): data e hora aparecem como no local, não no fuso de quem vê. */
+      fusoLocal?: string | null;
       // Evento do Ágora (túnel, 2026-10-27): já inscrito lá, valor e prazo/lote.
       agora?: { inscrito: boolean; valor: string | null; prazo: string | null };
     }
@@ -283,7 +285,7 @@ export async function getMemberDashboard(memberId: string) {
         startsAt: { gte: new Date(Date.now()-86400000) },
       },
       orderBy: { startsAt: "asc" },
-      include:{_count:{select:{registrations:{where:{desistenciaEm:null}}}},school:{select:{name:true}}},
+      include:{_count:{select:{registrations:{where:{desistenciaEm:null}}}},school:{select:{name:true,uf:true}}},
     }),
     studentClassGroupIds.length
       ? db.activity.findMany({
@@ -394,6 +396,8 @@ export async function getMemberDashboard(memberId: string) {
         externalUid: e.externalUid,
         // Evento de outra filial aberto à pessoa (abertoA, 2026-10-19): mostra de onde é.
         filialOrigem: e.schoolId && e.schoolId !== member.schoolId ? (e.school?.name ?? null) : null,
+        // Evento de uma filial: no fuso dela; nacional/regional sem filial: horário de Brasília.
+        fusoLocal: fusoDaEscola(e.school?.uf),
         posterUrl:eventPosters.get(e.id)??e.imageUrl??null,
         capacity:e.capacity,
         availableSpots:e.capacity===null?null:Math.max(0,e.capacity-e._count.registrations-reservasDeOutros(e.id)),

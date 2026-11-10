@@ -81,3 +81,16 @@ test("correlação", () => {
   assert.equal(correlacao([1, 2, 3], [2, 4, 6]), 1);
   assert.equal(correlacao([1, 2], [1, 2]), null);
 });
+
+test("data do evento: dia inteiro pela data; com horário, no fuso do local", async () => {
+  const { dataCivilDoCompromisso } = await import("../src/lib/data-evento");
+  // GM do Ágora: dia 20 inteiro, gravado à 00h de Brasília (03h UTC).
+  const gm = { date: new Date("2026-11-20T03:00:00Z"), allDay: true };
+  assert.equal(dataCivilDoCompromisso(gm, "America/Cuiaba"), "2026-11-20");
+  assert.equal(dataCivilDoCompromisso(gm, "America/Sao_Paulo"), "2026-11-20");
+  // Evento às 23h30 de Brasília: dia 20 para todos, mesmo para quem está em Manaus.
+  const noite = { date: new Date("2026-11-21T02:30:00Z"), allDay: false, fusoLocal: "America/Sao_Paulo" };
+  assert.equal(dataCivilDoCompromisso(noite, "America/Manaus"), "2026-11-20");
+  // Sem fuso local: o da filial de quem vê.
+  assert.equal(dataCivilDoCompromisso({ date: new Date("2026-11-21T02:30:00Z") }, "America/Manaus"), "2026-11-20");
+});

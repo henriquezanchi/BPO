@@ -853,3 +853,11 @@ campos aceitaram digitação; não reproduzido. Falta saber navegador e campo ex
   gerado a pedido, não guardado; nunca cita comentário literal.
 - Agenda: evento de dia inteiro (Ágora) passa a valer pela data, não pelo fuso; nas filiais a oeste de Brasília (MT, AM,
   RR, RO, AC) o toque nos próximos eventos abria um dia vazio.
+
+## 10/11/2026 — Data dos eventos como acontece no local; Barra do Garças no horário de Brasília
+
+Correção do usuário: o GM (dia 20) aparecia no dia 19 para Barra do Garças. Duas causas: `fusoDaEscola("MT")` dava
+America/Cuiaba, mas a filial funciona no horário de Brasília (MT saiu do mapa; única filial do estado); e a data dos
+eventos era lida no fuso de quem vê. Regra única em `lib/data-evento.ts`: dia inteiro vale pela data gravada (UTC); com
+horário, no fuso de onde acontece (`AgendaItem.fusoLocal`: filial do evento pela UF, Ágora = Brasília). Aplicada no
+calendário, nos próximos eventos da Agenda, no destaque da tela inicial e na vitrine.

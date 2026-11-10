@@ -1,4 +1,5 @@
 "use client";
+import { dataCivilDoCompromisso, fusoDoCompromisso } from "@/lib/data-evento";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import {REFUND_LABELS} from "@/lib/event-refund-policy";
@@ -54,14 +55,14 @@ function partesNoFuso(date: Date, fuso: string) {
  * é uma data, não um instante: vale a data em UTC, a mesma que o cartão mostra (formatDateBR). Pelo fuso, o do Ágora
  * (00h de Brasília) caía no dia anterior nas filiais a oeste de Brasília, e o toque abria um dia vazio.
  */
-function partesDoItem(item: { date: Date; allDay?: boolean | null }, fuso: string) {
-  return item.allDay ? partesNoFuso(item.date, "UTC") : partesNoFuso(item.date, fuso);
+function partesDoItem(item: { date: Date; allDay?: boolean | null; fusoLocal?: string | null }, fuso: string) {
+  return partesNoFuso(item.date, fusoDoCompromisso(item, fuso));
 }
 const chaveDoCompromisso = (item: { date: Date; allDay?: boolean | null }, fuso: string) => {
   const p = partesDoItem(item, fuso);
   return `${p.ano}-${p.mes}-${p.dia}`;
 };
-const dataCivilDoItem = (item: { date: Date; allDay?: boolean | null }, fuso: string) => item.date.toLocaleDateString("en-CA", { timeZone: item.allDay ? "UTC" : fuso });
+const dataCivilDoItem = (item: { date: Date; allDay?: boolean | null; fusoLocal?: string | null }, fuso: string) => dataCivilDoCompromisso(item, fuso);
 
 const horaNoFuso = (date: Date, fuso: string) => date.toLocaleTimeString("pt-BR", { timeZone: fuso, hour: "2-digit", minute: "2-digit" });
 
@@ -467,7 +468,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
         <span className="min-w-0">
         <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</span>
         <span className="mt-1 block text-[11px] capitalize text-gray-500 dark:text-gray-400">
-          {item.allDay ? (item.endsAt && formatDateBR(item.endsAt) !== formatDateBR(item.date) ? `${formatDateBR(item.date)} a ${formatDateBR(item.endsAt)}` : formatDateBR(item.date)) : item.date.toLocaleString("pt-BR",{timeZone:fuso,dateStyle:"short",timeStyle:"short"})}
+          {item.allDay ? (item.endsAt && formatDateBR(item.endsAt) !== formatDateBR(item.date) ? `${formatDateBR(item.date)} a ${formatDateBR(item.endsAt)}` : formatDateBR(item.date)) : item.date.toLocaleString("pt-BR",{timeZone:fusoDoCompromisso(item,fuso),dateStyle:"short",timeStyle:"short"})}
         </span>
         {item.location && (
           <span className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
@@ -740,7 +741,7 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
           {!semHora && (
             <span className="flex items-center gap-1">
               <CalendarClock size={10} className="shrink-0" />
-              {horaNoFuso(item.date, fuso)}
+              {horaNoFuso(item.date, fusoDoCompromisso(item as { allDay?: boolean | null; fusoLocal?: string | null }, fuso))}
             </span>
           )}
           {cancelado && <span className="font-semibold text-na-danger-dark dark:text-red-300">Cancelado</span>}

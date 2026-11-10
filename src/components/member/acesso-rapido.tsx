@@ -60,7 +60,7 @@ export function useFavorita(memberId: string, disponiveis: string[]) {
   return favorita;
 }
 
-type Evento = { id: string; titulo: string; data: Date };
+type Evento = { id: string; titulo: string; data: Date; fuso: string };
 
 /** Sem nada a destacar: frase do dia alternando com o Acrópole Play, e os próximos eventos. */
 export function DestaqueDoDia({ frase, acropolePlay, eventos, abrirAgenda }: { frase: { texto: string; autor: string; obra: string | null }; acropolePlay: boolean; eventos: Evento[]; abrirAgenda: () => void }) {
@@ -108,7 +108,7 @@ export function DestaqueDoDia({ frase, acropolePlay, eventos, abrirAgenda }: { f
           </span>
           {eventos.map((e) => (
             <span key={e.id} className="flex items-baseline gap-2 text-[12px]">
-              <span className="w-11 shrink-0 font-bold text-gray-500 tabular-nums">{e.data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
+              <span className="w-11 shrink-0 font-bold text-gray-500 tabular-nums">{e.data.toLocaleDateString("pt-BR", { timeZone: e.fuso, day: "2-digit", month: "2-digit" })}</span>
               <span className="truncate text-gray-800 dark:text-gray-200">{e.titulo}</span>
             </span>
           ))}

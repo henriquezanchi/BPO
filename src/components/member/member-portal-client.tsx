@@ -1,6 +1,7 @@
 "use client";
 
 import { MinhasDeclaracoes } from "@/components/member/minhas-declaracoes";
+import { dataCivilDoCompromisso, fusoDoCompromisso } from "@/lib/data-evento";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logout } from "@/lib/actions/auth-actions";
@@ -246,7 +247,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
     if (modal) registrarUso(member.id, modal);
   }, [modal, member.id]);
   const proximosEventos = agendaItems
-    .flatMap((i) => (i.kind === "evento" && i.date.toLocaleDateString("en-CA", { timeZone: dashboard.fuso }) >= dashboard.hoje && i.status !== "cancelado" ? [{ id: i.id, titulo: i.title, data: i.date }] : []))
+    .flatMap((i) => (i.kind === "evento" && dataCivilDoCompromisso(i, dashboard.fuso) >= dashboard.hoje && i.status !== "cancelado" ? [{ id: i.id, titulo: i.title, data: i.date, fuso: fusoDoCompromisso(i, dashboard.fuso) }] : []))
     .sort((a, b) => a.data.getTime() - b.data.getTime())
     .slice(0, 3);
 
@@ -356,7 +357,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
             <span className="mt-1 flex flex-col gap-0.5">
               {proximosEventos.map((e) => (
                 <span key={e.id} className="flex items-baseline gap-2 text-[12px]">
-                  <span className="w-10 shrink-0 font-bold text-gray-500 tabular-nums">{e.data.toLocaleDateString("pt-BR", { timeZone: dashboard.fuso, day: "2-digit", month: "2-digit" })}</span>
+                  <span className="w-10 shrink-0 font-bold text-gray-500 tabular-nums">{e.data.toLocaleDateString("pt-BR", { timeZone: e.fuso, day: "2-digit", month: "2-digit" })}</span>
                   <span className="truncate text-gray-700 dark:text-gray-300">{e.titulo}</span>
                 </span>
               ))}

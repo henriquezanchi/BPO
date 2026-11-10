@@ -1,9 +1,10 @@
 /**
- * Fuso da filial pela UF (Barra do Garças-MT é uma hora antes de Brasília). Módulo puro desde 31/10/2026, para a fila
+ * Fuso da filial pela UF. MT fica fora (10/11/2026, correção do usuário): a única filial do estado, Barra do Garças,
+ * funciona no horário de Brasília (divisa com Aragarças-GO); com America/Cuiaba, eventos de dia inteiro e da meia-noite
+ * apareciam um dia antes. Se abrir uma filial em Cuiabá, tratar por cidade, não por UF. Módulo puro desde 31/10/2026, para a fila
  * do Mercúrio (que também roda por script) usar o mesmo mapa; atendimentos.ts reexporta.
  */
 const FUSO_POR_UF: Record<string, string> = {
-  MT: "America/Cuiaba",
   MS: "America/Campo_Grande",
   AM: "America/Manaus",
   RR: "America/Boa_Vista",

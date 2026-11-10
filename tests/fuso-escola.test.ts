@@ -3,7 +3,9 @@ import test from "node:test";
 import { fusoDaEscola, mesNoFuso, instanteNoFuso } from "../src/lib/fuso-escola";
 
 test("fuso da filial pela UF", () => {
-  assert.equal(fusoDaEscola("MT"), "America/Cuiaba");
+  // MT (Barra do Garças) funciona no horário de Brasília (correção do usuário 10/11/2026).
+  assert.equal(fusoDaEscola("MT"), "America/Sao_Paulo");
+  assert.equal(fusoDaEscola("AM"), "America/Manaus");
   assert.equal(fusoDaEscola("df"), "America/Sao_Paulo");
   assert.equal(fusoDaEscola(null), "America/Sao_Paulo");
 });

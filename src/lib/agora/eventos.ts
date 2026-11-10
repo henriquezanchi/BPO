@@ -91,6 +91,8 @@ export function agendaDoAgora(lista: EventoAgora[]): AgendaItem[] {
         posterUrl: imagemId ? `${AGORA}/e/og/imagem/${imagemId}` : null,
         registrationUrl: e.slug ? `${AGORA}/#/e/${encodeURIComponent(e.slug)}` : `${AGORA}/`,
         status: /cancel/i.test(e.situacao ?? "") ? "cancelado" : "publicado",
+        // O Ágora manda horário de Brasília (ver dataDoAgora).
+        fusoLocal: "America/Sao_Paulo",
         description: e.texto ? textoDoAgora(e.texto).slice(0, 3000) : null,
         location: localDoEvento(e),
         // O Ágora manda só a data ("2026-10-31") e a duração em DIAS (GGSS: 3 = 31/10 a 02/11), visto em 27/10:
@@ -146,7 +148,7 @@ export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[], conte
     const item: AgendaItem = {
       ...(base && base.kind === "evento"
         ? base
-        : { kind: "evento" as const, id: `agora-${a.contextoId}`, title: nome, date: data, price: 0, reactions: [], minhaInscricao: null, source: "agora", status: "publicado", description: null, location: null, endsAt: null, allDay: true }),
+        : { kind: "evento" as const, id: `agora-${a.contextoId}`, title: nome, date: data, price: 0, reactions: [], minhaInscricao: null, source: "agora", status: "publicado", description: null, location: null, endsAt: null, allDay: true, fusoLocal: "America/Sao_Paulo" }),
       title: nome,
       date: data,
       scope: nacional ? "nacional" : daMinhaEscola ? "filial" : "regional",
