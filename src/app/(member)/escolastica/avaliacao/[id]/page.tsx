@@ -80,7 +80,7 @@ export default async function RelatorioAvaliacaoPage(props: { params: Promise<{ 
 
   return (
     <ShellTrabalho>
-      <Link href={`/escolastica/avaliacao?filial=${rel.campanha.schoolId}`} className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+      <Link href={`/escolastica/avaliacao?filial=${rel.campanha.schoolId}`} className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
           <ArrowLeft size={14} /> Avaliação dos instrutores
         </Link>
       <div>

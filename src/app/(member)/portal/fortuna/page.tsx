@@ -62,7 +62,7 @@ export default async function ExtratoFortunaPage(props: { searchParams: Promise<
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
-      <Link href="/portal" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+      <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
         <ArrowLeft size={14} /> Portal do Aluno
       </Link>
       <header className="flex flex-col gap-2">
@@ -75,7 +75,7 @@ export default async function ExtratoFortunaPage(props: { searchParams: Promise<
               key={d}
               href={`/portal/fortuna?dias=${d}`}
               aria-current={d === dias ? "page" : undefined}
-              className={`rounded-full px-3 py-1 text-[12px] font-semibold ${d === dias ? "bg-na-green-dark text-white" : "border border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300"}`}
+              className={`flex min-h-10 items-center rounded-full px-3.5 text-[13px] font-semibold ${d === dias ? "bg-na-green text-white" : "border border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300"}`}
             >
               {d} dias
             </Link>

@@ -29,7 +29,7 @@ export default async function AvaliacaoPage(props: { searchParams: Promise<{ rod
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
-        <Link href="/portal" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+        <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
           <ArrowLeft size={14} /> Portal do Aluno
         </Link>
         <ThemeToggle />

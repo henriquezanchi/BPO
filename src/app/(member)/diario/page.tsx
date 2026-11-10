@@ -23,7 +23,7 @@ export default async function DiarioPage(props: { searchParams: Promise<{ dia?: 
       {/* Continua a abertura das portas (entrada-diario.tsx): a luz dourada se desfaz ao chegar. */}
       <div aria-hidden className="diario-animado pointer-events-none fixed inset-0 z-50 bg-[radial-gradient(circle_at_50%_45%,rgb(255_202_0/0.35),#020d0b_70%)] [animation:diario-chegada_700ms_ease-out_forwards]" />
       <div className="flex items-center justify-between">
-        <Link href="/portal" className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+        <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
           <ArrowLeft size={14} /> Portal do Aluno
         </Link>
         <ThemeToggle />

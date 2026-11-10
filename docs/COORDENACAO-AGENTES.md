@@ -938,3 +938,10 @@ ligado pelo cartão do saldo.
 Área de Estudos em duas listas (Meus estudos; Conteúdos da Nova Acrópole), "Minha Contribuição" como linha em
 Pagamentos, "Adicionar créditos" do Fortuna em contorno (o único verde sólido da janela é "Pagar agora"), Minha Jornada
 com cartões brancos e ícone em destaque. Rótulos repetidos tirados.
+
+## 10/11/2026 — Telas secundárias do aluno no mesmo padrão (Claude)
+
+- Link "← Portal do Aluno" (e os demais "voltar" das 17 páginas internas: avaliação, diário, estudos, GAF, grupos, carteirinha, indicar, sugestões, Fortuna, comprovante, declaração, agenda Google, professor/turma, escolástica): área de toque de 44px (`min-h-11 -my-2 w-fit`), letra 13px e cinza mais escuro (gray-600). Antes era texto de 12px com ~16px de altura.
+- Indicar um amigo (`compartilhar-convite.tsx`): WhatsApp no verde principal (`bg-na-green`, como o "Pagar agora"); "Compartilhar" só aparece onde o aparelho tem compartilhamento nativo (`useSyncExternalStore`, sem divergência servidor/aparelho). No computador o botão não fazia nada; lá fica só "Copiar convite" na linha toda.
+- Extrato do Café (`/portal/fortuna`): filtros de período com 40px de altura e o verde principal.
+- Verificação: tsc, eslint e testes. Sem migração.
