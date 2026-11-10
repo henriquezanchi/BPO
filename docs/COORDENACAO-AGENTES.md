@@ -916,3 +916,11 @@ Pedido do usuário ("botões de vários tamanhos e cores"): cartão da contribui
 contorno, `BOTAO_SECUNDARIO`); destaques do carrossel todos no tom claro (Play e Diário inclusive); avaliação aberta como
 linha de lista com etiqueta "Aberta" em "Para você"; botões do cartão de boas-vindas com cantos `rounded-xl` e 44 px.
 Vermelho e dourado só em etiquetas pequenas; o verde do WhatsApp continua no botão flutuante.
+
+## 10/11/2026 — Lembrete que abre o pagamento; letra maior
+
+- Lembrete de vencimento (D-3 e no dia) leva a `/portal?abrir=pagar`, que abre direto o pagamento do mês em aberto
+  (também depois do login).
+- Botão "A+" no topo do Portal (`components/ui/tamanho-texto.tsx`): classe `texto-grande` na <html>, aplicada antes de
+  desenhar pelo script de layout.tsx, guardada no aparelho (`na-texto`); amplia a página 15% (`zoom` no body, porque os
+  tamanhos são em px). Conferido a 360 px sem estouro. Controles do topo saíram da posição absoluta (cobriam o logo).
