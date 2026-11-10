@@ -4,7 +4,7 @@ import { CampanhasPanel } from "@/components/avaliacao/campanhas-panel";
 import { QuestionarioEditor } from "@/components/avaliacao/questionario-editor";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
-import { escolasQueGereAvaliacao, questionarioDaFilial } from "@/lib/avaliacao";
+import { escolasQueGereAvaliacao, questionarioDaFilial, encerrarVencidas } from "@/lib/avaliacao";
 import { db } from "@/lib/db";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -26,6 +26,7 @@ export default async function GestaoAvaliacaoPage(props: { searchParams: Promise
   const { filial } = await props.searchParams;
   const escola = escolas.find((e) => e.id === filial) ?? escolas.find((e) => e.id === member.schoolId) ?? escolas[0];
 
+  await encerrarVencidas(escola.id);
   const [questionario, campanhas, turmas, vinculos] = await Promise.all([
     questionarioDaFilial(escola.id),
     db.avaliacaoCampanha.findMany({ where: { schoolId: escola.id }, orderBy: { abertaEm: "desc" } }),
@@ -81,6 +82,7 @@ export default async function GestaoAvaliacaoPage(props: { searchParams: Promise
           status: c.status,
           abertaEm: c.abertaEm,
           encerradaEm: c.encerradaEm,
+          encerraEm: c.encerraEm ? c.encerraEm.toISOString().slice(0, 10) : null,
           turmas: c.turmas.length,
           respostas: respostasPorCampanha.get(c.id) ?? 0,
           participantes: participantesPorCampanha.get(c.id) ?? 0,

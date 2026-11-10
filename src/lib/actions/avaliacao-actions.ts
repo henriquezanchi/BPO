@@ -1,8 +1,8 @@
 "use server";
 
 import { getAuthenticatedMember } from "@/lib/auth";
-import { instrutoresDoAluno, podeGerirAvaliacao, questionarioDaFilial } from "@/lib/avaliacao";
-import { lerPerguntas, type Pergunta } from "@/lib/avaliacao-comum";
+import { encerrarVencidas, instrutoresDoAluno, podeGerirAvaliacao, questionarioDaFilial } from "@/lib/avaliacao";
+import { encerramentoVencido, lerDataEncerramento, lerPerguntas, type Pergunta } from "@/lib/avaliacao-comum";
 import { db } from "@/lib/db";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
@@ -47,9 +47,11 @@ export async function restaurarQuestionarioBase(schoolId: string): Promise<Resul
 }
 
 /** Abre uma rodada: copia as perguntas atuais da filial (alterações futuras não mexem numa rodada já aberta). */
-export async function abrirCampanha(schoolId: string, dados: { titulo: string; turmas: string[] }): Promise<Resultado> {
+export async function abrirCampanha(schoolId: string, dados: { titulo: string; turmas: string[]; encerraEm?: string }): Promise<Resultado> {
   try {
     const eu = await gestor(schoolId);
+    const fim = lerDataEncerramento(dados.encerraEm ?? "");
+    if (!fim.ok) return fim;
     const q = await questionarioDaFilial(schoolId);
     const turmasValidas = dados.turmas.length
       ? (await db.classGroup.findMany({ where: { id: { in: dados.turmas }, schoolId, tipo: "turma" }, select: { id: true } })).map((t) => t.id)
@@ -61,6 +63,7 @@ export async function abrirCampanha(schoolId: string, dados: { titulo: string; t
         introducao: q.introducao,
         perguntas: q.perguntas as unknown as object,
         turmas: turmasValidas,
+        encerraEm: fim.data,
         criadoPorId: eu.id,
       },
     });
@@ -76,12 +79,31 @@ export async function alterarStatusCampanha(campanhaId: string, status: "aberta"
   try {
     const c = await db.avaliacaoCampanha.findUniqueOrThrow({ where: { id: campanhaId } });
     await gestor(c.schoolId);
-    await db.avaliacaoCampanha.update({ where: { id: campanhaId }, data: { status, encerradaEm: status === "encerrada" ? new Date() : null } });
+    // Reabrir uma rodada cujo último dia já passou tira a data; senão ela se encerraria de novo na hora.
+    const tirarData = status === "aberta" && encerramentoVencido(c.encerraEm);
+    await db.avaliacaoCampanha.update({ where: { id: campanhaId }, data: { status, encerradaEm: status === "encerrada" ? new Date() : null, ...(tirarData ? { encerraEm: null } : {}) } });
     revalidatePath("/escolastica/avaliacao");
     revalidatePath("/portal");
     return { ok: true };
   } catch (e) {
     return falha(e, "Não foi possível alterar a avaliação.");
+  }
+}
+
+/** Muda (ou tira) a data de encerramento de uma rodada aberta (pedido do usuário 10/11/2026). */
+export async function alterarEncerramentoCampanha(campanhaId: string, encerraEm: string): Promise<Resultado> {
+  try {
+    const c = await db.avaliacaoCampanha.findUniqueOrThrow({ where: { id: campanhaId } });
+    await gestor(c.schoolId);
+    if (c.status !== "aberta") return { ok: false, error: "Reabra a rodada antes de mudar a data." };
+    const fim = lerDataEncerramento(encerraEm);
+    if (!fim.ok) return fim;
+    await db.avaliacaoCampanha.update({ where: { id: campanhaId }, data: { encerraEm: fim.data } });
+    revalidatePath("/escolastica/avaliacao");
+    revalidatePath("/portal");
+    return { ok: true };
+  } catch (e) {
+    return falha(e, "Não foi possível mudar a data.");
   }
 }
 
@@ -120,6 +142,7 @@ export async function responderAvaliacao(
   try {
     const eu = await getAuthenticatedMember();
     if (!eu || !eu.mercurioAtivo) return { ok: false, error: "Faça login para responder." };
+    await encerrarVencidas(eu.schoolId);
     const c = await db.avaliacaoCampanha.findUniqueOrThrow({ where: { id: campanhaId } });
     if (c.status !== "aberta" || c.schoolId !== eu.schoolId) return { ok: false, error: "Esta avaliação não está aberta para você." };
     const perguntas = lerPerguntas(c.perguntas);

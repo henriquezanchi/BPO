@@ -2,9 +2,9 @@
 import { IconeWhatsApp } from "@/components/member/compartilhar-evento";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
-import { abrirCampanha, alterarStatusCampanha } from "@/lib/actions/avaliacao-actions";
+import { abrirCampanha, alterarEncerramentoCampanha, alterarStatusCampanha } from "@/lib/actions/avaliacao-actions";
 import { linkWhatsappDaAvaliacao } from "@/lib/avaliacao-comum";
-import { BarChart3, Loader2, Play, Square } from "lucide-react";
+import { BarChart3, CalendarClock, Loader2, Play, Square } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
@@ -21,18 +21,25 @@ interface Campanha {
   status: string;
   abertaEm: Date;
   encerradaEm: Date | null;
+  /** Último dia para responder (AAAA-MM-DD) ou null. */
+  encerraEm: string | null;
   turmas: number;
   respostas: number;
   participantes: number;
 }
 
 const data = (d: Date) => new Date(d).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+/** "2026-11-30" → "30/11/2026" (sem fuso: é um dia, não um instante). */
+const dia = (iso: string) => iso.split("-").reverse().join("/");
+const hojeIso = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 
 export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { schoolId: string; tituloPadrao: string; turmas: Turma[]; campanhas: Campanha[] }) {
   const [abrindo, setAbrindo] = useState(false);
   const [titulo, setTitulo] = useState(tituloPadrao);
   const [todas, setTodas] = useState(true);
   const [escolhidas, setEscolhidas] = useState<Set<string>>(new Set());
+  const [fim, setFim] = useState("");
+  const [editandoData, setEditandoData] = useState<{ id: string; valor: string } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [emAndamento, setEmAndamento] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -44,7 +51,7 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
     setErro(null);
     setEmAndamento("abrir");
     startTransition(async () => {
-      const r = await abrirCampanha(schoolId, { titulo, turmas: todas ? [] : [...escolhidas] });
+      const r = await abrirCampanha(schoolId, { titulo, turmas: todas ? [] : [...escolhidas], encerraEm: fim });
       setEmAndamento(null);
       if (r.ok) setAbrindo(false);
       else setErro(r.error);
@@ -60,6 +67,17 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
     });
   }
 
+  function salvarData(id: string, valor: string) {
+    setEmAndamento(`data-${id}`);
+    setErro(null);
+    startTransition(async () => {
+      const r = await alterarEncerramentoCampanha(id, valor);
+      setEmAndamento(null);
+      if (r.ok) setEditandoData(null);
+      else setErro(r.error);
+    });
+  }
+
   const abertas = campanhas.filter((c) => c.status === "aberta");
   const encerradas = campanhas.filter((c) => c.status !== "aberta");
   const linha = (c: (typeof campanhas)[number]) => (
@@ -68,7 +86,7 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{c.titulo}</p>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    {c.status === "aberta" ? `Aberta desde ${data(c.abertaEm)}` : `Encerrada em ${data(c.encerradaEm ?? c.abertaEm)}`} · {c.turmas ? `${c.turmas} turma(s)` : "todas as turmas"}
+                    {c.status === "aberta" ? `Aberta desde ${data(c.abertaEm)}${c.encerraEm ? ` · encerra no fim de ${dia(c.encerraEm)}` : " · sem data para encerrar"}` : `Encerrada em ${data(c.encerradaEm ?? c.abertaEm)}`} · {c.turmas ? `${c.turmas} turma(s)` : "todas as turmas"}
                   </p>
                 </div>
                 <span
@@ -82,6 +100,31 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
               <p className="text-[12px] text-gray-700 dark:text-gray-300">
                 {c.participantes} {c.participantes === 1 ? "aluno respondeu" : "alunos responderam"} · {c.respostas} {c.respostas === 1 ? "resposta" : "respostas"}
               </p>
+              {editandoData?.id === c.id && (
+                <div className="flex flex-wrap items-end gap-2 rounded-lg bg-gray-50 p-2.5 dark:bg-gray-800">
+                  <label className="flex flex-col gap-1 text-[11px] font-semibold text-gray-700 dark:text-gray-300">
+                    Último dia para responder
+                    <input
+                      type="date"
+                      min={hojeIso()}
+                      value={editandoData.valor}
+                      onChange={(e) => setEditandoData({ id: c.id, valor: e.target.value })}
+                      className="rounded-lg border border-gray-300 bg-white p-1.5 text-[13px] text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    />
+                  </label>
+                  <button type="button" disabled={emAndamento === `data-${c.id}`} onClick={() => salvarData(c.id, editandoData.valor)} className="flex items-center gap-1 rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60">
+                    {emAndamento === `data-${c.id}` && <Loader2 size={11} className="animate-spin" />} Salvar data
+                  </button>
+                  {c.encerraEm && (
+                    <button type="button" disabled={emAndamento === `data-${c.id}`} onClick={() => salvarData(c.id, "")} className="px-2 py-1.5 text-[11px] font-semibold text-gray-600 underline dark:text-gray-300">
+                      Tirar a data
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setEditandoData(null)} className="px-2 py-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                    Cancelar
+                  </button>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={`/escolastica/avaliacao/${c.id}`}
@@ -99,6 +142,15 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
                   >
                     <IconeWhatsApp tamanho={12} /> Compartilhar no WhatsApp
                   </a>
+                )}
+                {c.status === "aberta" && editandoData?.id !== c.id && (
+                  <button
+                    type="button"
+                    onClick={() => setEditandoData({ id: c.id, valor: c.encerraEm ?? "" })}
+                    className="flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    <CalendarClock size={12} /> {c.encerraEm ? "Mudar data de encerramento" : "Definir data de encerramento"}
+                  </button>
                 )}
                 <button
                   onClick={() => alterar(c.id, c.status === "aberta" ? "encerrada" : "aberta")}
@@ -159,6 +211,11 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
               </ul>
             )}
           </div>
+          <label className="flex flex-col gap-1 text-[11px] font-semibold text-gray-700 dark:text-gray-300">
+            Último dia para responder (opcional)
+            <input type="date" min={hojeIso()} value={fim} onChange={(e) => setFim(e.target.value)} className="w-fit rounded-lg border border-gray-300 p-2 text-sm dark:border-gray-700 dark:bg-gray-800" />
+            <span className="font-normal text-gray-500 dark:text-gray-400">A rodada se encerra sozinha no fim desse dia. Dá para mudar depois de aberta.</span>
+          </label>
           <p className="text-[11px] text-gray-500 dark:text-gray-400">
             As perguntas atuais do questionário (abaixo) são copiadas para esta rodada. Ao abrir, o quadrinho aparece no Portal de cada aluno com algo a responder.
           </p>
@@ -179,6 +236,12 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
         >
           <Play size={14} /> Abrir nova rodada
         </button>
+      )}
+
+      {erro && !abrindo && (
+        <p role="alert" className="text-[11px] text-na-danger-dark dark:text-red-300">
+          {erro}
+        </p>
       )}
 
       {semVinculo.length > 0 && (

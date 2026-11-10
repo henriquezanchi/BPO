@@ -32,3 +32,19 @@ test("nome do arquivo sem acento nem espaço", () => {
   assert.equal(nomeDoArquivo("Avaliação 1º Semestre / 2026"), "avaliacao-avaliacao-1-semestre-2026.csv");
   assert.equal(nomeDoArquivo("!!!"), "avaliacao-rodada.csv");
 });
+
+test("data de encerramento: hoje vale, passado e mais de um ano não", async () => {
+  const { lerDataEncerramento, encerramentoVencido } = await import("../src/lib/avaliacao-comum");
+  const agora = new Date("2026-11-10T15:00:00Z"); // 12h em Brasília
+  assert.deepEqual(lerDataEncerramento("", agora), { ok: true, data: null });
+  assert.equal(lerDataEncerramento("2026-11-10", agora).ok, true);
+  assert.equal(lerDataEncerramento("2026-11-09", agora).ok, false);
+  assert.equal(lerDataEncerramento("2027-11-10", agora).ok, true);
+  assert.equal(lerDataEncerramento("2027-11-11", agora).ok, false);
+  assert.equal(lerDataEncerramento("2026-02-30", agora).ok, false);
+  // Último dia 10/11: ainda aberta o dia todo em Brasília, encerrada a partir de 11/11 00h de Brasília (03h UTC).
+  const dia = new Date("2026-11-10T00:00:00Z");
+  assert.equal(encerramentoVencido(dia, new Date("2026-11-11T02:59:00Z")), false);
+  assert.equal(encerramentoVencido(dia, new Date("2026-11-11T03:01:00Z")), true);
+  assert.equal(encerramentoVencido(null, agora), false);
+});

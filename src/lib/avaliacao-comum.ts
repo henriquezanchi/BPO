@@ -181,3 +181,27 @@ export function linkWhatsappDaAvaliacao(titulo: string, urlPortal = "https://por
   ].join("\n\n");
   return `https://wa.me/?text=${encodeURIComponent(texto)}`;
 }
+
+/**
+ * Data de encerramento da rodada (pedido do usuário 10/11/2026: poder mudar depois de aberta). É o último dia para
+ * responder: a rodada se encerra sozinha quando esse dia termina no horário de Brasília. Aceita só AAAA-MM-DD, de hoje
+ * até um ano à frente; vazio = sem data (encerra só pelo botão).
+ */
+export const hojeEmBrasilia = (agora = new Date()) => agora.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+
+export function lerDataEncerramento(valor: string, agora = new Date()): { ok: true; data: Date | null } | { ok: false; error: string } {
+  const v = String(valor ?? "").trim();
+  if (!v) return { ok: true, data: null };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return { ok: false, error: "Data inválida." };
+  const d = new Date(`${v}T00:00:00Z`);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) return { ok: false, error: "Data inválida." };
+  const hoje = hojeEmBrasilia(agora);
+  if (v < hoje) return { ok: false, error: "A data de encerramento não pode ser no passado." };
+  const limite = new Date(`${hoje}T00:00:00Z`);
+  limite.setUTCFullYear(limite.getUTCFullYear() + 1);
+  if (d > limite) return { ok: false, error: "Escolha uma data até um ano à frente." };
+  return { ok: true, data: d };
+}
+
+/** O último dia já passou (no horário de Brasília)? */
+export const encerramentoVencido = (encerraEm: Date | null | undefined, agora = new Date()) => !!encerraEm && encerraEm.toISOString().slice(0, 10) < hojeEmBrasilia(agora);

@@ -6,6 +6,10 @@ import { MINIMO_RESPOSTAS, type Pergunta } from "@/lib/avaliacao-comum";
 import { db } from "@/lib/db";
 import { ArrowLeft, Download, Lock } from "lucide-react";
 import { ResumoPergunta as Resumo } from "@/components/avaliacao/resumo-pergunta";
+import { ListaDeAchados, NumerosECruzamentos } from "@/components/avaliacao/achados";
+import { SugestoesDaIA } from "@/components/avaliacao/sugestoes-ia";
+import { achadosDoInstrutor, analisarRodada } from "@/lib/avaliacao-analise";
+import { lerPerguntas } from "@/lib/avaliacao-comum";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -57,7 +61,14 @@ export default async function RelatorioAvaliacaoPage(props: { params: Promise<{ 
   const campanha = await db.avaliacaoCampanha.findUnique({ where: { id }, select: { schoolId: true, perguntas: true } });
   if (!campanha || !(await podeGerirAvaliacao(member, campanha.schoolId))) redirect("/portal");
 
-  const rel = await relatorioCampanha(id, { classGroupId: sp.turma, instrutorMatr: sp.instrutor });
+  const [rel, todas] = await Promise.all([
+    relatorioCampanha(id, { classGroupId: sp.turma, instrutorMatr: sp.instrutor }),
+    db.avaliacaoResposta.findMany({ where: { campanhaId: id }, select: { parte: true, classGroupId: true, turmaNome: true, instrutorMatr: true, instrutorNome: true, respostas: true } }),
+  ]);
+  // Painel de análise (10/11/2026): cruzamento dos dados e sugestões; com um instrutor no filtro, os achados dele.
+  const analise = analisarRodada(lerPerguntas(campanha.perguntas), todas);
+  const nomeInstrutor = sp.instrutor ? (rel.porInstrutor.find((i) => i.id === sp.instrutor)?.rotulo ?? "instrutor") : null;
+  const achados = sp.instrutor ? achadosDoInstrutor(analise, sp.instrutor, todas) : analise.achadosDirecao;
   const perguntasPorId = new Map((campanha.perguntas as unknown as Pergunta[]).map((p) => [p.id, p]));
   const verIndividuais = sp.ver === "respostas";
   const link = (m: Record<string, string | undefined>) => {
@@ -76,6 +87,18 @@ export default async function RelatorioAvaliacaoPage(props: { params: Promise<{ 
         <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">{rel.campanha.titulo}</h1>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Respostas anônimas. Recortes com menos de {MINIMO_RESPOSTAS} respostas ficam ocultos.</p>
       </div>
+
+      <section aria-labelledby="analise" className="flex flex-col gap-3 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+        <div>
+          <h2 id="analise" className="text-sm font-bold text-gray-900 dark:text-gray-100">{nomeInstrutor ? `Análise: ${nomeInstrutor}` : "Análise da rodada"}</h2>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            O que o cruzamento das respostas sugere, do que pede atenção ao que vai bem. Sinais para orientar a conversa com os instrutores, não conclusões.
+          </p>
+        </div>
+        {!nomeInstrutor && <NumerosECruzamentos analise={analise} />}
+        <ListaDeAchados achados={achados} vazio={`Ainda não há respostas suficientes para cruzar (mínimo de ${MINIMO_RESPOSTAS} por recorte).`} />
+        <SugestoesDaIA campanhaId={id} instrutorMatr={sp.instrutor} rotulo={nomeInstrutor ? `Sugestões da IA para ${nomeInstrutor}` : "Sugestões da IA para a escola"} />
+      </section>
 
       <section className="grid gap-4 sm:grid-cols-2">
         {[

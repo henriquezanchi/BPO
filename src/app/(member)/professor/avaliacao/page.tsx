@@ -1,4 +1,6 @@
+import { ListaDeAchados } from "@/components/avaliacao/achados";
 import { ResumoPergunta } from "@/components/avaliacao/resumo-pergunta";
+import { SugestoesDaIA } from "@/components/avaliacao/sugestoes-ia";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { resultadosDoInstrutor } from "@/lib/avaliacao";
@@ -41,7 +43,13 @@ export default async function MinhasAvaliacoesPage() {
               </p>
             </div>
             {r.suficiente ? (
-              r.perguntas.map((x) => <ResumoPergunta key={x.pergunta.id} p={x.pergunta} r={x.resumo} />)
+              <>
+                <ListaDeAchados achados={r.achados} vazio="" />
+                {r.perguntas.map((x) => (
+                  <ResumoPergunta key={x.pergunta.id} p={x.pergunta} r={x.resumo} />
+                ))}
+                {member.mercurioId && <SugestoesDaIA campanhaId={r.campanha.id} instrutorMatr={member.mercurioId} rotulo="Sugestões da IA para as minhas aulas" />}
+              </>
             ) : (
               <p className="flex items-start gap-1.5 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
                 <Lock size={13} className="mt-0.5 shrink-0" /> Menos de {MINIMO_RESPOSTAS} respostas nesta rodada: o resultado fica oculto para ninguém ser identificado.

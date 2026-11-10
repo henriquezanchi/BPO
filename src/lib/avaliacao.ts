@@ -1,6 +1,7 @@
 import { escolasChefiadas } from "@/lib/acesso-voluntario";
 import { areasNaFilial } from "@/lib/areas-filial";
-import { lerPerguntas, MINIMO_RESPOSTAS, QUESTIONARIO_BASE, type Pergunta, type Questionario } from "@/lib/avaliacao-comum";
+import { hojeEmBrasilia, lerPerguntas, MINIMO_RESPOSTAS, QUESTIONARIO_BASE, type Pergunta, type Questionario } from "@/lib/avaliacao-comum";
+import { achadosDoInstrutor, analisarRodada } from "@/lib/avaliacao-analise";
 import { db } from "@/lib/db";
 import type { Member } from "@prisma/client";
 
@@ -79,8 +80,24 @@ export async function instrutoresDoAluno(m: Pick<Member, "id" | "mercurioId">, c
   return [...porAlvo.values()];
 }
 
+/**
+ * Encerra as rodadas abertas cujo último dia (encerraEm) já passou no horário de Brasília. Chamado onde a situação da
+ * rodada importa (Portal do aluno, resposta, painel da Escolástica, resultados do instrutor), sem depender de rotina.
+ */
+export async function encerrarVencidas(schoolId?: string) {
+  const hoje = new Date(`${hojeEmBrasilia()}T00:00:00Z`);
+  const vencidas = await db.avaliacaoCampanha.findMany({ where: { status: "aberta", encerraEm: { lt: hoje }, ...(schoolId ? { schoolId } : {}) }, select: { id: true, encerraEm: true } });
+  for (const c of vencidas) {
+    // Encerrada no fim do último dia (meia-noite de Brasília = 03h UTC do dia seguinte).
+    const fim = new Date(c.encerraEm!.getTime() + 27 * 3600_000);
+    await db.avaliacaoCampanha.updateMany({ where: { id: c.id, status: "aberta" }, data: { status: "encerrada", encerradaEm: fim } });
+  }
+  return vencidas.length;
+}
+
 /** Rodada aberta da filial em que o aluno ainda tem algo a responder — é o que faz o quadrinho aparecer. */
 export async function avaliacaoPendente(m: Pick<Member, "id" | "mercurioId" | "schoolId">) {
+  await encerrarVencidas(m.schoolId);
   const campanhas = await db.avaliacaoCampanha.findMany({ where: { schoolId: m.schoolId, status: "aberta" }, orderBy: { abertaEm: "desc" } });
   for (const c of campanhas) {
     const instrutores = await instrutoresDoAluno(m, c);
@@ -181,6 +198,7 @@ export type RelatorioCampanha = Awaited<ReturnType<typeof relatorioCampanha>>;
  */
 export async function resultadosDoInstrutor(matricula: string | null) {
   if (!matricula) return [];
+  await encerrarVencidas();
   const porRodada = await db.avaliacaoResposta.groupBy({ by: ["campanhaId", "turmaNome"], where: { instrutorMatr: matricula, parte: "instrutor" } });
   if (!porRodada.length) return [];
   const turmasDa = (id: string) => [...new Set(porRodada.filter((r) => r.campanhaId === id && r.turmaNome).map((r) => r.turmaNome as string))].sort();
@@ -189,8 +207,19 @@ export async function resultadosDoInstrutor(matricula: string | null) {
     orderBy: { encerradaEm: "desc" },
     select: { id: true },
   });
-  const rels = await Promise.all(encerradas.map((c) => relatorioCampanha(c.id, { instrutorMatr: matricula })));
+  const rels = await Promise.all(
+    encerradas.map(async (c) => {
+      const [rel, camp, todas] = await Promise.all([
+        relatorioCampanha(c.id, { instrutorMatr: matricula }),
+        db.avaliacaoCampanha.findUniqueOrThrow({ where: { id: c.id }, select: { perguntas: true } }),
+        db.avaliacaoResposta.findMany({ where: { campanhaId: c.id }, select: { parte: true, classGroupId: true, turmaNome: true, instrutorMatr: true, instrutorNome: true, respostas: true } }),
+      ]);
+      // Achados só do próprio instrutor, comparado com a média da escola (sem citar colegas).
+      return { ...rel, achados: achadosDoInstrutor(analisarRodada(lerPerguntas(camp.perguntas), todas), matricula, todas) };
+    }),
+  );
   return rels.map((r) => ({
+    achados: r.achados,
     campanha: r.campanha,
     total: r.instrutor.total,
     suficiente: r.instrutor.suficiente,
@@ -202,6 +231,7 @@ export async function resultadosDoInstrutor(matricula: string | null) {
 /** Quantas rodadas encerradas têm respostas sobre o instrutor (para mostrar o atalho só quando há o que ver). */
 export async function rodadasComResultadoDoInstrutor(matricula: string | null): Promise<number> {
   if (!matricula) return 0;
+  await encerrarVencidas();
   const ids = (await db.avaliacaoResposta.groupBy({ by: ["campanhaId"], where: { instrutorMatr: matricula, parte: "instrutor" } })).map((r) => r.campanhaId);
   return ids.length ? db.avaliacaoCampanha.count({ where: { id: { in: ids }, status: "encerrada" } }) : 0;
 }

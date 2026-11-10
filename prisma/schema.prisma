@@ -1681,6 +1681,8 @@ model AvaliacaoCampanha {
   status       String    @default("aberta") // "aberta" | "encerrada"
   abertaEm     DateTime  @default(now())
   encerradaEm  DateTime?
+  /// Último dia para responder (pedido do usuário 10/11/2026); a rodada se encerra sozinha depois. null = só pelo botão.
+  encerraEm    DateTime? @db.Date
   criadoPorId  String
 
   @@index([schoolId, status])

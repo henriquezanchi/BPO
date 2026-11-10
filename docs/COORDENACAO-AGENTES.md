@@ -834,3 +834,22 @@ Aparelho, sistema, navegador, largura da tela e app instalado vão junto (user-a
 (aviso push para quem enviou), marcar em análise, arquivar, reabrir.
 Relato do cadastro: o painel Editar Dados foi testado num Chromium em tela de 1440px com dados fictícios e todos os
 campos aceitaram digitação; não reproduzido. Falta saber navegador e campo exatos do aluno.
+
+## 10/11/2026 — Avaliação dos instrutores: planilha, resultados do instrutor, data de encerramento e painel de análise
+
+- Planilha da rodada (`/escolastica/avaliacao/[id]/planilha`, `lib/avaliacao-planilha.ts`): CSV para Excel (BOM, `;`),
+  uma linha por resposta, sem data; só quem gere a avaliação.
+- "Minhas avaliações" (`/professor/avaliacao`): o instrutor vê o resumo sobre ele, somando as turmas, só em rodada
+  encerrada e com 3+ respostas, sem respostas individuais. Atalho no menu só quando há rodada encerrada com resultado.
+- Data de encerramento (migração `20261110160000_avaliacao_encerra_em`, coluna `AvaliacaoCampanha.encerraEm`): definida
+  ao abrir e alterável enquanto aberta ("Mudar data de encerramento"); a rodada se encerra sozinha no fim do dia
+  (Brasília) por `encerrarVencidas()`, chamada no Portal do aluno, na resposta, no painel da Escolástica e nos resultados
+  do instrutor. Reabrir uma rodada vencida tira a data.
+- Painel de análise (`lib/avaliacao-analise.ts`, testes em `tests/avaliacao-analise.test.ts`): números de cabeça, NPS,
+  recomendação cruzada com cada pergunta de escolha, e achados que separam assunto da turma (todos os instrutores
+  abaixo) de assunto do instrutor (abaixo em todas as turmas), diferença entre turmas, opiniões divididas, notas baixas.
+  Instrutor vê só os achados dele comparados à média da escola. Botão "Sugestões da IA" (`actions/avaliacao-ia-actions.ts`,
+  Claude Sonnet 5.5): temas dos comentários, pontos fortes, sugestões e, para a direção, como conduzir a orientação;
+  gerado a pedido, não guardado; nunca cita comentário literal.
+- Agenda: evento de dia inteiro (Ágora) passa a valer pela data, não pelo fuso; nas filiais a oeste de Brasília (MT, AM,
+  RR, RO, AC) o toque nos próximos eventos abria um dia vazio.
