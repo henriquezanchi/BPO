@@ -924,3 +924,10 @@ Vermelho e dourado só em etiquetas pequenas; o verde do WhatsApp continua no bo
 - Botão "A+" no topo do Portal (`components/ui/tamanho-texto.tsx`): classe `texto-grande` na <html>, aplicada antes de
   desenhar pelo script de layout.tsx, guardada no aparelho (`na-texto`); amplia a página 15% (`zoom` no body, porque os
   tamanhos são em px). Conferido a 360 px sem estouro. Controles do topo saíram da posição absoluta (cobriam o logo).
+
+## 10/11/2026 — "Hoje" na página inicial
+
+Bloco "Hoje" logo depois da busca: aulas, reuniões, conversas com o instrutor e eventos em que a pessoa se inscreveu,
+no dia (pela data civil do compromisso, para servidor e aparelho concordarem), com hora e lugar; toque abre a Agenda.
+"Para você" (avaliação aberta) subiu junto, antes do carrossel. O extrato do Fortuna já existia em `/portal/fortuna`,
+ligado pelo cartão do saldo.

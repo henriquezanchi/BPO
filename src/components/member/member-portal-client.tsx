@@ -9,13 +9,14 @@ import { logout } from "@/lib/actions/auth-actions";
 import { getFortunaBalancesForMember } from "@/lib/actions/fortuna-member-actions";
 import { whatsappHref } from "@/lib/format";
 import { getDictionary } from "@/lib/i18n/dictionaries";
-import type { MemberDashboard } from "@/lib/member-data";
+import type { AgendaItem, MemberDashboard } from "@/lib/member-data";
 import { PAGINA_BOLETIM_AURORA, type EdicaoAurora } from "@/lib/boletim-aurora";
 import {
   BookOpen,
   BookOpenText,
   Cake,
   CalendarCheck,
+  CalendarClock,
 
   CheckCircle2,
   Coffee,
@@ -240,6 +241,17 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   useEffect(() => {
     if (modal) registrarUso(member.id, modal);
   }, [modal, member.id]);
+  // "Hoje na escola" (avaliação de design, 10/11/2026): aulas, reuniões, conversas e eventos em que a pessoa se
+  // inscreveu, no dia de hoje (pela data do compromisso, não pela hora, para servidor e aparelho concordarem).
+  const compromissosDeHoje = agendaItems
+    .filter(
+      (i): i is Exclude<AgendaItem, { kind: "enquete" }> =>
+        i.kind !== "enquete" &&
+        (i.kind !== "evento" || (!!i.minhaInscricao && i.status !== "cancelado")) &&
+        dataCivilDoCompromisso(i as { date: Date; allDay?: boolean; fusoLocal?: string | null }, dashboard.fuso) === dashboard.hoje,
+    )
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .slice(0, 3);
   const proximosEventos = agendaItems
     .flatMap((i) => (i.kind === "evento" && dataCivilDoCompromisso(i, dashboard.fuso) >= dashboard.hoje && i.status !== "cancelado" ? [{ id: i.id, titulo: i.title, data: i.date, fuso: fusoDoCompromisso(i, dashboard.fuso) }] : []))
     .sort((a, b) => a.data.getTime() - b.data.getTime())
@@ -512,6 +524,32 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
             sem nada a destacar, a frase do dia (alternando com o Acrópole Play) e os próximos eventos. */}
         {/* Contribuição a pagar: fixa no topo, fora do carrossel (avaliação de design, 10/11/2026). */}
         {emPortugues && contribuicaoUrgente && cartaoContribuicao}
+        {compromissosDeHoje.length > 0 && (
+          <ListaAtalhos titulo="Hoje">
+            {compromissosDeHoje.map((c) => {
+              const diaInteiro = c.kind === "evento" && c.allDay;
+              const hora = diaInteiro ? "Dia todo" : c.date.toLocaleTimeString("pt-BR", { timeZone: fusoDoCompromisso(c as { allDay?: boolean; fusoLocal?: string | null }, dashboard.fuso), hour: "2-digit", minute: "2-digit" });
+              const onde =
+                c.kind === "evento" ? c.location : c.kind === "atendimento" ? (c.local ?? (c.linkOnline ? "Online" : null)) : c.kind === "reuniao" || c.kind === "atividade" ? c.className : null;
+              return (
+                <LinhaAtalho
+                  key={`${c.kind}-${c.id}`}
+                  icon={<CalendarClock size={16} />}
+                  title={c.title}
+                  subtitle={[hora, onde].filter(Boolean).join(" · ")}
+                  onClick={() => setModal("agenda")}
+                />
+              );
+            })}
+          </ListaAtalhos>
+        )}
+
+        {dashboard.avaliacao && (
+          <ListaAtalhos titulo="Para você">
+            <LinhaAtalho icon={<ClipboardCheck size={16} />} title="Avaliação dos instrutores" subtitle="Anônima · poucos minutos" href="/avaliacao" selo="Aberta" />
+          </ListaAtalhos>
+        )}
+
         {emPortugues ? (
           <Vitrine destaques={destaques} automatico={false} />
         ) : (
@@ -526,12 +564,6 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
         )}
 
         {/* Avaliação aberta: tarefa com prazo, em destaque antes dos atalhos. */}
-        {dashboard.avaliacao && (
-          <ListaAtalhos titulo="Para você">
-            <LinhaAtalho icon={<ClipboardCheck size={16} />} title="Avaliação dos instrutores" subtitle="Anônima · poucos minutos" href="/avaliacao" selo="Aberta" />
-          </ListaAtalhos>
-        )}
-
         {/* Quatro atalhos principais (avaliação de design, 10/11/2026); o resto em listas agrupadas abaixo. */}
         <section aria-label="Atalhos" className="grid grid-cols-2 gap-2.5">
           <FeatureTile
