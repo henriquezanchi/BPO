@@ -871,3 +871,13 @@ calendário, nos próximos eventos da Agenda, no destaque da tela inicial e na v
 - Avaliação: link por rodada (`/avaliacao?rodada=<id>`), usado no convite do WhatsApp; sem ele, abre a próxima pendente.
 - GAF: pedidos para participar com Aceitar/Recusar na lista da aba GAF (`decidirPedidoGaf`), com escolha do GAF quando o
   aluno não escolheu.
+
+## 10/11/2026 — Resumo semanal das sugestões; questionário-base da avaliação
+
+- Sugestões no resumo semanal (escolha do usuário): o resumo da direção (segunda, 8h da filial) ganha "N sugestões
+  novas"; `resumoSemanalDeSugestoesDoPortal` (segunda, 8h de Brasília) avisa a administração nacional (donos do sistema
+  e liberadores nacionais) dos problemas e ideias sobre o Portal ainda não lidos. Sem push a cada sugestão.
+- Questionário-base (ok do usuário): notas e escolhas obrigatórias; textos opcionais (inclusive "em que o instrutor
+  poderia aperfeiçoar"); "Prefiro não responder" em discordância, faixa etária, escolaridade e convivência
+  (`PREFIRO_NAO_RESPONDER`, fora das comparações da análise). Não altera questionários próprios (Barra do Garças tem um)
+  nem rodadas já abertas (guardam cópia).

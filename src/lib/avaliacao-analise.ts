@@ -1,4 +1,4 @@
-import { MINIMO_RESPOSTAS, type Pergunta } from "./avaliacao-comum";
+import { MINIMO_RESPOSTAS, opcaoDeSaida, type Pergunta } from "./avaliacao-comum";
 
 /**
  * Painel de análise da avaliação dos instrutores (pedido do usuário 10/11/2026: "além dos dados, sugerir informações
@@ -152,9 +152,11 @@ export function analisarRodada(perguntas: Pergunta[], respostas: RespostaAnalise
         const vs = geral.filter((r) => valorDe(r, p.id) === o).map((r) => num(valorDe(r, pRec.id))).filter(Number.isFinite);
         return { opcao: o, total: vs.length, media: vs.length >= MINIMO_RESPOSTAS ? media(vs) : null };
       });
-      const comMedia = linhas.filter((l) => l.media !== null);
-      if (comMedia.length < 2) continue;
+      if (linhas.filter((l) => l.media !== null).length < 2) continue;
       cruzamentos.push({ pergunta: p, linhas });
+      // "Prefiro não responder" aparece na tabela, mas não entra na comparação.
+      const comMedia = linhas.filter((l) => l.media !== null && !opcaoDeSaida(l.opcao));
+      if (comMedia.length < 2) continue;
       const alto = comMedia.reduce((a, b) => (b.media! > a.media! ? b : a));
       const baixo = comMedia.reduce((a, b) => (b.media! < a.media! ? b : a));
       if (alto.media! - baixo.media! >= 1.5 * relevante(pRec))

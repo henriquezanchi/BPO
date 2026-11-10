@@ -27,6 +27,13 @@ export interface Questionario {
 }
 
 /**
+ * Opção de saída nas perguntas de escolha (decisão do usuário 10/11/2026): tudo o que é nota ou escolha é obrigatório,
+ * e quem não quer responder diz isso, em vez de pular. Fica fora dos cruzamentos da análise.
+ */
+export const PREFIRO_NAO_RESPONDER = "Prefiro não responder";
+export const opcaoDeSaida = (o: string) => /^(prefiro n[aã]o responder|n[aã]o sei|n[aã]o se aplica)$/i.test(o.trim());
+
+/**
  * Base nacional: formulário da Nova Acrópole Lago Norte (Avaliação Geral,
  * maio/2026), autorizado a nível nacional — enviado pelo usuário 2026-10-19.
  * Adaptações para o Portal:
@@ -49,7 +56,8 @@ export const QUESTIONARIO_BASE: Questionario = {
       secao: "Avaliação dos instrutores",
       texto: "Em quais pontos você entende que o(a) instrutor(a) poderia aperfeiçoar em suas aulas?",
       tipo: "texto",
-      obrigatoria: true,
+      // Textos opcionais (decisão do usuário 10/11/2026): obrigatório, voltava "nada", "ok" e poluía a análise.
+      obrigatoria: false,
     },
     {
       id: "instrutor_nota",
@@ -106,7 +114,7 @@ export const QUESTIONARIO_BASE: Questionario = {
       texto: "Há algum(ns) ponto(s) específico(s) das matérias que não tenha gostado ou que não esteja(m) de acordo com seus princípios ou convicções?",
       tipo: "escolha",
       obrigatoria: true,
-      opcoes: ["Sim", "Não"],
+      opcoes: ["Sim", "Não", PREFIRO_NAO_RESPONDER],
     },
     {
       id: "faixa_etaria",
@@ -115,7 +123,7 @@ export const QUESTIONARIO_BASE: Questionario = {
       texto: "Faixa etária",
       tipo: "escolha",
       obrigatoria: true,
-      opcoes: ["Menos de 18 anos", "18 a 24 anos", "25 a 34 anos", "35 a 44 anos", "45 a 64 anos", "Acima de 64 anos"],
+      opcoes: ["Menos de 18 anos", "18 a 24 anos", "25 a 34 anos", "35 a 44 anos", "45 a 64 anos", "Acima de 64 anos", PREFIRO_NAO_RESPONDER],
     },
     {
       id: "escolaridade",
@@ -124,7 +132,7 @@ export const QUESTIONARIO_BASE: Questionario = {
       texto: "Escolaridade / Formação",
       tipo: "escolha",
       obrigatoria: true,
-      opcoes: ["Sem escolaridade", "1º Grau Primário", "Ensino Fundamental", "Ensino Médio", "Ensino Superior (completo ou incompleto)", "Pós-Graduação", "Mestrado ou Doutorado"],
+      opcoes: ["Sem escolaridade", "1º Grau Primário", "Ensino Fundamental", "Ensino Médio", "Ensino Superior (completo ou incompleto)", "Pós-Graduação", "Mestrado ou Doutorado", PREFIRO_NAO_RESPONDER],
     },
     {
       id: "convivencia",
@@ -133,7 +141,7 @@ export const QUESTIONARIO_BASE: Questionario = {
       texto: "Possui ou já teve algum problema de convivência na escola?",
       tipo: "escolha",
       obrigatoria: true,
-      opcoes: ["Sim", "Não"],
+      opcoes: ["Sim", "Não", PREFIRO_NAO_RESPONDER],
     },
     {
       id: "observacoes",

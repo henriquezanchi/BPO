@@ -82,3 +82,13 @@ test("contas a pagar: uma conta pelo nome; várias com total", async () => {
   assert.equal(v.titulo, "2 contas vencem amanhã · R$ 400,50");
   assert.ok(v.corpo.startsWith("Luz R$ 300,00 (prevista); Água R$ 100,50"));
 });
+
+test("resumo da direção inclui sugestões novas; resumo do Portal para a administração nacional", async () => {
+  const { textoResumoSugestoesDoPortal } = await import("../src/lib/avisos-direcao");
+  assert.equal(
+    textoResumoDirecao({ entradas: 0, saidas: 0, comAtraso: null, pendencias: 0, vencidas: 0, sugestoes: 2 }).corpo,
+    "Nenhuma entrada ou saída na semana. Escolástica sem pendências. 2 sugestões novas na caixa de sugestões.",
+  );
+  assert.equal(textoResumoSugestoesDoPortal({ problemas: 1, ideias: 3 }).corpo, "1 problema relatado e 3 ideias aguardando leitura.");
+  assert.equal(textoResumoSugestoesDoPortal({ problemas: 0, ideias: 1 }).corpo, "1 ideia aguardando leitura.");
+});

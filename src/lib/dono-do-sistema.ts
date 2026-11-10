@@ -6,6 +6,9 @@
 // Matrículas do Mercúrio. Configurável por DONOS_DO_SISTEMA (separadas por vírgula, 26/10/2026); sem a variável, a do usuário.
 const DONOS_DO_SISTEMA = new Set((process.env.DONOS_DO_SISTEMA ?? "21596").split(",").map((m) => m.trim()).filter(Boolean));
 
+/** Matrículas dos donos do sistema (para avisos à administração nacional). */
+export const donosDoSistema = () => [...DONOS_DO_SISTEMA];
+
 export function ehDonoDoSistema(m: { mercurioId: string | null }): boolean {
   return !!m.mercurioId && DONOS_DO_SISTEMA.has(m.mercurioId);
 }

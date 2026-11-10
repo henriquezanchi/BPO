@@ -1,5 +1,5 @@
 import { avisosDeAniversario } from "@/lib/aniversarios";
-import { avisosDeAlunosSumindo, resumoSemanalDaDirecao } from "@/lib/avisos-direcao";
+import { avisosDeAlunosSumindo, resumoSemanalDaDirecao, resumoSemanalDeSugestoesDoPortal } from "@/lib/avisos-direcao";
 import { lembretesDeAula } from "@/lib/lembrete-aula";
 import { avisosDeVoluntariado } from "@/lib/avisos-voluntariado";
 import { avisosDeContasAPagar } from "@/lib/avisos-contas";
@@ -38,6 +38,8 @@ export async function GET(req: Request) {
         // sem contribuição há 60 dias viram pendência da Escolástica (segunda, 9h).
         aulas: () => lembretesDeAula(),
         semanaDirecao: () => resumoSemanalDaDirecao(),
+        // 10/11/2026: sugestões sobre o Portal não lidas, para a administração nacional (segunda, 8h de Brasília).
+        semanaSugestoesPortal: () => resumoSemanalDeSugestoesDoPortal(),
         alunosSumindo: () => avisosDeAlunosSumindo(),
         // 07/11/2026: voluntariado da semana (segunda, 10h) e lembrete na véspera (18h) para quem foi aceito.
         voluntariado: () => avisosDeVoluntariado(),

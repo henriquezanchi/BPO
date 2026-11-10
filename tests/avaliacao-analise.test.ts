@@ -94,3 +94,15 @@ test("data do evento: dia inteiro pela data; com horário, no fuso do local", as
   // Sem fuso local: o da filial de quem vê.
   assert.equal(dataCivilDoCompromisso({ date: new Date("2026-11-21T02:30:00Z") }, "America/Manaus"), "2026-11-20");
 });
+
+test("questionário-base: notas e escolhas obrigatórias, textos opcionais, saída 'Prefiro não responder'", () => {
+  for (const p of P) assert.equal(p.obrigatoria, p.tipo !== "texto", p.id);
+  for (const id of ["faixa_etaria", "escolaridade", "convivencia", "pontos_discordancia"]) assert.ok(P.find((p) => p.id === id)!.opcoes!.includes("Prefiro não responder"), id);
+});
+
+test("'Prefiro não responder' fica fora da comparação do cruzamento", () => {
+  const rs = [...rep(4, () => ({ ...geral("A", 10, "Sim"), respostas: { nps: 10, convivencia: "Não" } })), ...rep(4, () => ({ ...geral("A", 2, "Sim"), respostas: { nps: 2, convivencia: "Prefiro não responder" } }))];
+  const a = analisarRodada(P, rs);
+  assert.ok(!a.achadosDirecao.some((x) => x.titulo.includes("convivência")));
+  assert.ok(a.cruzamentos.find((c) => c.pergunta.id === "convivencia")?.linhas.some((l) => l.opcao === "Prefiro não responder" && l.media === 2));
+});

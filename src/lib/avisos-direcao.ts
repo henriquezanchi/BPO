@@ -1,12 +1,13 @@
 import { Prisma } from "@prisma/client";
 import { areasNaFilial } from "@/lib/areas-filial";
 import { db } from "@/lib/db";
-import { matriculasComDirecaoLiberada } from "@/lib/dono-do-sistema";
+import { donosDoSistema, matriculasComDirecaoLiberada } from "@/lib/dono-do-sistema";
 import { fusoDaEscola } from "@/lib/fuso-escola";
 import { agoraNoFuso } from "@/lib/lembrete-aula";
 import { consultarMercurio, sqlTexto } from "@/lib/mercurio-db/client";
 import { emPaginas, type ResumoFilialDados } from "@/lib/mercurio-db/resumo-filial";
 import { enviarPush } from "@/lib/push";
+import { CATEGORIAS_FILIAL, CATEGORIAS_PORTAL } from "@/lib/sugestoes-comum";
 
 /**
  * Avisos semanais para a direção e a Escolástica (pedido do usuário 06/11/2026), na rotina de avisos (5 em 5 min):
@@ -34,11 +35,13 @@ async function reservar(chave: string) {
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
-export function textoResumoDirecao(n: { entradas: number; saidas: number; comAtraso: number | null; pendencias: number; vencidas: number }) {
+export function textoResumoDirecao(n: { entradas: number; saidas: number; comAtraso: number | null; pendencias: number; vencidas: number; sugestoes?: number }) {
   const partes = [
     n.entradas || n.saidas ? `${plural(n.entradas, "aluno novo", "alunos novos")} e ${plural(n.saidas, "saída", "saídas")} na semana` : "Nenhuma entrada ou saída na semana",
     n.comAtraso !== null ? `${plural(n.comAtraso, "pessoa", "pessoas")} com contribuição em atraso` : null,
     n.pendencias ? `${plural(n.pendencias, "pendência", "pendências")} da Escolástica${n.vencidas ? ` (${n.vencidas} vencida${n.vencidas > 1 ? "s" : ""})` : ""}` : "Escolástica sem pendências",
+    // Caixa de sugestões (10/11/2026, escolha do usuário: resumo semanal): as que ninguém leu ainda.
+    n.sugestoes ? `${plural(n.sugestoes, "sugestão nova", "sugestões novas")} na caixa de sugestões` : null,
   ].filter(Boolean);
   return { titulo: "Sua filial na semana", corpo: `${partes.join(". ")}.` };
 }
@@ -76,15 +79,16 @@ export async function resumoSemanalDaDirecao(agora = new Date()) {
 
     const u = sqlTexto(escola.mercurioUnidade!);
     const desde = new Date(new Date(`${hoje}T12:00:00Z`).getTime() - 7 * 864e5).toISOString().slice(0, 10);
-    const [[e], [s], resumo, pendencias, vencidas] = await Promise.all([
+    const [[e], [s], resumo, pendencias, vencidas, sugestoes] = await Promise.all([
       consultarMercurio(`SELECT COUNT(*) n FROM cadastro WHERE cad_unidade=${u} AND cad_situacao='ATI' AND cad_ingresso >= '${desde}'`),
       consultarMercurio(`SELECT COUNT(*) n FROM cadastro WHERE cad_unidade=${u} AND cad_situacao='INA' AND cad_baixa >= '${desde}'`),
       db.resumoFilial.findUnique({ where: { schoolId: escola.id }, select: { dados: true } }),
       db.scholasticPendency.count({ where: { schoolId: escola.id, completedAt: null } }),
       db.scholasticPendency.count({ where: { schoolId: escola.id, completedAt: null, dueDate: { lt: agora } } }),
+      db.sugestaoPortal.count({ where: { schoolId: escola.id, status: "nova", categoria: { in: CATEGORIAS_FILIAL } } }),
     ]);
     const comAtraso = (resumo?.dados as unknown as ResumoFilialDados | undefined)?.contribuicao?.pessoasComAtraso ?? null;
-    const texto = textoResumoDirecao({ entradas: Number(e?.n ?? 0), saidas: Number(s?.n ?? 0), comAtraso, pendencias, vencidas });
+    const texto = textoResumoDirecao({ entradas: Number(e?.n ?? 0), saidas: Number(s?.n ?? 0), comAtraso, pendencias, vencidas, sugestoes });
     total += (await enviarPush(direcao.map((d) => d.id), { ...texto, url: "/diretor", etiqueta: `semana-direcao-${hoje}` })).pessoas;
   }
   return total;
@@ -152,4 +156,31 @@ export async function avisosDeAlunosSumindo(agora = new Date()) {
     });
   }
   return criadas;
+}
+
+/** Texto do resumo semanal das sugestões sobre o Portal, para a administração nacional. */
+export function textoResumoSugestoesDoPortal(n: { problemas: number; ideias: number }) {
+  const partes = [n.problemas ? plural(n.problemas, "problema relatado", "problemas relatados") : null, n.ideias ? plural(n.ideias, "ideia", "ideias") : null].filter(Boolean);
+  return { titulo: "Sugestões sobre o Portal", corpo: `${partes.join(" e ")} aguardando leitura.` };
+}
+
+/**
+ * Segunda, 8h de Brasília (10/11/2026): sugestões sobre o Portal ainda não lidas, para a administração nacional (dono do
+ * sistema e liberadores nacionais). Sem nada novo, não avisa.
+ */
+export async function resumoSemanalDeSugestoesDoPortal(agora = new Date()) {
+  const { hoje, semana, minuto } = agoraNoFuso(agora, "America/Sao_Paulo");
+  if (semana !== 1 || minuto < HORA_RESUMO_DIRECAO * 60 || minuto >= 12 * 60) return 0;
+  const porCategoria = await db.sugestaoPortal.groupBy({ by: ["categoria"], where: { status: "nova", categoria: { in: CATEGORIAS_PORTAL } }, _count: true });
+  const n = (c: string) => porCategoria.find((x) => x.categoria === c)?._count ?? 0;
+  const problemas = n("portal_problema");
+  const ideias = n("portal_ideia");
+  if (!problemas && !ideias) return 0;
+  const nacionais = (await db.liberadorNacional.findMany({ select: { mercurioId: true } })).map((l) => l.mercurioId);
+  const pessoas = await db.member.findMany({
+    where: { mercurioAtivo: true, pushSubscriptions: { some: {} }, mercurioId: { in: [...nacionais, ...donosDoSistema()] } },
+    select: { id: true },
+  });
+  if (!pessoas.length || !(await reservar(`semana-sugestoes-portal:${hoje}`))) return 0;
+  return (await enviarPush(pessoas.map((p) => p.id), { ...textoResumoSugestoesDoPortal({ problemas, ideias }), url: "/voluntario/sugestoes", etiqueta: `semana-sugestoes-${hoje}` })).pessoas;
 }
