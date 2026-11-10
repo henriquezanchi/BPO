@@ -9,3 +9,8 @@ test("convite da avaliação no WhatsApp: título em negrito e link para /avalia
   assert.ok(texto.startsWith("*Avaliação geral — novembro/2026*"));
   assert.ok(texto.endsWith("Responda aqui: https://portal-na-one.vercel.app/avaliacao"));
 });
+
+test("convite da rodada leva ao link da própria rodada", () => {
+  const texto = decodeURIComponent(linkWhatsappDaAvaliacao("Rodada", "abc123").slice("https://wa.me/?text=".length));
+  assert.ok(texto.endsWith("Responda aqui: https://portal-na-one.vercel.app/avaliacao?rodada=abc123"));
+});

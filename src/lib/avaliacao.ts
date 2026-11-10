@@ -96,9 +96,10 @@ export async function encerrarVencidas(schoolId?: string) {
 }
 
 /** Rodada aberta da filial em que o aluno ainda tem algo a responder — é o que faz o quadrinho aparecer. */
-export async function avaliacaoPendente(m: Pick<Member, "id" | "mercurioId" | "schoolId">) {
+export async function avaliacaoPendente(m: Pick<Member, "id" | "mercurioId" | "schoolId">, campanhaId?: string) {
   await encerrarVencidas(m.schoolId);
-  const campanhas = await db.avaliacaoCampanha.findMany({ where: { schoolId: m.schoolId, status: "aberta" }, orderBy: { abertaEm: "desc" } });
+  // Com campanhaId (link da rodada, 10/11/2026): só aquela; sem, a mais recente com algo pendente.
+  const campanhas = await db.avaliacaoCampanha.findMany({ where: { schoolId: m.schoolId, status: "aberta", ...(campanhaId ? { id: campanhaId } : {}) }, orderBy: { abertaEm: "desc" } });
   for (const c of campanhas) {
     const instrutores = await instrutoresDoAluno(m, c);
     const temGeral = lerPerguntas(c.perguntas).some((p) => p.parte === "geral");

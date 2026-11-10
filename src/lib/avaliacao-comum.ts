@@ -173,11 +173,11 @@ export const MINIMO_RESPOSTAS = 3;
  * Convite da rodada para o WhatsApp (pedido do usuário 2026-10-27): a Escolástica manda nos grupos das turmas. O link
  * leva a /avaliacao (pede login antes, se preciso). Sem emojis: no wa.me eles chegavam como "�".
  */
-export function linkWhatsappDaAvaliacao(titulo: string, urlPortal = "https://portal-na-one.vercel.app") {
+export function linkWhatsappDaAvaliacao(titulo: string, campanhaId?: string, urlPortal = "https://portal-na-one.vercel.app") {
   const texto = [
     `*${titulo.replace(/\*/g, "").trim()}*`,
     "A avaliação dos instrutores está aberta no Portal do Aluno. Leva poucos minutos, e as respostas não guardam quem respondeu.",
-    `Responda aqui: ${urlPortal}/avaliacao`,
+    `Responda aqui: ${urlPortal}/avaliacao${campanhaId ? `?rodada=${encodeURIComponent(campanhaId)}` : ""}`,
   ].join("\n\n");
   return `https://wa.me/?text=${encodeURIComponent(texto)}`;
 }

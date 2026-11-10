@@ -10,11 +10,15 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-/** Avaliação dos instrutores — só existe enquanto houver rodada aberta com algo pendente pra este aluno. */
-export default async function AvaliacaoPage() {
+/**
+ * Avaliação dos instrutores — só existe enquanto houver rodada aberta com algo pendente pra este aluno. Cada rodada tem
+ * o próprio link (?rodada=<id>, 10/11/2026); sem ele, ou se o aluno já respondeu aquela, abre a próxima pendente.
+ */
+export default async function AvaliacaoPage(props: { searchParams: Promise<{ rodada?: string }> }) {
+  const { rodada } = await props.searchParams;
   const member = await getAuthenticatedMember();
-  if (!member) redirect("/login?next=/avaliacao");
-  const pendente = await avaliacaoPendente(member);
+  if (!member) redirect(`/login?next=${encodeURIComponent(rodada ? `/avaliacao?rodada=${rodada}` : "/avaliacao")}`);
+  const pendente = (rodada ? await avaliacaoPendente(member, rodada) : null) ?? (await avaliacaoPendente(member));
   if (!pendente) redirect("/portal");
 
   const campanha = await db.avaliacaoCampanha.findUniqueOrThrow({ where: { id: pendente.campanhaId } });

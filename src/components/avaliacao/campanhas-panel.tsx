@@ -134,7 +134,7 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
                 </Link>
                 {c.status === "aberta" && (
                   <a
-                    href={linkWhatsappDaAvaliacao(c.titulo)}
+                    href={linkWhatsappDaAvaliacao(c.titulo, c.id)}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Mandar o convite com o link da avaliação nos grupos das turmas"
