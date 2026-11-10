@@ -501,16 +501,18 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
                 <IdCard size={14} /> Carteirinha
               </a>
             )}
-          </div>
-          {dashboard.areaVoluntario && (
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              <Link href="/voluntario" className="flex min-h-9 items-center gap-1 rounded-full bg-white/15 px-3 text-[12px] font-semibold text-white/90 transition hover:bg-white/25">
-                <HandHeart size={11} /> {t.home.portalDoVoluntario}
+            {/* Área do Voluntário na mesma grade e no mesmo estilo, em largura total (pedido do usuário 10/11/2026). */}
+            {dashboard.areaVoluntario && (
+              <Link href="/voluntario" className={`${BOTAO_CARTAO} ${member.school.language !== "en" ? "col-span-2" : ""}`}>
+                <HandHeart size={14} /> {t.home.portalDoVoluntario}
                 {dashboard.pendenciasVoluntario > 0 && (
-                  <span className="ml-0.5 rounded-full bg-na-danger px-1.5 text-[9px] font-bold text-white" aria-label={`${dashboard.pendenciasVoluntario} pedidos aguardando`}>
+                  <span className="ml-0.5 rounded-full bg-na-danger px-1.5 text-[11px] font-bold text-white" aria-label={`${dashboard.pendenciasVoluntario} pedidos aguardando`}>
                     {dashboard.pendenciasVoluntario}
                   </span>
                 )}
+              </Link>
+            )}
+          </div>
               </Link>
             </div>
           )}
