@@ -9,6 +9,7 @@ import { ehFV } from "@/lib/grupos-portal";
 import { acessoInfantojuvenil, pendenciasInfantojuvenil } from "@/lib/infantojuvenil";
 import { acessoVazio } from "@/lib/infantojuvenil-comum";
 import { acessoSugestoes, sugestoesNovas } from "@/lib/sugestoes";
+import { rodadasComResultadoDoInstrutor } from "@/lib/avaliacao";
 import { semAcessoSugestoes } from "@/lib/sugestoes-comum";
 import { filiaisAdministradas } from "@/lib/recursos-filial";
 import { gestaoDeOportunidades } from "@/lib/oportunidades";
@@ -85,6 +86,8 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
   // Caixa de sugestões (10/11/2026): a direção lê as da filial; a administração nacional, também as do Portal.
   const sug = await acessoSugestoes(m);
   const novasSug = semAcessoSugestoes(sug) ? 0 : await sugestoesNovas(sug).catch(() => 0);
+  // Resultado da avaliação do próprio instrutor (10/11/2026): só depois de uma rodada encerrada.
+  const minhasAvaliacoes = m.isPedagogo ? await rodadasComResultadoDoInstrutor(m.mercurioId).catch(() => 0) : 0;
   const d: (Destino | false)[] = [
     { href: "/voluntario", rotulo: "Início", descricao: "Seus grupos, secretarias e encontros", icone: "inicio", secao: "Meu trabalho" },
     // Grupos num lugar só (pedido do usuário 2026-10-25): ver, criar e coordenar.
@@ -96,6 +99,7 @@ export async function destinosDaPessoa(m: Pessoa): Promise<Destino[]> {
       icone: "instrutor",
       secao: "Meu trabalho",
     },
+    minhasAvaliacoes > 0 && { href: "/professor/avaliacao", rotulo: "Minhas avaliações", descricao: "O que os alunos responderam sobre as suas aulas", icone: "avaliacao", secao: "Meu trabalho" },
     (tem("eventos") || tem("direcao")) && {
       href: "/voluntario/calendario",
       rotulo: "Calendário",

@@ -170,3 +170,38 @@ export async function relatorioCampanha(campanhaId: string, filtro: FiltroRelato
 }
 
 export type RelatorioCampanha = Awaited<ReturnType<typeof relatorioCampanha>>;
+
+// ----------------------------------------------------------------- o próprio instrutor
+
+/**
+ * Resultados do próprio instrutor (pergunta da Escolástica, 10/11/2026: "cada um consegue acessar as suas respostas?").
+ * Só rodadas encerradas, para ninguém acompanhar quem respondeu enquanto a rodada está aberta; só a parte do
+ * instrutor, somando todas as turmas dele; só o resumo (sem respostas individuais); e só com pelo menos
+ * MINIMO_RESPOSTAS respostas, como nos demais recortes.
+ */
+export async function resultadosDoInstrutor(matricula: string | null) {
+  if (!matricula) return [];
+  const porRodada = await db.avaliacaoResposta.groupBy({ by: ["campanhaId", "turmaNome"], where: { instrutorMatr: matricula, parte: "instrutor" } });
+  if (!porRodada.length) return [];
+  const turmasDa = (id: string) => [...new Set(porRodada.filter((r) => r.campanhaId === id && r.turmaNome).map((r) => r.turmaNome as string))].sort();
+  const encerradas = await db.avaliacaoCampanha.findMany({
+    where: { id: { in: [...new Set(porRodada.map((r) => r.campanhaId))] }, status: "encerrada" },
+    orderBy: { encerradaEm: "desc" },
+    select: { id: true },
+  });
+  const rels = await Promise.all(encerradas.map((c) => relatorioCampanha(c.id, { instrutorMatr: matricula })));
+  return rels.map((r) => ({
+    campanha: r.campanha,
+    total: r.instrutor.total,
+    suficiente: r.instrutor.suficiente,
+    perguntas: r.instrutor.perguntas,
+    turmas: turmasDa(r.campanha.id),
+  }));
+}
+
+/** Quantas rodadas encerradas têm respostas sobre o instrutor (para mostrar o atalho só quando há o que ver). */
+export async function rodadasComResultadoDoInstrutor(matricula: string | null): Promise<number> {
+  if (!matricula) return 0;
+  const ids = (await db.avaliacaoResposta.groupBy({ by: ["campanhaId"], where: { instrutorMatr: matricula, parte: "instrutor" } })).map((r) => r.campanhaId);
+  return ids.length ? db.avaliacaoCampanha.count({ where: { id: { in: ids }, status: "encerrada" } }) : 0;
+}
