@@ -803,3 +803,18 @@ atalho "Levar para o Google Agenda" no painel da Agenda e na busca. `camposPubli
 `notificacoes-agendadas.ts` para `event-policy.ts`. Limite: o Google atualiza agendas assinadas no ritmo dele (8 a 24
 h); confirmação de presença continua no Portal. Caminho 2 (gravar direto pela API do Google, com verificação do app)
 fica para depois. Conferido com a agenda real do dono: 3 eventos (1 confirmado, 1 a confirmar, 1 cancelado).
+
+## 09/11/2026 — Merlin e Janos: voluntários marcados e certidão negativa criminal
+
+Pedido do usuário após mensagem da Karla Lacombe (ECA: certidão negativa criminal dos colaboradores do Merlin e do
+Janos, renovada a cada 6 meses). Tabela `VoluntarioInfantojuvenil` (migração `20261109210000_voluntario_infantojuvenil`,
+RLS ligada, sem FK; uma linha por pessoa e programa, com data, validade, tribunal, observação e histórico das
+verificações). Regras puras em `lib/infantojuvenil-comum.ts` (testes em `tests/infantojuvenil.test.ts`), servidor em
+`lib/infantojuvenil.ts`, ações em `lib/actions/infantojuvenil-actions.ts` (cada uma reconfere o acesso), tela
+`/voluntario/merlin-janos` e item "Merlin e Janos" em Gestão da filial com o número de pendências. Marcação discreta:
+não aparece em perfil, carteirinha nem listas públicas. Acesso: Chefe/Sub-Chefe (os dois programas da filial);
+secretário, pró ou sub-secretário do programa pela função do Mercúrio (aquele programa na própria filial; colaborador e
+monitor não); função nacional do programa ou mandato de secretaria que cite Merlin, Janos ou infantojuvenis (no
+território do mandato); administração nacional (tudo). Validade = data + 6 meses (fim de mês ajustado); "vencendo" =
+até 30 dias. Guarda só datas e tribunal, nunca o documento. Sugestões vêm das funções do Mercúrio (9 pessoas hoje).
+Pendente: a função que o João criou no Mercúrio não aparece na oinabview; quando aparecer, sincronizar.

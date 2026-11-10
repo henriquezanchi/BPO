@@ -1414,6 +1414,28 @@ model ErrorNotification {
 // padrão. Chefe de Filial tem acesso sempre e libera quem quiser; quem foi
 // liberado e é responsável por um grupo libera os integrantes desse grupo.
 // Ver src/lib/acesso-voluntario.ts.
+// Voluntários dos programas Merlin e Janos (pedido do usuário 09/11/2026): marcação discreta, vista só pela direção
+// da filial, pelos secretários do programa e pela administração nacional (lib/infantojuvenil.ts). A certidão negativa
+// criminal é exigência do ECA e vale 6 meses; guardamos só datas e o órgão, nunca o documento.
+model VoluntarioInfantojuvenil {
+  id               String    @id @default(cuid())
+  memberId         String
+  schoolId         String
+  programa         String // MERLIN | JANOS
+  certidaoEm       DateTime? @db.Date
+  certidaoValidade DateTime? @db.Date
+  certidaoOrgao    String?
+  observacao       String?
+  historico        Json      @default("[]")
+  marcadoPorId     String
+  atualizadoPorId  String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([memberId, programa])
+  @@index([schoolId, programa])
+}
+
 model AcessoVoluntario {
   memberId      String   @id
   liberadoPorId String
