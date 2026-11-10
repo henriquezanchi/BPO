@@ -49,11 +49,19 @@ function partesNoFuso(date: Date, fuso: string) {
   return { ano: a, mes: m - 1, dia: d, semana: new Date(Date.UTC(a, m - 1, d)).getUTCDay() };
 }
 
-/** Mesma chave de chaveDia, para o dia de um compromisso no fuso da filial. */
-function chaveDoItem(date: Date, fuso: string): string {
-  const p = partesNoFuso(date, fuso);
-  return `${p.ano}-${p.mes}-${p.dia}`;
+/**
+ * Dia de um compromisso no calendário (10/11/2026: tocar num evento do Ágora "não fazia nada"). Evento de dia inteiro
+ * é uma data, não um instante: vale a data em UTC, a mesma que o cartão mostra (formatDateBR). Pelo fuso, o do Ágora
+ * (00h de Brasília) caía no dia anterior nas filiais a oeste de Brasília, e o toque abria um dia vazio.
+ */
+function partesDoItem(item: { date: Date; allDay?: boolean | null }, fuso: string) {
+  return item.allDay ? partesNoFuso(item.date, "UTC") : partesNoFuso(item.date, fuso);
 }
+const chaveDoCompromisso = (item: { date: Date; allDay?: boolean | null }, fuso: string) => {
+  const p = partesDoItem(item, fuso);
+  return `${p.ano}-${p.mes}-${p.dia}`;
+};
+const dataCivilDoItem = (item: { date: Date; allDay?: boolean | null }, fuso: string) => item.date.toLocaleDateString("en-CA", { timeZone: item.allDay ? "UTC" : fuso });
 
 const horaNoFuso = (date: Date, fuso: string) => date.toLocaleTimeString("pt-BR", { timeZone: fuso, hour: "2-digit", minute: "2-digit" });
 
@@ -695,7 +703,7 @@ const nomeDaSede = (t: string) =>
  */
 function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "enquete" }>; onAbrir: () => void }) {
   const fuso = useContext(FusoDaAgenda);
-  const partes = partesNoFuso(item.date, fuso);
+  const partes = partesDoItem(item as { date: Date; allDay?: boolean | null }, fuso);
   const Icone = item.kind === "evento" ? PartyPopper : item.kind === "reuniao" ? Users : item.kind === "atendimento" ? MessagesSquare : GraduationCap;
   const tipo =
     item.kind === "evento"
@@ -815,7 +823,7 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
   const porDia = useMemo(() => {
     const mapa = new Map<string, AgendaItem[]>();
     for (const item of items) {
-      const chave = chaveDoItem(item.date, fuso);
+      const chave = chaveDoCompromisso(item as { date: Date; allDay?: boolean | null }, fuso);
       const lista = mapa.get(chave);
       if (lista) lista.push(item);
       else mapa.set(chave, [item]);
@@ -865,7 +873,7 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
   // Próximos compromissos de OUTRAS datas (pedido do usuário 2026-10-21), de hoje em diante.
   const inicioDeHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   const proximos = items
-    .filter((i): i is Exclude<AgendaItem, { kind: "enquete" }> => i.kind !== "enquete" && i.date.toLocaleDateString("en-CA", { timeZone: fuso }) >= hojeCivil && chaveDoItem(i.date, fuso) !== chaveDia(diaSelecionado))
+    .filter((i): i is Exclude<AgendaItem, { kind: "enquete" }> => i.kind !== "enquete" && dataCivilDoItem(i as { date: Date; allDay?: boolean | null }, fuso) >= hojeCivil && chaveDoCompromisso(i as { date: Date; allDay?: boolean | null }, fuso) !== chaveDia(diaSelecionado))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
   // Primeiro o que é da escola no próximo mês (eventos da escola, grupos, turma, conversas); depois os demais.
   const fimDoMes = new Date(inicioDeHoje.getTime() + 30 * 864e5);
@@ -910,7 +918,8 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
                       onAbrir={() => {
                         const chave = itemKey(item);
                         setItemAberto(chave);
-                        selecionarDia(item.date);
+                        const p = partesDoItem(item as { date: Date; allDay?: boolean | null }, fuso);
+                        selecionarDia(new Date(p.ano, p.mes, p.dia));
                         setTimeout(() => document.getElementById(`agenda-item-${chave}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
                       }}
                     />
