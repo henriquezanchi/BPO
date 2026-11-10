@@ -157,44 +157,19 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
 
   // Cartões da contribuição e do Fortuna: no quadro "Economia" e, quando for o caso, no acesso rápido (2026-10-29).
   const cartaoContribuicao = (
-    <div
-      data-tour-id="contribuicao-status"
-      className={`flex flex-col gap-3 rounded-2xl border p-4 ${
-        isDelayed
-          ? "border-na-danger/40 bg-na-danger-light dark:border-red-900 dark:bg-red-950/30"
-          : semDesconto
-            ? "border-na-warning/40 bg-na-warning-light dark:border-amber-900 dark:bg-amber-950/30"
-            : "border-na-success/40 bg-na-success-light dark:border-emerald-900 dark:bg-emerald-950/30"
-      }`}
-    >
-      <div className="flex items-center gap-2.5">
-        <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-            isDelayed
-              ? "bg-na-danger-light text-na-danger-dark dark:bg-red-900/50 dark:text-red-300"
-              : semDesconto
-                ? "bg-na-warning-light text-na-warning-dark dark:bg-amber-900/50 dark:text-amber-300"
-                : "bg-na-success-light text-na-success-dark dark:bg-emerald-900/50 dark:text-emerald-300"
-          }`}
-        >
-          {isDelayed || semDesconto ? <TriangleAlert size={16} /> : <CheckCircle2 size={16} />}
-        </div>
-        <div>
-          <h4
-            className={`text-[13px] font-bold ${
-              isDelayed ? "text-na-danger-dark dark:text-red-300" : semDesconto ? "text-na-warning-dark dark:text-amber-300" : "text-na-success-dark dark:text-emerald-300"
-            }`}
-          >
-            {isDelayed ? t.home.contribuicaoPendente : semDesconto ? t.home.contribuicaoSemDesconto : t.home.contribuicaoEmDia}
-          </h4>
-          <p className="mt-0.5 text-xs text-gray-700 dark:text-gray-400">
+    <div data-tour-id="contribuicao-status" className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+      {/* Coesão visual (pedido do usuário 10/11/2026): cartão branco como os demais; a situação vai numa etiqueta. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">{t.tiles.economia.title}</p>
+          <p className="mt-0.5 text-[15px] leading-snug font-bold text-gray-900 dark:text-gray-100">
             {semDesconto
               ? t.home.mensagemSemDesconto(member.name.split(" ")[0])
               : situacao === "a_vencer"
                 ? t.home.mensagemAVencer(member.name.split(" ")[0])
                 : `${t.home.ola(member.name.split(" ")[0])} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
           </p>
-          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-500">
+          <p className="mt-1 text-[12px] text-gray-600 dark:text-gray-400">
             {proximoVencimento.diasRestantes < 0
               ? t.home.venceuHa(Math.abs(proximoVencimento.diasRestantes), proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes)
               : proximoVencimento.diasRestantes === 0
@@ -202,6 +177,18 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
                 : t.home.proximoVencimento(proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes, proximoVencimento.diasRestantes)}
           </p>
         </div>
+        <span
+          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+            isDelayed
+              ? "bg-na-danger-light text-na-danger-dark dark:bg-red-950/50 dark:text-red-300"
+              : semDesconto
+                ? "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/50 dark:text-amber-300"
+                : "bg-na-success-light text-na-success-dark dark:bg-emerald-950/50 dark:text-emerald-300"
+          }`}
+        >
+          {isDelayed || semDesconto ? <TriangleAlert size={12} /> : <CheckCircle2 size={12} />}
+          {isDelayed ? "Em atraso" : semDesconto ? "Sem desconto" : situacao === "a_vencer" ? "A vencer" : "Em dia"}
+        </span>
       </div>
 
       <button
@@ -209,18 +196,12 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           setPagarAgora(podePagarAgora);
           setModal("situacao");
         }}
-        className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[14px] font-semibold transition ${
-          isDelayed
-            ? "bg-na-danger text-white hover:bg-na-danger-dark"
-            : semDesconto
-              ? "bg-na-warning-dark text-white hover:opacity-90 dark:bg-amber-600"
-              : "bg-white/70 text-na-success-dark hover:bg-white dark:bg-black/20 dark:text-emerald-300"
-        }`}
+        className={podePagarAgora ? BOTAO_PRIMARIO : BOTAO_SECUNDARIO}
       >
         {podePagarAgora ? `Pagar agora · ${brl(compositionTotal)}` : t.home.verSituacao}
       </button>
       {podePagarAgora && (
-        <button type="button" onClick={() => setModal("situacao")} className="-mt-1 min-h-10 text-[12px] font-semibold text-gray-600 underline underline-offset-2 dark:text-gray-300">
+        <button type="button" onClick={() => setModal("situacao")} className="-mt-1 min-h-10 text-[13px] font-semibold text-na-green-dark dark:text-emerald-400">
           Ver todos os meses e comprovantes
         </button>
       )}
@@ -309,7 +290,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       conteudo:
         dashboard.celebracao.tipo === "aniversario" ? (
           <Anuncio
-            tom="ouro"
+            tom="claro"
             icone={<Cake size={20} />}
             rotulo="Nova Acrópole"
             titulo={`Feliz aniversário, ${member.name.trim().split(/\s+/)[0]}!`}
@@ -319,7 +300,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           />
         ) : (
           <Anuncio
-            tom="verde"
+            tom="claro"
             icone={<Cake size={20} />}
             rotulo="Tempo de casa"
             titulo={`Hoje faz ${dashboard.celebracao.anos} ${dashboard.celebracao.anos === 1 ? "ano" : "anos"} que você entrou na Nova Acrópole`}
@@ -335,7 +316,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
         id: "pedagogos",
         conteudo: (
           <Anuncio
-            tom={dashboard.pedagogos.proxima.situacao === "no_prazo" ? "ouro" : "claro"}
+            tom="claro"
             icone={<Presentation size={20} />}
             rotulo={`Sua apresentação · ${dataCurta(dashboard.pedagogos.proxima.data)}`}
             titulo={dashboard.pedagogos.proxima.tema}
@@ -383,7 +364,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       id: "fortuna",
       conteudo: (
         <Anuncio
-          tom={favorita === "economia" ? "ouro" : "claro"}
+          tom="claro"
           icone={<Coffee size={20} />}
           rotulo={`Fortuna · ${saldoFortuna.branchTitle}`}
           titulo="Coloque mais crédito e evite filas!"
@@ -415,7 +396,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       id: "voluntariado",
       conteudo: (
         <Anuncio
-          tom="verde"
+          tom="claro"
           icone={<HandHeart size={20} />}
           rotulo={dashboard.oportunidades.total === 1 ? "Voluntariado · 1 oportunidade aberta" : `Voluntariado · ${dashboard.oportunidades.total} oportunidades abertas`}
           titulo={dashboard.oportunidades.proxima?.titulo ?? "Sua escola precisa de você"}
@@ -433,7 +414,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       id: "voluntariado",
       conteudo: (
         <Anuncio
-          tom="verde"
+          tom="claro"
           icone={<HandHeart size={20} />}
           rotulo="Voluntariado"
           titulo="Você sabia que “Voluntário” significa “aquele que faz por força da Vontade”?"
@@ -543,7 +524,9 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
 
         {/* Avaliação aberta: tarefa com prazo, em destaque antes dos atalhos. */}
         {dashboard.avaliacao && (
-          <Anuncio tom="ouro" icone={<ClipboardCheck size={20} />} rotulo="Avaliação dos instrutores" titulo="Sua opinião sobre as aulas" texto="Anônima · poucos minutos" acao="Responder" href="/avaliacao" />
+          <ListaAtalhos titulo="Para você">
+            <LinhaAtalho icon={<ClipboardCheck size={16} />} title="Avaliação dos instrutores" subtitle="Anônima · poucos minutos" href="/avaliacao" selo="Aberta" />
+          </ListaAtalhos>
         )}
 
         {/* Quatro atalhos principais (avaliação de design, 10/11/2026); o resto em listas agrupadas abaixo. */}
@@ -734,7 +717,12 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
 
 /** Botões do cartão de boas-vindas: mesmo tamanho, lado a lado. */
 const BOTAO_CARTAO =
-  "flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 text-[12px] font-semibold whitespace-nowrap text-white transition hover:bg-white/25";
+  "flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3 text-[13px] font-semibold whitespace-nowrap text-white transition hover:bg-white/20";
+/** Um botão principal por tela (verde sólido) e o secundário em contorno; mesmos cantos e altura em todo o Portal. */
+const BOTAO_PRIMARIO =
+  "flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 text-[14px] font-semibold text-white transition hover:bg-na-green-dark";
+const BOTAO_SECUNDARIO =
+  "flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 text-[14px] font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800";
 
 /** Atalho principal da página inicial (só quatro). */
 function FeatureTile({
@@ -773,7 +761,7 @@ function ListaAtalhos({ titulo, children }: { titulo: string; children: React.Re
   );
 }
 
-function LinhaAtalho({ icon, title, subtitle, onClick, href, externo }: { icon: React.ReactNode; title: string; subtitle: string; onClick?: () => void; href?: string; externo?: boolean }) {
+function LinhaAtalho({ icon, title, subtitle, onClick, href, externo, selo }: { icon: React.ReactNode; title: string; subtitle: string; onClick?: () => void; href?: string; externo?: boolean; selo?: string }) {
   const corpo = (
     <>
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">{icon}</span>
@@ -781,6 +769,7 @@ function LinhaAtalho({ icon, title, subtitle, onClick, href, externo }: { icon: 
         <span className="block truncate text-[14px] font-semibold text-gray-900 dark:text-gray-100">{title}</span>
         <span className="block truncate text-[12px] text-gray-600 dark:text-gray-400">{subtitle}</span>
       </span>
+      {selo && <span className="shrink-0 rounded-full bg-na-gold/25 px-2 py-0.5 text-[11px] font-bold text-na-gold-dark dark:bg-amber-950/50 dark:text-amber-300">{selo}</span>}
       <ChevronRight size={16} className="shrink-0 text-gray-400" aria-hidden />
     </>
   );

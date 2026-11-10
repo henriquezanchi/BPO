@@ -205,8 +205,8 @@ export function DestaquePlay({ hoje }: { hoje: string }) {
   const serie = SERIES_PLAY[dia % SERIES_PLAY.length];
   return (
     <Anuncio
-      tom="verde"
-      rotulo={`Acrópole Play · ${serie.colecao}`}
+      tom="claro"
+      rotulo={`Acrópole Play · ${serie.colecao.replace(/\s*Acrópole Play$/, "")}`}
       titulo={serie.titulo}
       texto="Assista quando quiser. Você entra direto, com o seu login do Portal."
       acao="Assistir agora"
@@ -215,9 +215,9 @@ export function DestaquePlay({ hoje }: { hoje: string }) {
       capa={
         serie.capa && !semCapa ? (
           // eslint-disable-next-line @next/next/no-img-element -- capa servida pelo site da Acrópole Play
-          <img src={serie.capa} alt="" onError={() => setSemCapa(true)} className="h-[104px] w-[74px] shrink-0 rounded-lg object-cover shadow-md ring-1 ring-white/20" />
+          <img src={serie.capa} alt="" onError={() => setSemCapa(true)} className="h-[104px] w-[74px] shrink-0 rounded-lg object-cover ring-1 ring-black/10" />
         ) : (
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
             <Clapperboard size={22} />
           </span>
         )
@@ -237,7 +237,7 @@ export function DestaqueDiario() {
   const pendente = !estado ? null : !estado.prologo ? "O Prólogo de hoje te espera." : !estado.epilogo ? "Falta o Epílogo de hoje." : "Prólogo e Epílogo feitos hoje.";
   return (
     <Anuncio
-      tom="noite"
+      tom="claro"
       icone={<Lock size={20} />}
       rotulo="Meu diário"
       titulo="Um lugar onde só a sua consciência entra"

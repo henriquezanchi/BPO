@@ -908,3 +908,11 @@ automático da Cademi aceita destino).
   `ContactChangeLog` não guarda motivo da recusa; o aluno é orientado a falar com a secretaria.
 - Textos de 9, 10 e 10,5 px subiram para 11 px em `components/member` (aluno, voluntário, instrutor). Comprovante,
   declaração e carteirinha ficaram como estavam (documentos). Agenda e grade de meses conferidas a 360 px, sem estouro.
+
+## 10/11/2026 — Página inicial com um sistema só de botões e cores
+
+Pedido do usuário ("botões de vários tamanhos e cores"): cartão da contribuição branco, com a situação numa etiqueta
+(em atraso / sem desconto / a vencer / em dia) e um único botão principal verde (`BOTAO_PRIMARIO`; secundário em
+contorno, `BOTAO_SECUNDARIO`); destaques do carrossel todos no tom claro (Play e Diário inclusive); avaliação aberta como
+linha de lista com etiqueta "Aberta" em "Para você"; botões do cartão de boas-vindas com cantos `rounded-xl` e 44 px.
+Vermelho e dourado só em etiquetas pequenas; o verde do WhatsApp continua no botão flutuante.
