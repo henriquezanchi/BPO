@@ -40,7 +40,7 @@ export function GruposEstudoPanel({ grupos }: { grupos: GrupoDeEstudo[] }) {
         <BookOpenText size={18} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold tracking-wide text-na-gold-dark uppercase dark:text-amber-300">{g.tipo}</p>
+        <p className="text-[11px] font-bold tracking-wide text-na-gold-dark uppercase dark:text-amber-300">{g.tipo}</p>
         <p className="text-[14px] leading-snug font-bold text-gray-900 dark:text-gray-100">{g.nome}</p>
         {(g.modalidade || g.local) && (
           <p className="mt-0.5 flex items-center gap-1 text-[12px] text-gray-600 dark:text-gray-400">

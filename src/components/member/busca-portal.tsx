@@ -76,7 +76,7 @@ export function BuscaPortal({ destinos }: { destinos: Record<string, DestinoBusc
           ))}
           {sugeridos.length > 0 && (
             <>
-              <p className="flex items-center gap-1.5 border-t border-gray-100 px-3.5 pt-2.5 pb-1 text-[10px] font-bold tracking-wide text-na-gold-dark uppercase first:border-t-0 dark:border-gray-800 dark:text-amber-300">
+              <p className="flex items-center gap-1.5 border-t border-gray-100 px-3.5 pt-2.5 pb-1 text-[11px] font-bold tracking-wide text-na-gold-dark uppercase first:border-t-0 dark:border-gray-800 dark:text-amber-300">
                 <Sparkles size={11} /> Talvez seja isto
               </p>
               {sugeridos.map((f) => (

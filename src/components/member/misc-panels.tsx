@@ -101,7 +101,7 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
           )}
 
           <div className="flex flex-col gap-2 rounded-2xl border border-na-green/30 bg-na-green-light/30 p-3.5 dark:border-emerald-900/60 dark:bg-emerald-950/20">
-            <p className="text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Próximo encontro</p>
+            <p className="text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Próximo encontro</p>
             {g.proximo ? (
               <>
                 <p className={`flex items-center gap-1.5 text-[14px] font-semibold ${g.proximo.cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>
@@ -110,7 +110,7 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
                 {g.proximo.cancelado && <p className="text-[12px] font-semibold text-na-danger-dark dark:text-red-300">Cancelado{g.proximo.motivo ? `: ${g.proximo.motivo}` : ""}</p>}
                 {g.proximo.cancelado && (
                   <div className="mt-1 flex flex-col gap-1 border-t border-na-green/20 pt-2 dark:border-emerald-900/50">
-                    <p className="text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Encontro seguinte</p>
+                    <p className="text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Encontro seguinte</p>
                     {g.seguinte ? (
                       <>
                         <p className="flex items-center gap-1.5 text-[14px] font-semibold text-gray-900 dark:text-gray-100">
@@ -149,7 +149,7 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
                   <BookOpenText size={17} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[10px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Texto de trabalho · nº {g.leitura.numero}</span>
+                  <span className="block text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Texto de trabalho · nº {g.leitura.numero}</span>
                   <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{g.leitura.titulo}</span>
                 </span>
                 <ChevronRight size={16} className="shrink-0 text-gray-400" />

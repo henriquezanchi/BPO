@@ -94,7 +94,7 @@ export function PainelSugestoes({ sugestoes, variasFiliais }: { sugestoes: Suges
                   {s.contexto && <span className="mt-0.5 block text-[11px] font-medium text-na-green-dark dark:text-emerald-400">{s.contexto}</span>}
                   <span className={`mt-1 block text-[13px] text-gray-800 dark:text-gray-200 ${aberta === s.id ? "whitespace-pre-line" : "line-clamp-2"}`}>{s.texto}</span>
                 </span>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${COR[s.status]}`}>{ROTULO_STATUS[s.status]}</span>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${COR[s.status]}`}>{ROTULO_STATUS[s.status]}</span>
                 <ChevronDown size={16} className={`mt-0.5 shrink-0 text-gray-400 transition ${aberta === s.id ? "rotate-180" : ""}`} />
               </button>
               {aberta === s.id && <Detalhe s={s} />}

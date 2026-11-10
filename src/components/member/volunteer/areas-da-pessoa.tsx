@@ -24,7 +24,7 @@ export function AreasDaPessoa({ pessoaId, porSecretaria, porFuncao, porDirecao =
 
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5" aria-label="Áreas de trabalho">
-      <span className="text-[10px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">Áreas</span>
+      <span className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">Áreas</span>
       {AREAS.map(([area, rotulo]) => {
         const fixa = porDirecao || porFuncao.includes(area);
         const ligada = fixa || ativas.has(area);

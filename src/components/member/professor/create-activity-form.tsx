@@ -437,7 +437,7 @@ export function SeletorTemas({
               return (
                 <div key={t.titulo}>
                   {novoGrupo && (
-                    <p className="px-2 pt-2 pb-1 text-[10px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                    <p className="px-2 pt-2 pb-1 text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                       {t.grupo}
                     </p>
                   )}

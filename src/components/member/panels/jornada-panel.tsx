@@ -179,7 +179,7 @@ export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, level
                         </span>
                         <p className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{e.titulo}</p>
                         {"subtitulo" in e && e.subtitulo && <p className="text-[11px] text-gray-500 dark:text-gray-300">{e.subtitulo}</p>}
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400">{formatDateBR(e.data)}</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">{formatDateBR(e.data)}</p>
                       </li>
                     ))}
                   </ul>

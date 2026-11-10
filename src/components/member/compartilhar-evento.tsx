@@ -391,7 +391,7 @@ export function CompartilharEvento({ evento }: { evento: EventoCompartilhavel })
                     alt={`Arte para ${f === "story" ? "story" : "feed"} do Instagram`}
                     className={`rounded-md border border-gray-200 shadow-sm dark:border-gray-700 ${f === "story" ? "h-28 w-auto" : "h-[78px] w-auto"}`}
                   />
-                  <span className="flex items-center gap-1 text-[10px] font-semibold text-gray-500 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200">
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200">
                     <Download size={10} /> {f === "story" ? "Story" : "Feed"}
                   </span>
                 </button>

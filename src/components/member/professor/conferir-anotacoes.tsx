@@ -35,7 +35,7 @@ export function ConferirAnotacoes({ anotacoes }: { anotacoes: Anotacao[] }) {
               <summary className="cursor-pointer p-3">
                 <span className="font-semibold">{a.tema}</span>
                 <span className="text-gray-500 dark:text-gray-400"> · {a.materiaNome ?? a.materiaSigla} · {a.aluno}</span>
-                <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${a.revisao === "correta" ? "bg-na-success-light text-na-success-dark" : a.revisao === "incorreta" ? "bg-na-danger-light text-na-danger-dark" : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>
+                <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${a.revisao === "correta" ? "bg-na-success-light text-na-success-dark" : a.revisao === "incorreta" ? "bg-na-danger-light text-na-danger-dark" : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>
                   {a.revisao === "correta" ? "Correta" : a.revisao === "incorreta" ? "Incorreta" : "A conferir"}
                 </span>
               </summary>

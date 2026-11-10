@@ -676,7 +676,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
                   </span>
                   <span>
                     <span className="block text-xs font-semibold text-gray-900 dark:text-gray-100">{t.tiles.contribuicao.title}</span>
-                    <span className="block text-[10px] text-gray-500 dark:text-gray-400">{t.tiles.contribuicao.subtitle}</span>
+                    <span className="block text-[11px] text-gray-500 dark:text-gray-400">{t.tiles.contribuicao.subtitle}</span>
                   </span>
                 </span>
               </button>

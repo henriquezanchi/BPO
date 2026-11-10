@@ -151,7 +151,7 @@ function Cartao({ op, grupos, editar }: { op: Oportunidade; grupos: (Opcao & { t
     <article className={`rounded-2xl border p-4 ${op.aberta ? "border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900" : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/50"}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-x-2 text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
+          <p className="flex flex-wrap items-center gap-x-2 text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
             {op.area}
             <span className="flex items-center gap-1 font-semibold tracking-normal text-gray-500 normal-case dark:text-gray-400">
               {op.tipo === "pontual" ? <CalendarClock size={11} /> : <Clock size={11} />}

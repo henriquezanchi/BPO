@@ -126,16 +126,16 @@ export function CartaoEvento({
       <div
         className={`flex w-14 shrink-0 flex-col items-center justify-center self-start rounded-xl py-2 leading-tight ${passado ? "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400" : "bg-na-green text-white"}`}
       >
-        <span className="text-[10px] font-semibold uppercase opacity-90">
+        <span className="text-[11px] font-semibold uppercase opacity-90">
           {d.semana}
         </span>
         <span className="text-xl font-black">{d.dia}</span>
-        <span className="text-[10px] font-semibold uppercase opacity-90">
+        <span className="text-[11px] font-semibold uppercase opacity-90">
           {d.mes}
         </span>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <p className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-na-gold-dark uppercase dark:text-amber-300">
+        <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-na-gold-dark uppercase dark:text-amber-300">
           <Icone size={12} className="shrink-0" /> {cat.texto}
         </p>
         <h3

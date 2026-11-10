@@ -900,3 +900,11 @@ Avaliação Impeccable (`.impeccable/critique/`) e pedido do usuário "rode tudo
 - X das janelas com 44 px; foco visível global na cor da marca; seleção de texto em dourado.
 Pendente: anúncio da Acrópole Play levar à série (falta o endereço de cada série na área de membros e saber se o link
 automático da Cademi aceita destino).
+
+## 10/11/2026 — Pedidos de correção visíveis ao aluno; texto mínimo de 11 px
+
+- "Meus dados" mostra os pedidos de correção dos últimos 120 dias com a situação (em análise, aprovado, não aprovado),
+  por `meusPedidosDeCorrecao` (member-actions) e `lib/pedidos-correcao.ts` (testes em `tests/pedidos-correcao.test.ts`).
+  `ContactChangeLog` não guarda motivo da recusa; o aluno é orientado a falar com a secretaria.
+- Textos de 9, 10 e 10,5 px subiram para 11 px em `components/member` (aluno, voluntário, instrutor). Comprovante,
+  declaração e carteirinha ficaram como estavam (documentos). Agenda e grade de meses conferidas a 360 px, sem estouro.

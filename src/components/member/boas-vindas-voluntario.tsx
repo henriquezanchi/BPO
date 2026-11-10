@@ -68,7 +68,7 @@ export function BoasVindasVoluntario({ memberId, nome, dados }: { memberId: stri
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-na-gold">
             {passo === 2 ? <FileSignature size={24} /> : <HandHeart size={24} />}
           </span>
-          <p className="mt-4 text-[10px] font-bold tracking-wide text-na-gold uppercase">Portal do Voluntário · {passo + 1} de 3</p>
+          <p className="mt-4 text-[11px] font-bold tracking-wide text-na-gold uppercase">Portal do Voluntário · {passo + 1} de 3</p>
           <h2 id="boas-vindas-titulo" className="mt-1 text-[22px] leading-tight font-black text-balance">
             {passo === 0 ? `Obrigado, ${nome}!` : passo === 1 ? "O que você pode fazer aqui" : "Antes de começar"}
           </h2>

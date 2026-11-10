@@ -166,7 +166,7 @@ export function ContributionStatusPanel({
         {/* Mais enxuto (pedido do usuário 2026-10-25): sem repetir "nenhum atraso" nem "sem juros"; a data fica à direita do título. */}
         <div className="flex items-baseline justify-between gap-3">
           <h3 className="font-bold text-na-green-dark dark:text-na-green-light">Suas contribuições</h3>
-          {latestSync && <span className="shrink-0 text-[10px] text-gray-500 dark:text-gray-400">Atualizado em {latestSync.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</span>}
+          {latestSync && <span className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400">Atualizado em {latestSync.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</span>}
         </div>
         {overdue.length > 0 && <p>{`${overdue.length} ${overdue.length > 1 ? "meses" : "mês"} em atraso.`}</p>}
         {!monthlyStatus.length && <p>Ainda não temos a situação da escola.</p>}

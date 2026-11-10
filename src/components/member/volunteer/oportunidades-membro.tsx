@@ -42,7 +42,7 @@ function Cartao({ op, aoMudar }: { op: OportunidadeDoMembro; aoMudar: () => void
 
   return (
     <li className="rounded-2xl border border-gray-200 p-3.5 dark:border-gray-800">
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
         <span>{op.area}</span>
         <span className="flex items-center gap-1 font-semibold tracking-normal text-gray-500 normal-case dark:text-gray-400">
           {op.tipo === "pontual" ? <CalendarClock size={11} /> : <Clock size={11} />}

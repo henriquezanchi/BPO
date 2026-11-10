@@ -238,7 +238,7 @@ export function CaixaSugestoes({ inicial, minhas, opcoes }: { inicial: Categoria
                   </label>
                   {subAtual?.guia && <p className="text-[12px] text-gray-600 dark:text-gray-300">{subAtual.guia}</p>}
                   <textarea id="sug-texto" value={texto} onChange={(e) => setTexto(e.target.value)} rows={6} maxLength={TEXTO_MAX} placeholder="Escreva aqui" className={`${CAMPO} resize-y`} />
-                  <span className="self-end text-[10px] text-gray-400">{texto.trim().length < TEXTO_MIN ? `mínimo de ${TEXTO_MIN} caracteres` : `${texto.length}/${TEXTO_MAX}`}</span>
+                  <span className="self-end text-[11px] text-gray-400">{texto.trim().length < TEXTO_MIN ? `mínimo de ${TEXTO_MIN} caracteres` : `${texto.length}/${TEXTO_MAX}`}</span>
                 </div>
               )}
 
@@ -287,14 +287,14 @@ export function CaixaSugestoes({ inicial, minhas, opcoes }: { inicial: Categoria
                   {rotuloCompleto(s.categoria, s.subcategoria)} · {dataCurta(s.criadaEm)}
                   {s.anonima ? " · sem nome" : ""}
                 </span>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${COR_STATUS[s.status]}`}>{ROTULO_STATUS_AUTOR[s.status]}</span>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${COR_STATUS[s.status]}`}>{ROTULO_STATUS_AUTOR[s.status]}</span>
               </div>
               {s.titulo && <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{s.titulo}</p>}
               {s.contexto && <p className="text-[11px] text-gray-500 dark:text-gray-400">{s.contexto}</p>}
               <p className="text-[13px] whitespace-pre-line text-gray-800 dark:text-gray-200">{s.texto}</p>
               {s.resposta && (
                 <div className="rounded-lg bg-na-green-light/60 p-2.5 text-[12px] text-gray-800 dark:bg-emerald-950/40 dark:text-gray-200">
-                  <span className="mb-0.5 block text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
+                  <span className="mb-0.5 block text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
                     Resposta{s.respondidaEm ? ` · ${dataCurta(s.respondidaEm)}` : ""}
                   </span>
                   <span className="whitespace-pre-line">{s.resposta}</span>

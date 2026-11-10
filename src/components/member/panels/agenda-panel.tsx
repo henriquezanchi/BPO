@@ -581,7 +581,7 @@ function CartaoAtendimento({ item }: { item: Extract<AgendaItem, { kind: "atendi
   const MODALIDADE: Record<string, string> = { presencial: "Presencial", online: "Online" };
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-na-green/40 bg-white p-3 dark:bg-gray-900">
-      <p className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
+      <p className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
         <MessagesSquare size={11} /> Conversa individual
       </p>
       <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">{item.papel === "aluno" ? `Com ${item.comQuem}` : `Com ${item.comQuem} (aluno)`}</p>
@@ -731,13 +731,13 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
             <span className="my-0.5 text-base font-black">{partes.dia}</span>
             <span className="text-[8px] font-bold uppercase opacity-85">{MESES_CURTOS[partes.mes]}</span>
           </span>
-          <span className={`line-clamp-2 min-w-0 flex-1 text-[9px] leading-tight font-bold tracking-wide uppercase ${cor.rotulo}`}>
+          <span className={`line-clamp-2 min-w-0 flex-1 text-[11px] leading-tight font-bold tracking-wide uppercase ${cor.rotulo}`}>
             <Icone size={10} className="mr-0.5 inline align-[-1px]" />
             {tipo}
           </span>
         </span>
         <span className={`line-clamp-2 text-[12.5px] leading-snug font-semibold ${cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</span>
-        <span className="mt-auto flex flex-wrap items-center gap-x-1 text-[10.5px] text-gray-500 dark:text-gray-400">
+        <span className="mt-auto flex flex-wrap items-center gap-x-1 text-[11px] text-gray-500 dark:text-gray-400">
           {!semHora && (
             <span className="flex items-center gap-1">
               <CalendarClock size={10} className="shrink-0" />
@@ -910,7 +910,7 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
             .filter((g) => g.lista.length)
             .map((g) => (
               <div key={g.chave} className="flex flex-col gap-1.5">
-                {daEscola.length > 0 && outros.length > 0 && <h4 className="text-[10px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">{g.titulo}</h4>}
+                {daEscola.length > 0 && outros.length > 0 && <h4 className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">{g.titulo}</h4>}
                 <ul className="grid grid-cols-2 gap-2">
                   {g.lista.map((item) => (
                     <LinhaProximo
@@ -963,7 +963,7 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-gray-400 dark:text-gray-500">
+        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-gray-400 dark:text-gray-500">
           {DIAS_SEMANA.map((d, i) => (
             <span key={i}>{d}</span>
           ))}

@@ -94,7 +94,7 @@ export function DestaqueDoDia({ frase, acropolePlay, eventos, abrirAgenda }: { f
               <Clapperboard size={22} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[10px] font-bold tracking-wide text-na-gold uppercase">Acrópole Play</span>
+              <span className="block text-[11px] font-bold tracking-wide text-na-gold uppercase">Acrópole Play</span>
               <span className="block text-[14px] leading-snug font-bold">Filosofia em vídeos e séries, quando quiser.</span>
               <span className="mt-0.5 block text-[11px] text-white/80">Assistir agora →</span>
             </span>
@@ -103,7 +103,7 @@ export function DestaqueDoDia({ frase, acropolePlay, eventos, abrirAgenda }: { f
       </div>
       {eventos.length > 0 && (
         <button onClick={abrirAgenda} className="flex flex-col gap-1.5 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:border-na-gold dark:border-gray-800 dark:bg-gray-900">
-          <span className="flex items-center justify-between text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
+          <span className="flex items-center justify-between text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
             Próximos eventos <ChevronRight size={14} className="text-gray-400" />
           </span>
           {eventos.map((e) => (
@@ -124,7 +124,7 @@ export function AtalhoFavorito({ icone, titulo, subtitulo, onClick }: { icone: R
     <button onClick={onClick} className="flex items-center gap-3 rounded-2xl border border-na-green/30 bg-na-green-light/40 p-4 text-left transition hover:border-na-green dark:border-emerald-900 dark:bg-emerald-950/20">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-na-green text-white">{icone}</span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[10px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Acesso rápido</span>
+        <span className="block text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Acesso rápido</span>
         <span className="block text-[14px] font-bold text-gray-900 dark:text-gray-100">{titulo}</span>
         <span className="block truncate text-[11px] text-gray-500 dark:text-gray-400">{subtitulo}</span>
       </span>

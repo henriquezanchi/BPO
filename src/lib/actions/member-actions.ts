@@ -1,5 +1,6 @@
 "use server";
 
+import { camposDoPedido, situacaoDoPedido } from "@/lib/pedidos-correcao";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { OVERDUE_STATUSES } from "@/lib/member-data";
@@ -112,6 +113,23 @@ export async function solicitarAlteracaoContato(memberId: string, changes: Sensi
 }
 
 /** Pra UI mostrar "você já tem uma solicitação em aberto" e não deixar mandar duplicada. */
+/** Pedidos de correção do cadastro dos últimos 120 dias, com a situação (10/11/2026), para "Meus dados". */
+export async function meusPedidosDeCorrecao(memberId: string) {
+  await requireAuthenticatedMember(memberId);
+  const desde = new Date(Date.now() - 120 * 864e5);
+  const logs = await db.contactChangeLog.findMany({
+    where: { memberId, createdAt: { gte: desde }, status: { in: ["pendente", "aprovado", "rejeitado"] } },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+    select: { id: true, newValues: true, status: true, createdAt: true, reviewedAt: true },
+  });
+  return logs.flatMap((l) => {
+    const situacao = situacaoDoPedido(l.status);
+    const campos = camposDoPedido(l.newValues);
+    return situacao && campos.length ? [{ id: l.id, campos, situacao, criadoEm: l.createdAt.toISOString(), revisadoEm: l.reviewedAt?.toISOString() ?? null }] : [];
+  });
+}
+
 export async function getSolicitacaoContatoPendente(memberId: string) {
   await requireAuthenticatedMember(memberId);
   const pendente = await db.contactChangeLog.findFirst({

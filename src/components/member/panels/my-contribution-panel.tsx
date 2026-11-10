@@ -178,12 +178,12 @@ export function MyContributionPanel({
                       {item.label}
                     </span>
                     {item.pendingSync && (
-                      <span className="flex items-center gap-1 text-[10px] font-medium text-na-warning-dark dark:text-amber-400">
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-na-warning-dark dark:text-amber-400">
                         <Clock size={10} /> Aguardando confirmação no Mercúrio
                       </span>
                     )}
                     {remocaoPendente && (
-                      <span className="flex items-center gap-1 text-[10px] font-medium text-na-warning-dark dark:text-amber-400">
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-na-warning-dark dark:text-amber-400">
                         <Clock size={10} /> Pedido aguardando aprovação da Economia
                       </span>
                     )}
@@ -265,7 +265,7 @@ export function MyContributionPanel({
         )}
       </div>
 
-      <p className="mb-2 flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
+      <p className="mb-2 flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
         <Lock size={10} /> Itens com cadeado vieram do Mercúrio: aumentar vale na hora; diminuir ou remover vai para aprovação da Economia.
       </p>
 
@@ -331,7 +331,7 @@ export function MyContributionPanel({
                   Incluir
                 </button>
               </div>
-              <p className="text-[10px] text-gray-400">
+              <p className="text-[11px] text-gray-400">
                 Qualquer item novo é incluído na hora — só a remoção de item lançado pela secretaria passa pela Economia.
               </p>
             </div>

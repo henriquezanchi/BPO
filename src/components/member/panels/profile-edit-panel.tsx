@@ -1,7 +1,8 @@
 "use client";
 
 import { removerAvatar, uploadAvatar } from "@/lib/actions/avatar-actions";
-import { getSolicitacaoContatoPendente, solicitarAlteracaoContato, updateMemberAddress } from "@/lib/actions/member-actions";
+import { getSolicitacaoContatoPendente, meusPedidosDeCorrecao, solicitarAlteracaoContato, updateMemberAddress } from "@/lib/actions/member-actions";
+import { ROTULO_SITUACAO_PEDIDO, type SituacaoPedido } from "@/lib/pedidos-correcao";
 import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Loader2, Pencil, Trash2, Upload, UserRound } from "lucide-react";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import Link from "next/link";
@@ -27,6 +28,46 @@ const INPUT_CLASS =
   "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100";
 const LABEL_CLASS = "text-[12px] font-semibold text-gray-800 dark:text-gray-300";
 const SECAO_CLASS = "mb-1.5 text-[12px] font-bold text-gray-900 dark:text-gray-100";
+
+const COR_PEDIDO: Record<SituacaoPedido, string> = {
+  em_analise: "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/40 dark:text-amber-300",
+  aprovado: "bg-na-success-light text-na-success-dark dark:bg-green-950/40 dark:text-green-300",
+  recusado: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+};
+
+/** Situação dos pedidos de correção (10/11/2026): o aluno vê o que pediu e se já foi conferido. */
+function MeusPedidos({ memberId }: { memberId: string }) {
+  const [pedidos, setPedidos] = useState<Awaited<ReturnType<typeof meusPedidosDeCorrecao>>>([]);
+  useEffect(() => {
+    meusPedidosDeCorrecao(memberId)
+      .then(setPedidos)
+      .catch(() => {});
+  }, [memberId]);
+  if (!pedidos.length) return null;
+  const data = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return (
+    <section aria-label="Meus pedidos de correção" className="mb-5">
+      <p className="mb-1.5 text-[12px] font-bold text-gray-900 dark:text-gray-100">Meus pedidos de correção</p>
+      <ul className="flex flex-col gap-1.5">
+        {pedidos.map((p) => (
+          <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
+            <span className="min-w-0">
+              <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{p.campos.join(", ")}</span>
+              <span className="block text-[12px] text-gray-500 dark:text-gray-400">
+                Pedido em {data(p.criadoEm)}
+                {p.revisadoEm ? ` · conferido em ${data(p.revisadoEm)}` : ""}
+              </span>
+            </span>
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${COR_PEDIDO[p.situacao]}`}>{ROTULO_SITUACAO_PEDIDO[p.situacao]}</span>
+          </li>
+        ))}
+      </ul>
+      {pedidos.some((p) => p.situacao === "recusado") && (
+        <p className="mt-1.5 text-[12px] text-gray-500 dark:text-gray-400">Se um pedido não foi aprovado, fale com a secretaria para saber o motivo.</p>
+      )}
+    </section>
+  );
+}
 
 /** Foto de perfil — pedido do usuário 2026-09-30: deixa o Portal mais pessoal e ajuda a diretoria a reconhecer quem é quem. */
 function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; avatarUrl: string | null }) {
@@ -82,7 +123,7 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
             <Trash2 size={11} /> Remover foto
           </button>
         )}
-        {erro && <span className="text-[10px] text-na-danger dark:text-red-400">{erro}</span>}
+        {erro && <span className="text-[11px] text-na-danger dark:text-red-400">{erro}</span>}
       </div>
     </div>
   );
@@ -372,6 +413,8 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       </div>
       </div>
       )}
+
+      <MeusPedidos memberId={memberId} />
 
       <Link
         href={`/portal/mais-dados?memberId=${memberId}`}

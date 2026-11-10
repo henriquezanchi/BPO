@@ -93,7 +93,7 @@ export function AcessosVoluntarioPanel({ pessoas, mostrarSugeridos }: { pessoas:
           <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
             <span className="truncate">{p.name}</span>
             {p.excecao && (
-              <span title="Voluntariado é para membros. Liberar alguém do N1 é uma exceção da Direção da filial." className="shrink-0 rounded-full bg-na-gold/15 px-1.5 py-0.5 text-[9px] font-bold text-na-gold-dark dark:text-amber-300">
+              <span title="Voluntariado é para membros. Liberar alguém do N1 é uma exceção da Direção da filial." className="shrink-0 rounded-full bg-na-gold/15 px-1.5 py-0.5 text-[11px] font-bold text-na-gold-dark dark:text-amber-300">
                 N1 · exceção
               </span>
             )}
