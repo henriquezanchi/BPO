@@ -945,3 +945,11 @@ com cartões brancos e ícone em destaque. Rótulos repetidos tirados.
 - Indicar um amigo (`compartilhar-convite.tsx`): WhatsApp no verde principal (`bg-na-green`, como o "Pagar agora"); "Compartilhar" só aparece onde o aparelho tem compartilhamento nativo (`useSyncExternalStore`, sem divergência servidor/aparelho). No computador o botão não fazia nada; lá fica só "Copiar convite" na linha toda.
 - Extrato do Café (`/portal/fortuna`): filtros de período com 40px de altura e o verde principal.
 - Verificação: tsc, eslint e testes. Sem migração.
+
+## 10/11/2026 — Botões do aluno num arquivo só (Claude)
+
+- Novo `src/components/ui/botoes.ts`: `BOTAO_PRINCIPAL` (verde, 44px, cantos xl), `BOTAO_CONTORNO`, `BOTAO_PEQUENO` (ações de linha, 36px), `BOTAO_TEXTO` (atalho verde sem caixa) e as versões `*_LARGO` (48px, largura toda) usadas na página inicial.
+- As telas que tinham a sua própria constante `BOTAO` passaram a importar dali (com alias, sem mexer no JSX): diário (`diario-cliente.tsx`), diário da FV (`diario-fv.tsx`), grupo (`grupo-painel.tsx`), leituras do GAF (`leituras-gaf.tsx`), anotações (`anotacoes-cliente.tsx`) e a página inicial (`member-portal-client.tsx`). Opções de "compartilhar evento" com 44px e cantos xl.
+- Telas de direção/admin (`director/*`) ficaram de fora de propósito: são de operação e mais densas.
+- Ao criar botão novo em tela do aluno, importar de `@/components/ui/botoes` em vez de escrever as classes.
+- Verificação: tsc, eslint, 233 testes. Sem migração.

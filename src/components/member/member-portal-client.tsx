@@ -1,5 +1,6 @@
 "use client";
 
+import { BOTAO_PRINCIPAL_LARGO as BOTAO_PRIMARIO, BOTAO_CONTORNO_LARGO as BOTAO_SECUNDARIO } from "@/components/ui/botoes";
 import { MinhasDeclaracoes } from "@/components/member/minhas-declaracoes";
 import { dataCivilDoCompromisso, fusoDoCompromisso } from "@/lib/data-evento";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -745,11 +746,6 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
 /** Botões do cartão de boas-vindas: mesmo tamanho, lado a lado. */
 const BOTAO_CARTAO =
   "flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3 text-[13px] font-semibold whitespace-nowrap text-white transition hover:bg-white/20";
-/** Um botão principal por tela (verde sólido) e o secundário em contorno; mesmos cantos e altura em todo o Portal. */
-const BOTAO_PRIMARIO =
-  "flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 text-[14px] font-semibold text-white transition hover:bg-na-green-dark";
-const BOTAO_SECUNDARIO =
-  "flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 text-[14px] font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800";
 
 /** Atalho principal da página inicial (só quatro). */
 function FeatureTile({
