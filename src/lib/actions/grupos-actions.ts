@@ -417,6 +417,38 @@ export async function entrarNoGrupoDeEstudo(grupoId: string) {
 }
 
 /** Coordenação do GAF responde a um pedido feito pelo Portal do Aluno (2026-10-25): aceitar inclui a pessoa. */
+/**
+ * Decide um pedido pela lista da aba GAF (10/11/2026: os pedidos "sem GAF escolhido" não tinham ação nenhuma). Aceitar
+ * coloca a pessoa no GAF do pedido ou, se ela não escolheu, no GAF indicado aqui. Pode quem administra a filial ou quem
+ * coordena o GAF. Aceito, some também o pedido sem GAF da mesma pessoa.
+ */
+export async function decidirPedidoGaf(pedidoId: string, aceitar: boolean, grupoEscolhido?: string) {
+  return executar(async () => {
+    const m = await eu();
+    const pedido = await db.gafRequest.findUnique({ where: { id: pedidoId }, select: { memberId: true, classGroupId: true, member: { select: { schoolId: true } } } });
+    if (!pedido) throw new GrupoErro("Pedido não encontrado (talvez já respondido).");
+    const grupoId = pedido.classGroupId ?? grupoEscolhido ?? null;
+    const adminFilial = await administra(m, pedido.member.schoolId);
+    const coordena = grupoId ? (await papelNoGrupo(m, grupoId)).podeGerir : false;
+    if (!adminFilial && !coordena) throw new GrupoErro("Você não pode responder este pedido.");
+    if (aceitar) {
+      if (!grupoId) throw new GrupoErro("Escolha o GAF.");
+      const g = await db.classGroup.findUnique({ where: { id: grupoId }, select: { tipo: true, schoolId: true, permiteAlunos: true, arquivadoEm: true } });
+      if (!g || g.tipo !== "GAF" || g.arquivadoEm || g.schoolId !== pedido.member.schoolId) throw new GrupoErro("GAF inválido para esta pessoa.");
+      const motivo = await candidatoElegivel("GAF", g.schoolId, g.permiteAlunos, pedido.memberId);
+      if (motivo) throw new GrupoErro(motivo);
+      await db.classMembership.createMany({ data: [{ classGroupId: grupoId, memberId: pedido.memberId, role: "aluno" }], skipDuplicates: true });
+      await db.gafRequest.deleteMany({ where: { memberId: pedido.memberId, OR: [{ classGroupId: grupoId }, { classGroupId: null }] } });
+      atualizar(grupoId);
+    } else {
+      await db.gafRequest.delete({ where: { id: pedidoId } });
+      if (grupoId) atualizar(grupoId);
+    }
+    revalidatePath("/grupos");
+    return {};
+  });
+}
+
 export async function responderPedidoGaf(pedidoId: string, aceitar: boolean) {
   return executar(async () => {
     const pedido = await db.gafRequest.findUnique({ where: { id: pedidoId }, select: { memberId: true, classGroupId: true } });

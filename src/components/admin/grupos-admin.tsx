@@ -2,7 +2,7 @@
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { FormGrupo } from "@/components/grupos/form-grupo";
-import { criarSecretariasSugeridas, getSugestoesSecretarias, type SugestaoComPessoas } from "@/lib/actions/grupos-actions";
+import { criarSecretariasSugeridas, decidirPedidoGaf, getSugestoesSecretarias, type SugestaoComPessoas } from "@/lib/actions/grupos-actions";
 import type { ResumoGrupo } from "@/lib/grupos-dados";
 import { MODALIDADES } from "@/lib/grupos-comum";
 import { SECRETARIAS_PADRAO } from "@/lib/secretarias";
@@ -179,7 +179,9 @@ export function SecretariasAdmin({ schoolId, grupos }: { schoolId: string; grupo
 }
 
 /** GAFs da filial: lista, criação e pedidos de participação feitos pelo Portal. */
-export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grupos: ResumoGrupo[]; pedidos: { nome: string; em: string; nivelMembro: boolean; gaf: string | null }[] }) {
+type PedidoGaf = { id: string; gafId: string | null; nome: string; em: string; nivelMembro: boolean; gaf: string | null };
+
+export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grupos: ResumoGrupo[]; pedidos: PedidoGaf[] }) {
   const router = useRouter();
   const [criando, setCriando] = useState(false);
   return (
@@ -205,24 +207,64 @@ export function GafAdmin({ schoolId, grupos, pedidos }: { schoolId: string; grup
       </div>
       <aside className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
         <CollapsibleSection title={<h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Pedidos para participar</h3>}>
-        <p className="mt-0.5 mb-3 text-[11px] text-gray-500 dark:text-gray-400">Feitos pelo Portal do Aluno. Os pedidos para um GAF aparecem também na página dele (aba Pessoas), para aceitar ou recusar; os sem GAF escolhido, adicione a pessoa no GAF.</p>
+        <p className="mt-0.5 mb-3 text-[11px] text-gray-500 dark:text-gray-400">Feitos pelo Portal do Aluno. Aceite ou recuse aqui; quando a pessoa não escolheu um GAF, escolha você antes de aceitar.</p>
         {pedidos.length === 0 ? (
           <p className="text-[12px] text-gray-500">Nenhum pedido.</p>
         ) : (
-          <ul className="flex flex-col gap-1.5">
+          <ul className="flex flex-col gap-2">
             {pedidos.map((p) => (
-              <li key={p.nome + p.em} className="flex items-center justify-between gap-2 text-[12px] text-gray-700 dark:text-gray-300">
-                <span className="truncate">
-                  {p.nome} {!p.nivelMembro && <span className="text-[10px] text-gray-400">aluno</span>}
-                  <span className="block text-[10px] text-gray-400">{p.gaf ?? "Sem GAF escolhido"}</span>
-                </span>
-                <span className="shrink-0 text-[11px] text-gray-400">{new Date(p.em).toLocaleDateString("pt-BR")}</span>
-              </li>
+              <PedidoGafLinha key={p.id} p={p} grupos={grupos} />
             ))}
           </ul>
         )}
       </CollapsibleSection></aside>
     </div>
+  );
+}
+
+/** Um pedido para participar do GAF, com Aceitar e Recusar (e a escolha do GAF quando a pessoa não escolheu). */
+function PedidoGafLinha({ p, grupos }: { p: PedidoGaf; grupos: ResumoGrupo[] }) {
+  const router = useRouter();
+  const [escolhido, setEscolhido] = useState(p.gafId ?? (grupos.length === 1 ? grupos[0].id : ""));
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+  function decidir(aceitar: boolean) {
+    setErro(null);
+    iniciar(async () => {
+      const r = await decidirPedidoGaf(p.id, aceitar, p.gafId ? undefined : escolhido || undefined);
+      if (!r.ok) return setErro(r.error);
+      router.refresh();
+    });
+  }
+  return (
+    <li className="flex flex-col gap-1.5 rounded-xl border border-gray-200 p-2.5 text-[12px] text-gray-700 dark:border-gray-700 dark:text-gray-300">
+      <div className="flex items-start justify-between gap-2">
+        <span className="min-w-0">
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{p.nome}</span> {!p.nivelMembro && <span className="text-[10px] text-gray-400">aluno</span>}
+          <span className="block text-[10px] text-gray-500 dark:text-gray-400">{p.gaf ? `Pediu o GAF ${p.gaf}` : "Sem GAF escolhido"}</span>
+        </span>
+        <span className="shrink-0 text-[11px] text-gray-400">{new Date(p.em).toLocaleDateString("pt-BR")}</span>
+      </div>
+      {!p.gafId && (
+        <select aria-label={`GAF para ${p.nome}`} value={escolhido} onChange={(e) => setEscolhido(e.target.value)} className="rounded-lg border border-gray-300 bg-white p-1.5 text-[12px] text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          <option value="">Escolha o GAF</option>
+          {grupos.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.nome}
+            </option>
+          ))}
+        </select>
+      )}
+      <div className="flex gap-1.5">
+        <button type="button" disabled={pendente || (!p.gafId && !escolhido)} onClick={() => decidir(true)} className="flex items-center gap-1 rounded-lg bg-na-green px-2.5 py-1 text-[12px] font-semibold text-white disabled:opacity-50">
+          {pendente && <Loader2 size={11} className="animate-spin" />} Aceitar
+        </button>
+        <button type="button" disabled={pendente} onClick={() => decidir(false)} className="rounded-lg px-2.5 py-1 text-[12px] font-semibold text-gray-600 disabled:opacity-50 dark:text-gray-300">
+          Recusar
+        </button>
+      </div>
+      {erro && <p className="text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
+    </li>
   );
 }
 

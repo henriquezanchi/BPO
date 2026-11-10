@@ -85,10 +85,10 @@ export default async function GruposPage(props: { searchParams: Promise<{ aba?: 
         where: { member: { schoolId: escola.id, mercurioAtivo: true } },
         orderBy: { createdAt: "desc" },
         take: 50,
-        select: { createdAt: true, classGroup: { select: { name: true } }, member: { select: { name: true, isMembroPrograma: true } } },
+        select: { id: true, createdAt: true, classGroupId: true, classGroup: { select: { name: true } }, member: { select: { name: true, isMembroPrograma: true } } },
       }),
     ]);
-    conteudo = <GafAdmin key={escola.id} schoolId={escola.id} grupos={grupos} pedidos={pedidos.map((p) => ({ nome: p.member.name, em: p.createdAt.toISOString(), nivelMembro: p.member.isMembroPrograma, gaf: p.classGroup?.name ?? null }))} />;
+    conteudo = <GafAdmin key={escola.id} schoolId={escola.id} grupos={grupos} pedidos={pedidos.map((p) => ({ id: p.id, gafId: p.classGroupId, nome: p.member.name, em: p.createdAt.toISOString(), nivelMembro: p.member.isMembroPrograma, gaf: p.classGroup?.name ?? null }))} />;
   } else if (aba === "estudos" && podeEstudo) {
     conteudo = <EstudosAdmin key={escolaEstudo} schoolId={escolaEstudo} grupos={await gruposDaFilial(escolaEstudo, ["ESTUDO", "LEITURA"])} />;
   } else if (aba === "pedagogos" && podePedagogos) {
