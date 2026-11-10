@@ -513,9 +513,6 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               </Link>
             )}
           </div>
-              </Link>
-            </div>
-          )}
         </div>
       </header>
 
