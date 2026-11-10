@@ -27,7 +27,6 @@ import {
   Leaf,
   LifeBuoy,
   LogOut,
-  ChevronRight,
   MessageCircle,
   UserRound,
   MessageSquareText,
@@ -64,6 +63,7 @@ import { AtalhoFavorito, DestaqueDoDia, registrarUso, useFavorita } from "./aces
 import { BoasVindasVoluntario } from "./boas-vindas-voluntario";
 import { BuscaPortal, type DestinoBusca } from "./busca-portal";
 import { quandoDaOportunidade } from "@/lib/oportunidades-comum";
+import { LinhaAtalho, ListaAtalhos } from "./lista-atalhos";
 import { Anuncio, DestaqueDiario, DestaquePlay, Vitrine, type Destaque } from "./vitrine";
 
 type ModalKey =
@@ -163,7 +163,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       {/* Coesão visual (pedido do usuário 10/11/2026): cartão branco como os demais; a situação vai numa etiqueta. */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">{t.tiles.economia.title}</p>
+          <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">Contribuição mensal</p>
           <p className="mt-0.5 text-[15px] leading-snug font-bold text-gray-900 dark:text-gray-100">
             {semDesconto
               ? t.home.mensagemSemDesconto(member.name.split(" ")[0])
@@ -687,17 +687,9 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
           {modal === "economia" && (
             <div className="flex flex-col gap-4">
               {cartaoContribuicao}
-              <button onClick={() => setModal("contribuicao")} className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 text-left transition hover:border-na-gold dark:border-gray-800 dark:bg-gray-900">
-                <span className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
-                    <Leaf size={16} />
-                  </span>
-                  <span>
-                    <span className="block text-xs font-semibold text-gray-900 dark:text-gray-100">{t.tiles.contribuicao.title}</span>
-                    <span className="block text-[11px] text-gray-500 dark:text-gray-400">{t.tiles.contribuicao.subtitle}</span>
-                  </span>
-                </span>
-              </button>
+              <ListaAtalhos titulo="O que compõe a contribuição">
+                <LinhaAtalho icon={<Leaf size={16} />} title={t.tiles.contribuicao.title} subtitle={t.tiles.contribuicao.subtitle} onClick={() => setModal("contribuicao")} />
+              </ListaAtalhos>
               {cartaoFortuna}
             </div>
           )}
@@ -783,47 +775,5 @@ function FeatureTile({
       <span className="text-[14px] leading-tight font-semibold text-gray-900 dark:text-gray-100">{title}</span>
       <span className="line-clamp-2 text-[12px] leading-snug text-gray-600 dark:text-gray-400">{subtitle}</span>
     </button>
-  );
-}
-
-/** Lista agrupada de atalhos secundários (Comunidade, Ajuda e escola). */
-function ListaAtalhos({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return (
-    <section aria-label={titulo} className="flex flex-col gap-1.5">
-      <h2 className="px-1 text-[12px] font-bold text-gray-600 dark:text-gray-300">{titulo}</h2>
-      <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">{children}</ul>
-    </section>
-  );
-}
-
-function LinhaAtalho({ icon, title, subtitle, onClick, href, externo, selo }: { icon: React.ReactNode; title: string; subtitle: string; onClick?: () => void; href?: string; externo?: boolean; selo?: string }) {
-  const corpo = (
-    <>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">{icon}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14px] font-semibold text-gray-900 dark:text-gray-100">{title}</span>
-        <span className="block truncate text-[12px] text-gray-600 dark:text-gray-400">{subtitle}</span>
-      </span>
-      {selo && <span className="shrink-0 rounded-full bg-na-gold/25 px-2 py-0.5 text-[11px] font-bold text-na-gold-dark dark:bg-amber-950/50 dark:text-amber-300">{selo}</span>}
-      <ChevronRight size={16} className="shrink-0 text-gray-400" aria-hidden />
-    </>
-  );
-  const classe = "flex min-h-14 w-full items-center gap-3 px-3.5 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800/60";
-  return (
-    <li>
-      {href && externo ? (
-        <a href={href} target="_blank" rel="noreferrer" className={classe}>
-          {corpo}
-        </a>
-      ) : href ? (
-        <Link href={href} className={classe}>
-          {corpo}
-        </Link>
-      ) : (
-        <button type="button" onClick={onClick} className={classe}>
-          {corpo}
-        </button>
-      )}
-    </li>
   );
 }

@@ -35,8 +35,8 @@ export function FortunaWalletCard({
   if (!atual) {
     return (
       <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <span className="mb-3 block text-[11px] font-semibold text-na-gold-dark">
-          <Coffee size={12} className="mr-1 inline" /> CARTEIRA DIGITAL FORTUNA
+        <span className="mb-3 block text-[12px] font-semibold text-gray-500 dark:text-gray-400">
+          <Coffee size={12} className="mr-1 inline" /> Carteira Fortuna (café)
         </span>
         {loading ? (
           <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
@@ -52,8 +52,8 @@ export function FortunaWalletCard({
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-na-gold-dark">
-          <Coffee size={12} className="mr-1 inline" /> CARTEIRA DIGITAL FORTUNA
+        <span className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">
+          <Coffee size={12} className="mr-1 inline" /> Carteira Fortuna (café)
         </span>
         {balances.length > 1 && (
           <select
@@ -80,16 +80,16 @@ export function FortunaWalletCard({
           </div>
           <div className="text-2xl font-bold text-na-green dark:text-emerald-400">{formatBRL(atual.amount)}</div>
           {/* Extrato do Café (09/11/2026): consumo e créditos pela API de integração do Fortuna. */}
-          <a href="/portal/fortuna" className="text-[11px] font-semibold text-na-green-dark underline-offset-2 hover:underline dark:text-emerald-400">
+          <a href="/portal/fortuna" className="inline-flex min-h-9 items-center text-[12px] font-semibold text-na-green-dark underline-offset-2 hover:underline dark:text-emerald-400">
             Ver consumo e extrato
           </a>
         </div>
         {onAdicionarCreditos && (
           <button
             onClick={onAdicionarCreditos}
-            className="flex items-center gap-1.5 rounded-xl bg-na-green px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-na-green-dark"
+            className="flex min-h-11 items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3.5 text-[13px] font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
           >
-            <Plus size={14} /> Adicionar Créditos
+            <Plus size={14} /> Adicionar créditos
           </button>
         )}
       </div>

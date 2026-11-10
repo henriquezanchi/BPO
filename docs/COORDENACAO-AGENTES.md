@@ -931,3 +931,10 @@ Bloco "Hoje" logo depois da busca: aulas, reuniões, conversas com o instrutor e
 no dia (pela data civil do compromisso, para servidor e aparelho concordarem), com hora e lugar; toque abre a Agenda.
 "Para você" (avaliação aberta) subiu junto, antes do carrossel. O extrato do Fortuna já existia em `/portal/fortuna`,
 ligado pelo cartão do saldo.
+
+## 10/11/2026 — Janelas do aluno no mesmo padrão da página inicial
+
+`ListaAtalhos`/`LinhaAtalho` foram para `components/member/lista-atalhos.tsx` e passaram a servir também às janelas:
+Área de Estudos em duas listas (Meus estudos; Conteúdos da Nova Acrópole), "Minha Contribuição" como linha em
+Pagamentos, "Adicionar créditos" do Fortuna em contorno (o único verde sólido da janela é "Pagar agora"), Minha Jornada
+com cartões brancos e ícone em destaque. Rótulos repetidos tirados.

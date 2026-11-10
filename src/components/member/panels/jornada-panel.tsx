@@ -93,15 +93,19 @@ export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, level
   return (
     <div className="text-left">
       {(dataEntrada || turma) && (
-        <div className="mb-4 flex flex-col gap-1 rounded-xl border border-na-green/30 bg-na-green-light/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+        // Cartões brancos com o ícone em destaque, como no resto do Portal (coesão visual, 10/11/2026).
+        <div className="mb-3 flex flex-col gap-1 rounded-2xl border border-gray-200 bg-white p-3.5 dark:border-gray-800 dark:bg-gray-900">
           {dataEntrada && (
-            <p className="flex items-center gap-2 text-sm font-bold text-na-green-dark dark:text-emerald-300">
-              <DoorOpen size={18} className="shrink-0" /> Na Nova Acrópole há {tempoDeCasa(dataEntrada)}
+            <p className="flex items-center gap-2.5 text-[15px] font-bold text-gray-900 dark:text-gray-100">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-na-green-light text-na-green dark:bg-emerald-900/40 dark:text-emerald-400">
+                <DoorOpen size={17} />
+              </span>
+              Na Nova Acrópole há {tempoDeCasa(dataEntrada)}
             </p>
           )}
-          {dataEntrada && <p className="text-[11px] text-na-green-dark/80 dark:text-emerald-400/80">Desde {formatDateBR(dataEntrada)}</p>}
+          {dataEntrada && <p className="pl-[46px] text-[12px] text-gray-600 dark:text-gray-400">Desde {formatDateBR(dataEntrada)}</p>}
           {turma && (
-            <p className="mt-1 text-[12px] text-gray-700 dark:text-gray-300">
+            <p className="mt-1 pl-[46px] text-[12px] text-gray-700 dark:text-gray-300">
               Turma <span className="font-semibold">{turma.nome}</span>
               {turma.sala && <> · {turma.sala === "Online" ? "aulas online" : `sala ${turma.sala}`}</>}
               {turma.conclusao && <> · conclusão prevista para {MESES_EXTENSO[Number(turma.conclusao.slice(5, 7)) - 1]} de {turma.conclusao.slice(0, 4)}</>}
@@ -110,14 +114,15 @@ export function JornadaPanel({ dataEntrada, dataSegundoNivel, streakMeses, level
         </div>
       )}
       {streakMeses > 0 && (
-
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
-          <Flame size={24} className="shrink-0 text-na-warning" />
+        <div className="mb-4 flex items-center gap-2.5 rounded-2xl border border-gray-200 bg-white p-3.5 dark:border-gray-800 dark:bg-gray-900">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-na-gold/20 text-na-gold-dark dark:bg-amber-950/50 dark:text-amber-300">
+            <Flame size={17} />
+          </span>
           <div>
-            <p className="text-sm font-bold text-na-warning-dark dark:text-amber-300">
+            <p className="text-[15px] font-bold text-gray-900 dark:text-gray-100">
               {streakMeses} {streakMeses === 1 ? "mês" : "meses"} em dia
             </p>
-            <p className="text-[11px] text-na-warning-dark dark:text-amber-400">Continue assim!</p>
+            <p className="text-[12px] text-gray-600 dark:text-gray-400">Continue assim!</p>
           </div>
         </div>
       )}
