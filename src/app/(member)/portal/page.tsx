@@ -11,10 +11,11 @@ export default async function MemberPortalPage({ searchParams }: { searchParams:
   const params = await searchParams;
   const eventoId = typeof params.evento === "string" ? params.evento : undefined;
   // Avisos de voluntariado abrem o quadro direto (oportunidades-actions.ts).
-  const abrir = params.abrir === "voluntariado" ? "voluntariado" : undefined;
+  // "pagar" (10/11/2026): o lembrete de vencimento abre direto o pagamento do mês em aberto.
+  const abrir = params.abrir === "voluntariado" ? "voluntariado" : params.abrir === "pagar" ? "pagar" : undefined;
   const member = await getAuthenticatedMember();
   if (!member) {
-    const destino = eventoId ? `/portal?${new URLSearchParams({ evento: eventoId })}` : "/portal";
+    const destino = eventoId ? `/portal?${new URLSearchParams({ evento: eventoId })}` : abrir ? `/portal?${new URLSearchParams({ abrir })}` : "/portal";
     redirect(`/login?${new URLSearchParams({ next: destino })}`);
   }
   if (!member.mercurioAtivo) return <InactiveMemberNotice schoolWhatsapp={member.school.whatsapp} />;

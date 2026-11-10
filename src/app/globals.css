@@ -171,3 +171,9 @@ body {
 ::selection {
   background: color-mix(in srgb, var(--na-gold, #d4a017) 35%, transparent);
 }
+
+/* Letra maior (avaliação de design, 10/11/2026): o Portal usa tamanhos em px, então amplia a página inteira (inclusive
+   as janelas), escolhido pelo botão "A+" e guardado no aparelho. */
+html.texto-grande body {
+  zoom: 1.15;
+}

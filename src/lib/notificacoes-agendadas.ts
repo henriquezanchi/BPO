@@ -281,8 +281,8 @@ export async function avisosDeVencimento() {
     if (!(await reservar(`vencimento:${m.id}:${ano}-${String(mes).padStart(2, "0")}:${tipo}`))) return;
     const r = await enviarPush([m.id], {
       titulo: tipo === "d0" ? "Sua contribuição vence hoje" : `Contribuição de ${MESES[mes - 1]} vence dia ${DIA_VENCIMENTO}`,
-      corpo: "Pague pelo Portal com Pix em poucos segundos. Se já pagou, desconsidere.",
-      url: "/portal",
+      corpo: "Toque para pagar com Pix em poucos segundos. Se já pagou, desconsidere.",
+      url: "/portal?abrir=pagar",
       etiqueta: `vencimento-${ano}-${mes}`,
     });
     total += r.pessoas;

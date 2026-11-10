@@ -4,6 +4,7 @@ import { MinhasDeclaracoes } from "@/components/member/minhas-declaracoes";
 import { dataCivilDoCompromisso, fusoDoCompromisso } from "@/lib/data-evento";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { TamanhoTexto } from "@/components/ui/tamanho-texto";
 import { logout } from "@/lib/actions/auth-actions";
 import { getFortunaBalancesForMember } from "@/lib/actions/fortuna-member-actions";
 import { whatsappHref } from "@/lib/format";
@@ -106,13 +107,13 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
   return { vencimento: { dia: DIA_VENCIMENTO, mes }, diasRestantes, jaResolvidoEsseMes };
 }
 
-export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { dashboard: MemberDashboard; eventoId?: string; abrir?: "voluntariado"; boletim?: EdicaoAurora | null }) {
+export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { dashboard: MemberDashboard; eventoId?: string; abrir?: "voluntariado" | "pagar"; boletim?: EdicaoAurora | null }) {
   const { member, availableToAdd } = dashboard;
   // Eventos públicos do Ulisses lidos pelo navegador (ver lib/ulisses/navegador.ts).
   const agendaItems = useAgendaComUlisses(dashboard.agendaItems, member.school.ulissesFilialId, member.schoolId);
-  const [modal, setModal] = useState<ModalKey | null>(eventoId ? "agenda" : abrir && dashboard.voluntariadoVisivel ? abrir : null);
+  const [modal, setModal] = useState<ModalKey | null>(eventoId ? "agenda" : abrir === "pagar" ? "situacao" : abrir === "voluntariado" && dashboard.voluntariadoVisivel ? "voluntariado" : null);
   // "Pagar agora" abre o painel da situação direto no pagamento do mês em aberto.
-  const [pagarAgora, setPagarAgora] = useState(false);
+  const [pagarAgora, setPagarAgora] = useState(abrir === "pagar");
   const [fortunaBalances, setFortunaBalances] = useState(dashboard.fortunaBalances);
   const [fortunaCarregando, setFortunaCarregando] = useState(true);
   const [tourVisivel, setTourVisivel] = useState(!eventoId && !abrir && !member.tourCompletedAt);
@@ -435,8 +436,10 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
     <div className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
       {tourVisivel && <OnboardingTour memberId={member.id} onFechar={() => setTourVisivel(false)} />}
       {!tourVisivel && dashboard.boasVindasVoluntario && <BoasVindasVoluntario memberId={member.id} nome={member.name.split(" ")[0]} dados={dashboard.boasVindasVoluntario} />}
-      <header className="relative border-b border-gray-100 bg-white px-5 pt-6 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
-        <div className="absolute top-4 right-4 flex items-center gap-1">
+      <header className="relative border-b border-gray-100 bg-white px-5 pt-3 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
+        {/* Controles numa linha própria (10/11/2026): em posição absoluta, com o "A+", cobriam o logotipo no celular. */}
+        <div className="-mr-2 flex items-center justify-end gap-1">
+          <TamanhoTexto className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800" />
           <ThemeToggle className="flex h-11 w-11 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800" />
           <button
             onClick={() => logout()}
@@ -447,7 +450,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
             <LogOut size={16} />
           </button>
         </div>
-        <div className="mb-5 flex justify-center">
+        <div className="mb-5 -mt-2 flex justify-center">
           <Image src="/na-logo.png" alt={member.school.name} width={160} height={104} className="h-auto w-40 dark:brightness-0 dark:invert" />
         </div>
 

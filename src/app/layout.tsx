@@ -46,6 +46,7 @@ const THEME_INIT_SCRIPT = `
     var escolha = localStorage.getItem('na-theme');
     var sistema = window.matchMedia('(prefers-color-scheme: dark)');
     if (escolha ? escolha === 'dark' : sistema.matches) document.documentElement.classList.add('dark');
+    if (localStorage.getItem('na-texto') === 'grande') document.documentElement.classList.add('texto-grande');
     sistema.addEventListener('change', function (e) {
       if (!localStorage.getItem('na-theme')) document.documentElement.classList.toggle('dark', e.matches);
     });
