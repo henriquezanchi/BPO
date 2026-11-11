@@ -1,4 +1,5 @@
 import "server-only";
+import { motivosDeInteresse, type LeadParaQualificar } from "@/lib/aberturas/interessados-qualificados";
 import type { CanalEntrada } from "@/lib/mercurio-db/resumo-filial";
 
 import { experienciasDaRede } from "@/lib/aberturas/experiencias";
@@ -148,9 +149,11 @@ export async function getPainelAberturas(requestedSchoolId?: string) {
   const crm = cacheDb
     ? mapearCache(cacheDb.dados, cacheDb.sincronizadoEm)
     : { status: "pendente", leads: [], matriculas: [], baseAtualizadaEm: null };
+  const matriculadosCrm=new Set(crm.matriculas.map(m=>String(objeto(m).leadId??'')).filter(Boolean));
   for(const lead of crm.leads){
     const locais=aberturasDb.flatMap(a=>a.registros.filter(r=>r.tipo==='sinal'&&String(objeto(r.dados).leadId)===String(lead.id)).map(r=>({...objeto(r.dados),aberturaId:a.id,responsavel:r.autorId,registradoEm:r.createdAt.toISOString()})));
     const sinais=[...(Array.isArray(lead.sinais)?lead.sinais.map(objeto):[]),...locais];
+    lead.motivosInteresse=motivosDeInteresse(lead as LeadParaQualificar,sinais,matriculadosCrm.has(String(lead.id)));
     lead.avaliacoesPorAbertura=Object.fromEntries(aberturasDb.map(a=>[a.id,avaliarFatos(sinais,{id:a.id,diaSemana:a.diaSemana,inicioMinuto:a.inicioMinuto,primeiraAula:a.primeiraAula.toISOString()},undefined,{naoContatar:lead.naoContatar===true,atualizadoEm:lead.preferenciaContatoEm||null})]));
   }
   const config = configDb

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Abertura } from "./types";
 
-type Sinal = { tipo: string; valor: string | boolean; natureza: "declarado" | "observado"; rotulo: string };
+type Sinal = { tipo: string; valor: string | boolean; natureza: "declarado" | "observado"; rotulo: string; origem?: string };
 
 const INTERESSE: Sinal[] = [
   { tipo: "interesse_declarado", valor: "conhecer", natureza: "declarado", rotulo: "Quer conhecer" },
@@ -15,8 +15,10 @@ const INTERESSE: Sinal[] = [
   { tipo: "interesse_declarado", valor: "depois", natureza: "declarado", rotulo: "Prefere depois" },
   { tipo: "interesse_declarado", valor: "nao", natureza: "declarado", rotulo: "Sem interesse" },
 ];
+// "Perguntou no WhatsApp" é interesse declarado com origem WhatsApp (o motor de sinais não tem um tipo próprio).
+const WHATSAPP: Sinal = { tipo: "interesse_declarado", valor: "conhecer", natureza: "declarado", rotulo: "Perguntou no WhatsApp", origem: "WhatsApp" };
 const FATOS: Sinal[] = [
-  { tipo: "presenca_palestra", valor: true, natureza: "observado", rotulo: "Foi à palestra" },
+  { tipo: "presenca_palestra", valor: true, natureza: "observado", rotulo: "Foi à aula inaugural" },
   { tipo: "pedido_matricula", valor: true, natureza: "declarado", rotulo: "Pediu matrícula" },
   { tipo: "nao_contatar", valor: true, natureza: "declarado", rotulo: "Não quer contato" },
 ];
@@ -35,19 +37,22 @@ export function SituacaoInteressado({ schoolId, abertura, leadId }: { schoolId: 
   // Últimos sinais deste interessado nesta abertura (o painel recarrega depois de cada registro).
   const sinais = abertura.registros
     .filter((r) => r.tipo === "sinal" && String((r.dados as { leadId?: unknown } | null)?.leadId ?? "") === leadId)
-    .map((r) => ({ ...(r.dados as { tipo?: string; valor?: unknown; occurredAt?: string }), em: String((r as { createdAt?: unknown }).createdAt ?? "") }));
+    .map((r) => ({ ...(r.dados as { tipo?: string; valor?: unknown; occurredAt?: string; origem?: string }), em: String((r as { createdAt?: unknown }).createdAt ?? "") }));
   const ultimoInteresse = [...sinais].reverse().find((s) => s.tipo === "interesse_declarado");
   const fatos = new Set(sinais.filter((s) => s.valor === true).map((s) => s.tipo));
 
+  const perguntouNoWhatsapp = sinais.some((s) => s.tipo === "interesse_declarado" && /whats/i.test(String(s.origem ?? "")));
+  const chaveDe = (s: Sinal) => `${s.tipo}:${String(s.valor)}:${s.origem ?? ""}`;
+
   function registrar(s: Sinal) {
-    const chave = `${s.tipo}:${String(s.valor)}`;
+    const chave = chaveDe(s);
     setErro(null);
     setEnviando(chave);
     const f = new FormData();
     f.set("schoolId", schoolId);
     f.set("aberturaId", abertura.id);
     f.set("tipo", "sinal");
-    f.set("dados", JSON.stringify({ leadId, tipo: s.tipo, valor: s.valor, occurredAt: new Date().toISOString(), origem: "Portal", natureza: s.natureza }));
+    f.set("dados", JSON.stringify({ leadId, tipo: s.tipo, valor: s.valor, occurredAt: new Date().toISOString(), origem: s.origem ?? "Portal", natureza: s.natureza }));
     iniciar(async () => {
       const r = (await registrarAbertura(f)) as { ok: boolean; error?: string };
       setEnviando(null);
@@ -57,7 +62,7 @@ export function SituacaoInteressado({ schoolId, abertura, leadId }: { schoolId: 
   }
 
   const botao = (s: Sinal, marcado: boolean) => {
-    const chave = `${s.tipo}:${String(s.valor)}`;
+    const chave = chaveDe(s);
     return (
       <button
         key={chave}
@@ -65,7 +70,7 @@ export function SituacaoInteressado({ schoolId, abertura, leadId }: { schoolId: 
         disabled={!!enviando}
         onClick={() => registrar(s)}
         aria-pressed={marcado}
-        className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-semibold transition disabled:opacity-60 ${
+        className={`flex min-h-9 items-center gap-1 rounded-full border px-3 text-[12px] font-semibold transition disabled:opacity-60 ${
           marcado ? "border-na-green bg-na-green text-white" : "border-gray-300 text-gray-700 hover:border-na-green dark:border-gray-700 dark:text-gray-200"
         }`}
       >
@@ -91,6 +96,7 @@ export function SituacaoInteressado({ schoolId, abertura, leadId }: { schoolId: 
         {INTERESSE.map((s) => botao(s, ultimoInteresse?.valor === s.valor))}
       </div>
       <div className="flex flex-wrap gap-1.5">
+        {botao(WHATSAPP, perguntouNoWhatsapp)}
         {FATOS.map((s) => botao(s, fatos.has(s.tipo)))}
       </div>
       {erro && <p className="text-[12px] text-na-danger-dark dark:text-red-300">{erro}</p>}

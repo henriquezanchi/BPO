@@ -69,7 +69,8 @@ export type CalendarioItem = {
   [key: string]: unknown;
 };
 
-export type LeadCRM = JsonRecord & { id?: string; name?: string; nome?: string };
+/** motivosInteresse: por que a pessoa conta como interessada (vazio = só contato da base). Ver lib/aberturas/interessados-qualificados.ts. */
+export type LeadCRM = JsonRecord & { id?: string; name?: string; nome?: string; motivosInteresse?: string[] };
 
 export type PainelAberturas = {
   experienciasRede?: Array<{titulo:string;aberturas:number;escolas:number;interessados:number;matriculas:number;conversaoObservada:number;custoRegistradoPorMatriculaCentavos:number|null;sugestao:string;ressalva:string}>;
