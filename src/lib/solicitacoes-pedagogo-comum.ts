@@ -13,14 +13,18 @@ export const ehFormacao = (v: string): v is FormacaoPedagogo => FORMACOES_PEDAGO
 
 export const rotuloFormacao = (v: string) => FORMACOES_PEDAGOGO.find(([f]) => f === v)?.[1] ?? v;
 
-export type StatusSolicitacaoPedagogo = "pendente" | "incluida" | "recusada" | "cancelada";
+export type StatusSolicitacaoPedagogo = "pendente" | "autorizada" | "incluida" | "recusada" | "cancelada";
 
 export const ROTULO_STATUS: Record<StatusSolicitacaoPedagogo, string> = {
-  pendente: "Aguardando inclusão",
-  incluida: "Incluída no Mercúrio",
-  recusada: "Não incluída",
-  cancelada: "Cancelada",
+  pendente: "Aguardando autorização",
+  autorizada: "Autorizado · falta incluir no Mercúrio",
+  incluida: "Incluído no Mercúrio",
+  recusada: "Não autorizado",
+  cancelada: "Cancelado",
 };
+
+/** Máximo de pessoas num mesmo pedido. */
+export const PESSOAS_POR_PEDIDO = 20;
 
 export const MOTIVO_MIN = 10;
 export const MOTIVO_MAX = 1000;

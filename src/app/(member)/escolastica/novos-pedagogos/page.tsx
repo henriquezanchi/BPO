@@ -3,15 +3,16 @@ import { NovosPedagogos } from "@/components/escolastica/novos-pedagogos";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { acessoNovosPedagogos, candidatosAPedagogo, equipeQueAtende, listarSolicitacoesPedagogo, temAcessoNovosPedagogos } from "@/lib/solicitacoes-pedagogo";
+import { acessoNovosPedagogos, candidatosAPedagogo, equipeQueAtende, listarPedidosPedagogo, temAcessoNovosPedagogos } from "@/lib/solicitacoes-pedagogo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Novos pedagogos (pedido do usuário 11/11/2026): o Chefe e o Sub-Chefe pedem a inclusão de uma pessoa da filial como
- * pedagogo no Mercúrio; o responsável nacional pelos pedagogos (e quem ele indicar) faz a inclusão e marca o pedido. Regras em lib/solicitacoes-pedagogo.ts.
+ * Novos pedagogos (pedido do usuário 11/11/2026): o Chefe e o Sub-Chefe pedem a inclusão de uma ou mais pessoas da filial
+ * como pedagogos no Mercúrio; o responsável nacional (Giordano Bruno) autoriza, ou quem ele delegar. Regras em
+ * lib/solicitacoes-pedagogo.ts.
  */
 export default async function NovosPedagogosPage(props: { searchParams: Promise<{ filial?: string }> }) {
   const member = await getAuthenticatedMember();
@@ -19,16 +20,16 @@ export default async function NovosPedagogosPage(props: { searchParams: Promise<
   const acesso = await acessoNovosPedagogos(member);
   if (!temAcessoNovosPedagogos(acesso)) redirect("/escolastica");
 
-  // Quem atende vê todas as filiais; o formulário vale para a filial escolhida.
+  // Filiais em que a pessoa pede (o formulário vale para a escolhida); quem decide vê os pedidos de todas.
   const escolas = await db.school.findMany({ where: { id: { in: acesso.escolas } }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   const { filial } = await props.searchParams;
   const escola = escolas.find((e) => e.id === filial) ?? escolas.find((e) => e.id === member.schoolId) ?? escolas[0];
-  const todas = acesso.nacional ? (await db.school.findMany({ select: { id: true } })).map((s) => s.id) : acesso.escolas;
+  const todas = acesso.veTodas ? (await db.school.findMany({ select: { id: true } })).map((s) => s.id) : acesso.escolas;
 
-  const [solicitacoes, candidatos, equipe] = await Promise.all([
-    listarSolicitacoesPedagogo(todas),
+  const [pedidos, candidatos, equipe] = await Promise.all([
+    listarPedidosPedagogo(todas),
     escola ? candidatosAPedagogo(escola.id) : Promise.resolve([]),
-    equipeQueAtende(),
+    acesso.gereIndicados ? equipeQueAtende() : Promise.resolve(null),
   ]);
 
   return (
@@ -36,8 +37,8 @@ export default async function NovosPedagogosPage(props: { searchParams: Promise<
       <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
       <AbasEscolastica atual="novos-pedagogos" />
       <p className="max-w-3xl text-sm text-gray-500 dark:text-gray-400">
-        O Chefe e o Sub-Chefe da filial pedem aqui a inclusão de novos pedagogos no Mercúrio. O responsável nacional pelos pedagogos (ou quem ele indicar) faz a inclusão e marca o pedido; quando a
-        pessoa passa a aparecer como pedagogo na importação do Mercúrio, o pedido se fecha sozinho.
+        O Chefe e o Sub-Chefe da filial pedem aqui a inclusão de novos pedagogos no Mercúrio, uma ou várias pessoas por pedido. O responsável nacional pelos
+        pedagogos autoriza; quando a pessoa passa a aparecer como pedagogo na importação do Mercúrio, o pedido se fecha sozinho.
       </p>
       {escolas.length > 1 && (
         <nav className="-mt-2 flex flex-wrap gap-1.5" aria-label="Filial do pedido">
@@ -58,12 +59,12 @@ export default async function NovosPedagogosPage(props: { searchParams: Promise<
       <NovosPedagogos
         schoolId={escola?.id ?? member.schoolId}
         podePedir={!!escola}
-        nacional={acesso.nacional}
+        decide={acesso.nacional}
         candidatos={candidatos}
-        solicitacoes={solicitacoes}
+        pedidos={pedidos}
         escolasQuePede={acesso.escolas}
         variasFiliais={todas.length > 1}
-        equipe={equipe}
+        indicados={equipe?.indicados ?? []}
         gereIndicados={acesso.gereIndicados}
       />
     </ShellTrabalho>
