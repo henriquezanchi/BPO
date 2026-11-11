@@ -257,7 +257,7 @@ function InscricaoEvento({
         <img src={`data:image/png;base64,${inscricao.pixQrCodeBase64}`} alt="QR Code PIX" className="h-40 w-40 rounded-lg border border-gray-200" />
         <button
           onClick={handleCopiar}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 min-h-10 text-[13px] font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
         >
           {copiado ? <Check size={12} /> : <Copy size={12} />} {copiado ? "Copiado!" : "Copiar código PIX"}
         </button>
@@ -286,7 +286,7 @@ function InscricaoEvento({
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+          className="rounded-lg bg-na-green px-3 min-h-10 text-[13px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
         >
           {isPending ? "Gerando..." : "Gerar PIX"}
         </button>
@@ -299,7 +299,7 @@ function InscricaoEvento({
       <button
         onClick={handleClickInscrever}
         disabled={isPending}
-        className="rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
+        className="rounded-lg bg-na-green px-3 min-h-10 text-[13px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
       >
         {isPending ? <Loader2 size={12} className="animate-spin" /> : "Inscreva-se"}
       </button>
@@ -381,10 +381,10 @@ function CancelarInscricao({
     <div className="flex flex-col gap-1.5 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
       <p className="text-[11px] text-gray-700 dark:text-gray-300">{confirmacao}</p>
       <div className="flex gap-2">
-        <button type="button" onClick={confirmar} disabled={pendente} className="rounded-lg bg-na-danger px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60">
+        <button type="button" onClick={confirmar} disabled={pendente} className="rounded-lg bg-na-danger px-3 min-h-10 text-[13px] font-semibold text-white disabled:opacity-60">
           {pendente ? "Cancelando..." : "Sim, desistir"}
         </button>
-        <button type="button" onClick={() => setConfirmando(false)} disabled={pendente} className="rounded-lg px-3 py-1.5 text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+        <button type="button" onClick={() => setConfirmando(false)} disabled={pendente} className="rounded-lg px-3 min-h-10 text-[13px] font-semibold text-gray-600 dark:text-gray-300">
           Manter inscrição
         </button>
       </div>
@@ -418,7 +418,7 @@ function ListaDeEspera({ memberId, eventId, espera }: { memberId: string; eventI
         type="button"
         onClick={alternar}
         disabled={pendente}
-        className={`w-fit rounded-lg px-3 py-1.5 text-[11px] font-semibold disabled:opacity-60 ${naFila ? "text-gray-600 underline underline-offset-2 dark:text-gray-300" : "border border-na-green text-na-green-dark dark:border-emerald-700 dark:text-emerald-400"}`}
+        className={`w-fit rounded-lg px-3 min-h-10 text-[13px] font-semibold disabled:opacity-60 ${naFila ? "text-gray-600 underline underline-offset-2 dark:text-gray-300" : "border border-na-green text-na-green-dark dark:border-emerald-700 dark:text-emerald-400"}`}
       >
         {pendente ? <Loader2 size={12} className="animate-spin" /> : naFila ? "Sair da lista de espera" : "Entrar na lista de espera"}
       </button>
@@ -491,7 +491,7 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
             {[item.agora.valor, item.agora.prazo].filter(Boolean).join(" · ")}
           </p>
         )}
-        {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark">{item.source === "agora" ? (item.agora?.inscrito ? "Ver no Ágora" : "Inscrever-se no Ágora") : "Inscreva-se"}</a>}
+        {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center rounded-lg bg-na-green px-3 min-h-10 text-[13px] font-semibold text-white hover:bg-na-green-dark">{item.source === "agora" ? (item.agora?.inscrito ? "Ver no Ágora" : "Inscrever-se no Ágora") : "Inscreva-se"}</a>}
         {(() => { const publico = eventoCompartilhavel(item); return publico && <CompartilharEvento evento={publico} />; })()}
         {item.description && <p className="mt-1.5 whitespace-pre-line break-words text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
         {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{(item.availableSpots??0)===1?'1 vaga disponível':`${item.availableSpots??0} vagas disponíveis`} de {item.capacity}</p>}

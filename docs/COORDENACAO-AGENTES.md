@@ -953,3 +953,12 @@ com cartões brancos e ícone em destaque. Rótulos repetidos tirados.
 - Telas de direção/admin (`director/*`) ficaram de fora de propósito: são de operação e mais densas.
 - Ao criar botão novo em tela do aluno, importar de `@/components/ui/botoes` em vez de escrever as classes.
 - Verificação: tsc, eslint, 233 testes. Sem migração.
+
+## 10/11/2026 — Botões de ação pequenos demais (Claude)
+
+- Agenda (`agenda-panel.tsx`): "Inscreva-se", "Gerar PIX", "Inscrição no site", "Entrar na fila", "Cancelar inscrição" e "Voltar" tinham letra de 11px e ~28px de altura. Agora têm 40px (`min-h-10`) e 13px. A barra de abas da agenda não mudou.
+- Meus dados (`profile-edit-panel.tsx`): "Enviar solicitação", "Cancelar" e "Trocar foto" no mesmo tamanho.
+- Pergunta do topo (`nudge-card.tsx`) e "Quero participar" dos grupos de estudo (`grupos-estudo-panel.tsx`): idem.
+- Verde único: leitor da carteirinha, "Adicionar ao Google Agenda" e a página pública do convite usavam `bg-na-green-dark`; agora `bg-na-green` com o escuro só no hover, como os demais.
+- Edição por linha exata (script conferindo cada troca). tsc e 233 testes. Sem migração.
+- Ainda há botões escritos à mão em telas de professor, escala de pedagogos e voluntariado; ficam para quando alguém mexer nelas (usar `@/components/ui/botoes`).

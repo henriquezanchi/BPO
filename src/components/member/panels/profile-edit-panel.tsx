@@ -114,7 +114,7 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+        <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 min-h-10 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
           {isPending ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} {avatarUrl ? "Trocar foto" : "Adicionar foto"}
           <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={isPending} />
         </label>
@@ -187,7 +187,7 @@ function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; 
             <input id="contato-email" type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} className={INPUT_CLASS} />
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={handleSolicitar} disabled={isPending} className="rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60">
+            <button type="button" onClick={handleSolicitar} disabled={isPending} className="rounded-lg bg-na-green transition hover:bg-na-green-dark px-3 min-h-10 text-[13px] font-semibold text-white disabled:opacity-60">
               {isPending ? <Loader2 size={12} className="animate-spin" /> : "Enviar solicitação"}
             </button>
             <button
@@ -196,7 +196,7 @@ function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; 
                 setEditando(false);
                 setAviso(null);
               }}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-[11px] font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300"
+              className="rounded-lg border border-gray-300 px-3 min-h-10 text-[13px] font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300"
             >
               Cancelar
             </button>

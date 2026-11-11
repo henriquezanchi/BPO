@@ -12,7 +12,8 @@ import { useEffect, useState, useTransition } from "react";
  * (ex: membro já incluiu o item manualmente).
  */
 export function NudgeCard({ memberId }: { memberId: string }) {
-  const [nudge, setNudge] = useState<Awaited<ReturnType<typeof getNudgeAtivo>>>(null);
+  const [nudge, setNudge] =
+    useState<Awaited<ReturnType<typeof getNudgeAtivo>>>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -37,8 +38,12 @@ export function NudgeCard({ memberId }: { memberId: string }) {
           <HeartHandshake size={16} />
         </div>
         <div>
-          <h3 className="text-[13px] font-bold text-gray-900 dark:text-gray-100">{nudge.titulo}</h3>
-          <p className="text-[12px] text-gray-600 dark:text-gray-400">{nudge.descricao}</p>
+          <h3 className="text-[13px] font-bold text-gray-900 dark:text-gray-100">
+            {nudge.titulo}
+          </h3>
+          <p className="text-[12px] text-gray-600 dark:text-gray-400">
+            {nudge.descricao}
+          </p>
         </div>
       </div>
 
@@ -48,22 +53,28 @@ export function NudgeCard({ memberId }: { memberId: string }) {
             key={opcao.label}
             onClick={() => responder("sim", opcao.valor)}
             disabled={isPending}
-            className="rounded-lg bg-na-green px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
+            className="rounded-lg bg-na-green px-3 min-h-10 text-[13px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
           >
-            {isPending ? <Loader2 size={13} className="animate-spin" /> : nudge.opcoes.length === 1 ? "Sim" : opcao.label}
+            {isPending ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : nudge.opcoes.length === 1 ? (
+              "Sim"
+            ) : (
+              opcao.label
+            )}
           </button>
         ))}
         <button
           onClick={() => responder("depois")}
           disabled={isPending}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-[12px] font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="rounded-lg border border-gray-300 px-3 min-h-10 text-[13px] font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           Lembrar mês que vem
         </button>
         <button
           onClick={() => responder("nao")}
           disabled={isPending}
-          className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-gray-500 transition hover:bg-gray-100 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-800"
+          className="rounded-lg px-3 min-h-10 text-[13px] font-semibold text-gray-500 transition hover:bg-gray-100 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-800"
         >
           Não
         </button>
