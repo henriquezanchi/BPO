@@ -962,3 +962,12 @@ com cartões brancos e ícone em destaque. Rótulos repetidos tirados.
 - Verde único: leitor da carteirinha, "Adicionar ao Google Agenda" e a página pública do convite usavam `bg-na-green-dark`; agora `bg-na-green` com o escuro só no hover, como os demais.
 - Edição por linha exata (script conferindo cada troca). tsc e 233 testes. Sem migração.
 - Ainda há botões escritos à mão em telas de professor, escala de pedagogos e voluntariado; ficam para quando alguém mexer nelas (usar `@/components/ui/botoes`).
+
+## 11/11/2026 — Teste real de crédito no Fortuna pela API de integração (Claude, autorizado pelo usuário)
+
+- Pedido do usuário: "teste com um valor simbólico na minha conta de Barra do Garças, e depois remova o crédito".
+- Cliente Fortuna 2467 (matrícula 21596), filial 35 (Barra do Garças), saldo antes R$ 0,00.
+- `fortunaCreditarSaldo(2467, 35, 1, "teste-portal-2026-11-11-credito")` pela integração: HTTP 200, recibo 15009, saldo R$ 1,00. **A permissão de crédito da integração está liberada para BGA.**
+- Retirada: a integração só aceita valor positivo e não aceita "Estorno" (documentação do Fortuna). Foi feita pelo caminho antigo (login de gerente, `PUT /balance/with-receipt`, valor −1): recibo 15010, saldo final R$ 0,00. No extrato ficam os dois lançamentos (+1,00 e −1,00).
+- Consequência: estorno de crédito do café (ex.: recarga paga e devolvida no Asaas) só pelo login antigo ou pela equipe do Fortuna. Se for preciso automatizar, pedir ao Paulo um endpoint de estorno na integração.
+- Próximo passo (do usuário): ligação com o Asaas. Em BGA a subconta ainda recusa Pix ("conta precisa estar aprovada").
