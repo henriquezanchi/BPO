@@ -1,7 +1,6 @@
-import { AbasArea } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { TabelaInstrutores } from "@/components/atendimentos/tabela-instrutores";
-import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
+import { AbasEscolastica } from "@/components/escolastica/abas-escolastica";
 import { ehAdministradorNacional } from "@/lib/acesso-voluntario";
 import { numerosDosInstrutores } from "@/lib/atendimentos";
 import { getAuthenticatedMember } from "@/lib/auth";
@@ -43,7 +42,7 @@ export default async function AtendimentosGestaoPage(props: { searchParams: Prom
   return (
     <ShellTrabalho>
       <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
-      <AbasArea base="/escolastica" atual="atendimentos" abas={ABAS_ESCOLASTICA} />
+      <AbasEscolastica atual="atendimentos" />
       <p className="text-sm text-gray-500 dark:text-gray-400">
         Conversas individuais que os alunos marcam com os instrutores das suas turmas. Horários e ocupação contam as próximas 4 semanas; realizadas, faltas e cancelamentos, os últimos 30 dias. Dados do Portal.
       </p>

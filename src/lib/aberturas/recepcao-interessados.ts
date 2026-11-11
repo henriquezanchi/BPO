@@ -47,6 +47,14 @@ export function textoChegadaHoje(turma: string, nomes: string[], hora: string) {
   };
 }
 
+/** Toque no aviso abre a lista de interessados da abertura (11/11/2026); com uma pessoa só, já filtrada pelo nome. */
+export function linkInteressados(schoolId: string, aberturaId: string | null, lista: { nome: string }[]) {
+  const q = new URLSearchParams({ schoolId, secao: "interessados" });
+  if (aberturaId) q.set("abertura", aberturaId);
+  if (lista.length === 1 && lista[0].nome) q.set("busca", lista[0].nome);
+  return `/voluntario/aberturas?${q}`;
+}
+
 async function reservar(chave: string) {
   try {
     await db.pushEnviado.create({ data: { chave } });
@@ -76,7 +84,7 @@ export async function avisarInteressadosNovos(schoolId: string, novos: LeadCache
     const destino = [...new Set([...escolastica, ...(a?.professorIds ?? [])])];
     const ids = lista.map((l) => l.id).sort().join(",").slice(0, 120);
     if (!destino.length || !(await reservar(`interessados-novos:${schoolId}:${aberturaId}:${ids}`))) continue;
-    total += (await enviarPush(destino, { ...textoInteressadosNovos(lista.map((l) => l.nome), a?.titulo ?? null), url: "/voluntario/aberturas", etiqueta: `interessados-${schoolId}` })).pessoas;
+    total += (await enviarPush(destino, { ...textoInteressadosNovos(lista.map((l) => l.nome), a?.titulo ?? null), url: linkInteressados(schoolId, a?.id ?? null, lista), etiqueta: `interessados-${schoolId}` })).pessoas;
   }
   return total;
 }
@@ -98,7 +106,7 @@ export async function avisosDeChegadaDeInteressados(agora = new Date()) {
     const esperados = leadsDoCache(cache?.dados).filter((l) => l.aberturaId === a.id && !l.naoContatar);
     const destino = [...new Set([...(await equipeDaEscolastica(a.schoolId)), ...a.professorIds])];
     const hora = `${Math.floor(a.inicioMinuto / 60)}h${a.inicioMinuto % 60 ? String(a.inicioMinuto % 60).padStart(2, "0") : ""}`;
-    total += (await enviarPush(destino, { ...textoChegadaHoje(a.titulo, esperados.map((e) => e.nome), hora), url: "/voluntario/aberturas", etiqueta: `chegada-${a.id}` })).pessoas;
+    total += (await enviarPush(destino, { ...textoChegadaHoje(a.titulo, esperados.map((e) => e.nome), hora), url: linkInteressados(a.schoolId, a.id, []), etiqueta: `chegada-${a.id}` })).pessoas;
   }
   return total;
 }

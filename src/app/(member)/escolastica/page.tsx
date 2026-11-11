@@ -1,9 +1,9 @@
 import { AreaSecretaria } from "@/components/secretarias-rede/area-secretaria";
 import { EscolasticaPanel } from "@/components/escolastica/escolastica-panel";
-import { AbasArea, MembrosEscolastica } from "@/components/trabalho/areas";
+import { MembrosEscolastica } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { exigirArea } from "@/lib/area-trabalho";
-import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
+import { AbasEscolastica } from "@/components/escolastica/abas-escolastica";
 import { getDirectorDashboard } from "@/lib/director-data";
 import { paraEscolastica } from "@/lib/dados-por-area";
 import { AlertasCadastro } from "@/components/escolastica/alertas-cadastro";
@@ -32,7 +32,7 @@ export default async function EscolasticaPage(props: { searchParams: Promise<{ a
   const cabecalho = (
     <>
       <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
-      <AbasArea base="/escolastica" atual={aba} abas={ABAS_ESCOLASTICA} />
+      <AbasEscolastica atual={aba} />
     </>
   );
   // "Orientações e gestão" tem controle de acesso próprio (administração nacional/regional também entra).

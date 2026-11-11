@@ -154,7 +154,7 @@ model School {
   // pelo worker (process-mercurio-queue.ts, já roda a cada 10min no
   // Railway) e limpo (volta a null) ao concluir. Precisou virar assíncrono
   // pra rodar no Vercel (serverless não tem Chromium/Playwright).
-  rubricaSyncRequestedAt DateTime?
+  rubricaSyncRequestedAt  DateTime?
   // Subconta Asaas da escola (ver scripts/create-asaas-subaccount.ts) — a
   // cobrança continua sendo criada pela conta do BPO (1 API key só,
   // gerencia N escolas), e um split manda a fatia da escola pra esta
@@ -169,142 +169,142 @@ model School {
   // exibido é sempre de quem EMITE a cobrança, split não muda isso).
   // Asaas só entrega essa chave 1x, na criação da subconta — por isso
   // persistimos aqui em vez de só logar no terminal como antes.
-  asaasSubaccountApiKey   String?  @db.Text
+  asaasSubaccountApiKey   String?   @db.Text
 
-  members            Member[]
-  events             Event[]
-  telasEventos       TelaEventos[]
-  telaCartoes        TelaCartao[]
-  frasesTela         FraseTela[]
-  payables           Payable[]
-  repasses           Repasse[]
-  otherIncomes       OtherIncome[]
-  chargingRules      ChargingRule[]
-  classGroups        ClassGroup[]
-  compositionCatalog SchoolCompositionCatalogItem[]
-  paymentRubricas    SchoolPaymentRubrica[]
-  scholasticPendencies ScholasticPendency[]
-  financialSnapshots FinancialSnapshot[]
-  matriculasOnline MatriculaOnline[]
-  atendimentoJanelas AtendimentoJanela[]
-  atendimentoReservas AtendimentoReserva[]
-  apresentacoesPedagogos ApresentacaoPedagogo[]
-  whatsappEnvios WhatsappEnvio[]
-  redesSociais RedeSocialFilial[]
+  members                   Member[]
+  events                    Event[]
+  telasEventos              TelaEventos[]
+  telaCartoes               TelaCartao[]
+  frasesTela                FraseTela[]
+  payables                  Payable[]
+  repasses                  Repasse[]
+  otherIncomes              OtherIncome[]
+  chargingRules             ChargingRule[]
+  classGroups               ClassGroup[]
+  compositionCatalog        SchoolCompositionCatalogItem[]
+  paymentRubricas           SchoolPaymentRubrica[]
+  scholasticPendencies      ScholasticPendency[]
+  financialSnapshots        FinancialSnapshot[]
+  matriculasOnline          MatriculaOnline[]
+  atendimentoJanelas        AtendimentoJanela[]
+  atendimentoReservas       AtendimentoReserva[]
+  apresentacoesPedagogos    ApresentacaoPedagogo[]
+  whatsappEnvios            WhatsappEnvio[]
+  redesSociais              RedeSocialFilial[]
   oportunidadesVoluntariado OportunidadeVoluntariado[]
-  espelhoMercury EspelhoMercuryConfig?
-  espelhoMercuryItens EspelhoMercuryItem[]
+  espelhoMercury            EspelhoMercuryConfig?
+  espelhoMercuryItens       EspelhoMercuryItem[]
 }
 
 model Member {
-  acropolePlayAccess AcropolePlayAccess?
-  meetingSeriesCreated GroupMeetingSeries[]
-  groupMeetingsCreated GroupMeeting[] @relation("MeetingCreator")
-  atendimentoJanelas AtendimentoJanela[] @relation("AtendimentoJanelaInstrutor")
-  atendimentosComoInstrutor AtendimentoReserva[] @relation("AtendimentoReservaInstrutor")
-  atendimentosComoAluno AtendimentoReserva[] @relation("AtendimentoReservaAluno")
-  apresentacoesPedagogo ApresentacaoPedagogo[]
-  planosAula PlanoAula[]
-  sessaoAgora SessaoAgora?
-  diarioDias  DiarioDia[]
-  diarioPraticas DiarioPratica[]
-  diarioFvDias DiarioFvDia[]
-  diarioFvFicha DiarioFvFicha?
-  anotacoesAula AnotacaoAula[]
-  livrosLeitura LivroLeitura[]
-  oportunidadesResponsavel OportunidadeVoluntariado[] @relation("OportunidadeResponsavel")
-  interessesVoluntariado InteresseVoluntariado[]
-  meetingResponses GroupMeetingResponse[]
-  meetingAuditLog GroupMeetingAudit[] @relation("MeetingAuditor")
-  pushSubscriptions PushSubscription[]
-  id                    String       @id @default(cuid())
-  schoolId              String
-  school                School       @relation(fields: [schoolId], references: [id])
-  mercurioId            String?      @unique // matrícula no Mercúrio (ex: "21596"), quando conhecida
-  authUserId            String?      @unique // id do usuário no Supabase Auth (login por e-mail/senha) — ver src/lib/auth.ts
-  registrationNo        String? // "Matrícula #21596"
-  name                  String
-  whatsapp              String
-  whatsappAlt           String? // "Telefone Alternativo" do Mercúrio (2º par Celular/Alternativo)
-  email                 String?
+  acropolePlayAccess        AcropolePlayAccess?
+  meetingSeriesCreated      GroupMeetingSeries[]
+  groupMeetingsCreated      GroupMeeting[]             @relation("MeetingCreator")
+  atendimentoJanelas        AtendimentoJanela[]        @relation("AtendimentoJanelaInstrutor")
+  atendimentosComoInstrutor AtendimentoReserva[]       @relation("AtendimentoReservaInstrutor")
+  atendimentosComoAluno     AtendimentoReserva[]       @relation("AtendimentoReservaAluno")
+  apresentacoesPedagogo     ApresentacaoPedagogo[]
+  planosAula                PlanoAula[]
+  sessaoAgora               SessaoAgora?
+  diarioDias                DiarioDia[]
+  diarioPraticas            DiarioPratica[]
+  diarioFvDias              DiarioFvDia[]
+  diarioFvFicha             DiarioFvFicha?
+  anotacoesAula             AnotacaoAula[]
+  livrosLeitura             LivroLeitura[]
+  oportunidadesResponsavel  OportunidadeVoluntariado[] @relation("OportunidadeResponsavel")
+  interessesVoluntariado    InteresseVoluntariado[]
+  meetingResponses          GroupMeetingResponse[]
+  meetingAuditLog           GroupMeetingAudit[]        @relation("MeetingAuditor")
+  pushSubscriptions         PushSubscription[]
+  id                        String                     @id @default(cuid())
+  schoolId                  String
+  school                    School                     @relation(fields: [schoolId], references: [id])
+  mercurioId                String?                    @unique // matrícula no Mercúrio (ex: "21596"), quando conhecida
+  authUserId                String?                    @unique // id do usuário no Supabase Auth (login por e-mail/senha) — ver src/lib/auth.ts
+  registrationNo            String? // "Matrícula #21596"
+  name                      String
+  whatsapp                  String
+  whatsappAlt               String? // "Telefone Alternativo" do Mercúrio (2º par Celular/Alternativo)
+  email                     String?
   // Dependente de outro Member (ex: filho cadastrado no Mercúrio sem
   // e-mail próprio, usando o e-mail do responsável) — pedido do usuário
   // 2026-10-15: quando 2+ Members dividem o mesmo e-mail, só o responsável
   // tem login de verdade (1 e-mail = 1 conta de Auth, e authUserId já é
   // único aqui); os demais ficam vinculados aqui, sem tentar logar sozinhos.
-  responsavelId         String?
-  responsavel           Member?   @relation("Dependentes", fields: [responsavelId], references: [id])
-  dependentes           Member[]  @relation("Dependentes")
+  responsavelId             String?
+  responsavel               Member?                    @relation("Dependentes", fields: [responsavelId], references: [id])
+  dependentes               Member[]                   @relation("Dependentes")
   // Endereço estruturado (não um campo único de texto) pra permitir
   // autopreenchimento nativo do celular/Google no formulário do Portal —
   // ver src/components/member/panels/profile-edit-panel.tsx. Composto de
   // volta num Logradouro único só na hora de escrever no Mercúrio (que usa
   // 1 campo de texto livre pra rua+número+complemento), em
   // src/lib/mercurio/playwright-adapter.ts.
-  addressStreet         String?
-  addressNumber         String?
-  addressComplement     String?
-  addressNeighborhood   String?
-  addressCity           String?
-  addressState          String? // UF, 2 letras
-  addressZip            String?
+  addressStreet             String?
+  addressNumber             String?
+  addressComplement         String?
+  addressNeighborhood       String?
+  addressCity               String?
+  addressState              String? // UF, 2 letras
+  addressZip                String?
   // "Mais Dados" (aba PESSOAIS + IDENTIFICAÇÃO do Mercúrio) — ver
   // src/app/(member)/portal/mais-dados. escolaridade/estadoCivil guardam o
   // CÓDIGO que o Mercúrio usa (ex: "GRP", "SOL"), não o texto — ver
   // src/lib/mercurio/personal-data-options.ts.
-  birthDate             DateTime?
-  naturalidade          String? // "cidade/UF" (formato livre, como o Mercúrio grava)
-  profession            String?
-  escolaridade          String?
-  estadoCivil           String?
-  rgNumero              String?
-  rgOrgaoEmissor        String?
-  rgDataEmissao         DateTime?
+  birthDate                 DateTime?
+  naturalidade              String? // "cidade/UF" (formato livre, como o Mercúrio grava)
+  profession                String?
+  escolaridade              String?
+  estadoCivil               String?
+  rgNumero                  String?
+  rgOrgaoEmissor            String?
+  rgDataEmissao             DateTime?
   // Situação real no Mercúrio (ATI/INA) — sincronizada periodicamente via
   // scripts/sync-active-status.ts (lê a lista de Ativos da filial inteira
   // numa sessão só, mais eficiente que checar 1 aluno por vez). Verificado
   // no login (src/lib/auth.ts) pra impedir quem saiu da escola de manter
   // acesso ao Portal — não é uma checagem ao vivo a cada login por
   // velocidade, então pode ficar desatualizado até a próxima sincronização.
-  mercurioAtivo         Boolean      @default(true)
-  mercurioAtivoSync     DateTime? // última vez que este campo foi sincronizado de verdade
+  mercurioAtivo             Boolean                    @default(true)
+  mercurioAtivoSync         DateTime? // última vez que este campo foi sincronizado de verdade
   // Aparece na lista "Pedagogos" (Integração > Pedagogos) de alguma filial
   // no Mercúrio — quem dá aula lá também é aluno em outras turmas, então
   // não é um papel separado no Portal, só libera o botão "Área do
   // Professor" (ver scripts/sync-pedagogos.ts e member-portal-client.tsx).
-  isPedagogo            Boolean      @default(false)
-  pedagogoSyncedAt      DateTime?
+  isPedagogo                Boolean                    @default(false)
+  pedagogoSyncedAt          DateTime?
   // É Diretor(a) ou Sub-Chefe de alguma filial — lido de "Diretor > Dados
   // da Unidade" do Mercúrio (tem matrícula de verdade nesses dois campos,
   // diferente de Pedagogos — cruza por matrícula, não por nome). Libera o
   // card "Direção" no Portal do Voluntário (ver scripts/sync-diretoria.ts).
-  isDiretor             Boolean      @default(false)
-  isSubChefe            Boolean      @default(false)
-  direcaoSyncedAt       DateTime?
+  isDiretor                 Boolean                    @default(false)
+  isSubChefe                Boolean                    @default(false)
+  direcaoSyncedAt           DateTime?
   // Aparece em "DIRETOR > Colaboradores" (diretor/dir_unicar.php) com
   // Função contendo "ESCOLÁSTICA" — voluntário responsável pela agenda de
   // pendências acadêmicas (ex: transições pro Círculo de Amigos). Pedido do
   // usuário 2026-09-30, mesmo padrão de isPedagogo/isDiretor (sinal real do
   // Mercúrio, não bit local) — ver scripts/sync-diretoria.ts.
-  isSecretarioEscolastica Boolean    @default(false)
+  isSecretarioEscolastica   Boolean                    @default(false)
   // Mesmo padrão acima, mas Função contendo "ECONOMIA" — aprova alterações
   // de cadastro ligadas à contribuição (pedido do usuário 2026-10-08).
-  isSecretarioEconomia    Boolean    @default(false)
+  isSecretarioEconomia      Boolean                    @default(false)
   // Cargos de voluntário vindos de /branches/{id}/staff da Mercury API (ex:
   // "CHEFE DE BRIGADA DE FILIAL", "COLABORADOR DE FILIAL") — texto bruto do
   // Mercúrio. Qualquer cargo aqui libera a Área do Voluntário (pedido do
   // usuário 2026-10-15, implementado em 09/11/2026 em acesso-voluntario.ts) e
   // a área de trabalho correspondente (Escolástica, Economia/Tesouraria,
   // Eventos, Café — areas-filial.ts). Direção continua nos booleans acima.
-  cargos                  String[]   @default([])
+  cargos                    String[]                   @default([])
   // Pode liberar testadores da própria filial (diretor, chefe ou sub-chefe
   // de filial — vem do banco do Mercúrio). Liberadores nacionais ficam em
   // LiberadorNacional, não aqui.
-  liberaTestadores        Boolean    @default(false)
+  liberaTestadores          Boolean                    @default(false)
   // Filiais (School.mercurioUnidade) em que é Chefe de Filial — pode chefiar
   // mais de uma, inclusive fora da filial da própria matrícula (ex: Izabel,
   // GYN e BGA). Ver mercurio-db/importar.ts e acesso-voluntario.ts.
-  filiaisChefiadas        String[]   @default([])
+  filiaisChefiadas          String[]                   @default([])
   // Grupo/programa dentro da filial (PROGRAMA BRANCO > Provacionistas/
   // Membros, COMPLEMENTAR > C. de Amigos/Correntinha/Távolas/Janos) — cada
   // um é uma listagem própria no Mercúrio (mesmo formato Matr./Nome de
@@ -314,30 +314,30 @@ model Member {
   // "CONTRIBUIÇÃO JANOS" só deve aparecer pra quem tem isJanos=true. Não é
   // mutuamente exclusivo (uma pessoa pode, em teoria, aparecer em mais de
   // uma lista) — por isso são booleans separados, não um enum único.
-  isProvacionista       Boolean      @default(false)
-  isMembroPrograma      Boolean      @default(false)
+  isProvacionista           Boolean                    @default(false)
+  isMembroPrograma          Boolean                    @default(false)
   // Público dos eventos (pedido do usuário 2026-10-19), vindos do Mercúrio:
   // nível (cad_nivel: N1…N9, PP, CA…), HD (cad_machado HDA/HDR), dirigente
   // (cad_dirigente 'S') e FV/brigadista (cad_situacao_fv 'BRG').
-  nivel                 String?
-  isHD                  Boolean      @default(false)
-  isDirigente           Boolean      @default(false)
-  isFV                  Boolean      @default(false)
+  nivel                     String?
+  isHD                      Boolean                    @default(false)
+  isDirigente               Boolean                    @default(false)
+  isFV                      Boolean                    @default(false)
   // Em provacionismo para o FV (cad_situacao_fv 'PRO') — o público
   // "Provacionistas" dos eventos. Diferente de isProvacionista (nível PP).
-  emProvacionismo       Boolean      @default(false)
-  isCirculoDeAmigos     Boolean      @default(false)
-  isCorrentinha         Boolean      @default(false)
-  isTavolas             Boolean      @default(false)
-  isJanos               Boolean      @default(false)
-  perfilGruposSyncedAt  DateTime?
+  emProvacionismo           Boolean                    @default(false)
+  isCirculoDeAmigos         Boolean                    @default(false)
+  isCorrentinha             Boolean                    @default(false)
+  isTavolas                 Boolean                    @default(false)
+  isJanos                   Boolean                    @default(false)
+  perfilGruposSyncedAt      DateTime?
   // Id do cliente na carteira digital Fortuna (oinabnfortuna.acropolebrasil.com.br)
   // — numeração própria, SEM relação com mercurioId. Resolvido 1x por
   // e-mail/telefone (scripts/link-fortuna-client.ts), não por nome (mais
   // confiável que o casamento por nome que o Mercúrio exige). Diferente do
   // Mercúrio, a API do Fortuna é rápida (REST normal, sem RPA) — o saldo é
   // lido ao vivo a cada carregamento do Portal, não sincronizado/cacheado.
-  fortunaClientId       Int?         @unique
+  fortunaClientId           Int?                       @unique
   // Valor fixo mensal de crédito Fortuna cobrado JUNTO de toda cobrança
   // futura (manual ou automática via Pix Automático) — pedido do usuário
   // 2026-10-08, oferecido como nudge (ver nudge-actions.ts). Null = sem
@@ -345,17 +345,17 @@ model Member {
   // process-pix-automatico.ts soma isso no ciclo automático e
   // PaymentCharge.fortunaTopUpAmount credita na confirmação (mesmo
   // mecanismo já usado pro avulso).
-  fortunaTopUpRecorrente Decimal?    @db.Decimal(10, 2)
-  nudgeStates           MemberNudgeState[]
-  status                MemberStatus @default(em_dia)
-  createdAt             DateTime     @default(now())
+  fortunaTopUpRecorrente    Decimal?                   @db.Decimal(10, 2)
+  nudgeStates               MemberNudgeState[]
+  status                    MemberStatus               @default(em_dia)
+  createdAt                 DateTime                   @default(now())
   // "Anotações Econômicas sobre o Aluno" — textarea da tela de Composição
   // das Contribuições no Mercúrio (campo txtobs, limite de 255 caracteres
   // lá). Igual ao contato/dados pessoais: escreve local na hora e só
   // enfileira a propagação pro Mercúrio (ver sync-queue.ts) — worker
   // separado processa em background (scripts/process-mercurio-queue.ts).
-  economicNotes         String?      @db.VarChar(255)
-  economicNotesSyncedAt DateTime?
+  economicNotes             String?                    @db.VarChar(255)
+  economicNotesSyncedAt     DateTime?
 
   // Pix Automático (Asaas, lançado maio/2026) — autorização de débito
   // recorrente de verdade: o aluno autoriza 1x (paga o 1º QR code) e os
@@ -376,7 +376,7 @@ model Member {
 
   // Tour guiado do 1º login (ver onboarding-tour.tsx) — null = ainda não
   // viu. Decisão do usuário 2026-09-28.
-  tourCompletedAt DateTime?
+  tourCompletedAt   DateTime?
   // Data real de entrada na escola, pra Jornada Filosófica — não achamos
   // fonte confiável no Mercúrio pra isso ainda, então por ora é só
   // preenchimento manual pelo diretor (ver member-detail-panel.tsx). Se
@@ -445,16 +445,16 @@ model Contribution {
 // esses podem ser editados/excluídos por ele; itens que já vieram do
 // Mercúrio (lançados pela tesouraria) são só leitura no Portal.
 model ContributionCompositionItem {
-  id                String                     @id @default(cuid())
-  memberId          String
-  member            Member                     @relation(fields: [memberId], references: [id])
-  mercurioGroupId   String // "grp" no Mercúrio
-  label             String // "CONTRIBUIÇÃO BIBLIOTECA"
-  amount            Decimal                    @db.Decimal(10, 2)
-  addedViaPortal    Boolean                    @default(false)
-  createdAt         DateTime                   @default(now())
-  updatedAt         DateTime                   @updatedAt
-  removalRequests   CompositionChangeRequest[]
+  id              String                     @id @default(cuid())
+  memberId        String
+  member          Member                     @relation(fields: [memberId], references: [id])
+  mercurioGroupId String // "grp" no Mercúrio
+  label           String // "CONTRIBUIÇÃO BIBLIOTECA"
+  amount          Decimal                    @db.Decimal(10, 2)
+  addedViaPortal  Boolean                    @default(false)
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  removalRequests CompositionChangeRequest[]
 
   @@unique([memberId, mercurioGroupId])
   @@index([memberId])
@@ -475,20 +475,20 @@ model ContributionCompositionItem {
 // self-service — vira pedido aqui também, referenciando compositionItemId. O
 // item continua existindo normalmente até a aprovação.
 model CompositionChangeRequest {
-  id                String                    @id @default(cuid())
+  id                String                       @id @default(cuid())
   memberId          String
-  member            Member                    @relation(fields: [memberId], references: [id])
-  tipo              String                    @default("inclusao") // "inclusao" | "remocao" | "reducao"
+  member            Member                       @relation(fields: [memberId], references: [id])
+  tipo              String                       @default("inclusao") // "inclusao" | "remocao" | "reducao"
   compositionItemId String? // só em "remocao" — item de verdade que será removido se aprovado
   compositionItem   ContributionCompositionItem? @relation(fields: [compositionItemId], references: [id])
   mercurioGroupId   String
   label             String
-  amount            Decimal                   @db.Decimal(10, 2)
+  amount            Decimal                      @db.Decimal(10, 2)
   // "reducao" (pedido do usuário 2026-10-19: diminuir valor exige aprovação): amount = valor novo, previousAmount = valor atual.
-  previousAmount    Decimal?                  @db.Decimal(10, 2)
-  status            String                    @default("pendente") // "pendente" | "aprovado" | "rejeitado"
+  previousAmount    Decimal?                     @db.Decimal(10, 2)
+  status            String                       @default("pendente") // "pendente" | "aprovado" | "rejeitado"
   reviewedAt        DateTime?
-  createdAt         DateTime                  @default(now())
+  createdAt         DateTime                     @default(now())
 
   @@index([memberId])
 }
@@ -594,51 +594,51 @@ model ContributionMonthlyStatus {
 // polling (checkChargeStatus) — o que chegar primeiro marca `pago` e
 // enfileira o lançamento no Mercúrio (MercurioSyncTask).
 model PaymentCharge {
-  id              String              @id @default(cuid())
-  memberId        String
-  member          Member              @relation(fields: [memberId], references: [id])
-  referenceYear   Int
-  referenceMonth  Int
-  amount          Decimal             @db.Decimal(10, 2)
-  status          PaymentChargeStatus @default(pendente)
-  asaasCustomerId String
-  asaasPaymentId  String              @unique
+  id                     String              @id @default(cuid())
+  memberId               String
+  member                 Member              @relation(fields: [memberId], references: [id])
+  referenceYear          Int
+  referenceMonth         Int
+  amount                 Decimal             @db.Decimal(10, 2)
+  status                 PaymentChargeStatus @default(pendente)
+  asaasCustomerId        String
+  asaasPaymentId         String              @unique
   // "PIX" (padrão) ou "CREDIT_CARD" — decide se pixPayload/pixQrCodeBase64
   // (embutido na tela) ou invoiceUrl (checkout hospedado pelo Asaas, evita
   // qualquer dado de cartão passar pelo nosso servidor) é o campo relevante.
-  billingType     String              @default("PIX")
-  pixPayload      String?             @db.Text
-  pixQrCodeBase64 String?             @db.Text
-  invoiceUrl      String?             @db.Text
+  billingType            String              @default("PIX")
+  pixPayload             String?             @db.Text
+  pixQrCodeBase64        String?             @db.Text
+  invoiceUrl             String?             @db.Text
   // Sobretaxa do cartão (repassada ao aluno — decisão do usuário em
   // 2026-09-22) somada em cima do `amount` real da contribuição pra cobrir
   // a taxa do Asaas (bem mais alta que a do PIX) — não é receita real, só
   // referência pra mostrar "valor + taxa do cartão" na tela.
-  cardSurcharge   Decimal?            @db.Decimal(10, 2)
+  cardSurcharge          Decimal?            @db.Decimal(10, 2)
   // Recarga Fortuna combinada na MESMA cobrança da contribuição (decisão do
   // usuário 2026-09-22: aproveitar o momento em que o aluno já está pagando
   // pra sugerir também recarregar, sem precisar de um 2º PIX/cartão) — ver
   // confirm-payment.ts, que credita isso automaticamente junto da
   // confirmação, igual ao fluxo já existente em fortuna-topup-actions.ts.
-  fortunaTopUpAmount     Decimal?     @db.Decimal(10, 2)
+  fortunaTopUpAmount     Decimal?            @db.Decimal(10, 2)
   fortunaTopUpLaunchedAt DateTime?
   fortunaTopUpLaunchedBy String?
-  fortunaTopUpError      String?      @db.Text
+  fortunaTopUpError      String?             @db.Text
   // true = gerada sozinha pelo worker contra uma autorização Pix Automático
   // ativa (ver pix-automatico-actions.ts), sem o aluno ter feito nada —
   // só pra transparência no Painel do Diretor (distinguir de cobrança
   // manual criada quando o aluno clicou em "pagar").
-  autoDebito             Boolean      @default(false)
+  autoDebito             Boolean             @default(false)
   // Snapshot do Member.status NA HORA em que esta cobrança foi criada —
   // pedido do usuário 2026-10-08: "reversão de inadimplência" (ver
   // getCrescimentoContribuicoes em economia-actions.ts) é a soma de
   // cobranças PAGAS que foram criadas enquanto o membro estava "atrasado"
   // ou "negociando". Não dá pra inferir isso depois pelo status atual
   // (ele já mudou pra "em_dia" assim que pagou) — precisa do snapshot.
-  memberWasOverdue Boolean      @default(false)
-  paidAt          DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  memberWasOverdue       Boolean             @default(false)
+  paidAt                 DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
   @@index([memberId])
 }
@@ -707,10 +707,10 @@ model CrmContact {
 // React — nada era salvo, ninguém na escola via o pedido. Agora persiste de
 // verdade e aparece no detalhe do membro no Painel do Diretor.
 model GafRequest {
-  id        String   @id @default(cuid())
-  memberId  String
-  member    Member   @relation(fields: [memberId], references: [id])
-  createdAt DateTime @default(now())
+  id           String      @id @default(cuid())
+  memberId     String
+  member       Member      @relation(fields: [memberId], references: [id])
+  createdAt    DateTime    @default(now())
   // GAF escolhido pelo aluno (2026-10-25); nulo nos pedidos antigos, sem GAF definido.
   classGroupId String?
   classGroup   ClassGroup? @relation(fields: [classGroupId], references: [id], onDelete: SetNull)
@@ -770,14 +770,14 @@ model MemberLevelHistory {
 // composição (ver scripts/sync-composition.ts), já que ambos exigem abrir a
 // ficha do aluno na mesma sessão.
 model MemberIntegrationCourse {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   memberId   String
-  member     Member   @relation(fields: [memberId], references: [id])
+  member     Member    @relation(fields: [memberId], references: [id])
   courseName String
   dateBR     String // "dd/mm/aaaa" como o Mercúrio exibe
   courseDate DateTime? // dateBR convertido, pra ordenar a timeline — null se a data vier num formato inesperado
   instructor String
-  syncedAt   DateTime @default(now())
+  syncedAt   DateTime  @default(now())
 
   @@unique([memberId, courseName, dateBR])
   @@index([memberId])
@@ -931,46 +931,46 @@ model Event {
   externalUid String?   @unique
   createdAt   DateTime  @default(now())
 
-  posterPath String?
-  capacity Int?
-  registrationClosesAt DateTime?
-  participantInstructions String? @db.Text
-  contactInfo String?
-  audience String @default("todos_ativos")
+  posterPath              String?
+  capacity                Int?
+  registrationClosesAt    DateTime?
+  participantInstructions String?             @db.Text
+  contactInfo             String?
+  audience                String              @default("todos_ativos")
   // Vários públicos ao mesmo tempo (2026-10-19): todos_ativos, membros, fv,
   // provacionistas, hd, dirigentes. "audience" fica com o primeiro, por compatibilidade.
-  publicos String[] @default([])
+  publicos                String[]            @default([])
   // Inscrições de outras filiais: "filial" (só a dona), "todas", "filiais"
   // (ids em abertoValores), "regionais" (centro_oeste, df, nordeste, norte) ou
   // "estados" (UFs).
-  abertoA       String   @default("filial")
-  abertoValores String[] @default([])
+  abertoA                 String              @default("filial")
+  abertoValores           String[]            @default([])
   // Lanche compartilhado (pedido do usuário 2026-10-21): cada um leva algo; aparece em destaque no evento.
-  lancheCompartilhado Boolean @default(false)
+  lancheCompartilhado     Boolean             @default(false)
   // Post oficial do evento no Instagram (pedido do usuário 2026-10-22): compartilhar o post
   // oficial em vez de criar outro. Preenchido na administração; a importação do Ulisses não mexe.
-  linkPostagemOficial String?
+  linkPostagemOficial     String?
   // Leitura do cartaz por IA (pedido do usuário 2026-10-22): o que já está escrito nele
   // ({data, horario, local, inscricao}: boolean). Feita uma vez por imagem, guardada aqui e
   // usada por todos que compartilharem; cartazLidoUrl diz qual imagem foi lida.
-  cartazLeitura Json?
-  cartazLidoUrl String?
+  cartazLeitura           Json?
+  cartazLidoUrl           String?
   // Resumo da descrição para as telas de TV, feito por IA (pedido do usuário 2026-10-24);
   // resumoTelaDe = impressão da descrição resumida (lib/resumo-tela.ts).
-  resumoTela   String?
-  resumoTelaDe String?
+  resumoTela              String?
+  resumoTelaDe            String?
   // Desistência paga com devolução até N dias antes do evento (pedido do usuário
   // 2026-10-22: padrão 3; opções 1, 3 ou 7; null = sem devolução).
-  prazoDesistenciaDias Int? @default(3)
-  status String @default("publicado")
-  registrationUrl String?
+  prazoDesistenciaDias    Int?                @default(3)
+  status                  String              @default("publicado")
+  registrationUrl         String?
   // Imagem pública do evento no Ulisses (https). Cartaz próprio da filial fica em posterPath.
-  imageUrl String?
-  revision Int @default(0)
-  refundOnCancellation Boolean @default(false)
-  staff EventReception[]
-  audits EventAudit[]
-  registrations EventRegistration[]
+  imageUrl                String?
+  revision                Int                 @default(0)
+  refundOnCancellation    Boolean             @default(false)
+  staff                   EventReception[]
+  audits                  EventAudit[]
+  registrations           EventRegistration[]
 
   @@index([schoolId])
   @@index([scope])
@@ -990,36 +990,36 @@ model EventRegistration {
   // inscrição em evento pelo próprio Portal, igual ao fluxo de
   // contribuição. null = evento gratuito (paid=true direto, nada a
   // cobrar) ou inscrição lançada pela secretaria sem cobrança própria.
-  asaasCustomerId String?
-  asaasPaymentId  String?   @unique
-  pixPayload      String?   @db.Text
-  pixQrCodeBase64 String?   @db.Text
-  paidAt          DateTime?
-  checkedInAt DateTime?
-  checkedInBy String?
+  asaasCustomerId        String?
+  asaasPaymentId         String?       @unique
+  pixPayload             String?       @db.Text
+  pixQrCodeBase64        String?       @db.Text
+  paidAt                 DateTime?
+  checkedInAt            DateTime?
+  checkedInBy            String?
   selfReportedAttendance String?
-  selfReportedAt DateTime?
+  selfReportedAt         DateTime?
   // Desistência do próprio aluno (2026-10-22): a inscrição para de ocupar vaga e,
   // se paga dentro do prazo, entra na fila de reembolso (event-refunds.ts).
-  desistenciaEm DateTime?
-  mercurioStatus String @default("aguardando_integracao")
-  paymentState String @default("novo")
-  amount Decimal? @db.Decimal(10,2)
-  refundState String @default("nao_solicitado")
-  refundSubmittedAt DateTime?
-  refundCheckedAt DateTime?
-  refundNextAttemptAt DateTime?
-  refundLeaseUntil DateTime?
-  refundLockId String?
-  refundAttempts Int @default(0)
-  refundError String?
-  refundedAmount Decimal @default(0) @db.Decimal(10,2)
-  refundedAt DateTime?
-  refundsSnapshot Json @default("[]")
-  mercurioReceiptNo String?
-  mercurioRecordedAt DateTime?
-  mercurioRecordedBy String?
-  notices EventNotice[]
+  desistenciaEm          DateTime?
+  mercurioStatus         String        @default("aguardando_integracao")
+  paymentState           String        @default("novo")
+  amount                 Decimal?      @db.Decimal(10, 2)
+  refundState            String        @default("nao_solicitado")
+  refundSubmittedAt      DateTime?
+  refundCheckedAt        DateTime?
+  refundNextAttemptAt    DateTime?
+  refundLeaseUntil       DateTime?
+  refundLockId           String?
+  refundAttempts         Int           @default(0)
+  refundError            String?
+  refundedAmount         Decimal       @default(0) @db.Decimal(10, 2)
+  refundedAt             DateTime?
+  refundsSnapshot        Json          @default("[]")
+  mercurioReceiptNo      String?
+  mercurioRecordedAt     DateTime?
+  mercurioRecordedBy     String?
+  notices                EventNotice[]
 
   @@unique([eventId, memberId])
   @@index([eventId])
@@ -1151,9 +1151,9 @@ model AccountantDocument {
 // de atividades mesmo antes de fechar o formato exato da integração.
 
 model ClassGroup {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   schoolId        String
-  school          School   @relation(fields: [schoolId], references: [id])
+  school          School    @relation(fields: [schoolId], references: [id])
   name            String // "Curso de Filosofia - Turma A"
   // Nome da turma tal como aparece na Escala de Professores do Mercúrio
   // (ex: "HILARION", "AMON") — sabemos o formato agora (ver
@@ -1163,7 +1163,7 @@ model ClassGroup {
   // (cad_raio_fv): "BF" Brigada Feminina, "BM" Brigada Masculina, "CS"
   // Corpo de Segurança. Nos grupos, role "professor" = chefe/responsável e
   // "aluno" = integrante (BRG). Ver mercurio-db/importar.ts.
-  tipo            String   @default("turma")
+  tipo            String    @default("turma")
   // Canal do Slack da filial vinculado ao grupo (opcional) — ver lib/slack.ts.
   slackChannelId  String?
   slackTeamId     String?
@@ -1171,29 +1171,29 @@ model ClassGroup {
   // Acompanhamento Filosófico, criado pela administração da filial), "GDVE"
   // (criado por FV, só FV selecionados) e "SEC" (secretaria da filial, com
   // equipe e atividades). A sincronização do Mercúrio não mexe nesses tipos.
-  descricao       String?  @db.Text
+  descricao       String?   @db.Text
   modalidade      String? // "presencial" | "online" | "misto"
   local           String?
   linkOnline      String?
   // GAF: por padrão só membros (2º nível em diante); true = alunos também.
-  permiteAlunos   Boolean  @default(false)
+  permiteAlunos   Boolean   @default(false)
   // GAF: programa de estudos que orienta os encontros.
-  programa        String?  @db.Text
+  programa        String?   @db.Text
   criadoPorId     String?
   arquivadoEm     DateTime?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime  @default(now())
 
-  atividades  GrupoAtividade[]
-  memberships ClassMembership[]
-  meetingSeries GroupMeetingSeries[]
-  meetings GroupMeeting[]
-  activities  Activity[]
-  polls       Poll[]
+  atividades             GrupoAtividade[]
+  memberships            ClassMembership[]
+  meetingSeries          GroupMeetingSeries[]
+  meetings               GroupMeeting[]
+  activities             Activity[]
+  polls                  Poll[]
+  gafRequests            GafRequest[]
+  apresentacoesPedagogos ApresentacaoPedagogo[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
-  gafRequests     GafRequest[]
-  apresentacoesPedagogos ApresentacaoPedagogo[]
 }
 
 model ClassMembership {
@@ -1213,25 +1213,25 @@ model ClassMembership {
 // exibida para os alunos da turma dentro de "Agenda & Eventos" no Portal
 // do Membro (não é uma seção nova — reaproveita a caixinha existente).
 model Activity {
-  id           String       @id @default(cuid())
-  classGroupId String
-  classGroup   ClassGroup   @relation(fields: [classGroupId], references: [id])
-  createdById  String
-  createdBy    Member       @relation("ActivityCreator", fields: [createdById], references: [id])
-  type         ActivityType
-  title        String
-  studyItems   String?      @db.Text // itens/conteúdo a estudar
+  id                String       @id @default(cuid())
+  classGroupId      String
+  classGroup        ClassGroup   @relation(fields: [classGroupId], references: [id])
+  createdById       String
+  createdBy         Member       @relation("ActivityCreator", fields: [createdById], references: [id])
+  type              ActivityType
+  title             String
+  studyItems        String?      @db.Text // itens/conteúdo a estudar
   // Prova/trabalho/leitura de turma (2026-10-21): matéria em curso na turma
   // (TurmaMateria) e temas escolhidos do catálogo (lib/temas-curriculo.ts).
-  materiaSigla String?
-  materiaNome  String?
-  temas        String[]     @default([])
-  description  String?      @db.Text
-  dueDate      DateTime
-  createdAt    DateTime     @default(now())
+  materiaSigla      String?
+  materiaNome       String?
+  temas             String[]     @default([])
+  description       String?      @db.Text
+  dueDate           DateTime
+  createdAt         DateTime     @default(now())
   // Depois que a atividade aconteceu (2026-10-29): observação só para a administração/professores e outra para os alunos.
-  observacaoInterna String? @db.Text
-  observacaoAlunos  String? @db.Text
+  observacaoInterna String?      @db.Text
+  observacaoAlunos  String?      @db.Text
 
   notifications ActivityNotification[]
 
@@ -1383,10 +1383,10 @@ model VolunteerTermSignature {
 // matrícula, não Member.id: a pessoa pode ainda nem ter feito o primeiro
 // acesso (Member só é criado nesse momento).
 model TestadorLiberado {
-  mercurioId   String   @id // matrícula
-  unidade      String // unidades.uni_id da filial da pessoa
-  liberadoPor  String // matrícula de quem liberou
-  liberadoEm   DateTime @default(now())
+  mercurioId  String   @id // matrícula
+  unidade     String // unidades.uni_id da filial da pessoa
+  liberadoPor String // matrícula de quem liberou
+  liberadoEm  DateTime @default(now())
 
   @@index([unidade])
 }
@@ -1407,7 +1407,6 @@ model ErrorNotification {
   firstSeenAt    DateTime @default(now())
   lastNotifiedAt DateTime
 }
-
 
 // Liberação em camadas da área de voluntários (grupos Feminino/Masculino/
 // de Segurança, avisos, escalas) — informação sensível, nada aparece por
@@ -1463,6 +1462,32 @@ model SugestaoPortal {
   @@index([memberId, createdAt])
 }
 
+/// Solicitação de inclusão de pedagogo no Mercúrio (pedido do usuário 11/11/2026). Pedem só o Chefe e o Sub-Chefe da
+/// filial (Escolástica → Novos pedagogos); a administração nacional faz a inclusão no Mercúrio e marca como atendida.
+/// Fica registrado quem pediu (solicitadoPorId) e quem atendeu (atendidaPorId; nulo = fechada pela importação do
+/// Mercúrio, quando a pessoa passou a aparecer como pedagogo). Regras em lib/solicitacoes-pedagogo.ts.
+model SolicitacaoPedagogo {
+  id              String    @id @default(cuid())
+  schoolId        String
+  /// Pessoa a incluir como pedagogo.
+  memberId        String
+  /// Formação pedida, como o Mercúrio escreve: "EM FORMAÇÃO" ou "INSTRUTOR".
+  formacao        String
+  motivo          String
+  solicitadoPorId String
+  /// pendente | incluida | recusada | cancelada
+  status          String    @default("pendente")
+  observacao      String?
+  atendidaEm      DateTime?
+  atendidaPorId   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([schoolId, status])
+  @@index([status, createdAt])
+  @@index([memberId])
+}
+
 model AcessoVoluntario {
   memberId      String   @id
   liberadoPorId String
@@ -1471,99 +1496,102 @@ model AcessoVoluntario {
   @@index([liberadoPorId])
 }
 
-
 // Reuniões: ocorrências explícitas, cancelamento sem apagar histórico.
 model GroupMeeting {
-  id String @id @default(cuid())
-  classGroupId String
-  classGroup ClassGroup @relation(fields: [classGroupId], references: [id])
-  createdById String
-  createdBy Member @relation("MeetingCreator", fields: [createdById], references: [id])
-  seriesId String?
-  seriesSlot String?
-  title String
-  startsAt DateTime
-  endsAt DateTime
-  timeZone String
-  required Boolean @default(true)
-  publicDetails String @default("") @db.Text
-  internalDetails String @default("") @db.Text
-  fullUniform Boolean @default(false)
-  status String @default("agendada")
-  cancellationReason String?
-  version Int @default(0)
+  id                   String                 @id @default(cuid())
+  classGroupId         String
+  classGroup           ClassGroup             @relation(fields: [classGroupId], references: [id])
+  createdById          String
+  createdBy            Member                 @relation("MeetingCreator", fields: [createdById], references: [id])
+  seriesId             String?
+  seriesSlot           String?
+  title                String
+  startsAt             DateTime
+  endsAt               DateTime
+  timeZone             String
+  required             Boolean                @default(true)
+  publicDetails        String                 @default("") @db.Text
+  internalDetails      String                 @default("") @db.Text
+  fullUniform          Boolean                @default(false)
+  status               String                 @default("agendada")
+  cancellationReason   String?
+  version              Int                    @default(0)
   // Notificações push (2026-10-21): marcam o envio para não repetir.
-  lembreteEnviadoEm DateTime?
+  lembreteEnviadoEm    DateTime?
   presencaPerguntadaEm DateTime?
   // Leitura do GAF (2026-10-26): código do texto escolhido pela coordenação ("teseu-05") ou "nenhuma"; nulo = automático.
-  leituraGaf String?
-  createdAt DateTime @default(now())
-  responses GroupMeetingResponse[]
-  auditLog GroupMeetingAudit[]
-  presencas GrupoPresenca[]
+  leituraGaf           String?
+  createdAt            DateTime               @default(now())
+  responses            GroupMeetingResponse[]
+  auditLog             GroupMeetingAudit[]
+  presencas            GrupoPresenca[]
+
+  @@unique([seriesId, seriesSlot])
   @@index([classGroupId, startsAt])
   @@index([seriesId, startsAt])
-  @@unique([seriesId, seriesSlot])
 }
 
 model GroupMeetingResponse {
-  id String @id @default(cuid())
-  meetingId String
-  meeting GroupMeeting @relation(fields: [meetingId], references: [id])
-  memberId String
-  member Member @relation(fields: [memberId], references: [id])
-  response String
-  justification String? @db.Text
-  updatedAt DateTime @updatedAt
+  id            String       @id @default(cuid())
+  meetingId     String
+  meeting       GroupMeeting @relation(fields: [meetingId], references: [id])
+  memberId      String
+  member        Member       @relation(fields: [memberId], references: [id])
+  response      String
+  justification String?      @db.Text
+  updatedAt     DateTime     @updatedAt
+
   @@unique([meetingId, memberId])
 }
 
 model GroupMeetingAudit {
-  id String @id @default(cuid())
+  id        String       @id @default(cuid())
   meetingId String
-  meeting GroupMeeting @relation(fields: [meetingId], references: [id])
-  actorId String
-  actor Member @relation("MeetingAuditor", fields: [actorId], references: [id])
-  action String
-  changes Json
-  createdAt DateTime @default(now())
+  meeting   GroupMeeting @relation(fields: [meetingId], references: [id])
+  actorId   String
+  actor     Member       @relation("MeetingAuditor", fields: [actorId], references: [id])
+  action    String
+  changes   Json
+  createdAt DateTime     @default(now())
+
   @@index([meetingId, createdAt])
 }
 
-
 // Rotina semanal permanente; só materializa as próximas ocorrências.
 model GroupMeetingSeries {
-  id String @id @default(cuid())
-  classGroupId String
-  classGroup ClassGroup @relation(fields: [classGroupId], references: [id])
-  createdById String
-  createdBy Member @relation(fields: [createdById], references: [id])
-  startsLocal String
-  endsLocal String
-  timeZone String
-  template Json
-  changes Json @default("[]")
-  untilSlot String?
+  id               String     @id @default(cuid())
+  classGroupId     String
+  classGroup       ClassGroup @relation(fields: [classGroupId], references: [id])
+  createdById      String
+  createdBy        Member     @relation(fields: [createdById], references: [id])
+  startsLocal      String
+  endsLocal        String
+  timeZone         String
+  template         Json
+  changes          Json       @default("[]")
+  untilSlot        String?
   // 1 = semanal, 2 = quinzenal, 4 = a cada 4 semanas (GAF, GDVE, secretarias).
-  intervaloSemanas Int @default(1)
-  createdAt DateTime @default(now())
+  intervaloSemanas Int        @default(1)
+  createdAt        DateTime   @default(now())
+
   @@index([classGroupId])
 }
 
 // Atividades de um grupo (secretaria, Grupo Feminino/Masculino/de Segurança,
 // GDVE) e quem responde por cada uma (pedido do usuário 2026-10-19).
 model GrupoAtividade {
-  id           String     @id @default(cuid())
-  classGroupId String
-  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id])
-  titulo       String
-  descricao    String?    @db.Text
-  responsaveis String[]   @default([]) // ids de Member, integrantes do grupo
-  periodicidade String?   // texto livre: "toda semana", "no dia do evento"…
-  status       String     @default("ativa") // ativa | pausada | concluida
-  criadoPorId  String
-  criadoEm     DateTime   @default(now())
-  atualizadoEm DateTime   @updatedAt
+  id            String     @id @default(cuid())
+  classGroupId  String
+  classGroup    ClassGroup @relation(fields: [classGroupId], references: [id])
+  titulo        String
+  descricao     String?    @db.Text
+  responsaveis  String[]   @default([]) // ids de Member, integrantes do grupo
+  periodicidade String? // texto livre: "toda semana", "no dia do evento"…
+  status        String     @default("ativa") // ativa | pausada | concluida
+  criadoPorId   String
+  criadoEm      DateTime   @default(now())
+  atualizadoEm  DateTime   @updatedAt
+
   @@index([classGroupId])
 }
 
@@ -1578,40 +1606,45 @@ model GrupoPresenca {
   motivo       String?      @db.Text
   naoInformou  Boolean      @default(false)
   respondidoEm DateTime     @default(now())
+
   @@unique([meetingId, memberId])
   @@index([memberId])
 }
 
-
 // Designação específica para recepção, sem acesso ao painel financeiro.
 model EventReception {
-  id String @id @default(cuid())
-  eventId String
-  event Event @relation(fields:[eventId], references:[id])
+  id       String @id @default(cuid())
+  eventId  String
+  event    Event  @relation(fields: [eventId], references: [id])
   memberId String
-  @@unique([eventId,memberId])
+
+  @@unique([eventId, memberId])
   @@index([memberId])
 }
+
 model EventAudit {
-  id String @id @default(cuid())
-  eventId String
-  event Event @relation(fields:[eventId], references:[id])
-  actorId String
-  action String
-  changes Json
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  actorId   String
+  action    String
+  changes   Json
   createdAt DateTime @default(now())
-  @@index([eventId,createdAt])
+
+  @@index([eventId, createdAt])
 }
+
 model EventNotice {
-  id String @id @default(cuid())
+  id             String            @id @default(cuid())
   registrationId String
-  registration EventRegistration @relation(fields:[registrationId], references:[id])
-  kind String
-  dueAt DateTime
-  status String @default("aguardando_canal")
-  sentAt DateTime?
-  @@unique([registrationId,kind])
-  @@index([status,dueAt])
+  registration   EventRegistration @relation(fields: [registrationId], references: [id])
+  kind           String
+  dueAt          DateTime
+  status         String            @default("aguardando_canal")
+  sentAt         DateTime?
+
+  @@unique([registrationId, kind])
+  @@index([status, dueAt])
 }
 
 // Recursos do Portal do Aluno liberados por filial (pedido do usuário
@@ -1646,7 +1679,7 @@ model AdministradorFilial {
 // atualizado pela sincronização diária. É ele que define quem cada aluno
 // pode avaliar (os instrutores da própria turma, com as matérias deles).
 model TurmaMateria {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   schoolId          String
   classGroupId      String
   materiaSigla      String
@@ -1655,7 +1688,7 @@ model TurmaMateria {
   instrutorNome     String
   instrutorMemberId String?
   inicio            DateTime?
-  syncedAt          DateTime @default(now())
+  syncedAt          DateTime  @default(now())
 
   @@unique([classGroupId, materiaSigla])
   @@index([schoolId])
@@ -1676,18 +1709,18 @@ model AvaliacaoQuestionario {
 // das perguntas no momento da abertura (mudanças posteriores no questionário
 // não alteram uma rodada já aberta). turmas vazio = todas as turmas.
 model AvaliacaoCampanha {
-  id           String    @id @default(cuid())
-  schoolId     String
-  titulo       String
-  introducao   String
-  perguntas    Json
-  turmas       String[]  @default([])
-  status       String    @default("aberta") // "aberta" | "encerrada"
-  abertaEm     DateTime  @default(now())
-  encerradaEm  DateTime?
+  id          String    @id @default(cuid())
+  schoolId    String
+  titulo      String
+  introducao  String
+  perguntas   Json
+  turmas      String[]  @default([])
+  status      String    @default("aberta") // "aberta" | "encerrada"
+  abertaEm    DateTime  @default(now())
+  encerradaEm DateTime?
   /// Último dia para responder (pedido do usuário 10/11/2026); a rodada se encerra sozinha depois. null = só pelo botão.
-  encerraEm    DateTime? @db.Date
-  criadoPorId  String
+  encerraEm   DateTime? @db.Date
+  criadoPorId String
 
   @@index([schoolId, status])
 }
@@ -1791,6 +1824,7 @@ model RedefinicaoSenha {
   memberId String
   porId    String
   em       DateTime @default(now())
+
   @@index([memberId])
 }
 
@@ -1804,6 +1838,7 @@ model AcessoRetiradoSubchefe {
   area     String
   porId    String
   em       DateTime @default(now())
+
   @@unique([schoolId, memberId, area])
   @@index([memberId])
 }
@@ -1813,15 +1848,16 @@ model AcessoRetiradoSubchefe {
 // navegador/celular em que a pessoa ativou as notificações vira uma linha;
 // inscrições que o serviço de push recusa (404/410) são apagadas no envio.
 model PushSubscription {
-  id         String   @id @default(cuid())
-  memberId   String
-  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  endpoint   String   @unique
-  p256dh     String
-  auth       String
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id            String    @id @default(cuid())
+  memberId      String
+  member        Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  userAgent     String?
+  createdAt     DateTime  @default(now())
   ultimoEnvioEm DateTime?
+
   @@index([memberId])
 }
 
@@ -1842,159 +1878,176 @@ model EventWaitlist {
   memberId  String
   createdAt DateTime  @default(now())
   avisadoEm DateTime?
+
   @@unique([eventId, memberId])
   @@index([eventId, createdAt])
 }
 
 // Credencial de terceiro isolada: nunca incluir na serialização genérica de Member.
 model AcropolePlayAccess {
-  memberId        String   @id
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  sourceStudentId String   @unique
+  memberId        String              @id
+  member          Member              @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sourceStudentId String              @unique
   source          AcropolePlayStudent @relation(fields: [sourceStudentId], references: [sourceStudentId], onDelete: Cascade)
   emailHash       String
   loginCiphertext String
-  importedAt      DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  importedAt      DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 }
 
 // Catálogo privado também atende alunos ativos que ainda não criaram login.
 model AcropolePlayStudent {
-  sourceStudentId       String @id
-  emailHash             String
-  nameHash              String
-  loginCiphertext       String
-  mercurioId            String?
-  mercurioUnit          String?
-  reconciliationStatus  String
-  mercurioSnapshotAt    DateTime?
-  importedAt            DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  access                AcropolePlayAccess?
+  sourceStudentId      String              @id
+  emailHash            String
+  nameHash             String
+  loginCiphertext      String
+  mercurioId           String?
+  mercurioUnit         String?
+  reconciliationStatus String
+  mercurioSnapshotAt   DateTime?
+  importedAt           DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  access               AcropolePlayAccess?
+
   @@index([emailHash])
   @@index([mercurioId])
 }
 
 // Planejamento por filial. Registros e avaliações são históricos append-only.
 model AberturaTurma {
-  mercurioTurmaId String?
-  inscricoesAte DateTime?
-  id String @id @default(cuid())
-  schoolId String
-  autorId String
-  titulo String
-  primeiraAula DateTime
-  diaSemana Int
-  inicioMinuto Int
-  duracaoMinutos Int @default(120)
-  capacidade Int
-  metaMatriculas Int
-  orcamentoCentavos Int @default(0)
+  mercurioTurmaId           String?
+  inscricoesAte             DateTime?
+  id                        String             @id @default(cuid())
+  schoolId                  String
+  autorId                   String
+  titulo                    String
+  primeiraAula              DateTime
+  diaSemana                 Int
+  inicioMinuto              Int
+  duracaoMinutos            Int                @default(120)
+  capacidade                Int
+  metaMatriculas            Int
+  orcamentoCentavos         Int                @default(0)
   // Site de matrículas (2026-10-25): link público /matricula/<token>, liga/desliga e valor da 1ª contribuição.
-  matriculaToken String? @unique
-  matriculaAberta Boolean @default(true)
+  matriculaToken            String?            @unique
+  matriculaAberta           Boolean            @default(true)
   valorContribuicaoCentavos Int?
-  matriculasOnline MatriculaOnline[]
-  sala String
-  status String @default("rascunho")
-  professorIds String[] @default([])
-  revisao Int @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  registros AberturaRegistro[]
+  matriculasOnline          MatriculaOnline[]
+  sala                      String
+  status                    String             @default("rascunho")
+  professorIds              String[]           @default([])
+  revisao                   Int                @default(0)
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+  registros                 AberturaRegistro[]
+
   @@index([schoolId, primeiraAula])
 }
+
 model AberturaRegistro {
-  id String @id @default(cuid())
+  id         String        @id @default(cuid())
   aberturaId String
-  abertura AberturaTurma @relation(fields:[aberturaId],references:[id],onDelete:Cascade)
-  autorId String
-  tipo String
-  dados Json
-  createdAt DateTime @default(now())
-  @@index([aberturaId,tipo,createdAt])
+  abertura   AberturaTurma @relation(fields: [aberturaId], references: [id], onDelete: Cascade)
+  autorId    String
+  tipo       String
+  dados      Json
+  createdAt  DateTime      @default(now())
+
+  @@index([aberturaId, tipo, createdAt])
 }
+
 model ProfessorDisponibilidade {
-  id String @id @default(cuid())
-  schoolId String
-  professorId String
-  diaSemana Int
+  id           String   @id @default(cuid())
+  schoolId     String
+  professorId  String
+  diaSemana    Int
   inicioMinuto Int
-  fimMinuto Int
-  validaDe String
-  validaAte String
-  impedimentos Json @default("[]")
-  habilitado Boolean @default(false)
-  autorId String
-  createdAt DateTime @default(now())
-  @@index([schoolId,professorId])
+  fimMinuto    Int
+  validaDe     String
+  validaAte    String
+  impedimentos Json     @default("[]")
+  habilitado   Boolean  @default(false)
+  autorId      String
+  createdAt    DateTime @default(now())
+
+  @@index([schoolId, professorId])
 }
+
 model SecretariaEscala {
-  id String @id @default(cuid())
-  schoolId String
-  secretaria String
-  memberId String
-  funcao String
-  diaSemana Int
+  id           String   @id @default(cuid())
+  schoolId     String
+  secretaria   String
+  memberId     String
+  funcao       String
+  diaSemana    Int
   inicioMinuto Int
-  fimMinuto Int
-  validaDe String
-  validaAte String
-  confirmado Boolean @default(false)
-  autorId String
-  createdAt DateTime @default(now())
-  @@index([schoolId,diaSemana])
+  fimMinuto    Int
+  validaDe     String
+  validaAte    String
+  confirmado   Boolean  @default(false)
+  autorId      String
+  createdAt    DateTime @default(now())
+
+  @@index([schoolId, diaSemana])
 }
+
 model AberturaConfig {
-  schoolId String @id
-  capacidadeEscola Int?
-  funcoesNecessarias String[] @default([])
-  compartilharAprendizados Boolean @default(false)
-  revisao Int @default(0)
-  updatedAt DateTime @updatedAt
+  schoolId                 String   @id
+  capacidadeEscola         Int?
+  funcoesNecessarias       String[] @default([])
+  compartilharAprendizados Boolean  @default(false)
+  revisao                  Int      @default(0)
+  updatedAt                DateTime @updatedAt
 }
+
 model AberturaCrmCache {
-  schoolId String @id
-  dados Json
+  schoolId       String   @id
+  dados          Json
   sincronizadoEm DateTime @default(now())
 }
+
 model SecretariaMandato {
-  id String @id @default(cuid())
-  memberId String
+  id         String   @id @default(cuid())
+  memberId   String
   secretaria String
-  escopo String
-  schoolIds String[] @default([])
-  ufs String[] @default([])
-  ativo Boolean @default(true)
-  createdAt DateTime @default(now())
-  @@index([memberId,ativo])
+  escopo     String
+  schoolIds  String[] @default([])
+  ufs        String[] @default([])
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([memberId, ativo])
 }
+
 model SecretariaPublicacao {
-  id String @id @default(cuid())
-  secretaria String
-  autorId String
-  titulo String
-  tipo String
-  conteudo String
-  url String?
-  schoolIds String[] @default([])
-  ufs String[] @default([])
-  inicio DateTime?
-  fim DateTime?
-  versao Int @default(1)
-  exigeLeitura Boolean @default(false)
-  publicado Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@index([secretaria,publicado])
+  id           String    @id @default(cuid())
+  secretaria   String
+  autorId      String
+  titulo       String
+  tipo         String
+  conteudo     String
+  url          String?
+  schoolIds    String[]  @default([])
+  ufs          String[]  @default([])
+  inicio       DateTime?
+  fim          DateTime?
+  versao       Int       @default(1)
+  exigeLeitura Boolean   @default(false)
+  publicado    Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([secretaria, publicado])
 }
+
 model SecretariaLeitura {
-  id String @id @default(cuid())
+  id           String   @id @default(cuid())
   publicacaoId String
-  memberId String
-  versao Int
-  lidoEm DateTime @default(now())
-  @@unique([publicacaoId,memberId,versao])
+  memberId     String
+  versao       Int
+  lidoEm       DateTime @default(now())
+
+  @@unique([publicacaoId, memberId, versao])
 }
 
 // Telas de TV da filial (pedido do usuário 2026-10-24): link público, sem login, que mostra em
@@ -2002,19 +2055,19 @@ model SecretariaLeitura {
 // derruba o link antigo. publicos: "aberto_publico" (eventos do Ulisses) e as chaves de
 // EVENT_AUDIENCES (todos_ativos, membros, fv, provacionistas, hd, dirigentes).
 model TelaEventos {
-  id        String   @id @default(cuid())
-  schoolId  String
-  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  nome      String
-  publicos  String[] @default([])
+  id         String      @id @default(cuid())
+  schoolId   String
+  school     School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  nome       String
+  publicos   String[]    @default([])
   // Conteúdos intercalados com os eventos (lib/telas-publicos.ts: CONTEUDOS_TELA) e
   // orientação ("auto" | "direita" | "esquerda" = vertical girada) — pedidos de 2026-10-24.
-  conteudos  String[] @default([])
-  orientacao String   @default("auto")
-  token     String   @unique
-  criadoPor String?
-  createdAt DateTime @default(now())
-  conexoes  TvConexao[]
+  conteudos  String[]    @default([])
+  orientacao String      @default("auto")
+  token      String      @unique
+  criadoPor  String?
+  createdAt  DateTime    @default(now())
+  conexoes   TvConexao[]
 
   @@index([schoolId])
 }
@@ -2115,23 +2168,23 @@ model MatriculaOnline {
 /// Atendimentos individuais com o instrutor (pedido do usuário 2026-10-25): faixas de horário que o instrutor abre
 /// (semanal por diaSemana, ou avulsa por data "YYYY-MM-DD"), fatiadas em conversas de duracaoMinutos. Horários no fuso da filial.
 model AtendimentoJanela {
-  id             String   @id @default(cuid())
+  id             String               @id @default(cuid())
   schoolId       String
   instrutorId    String
   diaSemana      Int?
   data           String?
   inicioMinuto   Int
   fimMinuto      Int
-  duracaoMinutos Int      @default(30)
-  modalidade     String   @default("presencial") // presencial | online | ambos
+  duracaoMinutos Int                  @default(30)
+  modalidade     String               @default("presencial") // presencial | online | ambos
   local          String?
   linkOnline     String?
-  datasFechadas  String[] @default([])
-  ativa          Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now()) @updatedAt
-  school         School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  instrutor      Member   @relation("AtendimentoJanelaInstrutor", fields: [instrutorId], references: [id], onDelete: Cascade)
+  datasFechadas  String[]             @default([])
+  ativa          Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @default(now()) @updatedAt
+  school         School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  instrutor      Member               @relation("AtendimentoJanelaInstrutor", fields: [instrutorId], references: [id], onDelete: Cascade)
   reservas       AtendimentoReserva[]
 
   @@index([instrutorId])
@@ -2381,17 +2434,17 @@ model LivroLeitura {
 // Oportunidades de voluntariado (pedido do usuário 2026-10-29): a Direção ou o responsável de uma secretaria/grupo
 // cadastra o que a filial precisa; o membro vê e se oferece; o responsável aceita ou recusa. Ver lib/oportunidades.ts.
 model OportunidadeVoluntariado {
-  id            String    @id @default(cuid())
+  id            String                  @id @default(cuid())
   schoolId      String
-  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school        School                  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   criadoPorId   String
   responsavelId String
-  responsavel   Member    @relation("OportunidadeResponsavel", fields: [responsavelId], references: [id], onDelete: Cascade)
+  responsavel   Member                  @relation("OportunidadeResponsavel", fields: [responsavelId], references: [id], onDelete: Cascade)
   titulo        String
   area          String
   descricao     String
   // "pontual" (um dia: data + horário) ou "continua" (horário recorrente em texto, ex: "Quintas, 19h às 21h").
-  tipo          String    @default("pontual")
+  tipo          String                  @default("pontual")
   data          String? // AAAA-MM-DD, data civil da filial (só pontual)
   horario       String?
   vagas         Int?
@@ -2399,8 +2452,8 @@ model OportunidadeVoluntariado {
   // Grupo do Portal (secretaria ou GDVE) em que a pessoa aceita entra.
   grupoId       String?
   encerradaEm   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
   interesses    InteresseVoluntariado[]
 
   @@index([schoolId, encerradaEm])
@@ -2408,16 +2461,16 @@ model OportunidadeVoluntariado {
 }
 
 model InteresseVoluntariado {
-  id             String                   @id @default(cuid())
-  oportunidadeId String
-  oportunidade   OportunidadeVoluntariado @relation(fields: [oportunidadeId], references: [id], onDelete: Cascade)
-  memberId       String
-  member         Member                   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  recado         String?
-  status         String                   @default("pendente") // pendente | aceito | recusado | desistiu
+  id              String                   @id @default(cuid())
+  oportunidadeId  String
+  oportunidade    OportunidadeVoluntariado @relation(fields: [oportunidadeId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          Member                   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  recado          String?
+  status          String                   @default("pendente") // pendente | aceito | recusado | desistiu
   respondidoPorId String?
-  respondidoEm   DateTime?
-  createdAt      DateTime                 @default(now())
+  respondidoEm    DateTime?
+  createdAt       DateTime                 @default(now())
 
   @@unique([oportunidadeId, memberId])
   @@index([memberId])
@@ -2426,22 +2479,22 @@ model InteresseVoluntariado {
 // Diário de FV dentro do GDVE (pedido do usuário 2026-10-31, migração autorizada). Mesma privacidade do diário: só a
 // própria pessoa lê e grava, nem coordenação do GDVE, direção ou administração. Ver src/lib/fv/.
 model DiarioFvDia {
-  id                  String   @id @default(cuid())
-  memberId            String
-  data                String // "AAAA-MM-DD", dia local da pessoa
-  itens               Json     @default("{}") // Degrau: { item1, item2_instintos..item2_ambiente, item2 (antigo), item34, item5, item6, item7 }
-  praticas            Json     @default("{}") // Forja: { recitarHonra, recitar7Fases, camara, formasGeometricas, porta, patioAberto, patioColunas, santuario } (Tratak fica em DiarioDia)
-  presencas           Json     @default("{}") // { aulaRegular, reuniaoRaio, aulaMinistrada, crm, aulaEd }: "Sim" | "Não"
-  minutosVoluntariado Int?
+  id                    String   @id @default(cuid())
+  memberId              String
+  data                  String // "AAAA-MM-DD", dia local da pessoa
+  itens                 Json     @default("{}") // Degrau: { item1, item2_instintos..item2_ambiente, item2 (antigo), item34, item5, item6, item7 }
+  praticas              Json     @default("{}") // Forja: { recitarHonra, recitar7Fases, camara, formasGeometricas, porta, patioAberto, patioColunas, santuario } (Tratak fica em DiarioDia)
+  presencas             Json     @default("{}") // { aulaRegular, reuniaoRaio, aulaMinistrada, crm, aulaEd }: "Sim" | "Não"
+  minutosVoluntariado   Int?
   minutosAulaAssistida  Int? // só vindos da importação; os novos são calculados pelo calendário
   minutosAulaMinistrada Int?
-  gdveTarefas         Json     @default("{}") // { tarefaId: contador do dia }
-  gdvePresenca        Boolean  @default(false)
-  origem              String   @default("portal") // portal | firebase
-  origemId            String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @default(now()) @updatedAt
-  member              Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  gdveTarefas           Json     @default("{}") // { tarefaId: contador do dia }
+  gdvePresenca          Boolean  @default(false)
+  origem                String   @default("portal") // portal | firebase
+  origemId              String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @default(now()) @updatedAt
+  member                Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, data])
 }

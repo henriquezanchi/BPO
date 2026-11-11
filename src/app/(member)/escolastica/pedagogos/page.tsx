@@ -1,7 +1,6 @@
 import { PedagogosAdmin } from "@/components/admin/grupos-admin";
-import { AbasArea } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
-import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
+import { AbasEscolastica } from "@/components/escolastica/abas-escolastica";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { gruposDaFilial } from "@/lib/grupos-dados";
 import { podeCriarTurmaPedagogos } from "@/lib/grupos-portal";
@@ -21,7 +20,7 @@ export default async function PedagogosEscolasticaPage() {
   return (
     <ShellTrabalho>
       <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
-      <AbasArea base="/escolastica" atual="pedagogos" abas={ABAS_ESCOLASTICA} />
+      <AbasEscolastica atual="pedagogos" />
       <PedagogosAdmin schoolId={member.schoolId} grupos={grupos} />
     </ShellTrabalho>
   );

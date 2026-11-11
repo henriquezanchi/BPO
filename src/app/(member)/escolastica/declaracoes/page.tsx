@@ -1,7 +1,6 @@
 import { GeradorDeclaracoes } from "@/components/escolastica/declaracoes";
-import { AbasArea } from "@/components/trabalho/areas";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
-import { ABAS_ESCOLASTICA } from "@/lib/abas-escolastica";
+import { AbasEscolastica } from "@/components/escolastica/abas-escolastica";
 import { exigirArea } from "@/lib/area-trabalho";
 import { db } from "@/lib/db";
 import { finalidadeDoPedido, TIPO_PEDIDO_DECLARACAO } from "@/lib/declaracoes/pedidos";
@@ -26,7 +25,7 @@ export default async function DeclaracoesPage(props: { searchParams: Promise<{ p
     <ShellTrabalho>
       <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400 print:hidden">Escolástica</h1>
       <div className="print:hidden">
-        <AbasArea base="/escolastica" atual="declaracoes" abas={ABAS_ESCOLASTICA} />
+        <AbasEscolastica atual="declaracoes" />
       </div>
       <GeradorDeclaracoes
         schoolId={member.schoolId}

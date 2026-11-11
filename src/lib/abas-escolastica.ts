@@ -9,6 +9,8 @@ export const ABAS_ESCOLASTICA: readonly AbaEscolastica[] = [
   ["avaliacao", "Avaliação dos instrutores", "/escolastica/avaliacao"],
   ["atendimentos", "Atendimentos dos instrutores", "/escolastica/atendimentos"],
   ["pedagogos", "Turmas de pedagogos", "/escolastica/pedagogos"],
+  // Só Chefe, Sub-Chefe e administração nacional veem esta aba (ver AbasEscolastica e lib/solicitacoes-pedagogo.ts).
+  ["novos-pedagogos", "Novos pedagogos", "/escolastica/novos-pedagogos"],
   ["declaracoes", "Declarações", "/escolastica/declaracoes"],
   ["orientacoes", "Orientações e gestão"],
 ];

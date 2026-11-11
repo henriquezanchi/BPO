@@ -27,10 +27,11 @@ const ABAS: { id: Aba; titulo: string }[] = [
 ];
 const CARD = "rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-gray-800 dark:bg-gray-900";
 
-export function PainelAberturas({ data }: { data: PainelAberturas }) {
+/** `secao`, `aberturaInicial` e `busca` vêm do link do aviso de interessado novo (11/11/2026): abre direto a lista, já filtrada. */
+export function PainelAberturas({ data, secao, aberturaInicial, busca }: { data: PainelAberturas; secao?: string; aberturaInicial?: string; busca?: string }) {
   const router = useRouter();
-  const inicial = data.aberturas.find((item) => item.status !== "cancelada") ?? data.aberturas[0];
-  const [aba, setAba] = useState<Aba>("resumo");
+  const inicial = data.aberturas.find((item) => item.id === aberturaInicial) ?? data.aberturas.find((item) => item.status !== "cancelada") ?? data.aberturas[0];
+  const [aba, setAba] = useState<Aba>(ABAS.some((a) => a.id === secao) ? (secao as Aba) : "resumo");
   const [aberturaId, setAberturaId] = useState(inicial?.id ?? "");
   const [formAberto, setFormAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Abertura | null>(null);
@@ -60,7 +61,7 @@ export function PainelAberturas({ data }: { data: PainelAberturas }) {
     if (aba === "resumo") return <ResumoTab data={data} nova={abrirNova} onIr={(id, destino = "planejamento") => { if (id) setAberturaId(id); setAba(destino); }} />;
     if (aba === "planejamento") return <PlanejamentoTab data={data} abertura={abertura} selecionar={setAberturaId} nova={abrirNova} editar={abrirEdicao} />;
     if (aba === "cultura") return <CicloCultural data={data} abertura={abertura} />;
-    if (aba === "interessados") return <InteressadosTab data={data} abertura={abertura} />;
+    if (aba === "interessados") return <InteressadosTab data={data} abertura={abertura} buscaInicial={busca} />;
     if (aba === "investimentos") return <InvestimentosTab data={data} abertura={abertura} />;
     if (aba === "equipe") return <EquipeHorarios data={data} abertura={abertura} />;
     return <AprendizadosTab data={data} abertura={abertura} />;

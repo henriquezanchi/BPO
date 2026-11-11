@@ -14,9 +14,9 @@ import { SituacaoInteressado } from "./situacao-interessado";
 
 const CARD = "rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-gray-800 dark:bg-gray-900";
 
-export function InteressadosTab({ data, abertura }: { data: PainelAberturas; abertura: Abertura | null }) {
+export function InteressadosTab({ data, abertura, buscaInicial }: { data: PainelAberturas; abertura: Abertura | null; buscaInicial?: string }) {
   const action = useFormAction(sincronizarCrmAberturas);
-  const [busca,setBusca]=useState(''),[pagina,setPagina]=useState(0);
+  const [busca,setBusca]=useState(buscaInicial??''),[pagina,setPagina]=useState(0);
   const filtrados=data.crm.leads.filter(l=>`${l.nome||l.name||''} ${l.id||''}`.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR')));
   const atual=Math.min(pagina,Math.max(0,Math.ceil(filtrados.length/50)-1));
 
