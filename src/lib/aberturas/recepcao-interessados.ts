@@ -55,6 +55,8 @@ export function linkInteressados(schoolId: string, aberturaId: string | null, li
   return `/voluntario/aberturas?${q}`;
 }
 
+const AVISO_INTERESSADO_NOVO_DESLIGADO = true;
+
 async function reservar(chave: string) {
   try {
     await db.pushEnviado.create({ data: { chave } });
@@ -73,7 +75,10 @@ async function equipeDaEscolastica(schoolId: string) {
 
 /** Chamado depois de cada sincronização do CRM (aberturas/sincronizacao.ts). */
 export async function avisarInteressadosNovos(schoolId: string, novos: LeadCache[]) {
-  if (!novos.length) return 0;
+  // Desligado em 11/11/2026 (pedido do usuário): os leads do CRM não são interessados — são contatos a trabalhar. O aviso
+  // volta quando "interessado" tiver critério qualificado (perguntou no WhatsApp, foi a uma aula inaugural, se inscreveu na
+  // abertura e não se matriculou, ou foi marcado pela escola).
+  if (AVISO_INTERESSADO_NOVO_DESLIGADO || !novos.length) return 0;
   const escolastica = await equipeDaEscolastica(schoolId);
   const aberturas = new Map(
     (await db.aberturaTurma.findMany({ where: { schoolId, id: { in: [...new Set(novos.map((n) => n.aberturaId).filter((x): x is string => !!x))] } }, select: { id: true, titulo: true, professorIds: true } })).map((a) => [a.id, a]),

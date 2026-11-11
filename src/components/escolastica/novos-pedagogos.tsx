@@ -1,10 +1,10 @@
 "use client";
 
 import { BOTAO_CONTORNO, BOTAO_PEQUENO, BOTAO_PRINCIPAL } from "@/components/ui/botoes";
-import { atenderSolicitacaoPedagogo, cancelarSolicitacaoPedagogo, solicitarPedagogo } from "@/lib/actions/solicitacao-pedagogo-actions";
+import { alterarIndicadoPedagogos, atenderSolicitacaoPedagogo, cancelarSolicitacaoPedagogo, solicitarPedagogo } from "@/lib/actions/solicitacao-pedagogo-actions";
 import type { SolicitacaoParaVer } from "@/lib/solicitacoes-pedagogo";
 import { FORMACOES_PEDAGOGO, MOTIVO_MAX, ROTULO_STATUS, type StatusSolicitacaoPedagogo } from "@/lib/solicitacoes-pedagogo-comum";
-import { Check, GraduationCap, Loader2, Search, X } from "lucide-react";
+import { Check, GraduationCap, Loader2, Search, UserCheck, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
@@ -63,7 +63,7 @@ function NovoPedido({ schoolId, candidatos }: { schoolId: string; candidatos: Ca
         </span>
         <div className="min-w-0">
           <h2 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">Pedir inclusão de pedagogo</h2>
-          <p className="text-[12px] text-gray-500 dark:text-gray-400">A administração nacional faz a inclusão no Mercúrio. O pedido fica registrado com o seu nome.</p>
+          <p className="text-[12px] text-gray-500 dark:text-gray-400">O responsável nacional pelos pedagogos faz a inclusão no Mercúrio. O pedido fica registrado com o seu nome.</p>
         </div>
       </div>
 
@@ -149,7 +149,7 @@ function NovoPedido({ schoolId, candidatos }: { schoolId: string; candidatos: Ca
       {erro && <p className="text-[13px] text-na-danger-dark dark:text-red-400">{erro}</p>}
       {enviado && !erro && (
         <p className="flex items-center gap-1.5 text-[13px] font-semibold text-na-green-dark dark:text-emerald-300">
-          <Check size={15} /> Pedido de {enviado} enviado à administração nacional.
+          <Check size={15} /> Pedido de {enviado} enviado ao responsável nacional.
         </p>
       )}
       <button type="submit" disabled={enviando} className={`${BOTAO_PRINCIPAL} self-start`}>
@@ -159,7 +159,7 @@ function NovoPedido({ schoolId, candidatos }: { schoolId: string; candidatos: Ca
   );
 }
 
-/** Botões de quem atende (administração nacional) e de quem pediu (cancelar). */
+/** Botões de quem atende (responsável nacional e indicados) e de quem pediu (cancelar). */
 function AcoesDoPedido({ s, nacional, podeCancelar }: { s: SolicitacaoParaVer; nacional: boolean; podeCancelar: boolean }) {
   const router = useRouter();
   const [recusando, setRecusando] = useState(false);
@@ -243,6 +243,82 @@ function CartaoPedido({ s, nacional, podeCancelar, mostrarFilial }: { s: Solicit
   );
 }
 
+type PessoaEquipe = { matricula: string; nome: string; filial: string };
+
+/** Quem atende os pedidos; o responsável nacional indica e retira pessoas pela matrícula. */
+function EquipeQueAtende({ equipe, gere }: { equipe: { responsavel: PessoaEquipe; indicados: PessoaEquipe[] }; gere: boolean }) {
+  const router = useRouter();
+  const [matricula, setMatricula] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [emAndamento, iniciar] = useTransition();
+
+  const alterar = (matr: string, incluir: boolean) =>
+    iniciar(async () => {
+      setErro(null);
+      const r = await alterarIndicadoPedagogos(matr, incluir);
+      if (!r.ok) return setErro(r.error);
+      if (incluir) setMatricula("");
+      router.refresh();
+    });
+
+  const linha = (p: PessoaEquipe, papel: string, remover: boolean) => (
+    <li key={p.matricula} className="flex min-h-11 items-center justify-between gap-3 border-b border-gray-100 py-1.5 last:border-0 dark:border-gray-800">
+      <span className="min-w-0">
+        <span className="block truncate text-[14px] font-semibold text-gray-900 dark:text-gray-100">{p.nome}</span>
+        <span className="block text-[12px] text-gray-500 dark:text-gray-400">
+          {papel} · matr. {p.matricula}
+          {p.filial && ` · ${p.filial}`}
+        </span>
+      </span>
+      {remover && (
+        <button type="button" disabled={emAndamento} onClick={() => alterar(p.matricula, false)} className={BOTAO_PEQUENO}>
+          Retirar
+        </button>
+      )}
+    </li>
+  );
+
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-na-green-light text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-300">
+          <UserCheck size={18} />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">Quem atende os pedidos</h2>
+          <p className="text-[12px] text-gray-500 dark:text-gray-400">Recebem o aviso de cada pedido novo e marcam a inclusão no Mercúrio.</p>
+        </div>
+      </div>
+      <ul className="flex flex-col">
+        {linha(equipe.responsavel, "Responsável nacional", false)}
+        {equipe.indicados.map((p) => linha(p, "Indicado", gere))}
+      </ul>
+      {gere && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            alterar(matricula, true);
+          }}
+          className="flex flex-wrap items-center gap-2"
+        >
+          <input
+            value={matricula}
+            onChange={(e) => setMatricula(e.target.value)}
+            inputMode="numeric"
+            placeholder="Matrícula de quem vai atender"
+            aria-label="Matrícula de quem vai atender"
+            className={`${CAMPO} max-w-64`}
+          />
+          <button type="submit" disabled={emAndamento || !matricula.trim()} className={BOTAO_CONTORNO}>
+            {emAndamento && <Loader2 size={15} className="animate-spin" />} Indicar
+          </button>
+        </form>
+      )}
+      {erro && <p className="text-[13px] text-na-danger-dark dark:text-red-400">{erro}</p>}
+    </section>
+  );
+}
+
 export function NovosPedagogos({
   schoolId,
   podePedir,
@@ -251,6 +327,8 @@ export function NovosPedagogos({
   solicitacoes,
   escolasQuePede,
   variasFiliais,
+  equipe,
+  gereIndicados,
 }: {
   schoolId: string;
   podePedir: boolean;
@@ -259,6 +337,8 @@ export function NovosPedagogos({
   solicitacoes: SolicitacaoParaVer[];
   escolasQuePede: string[];
   variasFiliais: boolean;
+  equipe: { responsavel: PessoaEquipe; indicados: PessoaEquipe[] };
+  gereIndicados: boolean;
 }) {
   const pendentes = solicitacoes.filter((s) => s.status === "pendente");
   const historico = solicitacoes.filter((s) => s.status !== "pendente");
@@ -293,6 +373,8 @@ export function NovosPedagogos({
           </ul>
         </section>
       )}
+
+      <EquipeQueAtende equipe={equipe} gere={gereIndicados} />
     </div>
   );
 }

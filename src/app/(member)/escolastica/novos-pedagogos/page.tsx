@@ -3,7 +3,7 @@ import { NovosPedagogos } from "@/components/escolastica/novos-pedagogos";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { acessoNovosPedagogos, candidatosAPedagogo, listarSolicitacoesPedagogo, temAcessoNovosPedagogos } from "@/lib/solicitacoes-pedagogo";
+import { acessoNovosPedagogos, candidatosAPedagogo, equipeQueAtende, listarSolicitacoesPedagogo, temAcessoNovosPedagogos } from "@/lib/solicitacoes-pedagogo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Novos pedagogos (pedido do usuário 11/11/2026): o Chefe e o Sub-Chefe pedem a inclusão de uma pessoa da filial como
- * pedagogo no Mercúrio; a administração nacional faz a inclusão e marca o pedido. Regras em lib/solicitacoes-pedagogo.ts.
+ * pedagogo no Mercúrio; o responsável nacional pelos pedagogos (e quem ele indicar) faz a inclusão e marca o pedido. Regras em lib/solicitacoes-pedagogo.ts.
  */
 export default async function NovosPedagogosPage(props: { searchParams: Promise<{ filial?: string }> }) {
   const member = await getAuthenticatedMember();
@@ -19,20 +19,24 @@ export default async function NovosPedagogosPage(props: { searchParams: Promise<
   const acesso = await acessoNovosPedagogos(member);
   if (!temAcessoNovosPedagogos(acesso)) redirect("/escolastica");
 
-  // A administração nacional atende todas as filiais; o formulário vale para a filial escolhida.
+  // Quem atende vê todas as filiais; o formulário vale para a filial escolhida.
   const escolas = await db.school.findMany({ where: { id: { in: acesso.escolas } }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   const { filial } = await props.searchParams;
   const escola = escolas.find((e) => e.id === filial) ?? escolas.find((e) => e.id === member.schoolId) ?? escolas[0];
   const todas = acesso.nacional ? (await db.school.findMany({ select: { id: true } })).map((s) => s.id) : acesso.escolas;
 
-  const [solicitacoes, candidatos] = await Promise.all([listarSolicitacoesPedagogo(todas), escola ? candidatosAPedagogo(escola.id) : Promise.resolve([])]);
+  const [solicitacoes, candidatos, equipe] = await Promise.all([
+    listarSolicitacoesPedagogo(todas),
+    escola ? candidatosAPedagogo(escola.id) : Promise.resolve([]),
+    equipeQueAtende(),
+  ]);
 
   return (
     <ShellTrabalho>
       <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Escolástica</h1>
       <AbasEscolastica atual="novos-pedagogos" />
       <p className="max-w-3xl text-sm text-gray-500 dark:text-gray-400">
-        O Chefe e o Sub-Chefe da filial pedem aqui a inclusão de novos pedagogos no Mercúrio. A administração nacional faz a inclusão e marca o pedido; quando a
+        O Chefe e o Sub-Chefe da filial pedem aqui a inclusão de novos pedagogos no Mercúrio. O responsável nacional pelos pedagogos (ou quem ele indicar) faz a inclusão e marca o pedido; quando a
         pessoa passa a aparecer como pedagogo na importação do Mercúrio, o pedido se fecha sozinho.
       </p>
       {escolas.length > 1 && (
@@ -59,6 +63,8 @@ export default async function NovosPedagogosPage(props: { searchParams: Promise<
         solicitacoes={solicitacoes}
         escolasQuePede={acesso.escolas}
         variasFiliais={todas.length > 1}
+        equipe={equipe}
+        gereIndicados={acesso.gereIndicados}
       />
     </ShellTrabalho>
   );

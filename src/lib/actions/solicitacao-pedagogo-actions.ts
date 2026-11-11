@@ -3,7 +3,7 @@
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { avisarSemEsperar } from "@/lib/push";
-import { acessoNovosPedagogos, contasDaAdministracaoNacional } from "@/lib/solicitacoes-pedagogo";
+import { RESPONSAVEL_NACIONAL_PEDAGOGOS, acessoNovosPedagogos, contasQueAtendem, gravarIndicados, indicadosParaAtender } from "@/lib/solicitacoes-pedagogo";
 import { ehFormacao, rotuloFormacao, validarMotivo } from "@/lib/solicitacoes-pedagogo-comum";
 import { revalidatePath } from "next/cache";
 
@@ -32,7 +32,7 @@ export async function solicitarPedagogo(dados: { schoolId: string; memberId: str
     data: { schoolId: dados.schoolId, memberId: pessoa.id, formacao: dados.formacao, motivo: motivo.texto, solicitadoPorId: eu.id },
   });
   const filial = pessoa.school.name.replace(/^Nova Acrópole\s*-\s*/i, "");
-  avisarSemEsperar(await contasDaAdministracaoNacional(), {
+  avisarSemEsperar(await contasQueAtendem(), {
     titulo: "Novo pedagogo para incluir no Mercúrio",
     corpo: `${filial}: ${pessoa.name} (${rotuloFormacao(dados.formacao).toLowerCase()}), pedido por ${eu.name}.`,
     url: CAMINHO,
@@ -56,11 +56,11 @@ export async function cancelarSolicitacaoPedagogo(id: string) {
   return { ok: true as const };
 }
 
-/** Administração nacional: marca como incluída no Mercúrio ou como não incluída (com o motivo, que a filial lê). */
+/** Responsável nacional pelos pedagogos (ou indicado): marca como incluída no Mercúrio ou como não incluída (com o motivo, que a filial lê). */
 export async function atenderSolicitacaoPedagogo(id: string, resultado: "incluida" | "recusada", observacao: string) {
   const eu = await getAuthenticatedMember();
   if (!eu) return erro("Entre no Portal de novo.");
-  if (!(await acessoNovosPedagogos(eu)).nacional) return erro("Só a administração nacional marca a inclusão no Mercúrio.");
+  if (!(await acessoNovosPedagogos(eu)).nacional) return erro("Só o responsável nacional pelos pedagogos e quem ele indicou marcam a inclusão no Mercúrio.");
   if (resultado !== "incluida" && resultado !== "recusada") return erro("Resultado inválido.");
   const obs = (observacao ?? "").trim().slice(0, 1000);
   if (resultado === "recusada" && obs.length < 5) return erro("Diga à filial por que a pessoa não foi incluída.");
@@ -75,6 +75,25 @@ export async function atenderSolicitacaoPedagogo(id: string, resultado: "incluid
     url: CAMINHO,
     etiqueta: `novo-pedagogo-${id}`,
   });
+  revalidatePath(CAMINHO);
+  return { ok: true as const };
+}
+
+/** O responsável nacional indica (ou retira) quem atende os pedidos junto com ele, pela matrícula. */
+export async function alterarIndicadoPedagogos(matricula: string, incluir: boolean) {
+  const eu = await getAuthenticatedMember();
+  if (!eu) return erro("Entre no Portal de novo.");
+  if (!(await acessoNovosPedagogos(eu)).gereIndicados) return erro("Só o responsável nacional pelos pedagogos indica quem atende.");
+  const matr = String(matricula ?? "").replace(/\D/g, "");
+  if (!matr) return erro("Informe a matrícula.");
+  if (matr === RESPONSAVEL_NACIONAL_PEDAGOGOS) return erro("O responsável nacional já atende.");
+  const atuais = await indicadosParaAtender();
+  if (incluir) {
+    const pessoa = await db.member.findFirst({ where: { mercurioId: matr, mercurioAtivo: true }, select: { name: true } });
+    if (!pessoa) return erro(`Matrícula ${matr} não encontrada entre os membros ativos.`);
+    if (atuais.includes(matr)) return erro(`${pessoa.name} já está na lista.`);
+    await gravarIndicados([...atuais, matr]);
+  } else await gravarIndicados(atuais.filter((m) => m !== matr));
   revalidatePath(CAMINHO);
   return { ok: true as const };
 }
