@@ -1,4 +1,5 @@
 import { KeyRound, Settings } from "lucide-react";
+import { FaixaRolavel } from "@/components/ui/faixa-rolavel";
 import Link from "next/link";
 
 /**
@@ -12,7 +13,7 @@ export function AbasAdmin({ atual, filial, acessos }: { atual: "recursos" | "ace
     { id: "acessos", rotulo: "Liberar acessos", icone: KeyRound, href: "/voluntario/acessos" },
   ] as const;
   return (
-    <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-gray-200 px-4 lg:mx-0 lg:px-0 dark:border-gray-800" aria-label="Seções da Administração">
+    <nav aria-label="Seções da Administração"><FaixaRolavel externo="-mx-4 border-b border-gray-200 lg:mx-0 dark:border-gray-800" className="flex gap-1 px-4 lg:px-0">
       {abas.filter((a) => a.id !== "acessos" || acessos).map((a) => (
         <Link
           key={a.id}
@@ -25,6 +26,6 @@ export function AbasAdmin({ atual, filial, acessos }: { atual: "recursos" | "ace
           <a.icone size={15} /> {a.rotulo}
         </Link>
       ))}
-    </nav>
+    </FaixaRolavel></nav>
   );
 }

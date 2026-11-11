@@ -1,4 +1,5 @@
 import { AdminFilialPanel } from "@/components/admin/admin-filial-panel";
+import { FaixaRolavel } from "@/components/ui/faixa-rolavel";
 import { AcessosSubchefe } from "@/components/admin/acessos-subchefe";
 import { ehAdministradorNacional, escolasChefiadas } from "@/lib/acesso-voluntario";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
@@ -104,11 +105,12 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
           {escolas.length === 1 && <p className="text-xs text-gray-500 dark:text-gray-400">{nomeEscola(escola.name)}</p>}
         </div>
         {escolas.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
+          <FaixaRolavel className="flex gap-1.5 pb-1">
             {escolas.map((e) => (
               <Link
                 key={e.id}
                 href={link(aba, e.id)}
+                aria-current={e.id === escola.id ? "page" : undefined}
                 className={`shrink-0 rounded-full border px-3 py-1 text-[12px] font-semibold ${
                   e.id === escola.id ? "border-na-green bg-na-green/10 text-na-green-dark dark:text-emerald-400" : "border-gray-300 text-gray-600 dark:border-gray-700 dark:text-gray-400"
                 }`}
@@ -116,7 +118,7 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
                 {nomeEscola(e.name)}
               </Link>
             ))}
-          </div>
+          </FaixaRolavel>
         )}
         <AbasAdmin atual="recursos" filial={escolas.length > 1 ? escola.id : undefined} acessos={member.isDiretor || member.isSubChefe || member.filiaisChefiadas.length > 0 || (await ehAdministradorNacional(member))} />
         <p className="text-[13px] text-gray-500 dark:text-gray-400">{abaInfo.descricao}</p>

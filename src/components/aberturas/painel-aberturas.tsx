@@ -1,4 +1,5 @@
 "use client";
+import { FaixaRolavel } from "@/components/ui/faixa-rolavel";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 import { useRouter } from "next/navigation";
@@ -75,7 +76,7 @@ export function PainelAberturas({ data, secao, aberturaInicial, busca }: { data:
       </div>
     </header>
 
-    <nav aria-label="Seções de aberturas" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1" role="tablist">{ABAS.map(({ id, titulo }) => <button key={id} type="button" role="tab" id={`aba-aberturas-${id}`} aria-selected={aba === id} aria-controls="painel-aberturas-conteudo" onClick={() => setAba(id)} className={`min-h-10 shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 sm:text-sm ${aba === id ? "bg-na-green-dark text-white shadow-sm dark:bg-emerald-800" : "bg-white text-gray-600 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"}`}>{titulo}</button>)}</nav>
+    <nav aria-label="Seções de aberturas"><FaixaRolavel externo="-mx-1" className="flex gap-1 px-1 pb-1" role="tablist">{ABAS.map(({ id, titulo }) => <button key={id} type="button" role="tab" id={`aba-aberturas-${id}`} aria-selected={aba === id} aria-controls="painel-aberturas-conteudo" onClick={() => setAba(id)} className={`min-h-10 shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 sm:text-sm ${aba === id ? "bg-na-green-dark text-white shadow-sm dark:bg-emerald-800" : "bg-white text-gray-600 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"}`}>{titulo}</button>)}</FaixaRolavel></nav>
 
     <div role="tabpanel" id="painel-aberturas-conteudo" aria-labelledby={`aba-aberturas-${aba}`} className="min-w-0">{mostrarAba()}</div>
     {formAberto && <FormAbertura key={emEdicao?.id ?? "nova-abertura"} schoolId={data.schoolId} professores={data.professores} abertura={emEdicao} onFechar={fecharFormulario} />}

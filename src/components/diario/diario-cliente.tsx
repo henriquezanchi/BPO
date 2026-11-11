@@ -1,4 +1,5 @@
 "use client";
+import { FaixaRolavel } from "@/components/ui/faixa-rolavel";
 import { BOTAO_PRINCIPAL as BOTAO } from "@/components/ui/botoes";
 import { BotaoTratak } from "@/components/diario/tratak";
 
@@ -66,9 +67,9 @@ export function DiarioCliente({ d }: { d: DiarioDaPessoa }) {
   return (
     <div className="flex flex-col gap-4">
       <nav
-        aria-label="Dia do diário"
-        className="flex gap-1.5 overflow-x-auto pb-1"
-      >
+    aria-label="Dia do diário"
+    
+  ><FaixaRolavel externo="" className="flex gap-1.5 pb-1">
         {d.datas.map((x) => (
           <Link
             key={x.data}
@@ -87,7 +88,7 @@ export function DiarioCliente({ d }: { d: DiarioDaPessoa }) {
             ) : null}
           </Link>
         ))}
-      </nav>
+      </FaixaRolavel></nav>
 
       <FogoInterno fogo={d.fogo} />
 

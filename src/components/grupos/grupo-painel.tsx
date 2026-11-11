@@ -1,4 +1,5 @@
 "use client";
+import { FaixaRolavel } from "@/components/ui/faixa-rolavel";
 import {
   BOTAO_PRINCIPAL as BOTAO,
   BOTAO_TEXTO as BOTAO_LEVE,
@@ -177,9 +178,9 @@ export function GrupoPainel({
 
       {/* Mesmo visual das abas das áreas (AbasArea). */}
       <nav
-        className="-mx-4 flex gap-1 overflow-x-auto border-b border-gray-200 px-4 lg:mx-0 lg:px-0 dark:border-gray-800"
-        aria-label="Seções do grupo"
-      >
+    
+    aria-label="Seções do grupo"
+  ><FaixaRolavel externo="-mx-4 border-b border-gray-200 lg:mx-0 dark:border-gray-800" className="flex gap-1 px-4 lg:px-0">
         {abas.map(([a, r]) => (
           <button
             key={a}
@@ -194,7 +195,7 @@ export function GrupoPainel({
             {r}
           </button>
         ))}
-      </nav>
+      </FaixaRolavel></nav>
 
       <div className="flex max-w-3xl flex-col gap-4">
         {aba === "escala" && escala}

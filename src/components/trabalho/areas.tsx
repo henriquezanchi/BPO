@@ -1,5 +1,6 @@
 "use client";
 
+import { FaixaRolavel } from "@/components/ui/faixa-rolavel";
 import { MembrosTab, VisaoGeralTab } from "@/components/director/diretor-dashboard";
 import { FortunaTab } from "@/components/director/fortuna-tab";
 import { MemberDetailPanel } from "@/components/director/member-detail-panel";
@@ -17,7 +18,7 @@ import type { AbaEscolastica } from "@/lib/abas-escolastica";
 /** Abas de uma área da filial (links com ?aba=, funcionam no computador e no celular). */
 export function AbasArea({ base, abas, atual }: { base: string; abas: readonly AbaEscolastica[]; atual: string }) {
   return (
-    <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-gray-200 px-4 lg:mx-0 lg:px-0 dark:border-gray-800" aria-label="Seções">
+    <nav aria-label="Seções"><FaixaRolavel externo="-mx-4 border-b border-gray-200 lg:mx-0 dark:border-gray-800" className="flex gap-1 px-4 lg:px-0">
       {abas.map(([id, rotulo, href]) => (
         <Link
           key={id}
@@ -30,7 +31,7 @@ export function AbasArea({ base, abas, atual }: { base: string; abas: readonly A
           {rotulo}
         </Link>
       ))}
-    </nav>
+    </FaixaRolavel></nav>
   );
 }
 
