@@ -1120,3 +1120,17 @@ Os testes de regras da Meta passaram.
 **Não testado com dinheiro.** Nenhum saque foi feito. Pode ser preciso habilitar no Asaas as transferências pela API e a validação de saque nas subcontas.
 
 **Fora do escopo por enquanto:** a gestão das contas a pagar da escola.
+
+## 12/11/2026 — Proposta Piloto (Claude)
+
+Arquivos em `docs/propostas/Proposta-Piloto-Portal-2026-11.html` e `.pdf`, com 4 páginas.
+- Para gerar o PDF de novo depois de editar o HTML: `npx tsx scripts/gerar-proposta-piloto.ts` (usa o Chromium do Playwright).
+
+**Conteúdo**
+- Escolas participantes, com os ativos de cada uma (1.651 no total).
+- Faixa fixa, não proporcional: o piloto, com todas as escolas liberadas, fica em **1%**.
+- As escolas pagam só o spread. A SNE complementa até R$ 3.000.
+- Simulação com adesão de 25%, 50%, 75% e 100%.
+- Taxas do Asaas, serviços opcionais e etapas de implantação. As datas dependem da parte burocrática de cada escola.
+
+A proposta de 23/10 não foi alterada; esta é uma proposta nova.

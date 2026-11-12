@@ -85,7 +85,7 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   }),
   a("a38", S0, "2026-11-13", "2026-11-17", "Atualizar a proposta: faixa fixa (não proporcional) e fixo abatido pelo spread; refazer a simulação", "Henrique, Claude (texto e tabela)", [
     "Proposta de 23/10/2026 (PDF)", "Nova tabela: total = máx(R$ 3.000, spread)",
-  ], "1 dia", 1, { obs: "Antes de ir ao Diretor Nacional e às escolas." }),
+  ], "1 dia", 1, { status: "andamento", obs: "Antes de ir ao Diretor Nacional e às escolas.", registros: [R("Proposta Piloto feita: docs/propostas/Proposta-Piloto-Portal-2026-11.pdf. Falta a revisão do Henrique.")] }),
   a("a14", DEV, "2026-11-16", "2026-11-27", "Construir o modo guiado por QR code (/pagar)", "Claude, Henrique (testes)", [
     "Roteiro das telas do tutorial", "QR por filial com origem=patio", "Usuário de teste",
   ], "5 a 7 dias úteis", 6),

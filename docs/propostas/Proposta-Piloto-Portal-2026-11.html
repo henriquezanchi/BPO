@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Proposta Piloto — Portal, Suporte e Serviços Financeiros</title>
+<style>
+  /* Fonte do PDF: gerar com `npx tsx scripts/gerar-proposta-piloto.ts`. Mesmo visual da proposta de 23/10/2026. */
+  @page { size: A4; margin: 18mm 18mm 20mm; }
+  :root { --verde: #0f3d33; --verde2: #0b6b55; --linha: #dfe7e3; --fundo: #f0f5f2; --texto: #1d2a25; --cinza: #5c6b65; }
+  * { box-sizing: border-box; }
+  body { font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif; color: var(--texto); font-size: 10.5pt; line-height: 1.45; margin: 0; }
+  .pagina { page-break-after: always; }
+  .pagina:last-child { page-break-after: auto; }
+  .olho { font-size: 8.5pt; color: var(--cinza); letter-spacing: .04em; text-transform: uppercase; margin: 0 0 6mm; }
+  h1 { font-size: 26pt; line-height: 1.08; color: var(--verde); margin: 0 0 4mm; }
+  h2 { font-size: 14pt; color: var(--verde2); margin: 5mm 0 2mm; }
+  .sub { font-size: 12pt; color: var(--cinza); margin: 0 0 4mm; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 9.8pt; }
+  th { background: var(--fundo); text-align: left; font-weight: 700; color: #4a5853; padding: 1.8mm 3mm; border-bottom: 1.4px solid var(--verde2); }
+  td { padding: 1.5mm 3mm; border-bottom: 1px solid var(--linha); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.destaque td { background: #e3f1ea; font-weight: 700; color: var(--verde); }
+  ul { margin: 1mm 0 2mm; padding-left: 5mm; }
+  li { margin: 0.8mm 0; }
+  .nota { font-size: 8.8pt; color: var(--cinza); }
+  .caixa { background: var(--fundo); border-left: 3px solid var(--verde2); padding: 3mm 4mm; margin: 3mm 0; }
+  .grande { font-size: 18pt; font-weight: 800; color: var(--verde); line-height: 1.1; }
+  .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+</style>
+</head>
+<body>
+
+<section class="pagina">
+  <p class="olho">01 / Proposta piloto · 12/11/2026</p>
+  <h1>Proposta Piloto<br>Portal, Suporte e Serviços Financeiros</h1>
+  <p class="sub">Mais autonomia para o aluno. Mais organização para a escola. Mais tempo para ensinar e acolher.</p>
+
+  <table>
+    <tr><th>Frente</th><th>Contratação</th><th>Remuneração</th></tr>
+    <tr><td>Portal e suporte</td><td>Nacional (piloto)</td><td><b>Spread + complemento da Secretaria Nacional de Economia até R$ 3.000/mês</b></td></tr>
+    <tr><td>BPO financeiro</td><td>Individual, por escola</td><td>Conforme escopo</td></tr>
+    <tr><td>Recuperação de inadimplência</td><td>Individual, por escola</td><td>10% dos valores recuperados</td></tr>
+  </table>
+  <p><b>Sem taxa de implantação.</b></p>
+
+  <h2>Escolas participantes do piloto</h2>
+  <p>Todas as escolas de Goiás (exceto Valparaíso), Barra do Garças e a Sede Nacional (Brasília). Membros ativos no Mercúrio em 12/11/2026:</p>
+  <div class="duas"><table><tr><th>Escola</th><th class="n">Ativos</th></tr><tr><td>Sede Nacional — Brasília</td><td class="n">448</td></tr><tr><td>Goiânia Universitário</td><td class="n">322</td></tr><tr><td>Goiânia Jardim América</td><td class="n">303</td></tr><tr><td>Rio Verde</td><td class="n">130</td></tr><tr><td>Anápolis</td><td class="n">121</td></tr><tr><td>Goiânia Setor Oeste</td><td class="n">61</td></tr><tr><td>Goiânia II</td><td class="n">47</td></tr></table><table><tr><th>Escola</th><th class="n">Ativos</th></tr><tr><td>Goiânia Alto da Glória</td><td class="n">41</td></tr><tr><td>Goiânia Eldorado</td><td class="n">40</td></tr><tr><td>Goiânia Cidade Jardim</td><td class="n">39</td></tr><tr><td>Goiânia Garavelo (Aparecida)</td><td class="n">35</td></tr><tr><td>Barra do Garças</td><td class="n">31</td></tr><tr><td>Catalão</td><td class="n">31</td></tr><tr><td>Itumbiara</td><td class="n">2</td></tr><tr class="destaque"><td>Total do piloto</td><td class="n">1.651</td></tr></table></div>
+</section>
+
+<section class="pagina">
+  <p class="olho">02 / Pagamentos e escala</p>
+  <h1>Remuneração pelo uso</h1>
+
+  <h2>Taxa sobre pagamentos (spread)</h2>
+  <ul>
+    <li><b>Uso facultativo:</b> nenhum aluno será obrigado a pagar pelo Portal.</li>
+    <li><b>Só sobre o que passa pelo Portal:</b> pagamentos feitos por outros meios não geram spread. Escola sem pagamento pelo Portal no mês não paga nada.</li>
+    <li><b>Faixa única para todas as escolas:</b> o total de membros ativos das escolas participantes, inclusive os que pagam por outros meios, define uma única taxa. A faixa atingida num mês vale no mês seguinte.</li>
+    <li><b>Divisão automática do pagamento (split):</b> a instituição de pagamento separa a parte da escola e a remuneração da prestadora, sem repasse manual.</li>
+  </ul>
+  <table>
+    <tr><th>Membros ativos nas escolas participantes</th><th class="n">Spread</th></tr>
+    <tr><td>Até 500</td><td class="n">2%</td></tr>
+    <tr><td>De 501 a 1.500</td><td class="n">1,5%</td></tr>
+    <tr class="destaque"><td>De 1.501 a 3.000 — faixa do piloto</td><td class="n">1%</td></tr>
+    <tr><td>De 3.001 a 5.000</td><td class="n">0,75%</td></tr>
+    <tr><td>De 5.001 a 10.000</td><td class="n">0,5%</td></tr>
+    <tr><td>Acima de 10.000</td><td class="n">0,25%</td></tr>
+  </table>
+  <p class="nota">Faixa fixa, não proporcional: com 5.001 membros, por exemplo, o spread do mês seguinte é 0,5% sobre tudo o que passar pelo Portal.</p>
+
+  <div class="caixa">
+    <p style="margin:0 0 1mm"><b>Faixa do piloto, com todas as escolas liberadas</b></p>
+    <p class="grande" style="margin:0">1% · 1.651 membros</p>
+    <p style="margin:1.5mm 0 0">Cada escola passa a receber pelo Portal depois que a sua conta na instituição de pagamento for aberta e aprovada (cadastro, documentos e autorização do responsável legal). Enquanto isso, a escola não paga nada.</p>
+  </div>
+
+  <h2>Valor fixo e Secretaria Nacional de Economia</h2>
+  <ul>
+    <li><b>As escolas pagam somente o spread</b>, descontado automaticamente em cada pagamento.</li>
+    <li>A remuneração mensal de referência é <b>R$ 3.000</b> para o conjunto de escolas. A <b>Secretaria Nacional de Economia</b> paga apenas a diferença entre R$ 3.000 e o spread do mês.</li>
+    <li>Exemplo: se o spread do mês somar R$ 1.000, a Secretaria Nacional paga R$ 2.000. Se o spread chegar a R$ 3.000, a Secretaria Nacional não paga nada.</li>
+  </ul>
+
+</section>
+
+<section class="pagina">
+  <p class="olho">03 / Simulação do piloto</p>
+  <h1>Portal e suporte</h1>
+  <h2>Simulação com as escolas do piloto</h2>
+  <p><b>Premissas:</b> 1.651 membros ativos, contribuição média de R$ 120 por mês, spread de 1% (faixa do piloto) e remuneração mensal de referência de R$ 3.000.</p>
+  <table>
+    <tr><th>Membros pagando pelo Portal</th><th class="n">Volume/mês</th><th class="n">Spread/mês (escolas)</th><th class="n">Secretaria Nacional</th><th class="n">Total/mês</th></tr>
+    <tr><td>25% (413)</td><td class="n">R$ 49.530</td><td class="n">R$ 495,30</td><td class="n">R$ 2.504,70</td><td class="n">R$ 3.000</td></tr>
+    <tr><td>50% (826)</td><td class="n">R$ 99.060</td><td class="n">R$ 990,60</td><td class="n">R$ 2.009,40</td><td class="n">R$ 3.000</td></tr>
+    <tr><td>75% (1.238)</td><td class="n">R$ 148.590</td><td class="n">R$ 1.485,90</td><td class="n">R$ 1.514,10</td><td class="n">R$ 3.000</td></tr>
+    <tr><td>100% (1.651)</td><td class="n">R$ 198.120</td><td class="n">R$ 1.981,20</td><td class="n">R$ 1.018,80</td><td class="n">R$ 3.000</td></tr>
+  </table>
+  <p class="nota">Valores ilustrativos de remuneração bruta da empresa, antes de seus custos e impostos. Não incluem tarifas da instituição de pagamento, BPO ou recuperação de inadimplência. A adesão aos pagamentos pelo Portal é estimada e não obrigatória. Quanto mais membros pagam pelo Portal, menor a parte da Secretaria Nacional.</p>
+
+  <h2>Transparência financeira</h2>
+  <p><b>O dinheiro da escola não passa pela conta da prestadora de serviço em nenhum momento.</b> A instituição de pagamento recebe e divide os valores: a parte da filial vai para a conta da própria escola; a prestadora recebe somente sua remuneração.</p>
+  <p class="nota">O demonstrativo mostra o valor pago, a tarifa do serviço financeiro, a remuneração da prestadora e o valor que fica para a escola. As tarifas da instituição de pagamento são separadas do spread: no Pix, saem da parte da escola; no cartão, cada escola escolhe se repassa a tarifa ao aluno ou se a absorve (repassar aumenta a chance de atraso). Cancelamentos e devoluções terão os ajustes correspondentes.</p>
+  <h2>O que o Portal oferece</h2>
+  <ul>
+    <li><b>Contribuição:</b> consulta da situação, composição e pagamento por Pix, cartão e débito automático por Pix.</li>
+    <li><b>Autoatendimento:</b> solicitações cadastrais e orientação aos alunos.</li>
+    <li><b>Agenda e eventos:</b> atividades internas, eventos públicos do Ulisses e eventos da fazenda pelo Ágora.</li>
+    <li><b>Estudos:</b> Acrópole Play, biblioteca e conteúdos autorizados.</li>
+    <li><b>Turmas e grupos:</b> atividades, avisos e encontros, incluindo GAF e GDVE.</li>
+    <li><b>Voluntários e dirigentes:</b> áreas por responsabilidade, aberturas de turmas, tarefas, escalas e documentos; na Economia, saldo, saque e acompanhamento dos pagamentos da filial.</li>
+  </ul>
+</section>
+
+<section class="pagina">
+  <p class="olho">04 / Serviços opcionais e implantação</p>
+  <h1>Apoio financeiro conforme a necessidade</h1>
+  <h2>BPO financeiro — contratação individual</h2>
+  <p>Apoio às filiais que desejam delegar parte de sua rotina financeira: contas a receber, conferência dos recebimentos, pendências, atendimento financeiro aos alunos, contas a pagar (com a autorização mantida com os responsáveis da escola) e relatórios. Proposta individual por escola, opcional e independente da adesão ao Portal.</p>
+  <h2>Recuperação de inadimplência</h2>
+  <p>Contato, negociação e acompanhamento de dívidas, preservando o relacionamento com o aluno. A escola define descontos e parcelamentos; a direção decide isenções. <b>Remuneração por resultado: 10% sobre os valores efetivamente recuperados e recebidos.</b> Sem comissão sobre promessas de pagamento.</p>
+  <h2>O compromisso da nossa empresa</h2>
+  <ul>
+    <li><b>Operação e integrações:</b> manutenção, atualização e evolução conforme escopo acordado.</li>
+    <li><b>Suporte e treinamento:</b> apoio às escolas, atendimento de uso aos alunos, treinamento e materiais de orientação (vídeo, passo a passo em PDF e cartaz com QR code).</li>
+  </ul>
+  <h2>Implantação do piloto</h2>
+  <table>
+    <tr><th>Etapa</th><th>O que acontece</th><th>Quando</th></tr>
+    <tr><td>1. Alinhar</td><td>Aviso às escolas, termo de adesão, documentos</td><td>Novembro/2026</td></tr>
+    <tr><td>2. Liberar</td><td>Abertura e aprovação da conta de cada escola na instituição de pagamento</td><td>Novembro e dezembro/2026</td></tr>
+    <tr><td>3. Capacitar</td><td>Treino das tesourarias, vídeo, PDF e cartaz com QR code</td><td>Dezembro/2026</td></tr>
+    <tr><td>4. Lançar</td><td>Pagamento pelo Portal e débito automático por Pix</td><td>Dezembro/2026 a janeiro/2027</td></tr>
+    <tr><td>5. Acompanhar</td><td>Relatório por escola: adesão, inadimplência e spread</td><td>A partir de janeiro/2027</td></tr>
+  </table>
+  <p class="nota">As datas dependem da parte burocrática de cada escola (documentos e aprovação da conta). Duração do piloto e transição do suporte para as escolas a definir no contrato.</p>
+</section>
+
+</body>
+</html>
