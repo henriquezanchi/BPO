@@ -994,3 +994,20 @@ com cartões brancos e ícone em destaque. Rótulos repetidos tirados.
 - Causa da rolagem para o lado (medido com Playwright, dados reais, 320/360/390 px, com e sem "A+"): o carrossel `Vitrine` usava `grid` sem coluna definida — a coluna crescia até o min-content da linha de evento com `truncate` (305 px num espaço de 278). Em 320 px a página ficava com 334 px; com "A+" (`zoom: 1.15`), 384–385 px em 320 e 360. Correção em `vitrine.tsx`: `grid-cols-[minmax(0,1fr)]` + `min-w-0`. Depois: largura da página = largura da tela nas 6 combinações. A janela de boas-vindas do voluntário só parecia larga por causa do carrossel.
 - Cartão da contribuição (`member-portal-client.tsx`): o selo ("Sem desconto" etc.) foi para a linha do rótulo; a mensagem usa a largura toda (antes virava coluna de uma palavra por linha).
 - Acrópole Play (`vitrine.tsx`, `acesso-rapido.tsx`): "Assistir agora" → "Acessar o Acrópole Play" (o link abre a página inicial do Play, não a série do destaque).
+
+## 12/11/2026 — Cópias velhas no banco de consulta do Mercúrio: importação protegida e painel de saúde (Claude)
+
+- **Achado:** no banco `oinabview`, só `cadastro`, `reciboc`, `reciboi`, `turmas` e `turmas_materias` são VIEW (ao vivo). As outras 16 tabelas que o Portal lê são cópias (BASE TABLE) carregadas em 17/10/2026 e nunca mais (`compaluno`, `fichas`, `produtos`, `unidades`, `dirigente_funcoes`, `cursos_integra_participa`, condecorações e os catálogos `sig_*`). A tabela `atualização` diz 30/10 e não serve de guia. Sintoma: a composição dos alunos da ENOCH e da AMON (Barra do Garças), trocada no Mercúrio para MEMBRO AP, voltava a CURSO DE FILOSOFIA a cada importação. O usuário já pediu ao João Guilherme que as cópias virem views.
+- **`src/lib/mercurio-db/frescor.ts`:** catálogo das fontes (o que cada uma traz) e data de carga de cada uma via `information_schema` (`TABLE_SCHEMA='oinabview'`; `DATABASE()` não funciona por ali). Cópia com mais de 2 dias = desatualizada.
+- **`importar.ts`:**
+  - com `compaluno` velha, a composição que o Portal já tem não é sobrescrita nem apagada; quem não tem nenhuma ainda é preenchido;
+  - o recibo conta como pago se for de rubrica da composição OU de qualquer "CONTRIBUI…" (antes, com composição na cópia, só as rubricas dela; mesma regra do `resumo-filial.ts`).
+- **`/admin/saude`:** seção nova "O que vem do Mercúrio, e de quando" (cada fonte: ao vivo ou cópia com data e idade, o que traz) e "Última importação completa por filial" (de `rotina-estado:mercurio`). Cópias críticas velhas e filiais sem importação há 26 h entram na contagem de pontos de atenção. Não dispara WhatsApp do suporte (problema conhecido, seria alerta de hora em hora).
+- **`scripts/sync-composicao-mercurio.ts`:** relê a composição no Mercúrio pelo scraper (só leitura no Mercúrio) e grava no Portal. **Só funciona em Barra do Garças:** nas outras filiais o login do scraper abre a tela sem itens; o script recusa composição vazia e não mexe. Simulação em BGA: 3 alunos da AMON com 316=120 → 3311=140. A gravação ficou para o usuário rodar (`npx tsx scripts/sync-composicao-mercurio.ts BGA`).
+- **Continua desatualizado até o João resolver:**
+  - situação mensal (`fichas`): só o pago é corrigido pelos recibos ao vivo;
+  - Chefe e Sub-Chefe (`unidades`);
+  - cargos e secretarias (`dirigente_funcoes`);
+  - cursos de integração;
+  - nomes de rubricas criadas depois de 17/10;
+  - composição fora de BGA.

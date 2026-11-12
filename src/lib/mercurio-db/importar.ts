@@ -4,6 +4,7 @@ import { TIPOS_GRUPO, ehTipoGrupo } from "@/lib/grupos-comum";
 import { parseLogradouro } from "@/lib/mercurio/parse-logradouro";
 import type { ContributionMonthStatus } from "@prisma/client";
 import { consultarMercurio, sqlNumero, sqlTexto } from "./client";
+import { copiaDesatualizada } from "./frescor";
 import { apelidosDeTurma } from "./turmas";
 import { avisarFinanceiroSemEsperar, whatsappFinanceiroAtivo } from "@/lib/whatsapp/financeiro";
 import { mesPorExtenso, nomeCurtoDaFilial, primeiroNome, reais } from "@/lib/whatsapp/modelos";
@@ -164,7 +165,10 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const pagoOnline = new Map<string, Linha>();
   for (const r of recibosOnline) {
     const itens = composicaoDe.get(r.rei_matr!);
-    if (itens?.size ? itens.has(r.rei_produto ?? "") : /^CONTRIBUI/i.test(r.pro_descricao ?? "")) pagoOnline.set(`${r.rei_matr}-${Number(r.rei_mes)}`, r);
+    // Rubrica da composição OU qualquer "CONTRIBUI…" (12/11/2026): a composição vem de cópia (compaluno) que pode estar
+    // velha — quem trocou de CURSO DE FILOSOFIA para MEMBRO AP depois da carga tinha o recibo ignorado. Mesma regra do
+    // resumo da filial (resumo-filial.ts).
+    if (itens?.has(r.rei_produto ?? "") || /^CONTRIBUI/i.test(r.pro_descricao ?? "")) pagoOnline.set(`${r.rei_matr}-${Number(r.rei_mes)}`, r);
   }
   const fichas: Linha[] = fichasCopia.map((f) => {
     const r = pagoOnline.get(`${f.fic_matr}-${Number(f.fic_mes)}`);
@@ -218,6 +222,9 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   };
   const fichasPor = porMatr(fichas, "fic_matr");
   const composicaoPor = porMatr(composicao, "cal_matr");
+  // compaluno é cópia (parada em 17/10/2026 — ver frescor.ts). Cópia velha não sobrescreve nem apaga a composição que o
+  // Portal já tem (que pode ter vindo do scraper, mais nova); só preenche quem ainda não tem nenhuma.
+  const composicaoVelha = alvo.length ? await copiaDesatualizada("compaluno") : false;
   const funcoesPor = porMatr(funcoes, "dfn_matr");
   const aulasPor = porMatr(aulas, "tma_instrutor");
   const cursosPor = porMatr(cursos, "dcr_matr");
@@ -397,7 +404,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
       if (novo !== member.status) await db.member.update({ where: { id: member.id }, data: { status: novo } });
     }
 
-    const itens = composicaoPor.get(matr) ?? [];
+    const itens = composicaoVelha && (await db.contributionCompositionItem.count({ where: { memberId: member.id } })) ? [] : (composicaoPor.get(matr) ?? []);
     const grupos = new Set<string>();
     for (const it of itens) {
       const grupo = it.cal_grupo!;
@@ -412,7 +419,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     }
     // Item incluído pelo membro no Portal pode ainda estar a caminho do
     // Mercúrio (fila) — só remove o que veio do próprio Mercúrio.
-    await db.contributionCompositionItem.deleteMany({ where: { memberId: member.id, addedViaPortal: false, mercurioGroupId: { notIn: [...grupos] } } });
+    if (!composicaoVelha) await db.contributionCompositionItem.deleteMany({ where: { memberId: member.id, addedViaPortal: false, mercurioGroupId: { notIn: [...grupos] } } });
 
     // Cursos de integração (Jornada) — o banco é a fonte; substitui o que o
     // scraper antigo tinha gravado.

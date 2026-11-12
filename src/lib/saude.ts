@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { fortunaGetBranches } from "@/lib/fortuna/client";
 import { consultarMercurio } from "@/lib/mercurio-db/client";
+import { type FrescorFonte, frescorDasFontes } from "@/lib/mercurio-db/frescor";
 import { fetchAcropole, ponteConfigurada } from "@/lib/ponte";
 
 /**
@@ -97,4 +98,38 @@ export async function verificarTudo(): Promise<ResultadoVerificacao[]> {
       }
     }),
   );
+}
+
+export type ImportacaoFilial = { unidade: string; filial: string; ultima: string | null; emAndamento: number | null; atrasada: boolean };
+export type FonteComIdade = FrescorFonte & { dias: number | null };
+
+/**
+ * O que o Portal traz do Mercúrio e de quando é (pedido do usuário 12/11/2026): cada fonte do banco de consulta (ao
+ * vivo ou cópia, e a data da cópia) e a última importação completa de cada filial (rotina-diaria.ts).
+ */
+export async function dadosDoMercurio(): Promise<{ fontes: FonteComIdade[] | null; erroFontes: string | null; filiais: ImportacaoFilial[] }> {
+  const [fontes, estado, escolas] = await Promise.all([
+    comPrazo(frescorDasFontes()).then(
+      (f) => ({ f, e: null }),
+      (e: unknown) => ({ f: null, e: e instanceof Error ? e.message : String(e) }),
+    ),
+    db.resumoNacional.findUnique({ where: { chave: "rotina-estado:mercurio" } }),
+    db.school.findMany({
+      where: { mercurioUnidade: { not: null }, sistemaRegistro: { not: "mercury" }, members: { some: { mercurioAtivo: true } } },
+      select: { name: true, mercurioUnidade: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  const d = (estado?.dados ?? {}) as { uni?: string | null; pendentes?: string[]; ultimas?: Record<string, string> };
+  return {
+    fontes: fontes.f?.map((f) => ({ ...f, dias: f.carregadaEm ? Math.floor((Date.now() - Date.parse(f.carregadaEm)) / 864e5) : null })) ?? null,
+    erroFontes: fontes.e,
+    filiais: escolas.map((e) => ({
+      unidade: e.mercurioUnidade!,
+      filial: e.name.replace(/^Nova Acrópole\s*-\s*/i, ""),
+      ultima: d.ultimas?.[e.mercurioUnidade!] ?? null,
+      emAndamento: d.uni === e.mercurioUnidade ? (d.pendentes?.length ?? 0) : null,
+      atrasada: !d.ultimas?.[e.mercurioUnidade!] || Date.now() - Date.parse(d.ultimas[e.mercurioUnidade!]) > 26 * 3600_000,
+    })),
+  };
 }
