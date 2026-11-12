@@ -11,6 +11,7 @@ import { GUIA_MENSAGENS, type Problema, problemasDePagamento } from "@/lib/probl
 import { cartaoRepassaTaxa, chavePixDaEscola, configCobranca, contarEscopo, demonstrativoDoMes, spreadDoMes } from "@/lib/spread";
 import { FAIXAS_SPREAD, FIXO_MENSAL, faixaDoSpread, pct } from "@/lib/spread-comum";
 import { CircleCheck, CircleX, Wrench } from "lucide-react";
+import Link from "next/link";
 
 /**
  * Economia → Cobrança on-line (12/11/2026): taxa do cartão (repassar ou absorver), faixa do spread e situação da conta
@@ -141,6 +142,16 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
           )}
         </section>
       )}
+
+      <section className={card} aria-labelledby="cartaz-h">
+        <h2 id="cartaz-h" className={h2}>Cartaz do pátio</h2>
+        <p className="text-[13px] text-gray-600 dark:text-gray-400">
+          QR code que abre o pagamento guiado: o aluno lê com a câmera, entra com a senha do Portal e o Pix é gerado sozinho. Imprima e afixe no pátio.
+        </p>
+        <Link href={`/economia/cartaz${dono ? `?filial=${schoolId}` : ""}`} className="w-fit rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
+          Abrir o cartaz para imprimir
+        </Link>
+      </section>
 
       <section className={card} aria-labelledby="cartao-h">
         <h2 id="cartao-h" className={h2}>Taxa do cartão de crédito</h2>

@@ -67,6 +67,9 @@ function paraResultadoCobranca(charge: PaymentCharge) {
  * fortuna-topup-actions.ts). Creditado automaticamente na confirmação, ver
  * confirm-payment.ts.
  */
+/** Desde 25/10/2026 toda cobrança sai pela subconta da filial: clientes Asaas anteriores são da conta principal. */
+const INICIO_SUBCONTA = new Date("2026-10-25T00:00:00-03:00");
+
 export async function createContributionCharge(
   memberId: string,
   year: number,
@@ -112,7 +115,16 @@ export async function createContributionCharge(
 
   // Sempre pela subconta da filial (regra do usuário 2026-10-25).
   const conta = await contaDaEscolaId(member.schoolId);
-  const cliente = await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined, conta);
+  // CPF em branco (pagamento guiado pelo QR, /pagar, 12/11/2026): reaproveita o pagador da última cobrança feita pela
+  // subconta desta filial. Sem cobrança anterior, o CPF continua obrigatório.
+  const cliente = cpf
+    ? await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined, conta)
+    : await db.paymentCharge
+        .findFirst({ where: { memberId, createdAt: { gte: INICIO_SUBCONTA } }, orderBy: { createdAt: "desc" }, select: { asaasCustomerId: true } })
+        .then((c) => {
+          if (!c?.asaasCustomerId) throw new Error("Digite o CPF de quem vai pagar.");
+          return { id: c.asaasCustomerId };
+        });
 
   const vencimento = new Date();
   vencimento.setDate(vencimento.getDate() + 2);

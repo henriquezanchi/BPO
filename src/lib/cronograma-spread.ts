@@ -88,7 +88,7 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   ], "1 dia", 1, { status: "andamento", obs: "Antes de ir ao Diretor Nacional e às escolas.", registros: [R("Proposta Piloto feita: docs/propostas/Proposta-Piloto-Portal-2026-11.pdf. Falta a revisão do Henrique.")] }),
   a("a14", DEV, "2026-11-16", "2026-11-27", "Construir o modo guiado por QR code (/pagar)", "Claude, Henrique (testes)", [
     "Roteiro das telas do tutorial", "QR por filial com origem=patio", "Usuário de teste",
-  ], "5 a 7 dias úteis", 6),
+  ], "5 a 7 dias úteis", 6, { status: "andamento", registros: [R("Primeira versão no ar: /pagar mostra a contribuição, gera o Pix sozinho, pede CPF só na 1ª vez e espera a confirmação. Falta testar com um pagamento real em BGA.")] }),
   a("a15", DEV, "2026-11-16", "2026-12-02", "Construir o cartão de crédito recorrente com split", "Claude, Henrique (testes)", [
     "Conta sandbox do Asaas", "Taxa do cartão repassada ao aluno", "Tela de trocar e cancelar cartão",
   ], "5 a 8 dias úteis", 7),
@@ -109,7 +109,7 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   a("a25", S3, "2026-11-30", "2026-12-01", "Montar o PDF passo a passo (A4 frente e verso)", "Claude, Henrique (revisão)", ["6 a 8 capturas do modo guiado", "Uma frase por tela"], "1 dia", 1),
   a("a26", S3, "2026-11-30", "2026-12-04", "Página \"como pagar\" e cartazes com QR por filial", "Claude (arte e página), Gráfica", [
     "Arte A3 por filial", "QR de pagamento + QR do vídeo", "Orçamento de impressão",
-  ], "Arte 1 dia; impressão 1 a 3 dias", 3),
+  ], "Arte 1 dia; impressão 1 a 3 dias", 3, { registros: [R("Cartaz A4 com QR por filial pronto em Economia → Cobrança on-line → Cartaz do pátio (/economia/cartaz). Falta a página \"como pagar\" com o vídeo.")] }),
   a("a27", S3, "2026-11-26", "2026-12-10", "Acompanhar as cobranças do ciclo de 10/12 em Barra do Garças", "Henrique, Claude, Tesoureiro BGA", ["Painel de saúde", "Lista de autorizações ativas"], "10 min por dia", 0.5, {
     obs: "Janela do Pix Automático: cobranças criadas de 26/11 a 08/12.",
   }),

@@ -1177,3 +1177,19 @@ O usuário é tech provider da Meta, então o número novo do financeiro **não 
 - O spread é estimado pela taxa da faixa do mês.
 - Ainda não inclui inscrições em eventos nem matrículas.
 - Em 12/11 ainda não havia nenhuma contribuição paga pelo Portal.
+
+## 12/11/2026 — Pagamento guiado pelo QR do pátio (/pagar) e cartaz por filial (Claude)
+
+**Página `/pagar?filial=SIGLA&origem=patio`** (`app/(member)/pagar/page.tsx` e `components/member/pagamento-guiado.tsx`)
+- Sem login, vai para `/login?next=/pagar…` e volta para cá.
+- O passo a passo anda sozinho: mostra a contribuição do mês mais antigo em aberto (ou do mês atual) e, depois de 2,5 s, gera o Pix.
+  - Se já existe um pagador salvo, gera direto. Na primeira vez, pede só o CPF de quem vai pagar.
+- O aluno toca em "Copiar o código", e a tela confere a confirmação a cada 5 s, por até 15 min.
+- Também oferece o QR para pagar de outro celular e o link "Prefiro pagar no cartão", que leva a `/portal?abrir=pagar`.
+- Filial não liberada, tudo em dia e composição vazia têm mensagens próprias.
+
+**`createContributionCharge`:** com o CPF em branco, reaproveita o cliente Asaas da última cobrança feita pela subconta (desde 25/10). Sem cobrança anterior, o CPF continua obrigatório. A tela de pagamento do Portal não mudou, porque sempre manda o CPF.
+
+**Cartaz do pátio:** `/economia/cartaz` (o dono pode passar `?filial=ID`). É um A4 com o QR da filial e os 3 passos, com botão de imprimir. Há um link para ele em Economia → Cobrança on-line.
+
+**Não testado com pagamento real.** O primeiro teste deve ser em BGA, com alguém da direção.
