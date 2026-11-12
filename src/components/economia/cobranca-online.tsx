@@ -8,7 +8,7 @@ import { asaasGetCreditCardFeeStatus } from "@/lib/asaas/client";
 import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { db } from "@/lib/db";
 import { GUIA_MENSAGENS, type Problema, problemasDePagamento } from "@/lib/problemas-pagamento";
-import { cartaoRepassaTaxa, chavePixDaEscola, configCobranca, contarEscopo, spreadDoMes } from "@/lib/spread";
+import { cartaoRepassaTaxa, chavePixDaEscola, configCobranca, contarEscopo, demonstrativoDoMes, spreadDoMes } from "@/lib/spread";
 import { FAIXAS_SPREAD, FIXO_MENSAL, faixaDoSpread, pct } from "@/lib/spread-comum";
 import { CircleCheck, CircleX, Wrench } from "lucide-react";
 
@@ -214,6 +214,8 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
         )}
       </section>
 
+      {dono && <Demonstrativo />}
+
       <section className={card} aria-labelledby="conta-h">
         <h2 id="conta-h" className={h2}>Conta Asaas da filial</h2>
         <ul className="grid gap-1.5 text-[13px]">
@@ -255,5 +257,64 @@ function ListaProblema({ p }: { p: Problema }) {
         ))}
       </ul>
     </details>
+  );
+}
+
+/** Só o dono do sistema: spread do mês por escola e quanto a Secretaria Nacional de Economia completa. */
+async function Demonstrativo() {
+  const agora = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const meses = [
+    { ano: agora.getFullYear(), mes: agora.getMonth() + 1 },
+    agora.getMonth() === 0 ? { ano: agora.getFullYear() - 1, mes: 12 } : { ano: agora.getFullYear(), mes: agora.getMonth() },
+  ];
+  const dados = await Promise.all(meses.map((m) => demonstrativoDoMes(m.ano, m.mes).then((d) => ({ ...m, ...d })).catch(() => null)));
+  const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return (
+    <section className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-gray-800 dark:bg-gray-900" aria-labelledby="demo-h">
+      <h2 id="demo-h" className="text-base font-black text-gray-900 dark:text-gray-100">Demonstrativo do spread (só você vê)</h2>
+      <p className="text-[13px] text-gray-600 dark:text-gray-400">
+        Contribuições pagas pelo Portal nas escolas participantes. A Secretaria Nacional de Economia completa o que faltar para R$ {num(FIXO_MENSAL)}. Ainda não
+        inclui inscrições em eventos nem matrículas.
+      </p>
+      {dados.map((d) =>
+        !d ? null : (
+          <div key={`${d.ano}-${d.mes}`} className="grid gap-1.5">
+            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+              {MES[d.mes - 1]} de {d.ano} · taxa {pct(d.percentual)}
+              {d.estimado && <span className="font-normal text-gray-500"> (faixa estimada pela contagem de hoje)</span>}
+            </p>
+            {d.linhas.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-[11px] uppercase tracking-wider text-gray-500 dark:border-gray-800">
+                      <th className="py-1 pr-3 font-semibold">Escola</th>
+                      <th className="py-1 pr-3 text-right font-semibold">Pagamentos</th>
+                      <th className="py-1 pr-3 text-right font-semibold">Volume</th>
+                      <th className="py-1 text-right font-semibold">Spread</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.linhas.map((l) => (
+                      <tr key={l.unidade} className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-1 pr-3">{l.escola}</td>
+                        <td className="py-1 pr-3 text-right tabular-nums">{l.pagamentos}</td>
+                        <td className="py-1 pr-3 text-right tabular-nums">{brl(l.volume)}</td>
+                        <td className="py-1 text-right tabular-nums">{brl(l.spread)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-[13px] text-gray-500">Nenhuma contribuição paga pelo Portal neste mês.</p>
+            )}
+            <p className="text-[13px] tabular-nums text-gray-700 dark:text-gray-300">
+              Spread das escolas: <b>{brl(d.spread)}</b> · Secretaria Nacional paga: <b>{brl(d.sne)}</b> · total: {brl(d.spread + d.sne)}
+            </p>
+          </div>
+        ),
+      )}
+    </section>
   );
 }

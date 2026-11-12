@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { consultarMercurio, sqlTexto } from "@/lib/mercurio-db/client";
 import type { ChavePix } from "@/lib/asaas/saque";
-import { faixaDoSpread } from "@/lib/spread-comum";
+import { faixaDoSpread, fixoDoMes } from "@/lib/spread-comum";
 
 /**
  * Spread do BPO e configuração da cobrança on-line por escola (12/11/2026). Regras em lib/spread-comum.ts e em
@@ -93,4 +93,32 @@ export async function spreadDoMes(): Promise<SpreadDoMes> {
   // Corrida entre duas cobranças simultâneas: a primeira gravação vale.
   await db.resumoNacional.upsert({ where: { chave }, update: {}, create: { chave, dados } });
   return ((await db.resumoNacional.findUnique({ where: { chave } }))?.dados as SpreadDoMes) ?? dados;
+}
+
+export type LinhaDemonstrativo = { unidade: string; escola: string; pagamentos: number; volume: number; spread: number };
+
+/**
+ * Demonstrativo do mês (dono do sistema): contribuições pagas pelo Portal nas escolas do escopo, spread de cada escola
+ * e quanto a Secretaria Nacional de Economia completa até o fixo. O spread é estimado pela taxa da faixa do mês (as
+ * cobranças antigas, de antes de 12/11/2026, saíram com 2%). Ainda não inclui inscrições em eventos nem matrículas.
+ */
+export async function demonstrativoDoMes(ano: number, mes: number) {
+  const chave = `spread:${ano}-${String(mes).padStart(2, "0")}`;
+  const congelado = (await db.resumoNacional.findUnique({ where: { chave } }))?.dados as { percentual?: number } | undefined;
+  const config = await configCobranca();
+  const percentual = congelado?.percentual ?? faixaDoSpread((await contarEscopo(config.escopo)).total).percentual;
+  const inicio = new Date(Date.UTC(ano, mes - 1, 1, 3));
+  const fim = new Date(Date.UTC(ano, mes, 1, 3));
+  const escolas = await db.school.findMany({ where: { mercurioUnidade: { in: config.escopo } }, select: { id: true, name: true, mercurioUnidade: true } });
+  const pagas = await db.paymentCharge.findMany({
+    where: { status: "pago", paidAt: { gte: inicio, lt: fim }, member: { schoolId: { in: escolas.map((e) => e.id) } } },
+    select: { amount: true, fortunaTopUpAmount: true, member: { select: { schoolId: true } } },
+  });
+  const linhas: LinhaDemonstrativo[] = escolas.map((e) => {
+    const daEscola = pagas.filter((p) => p.member.schoolId === e.id);
+    const volume = daEscola.reduce((s, p) => s + Number(p.amount) + Number(p.fortunaTopUpAmount ?? 0), 0);
+    return { unidade: e.mercurioUnidade!, escola: e.name.replace(/^Nova Acr[oó]pole\s*-\s*/i, ""), pagamentos: daEscola.length, volume, spread: Math.round(volume * percentual) / 100 };
+  });
+  const spread = Math.round(linhas.reduce((s, l) => s + l.spread, 0) * 100) / 100;
+  return { percentual, linhas: linhas.filter((l) => l.pagamentos).sort((a, b) => b.volume - a.volume), spread, sne: fixoDoMes(spread), estimado: !congelado };
 }

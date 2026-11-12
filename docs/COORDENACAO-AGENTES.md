@@ -1164,3 +1164,16 @@ O usuário é tech provider da Meta, então o número novo do financeiro **não 
 5. **Autorizar a migração `20261026180000_whatsapp_financeiro_instagram`**, que cria as tabelas de registro dos envios e de descadastro. Ela continua sem aplicar. Sem ela, o envio falha ao gravar o registro; a resposta aos botões não depende dela, mas o SAIR depende.
 
 **Sem disparo automático por enquanto:** a régua continua com "Aprovar e enviar", conforme a decisão antiga.
+
+## 12/11/2026 — Demonstrativo do spread na Economia, só para o dono (Claude)
+
+`demonstrativoDoMes` em `src/lib/spread.ts`, com o quadro em Economia → Cobrança on-line, mostrado só ao dono do sistema.
+
+**O que mostra:** para o mês atual e o anterior, as contribuições pagas pelo Portal nas escolas do escopo.
+- Por escola: número de pagamentos, volume e spread.
+- O quanto a SNE completa: máx(0, 3.000 − spread).
+
+**Limites**
+- O spread é estimado pela taxa da faixa do mês.
+- Ainda não inclui inscrições em eventos nem matrículas.
+- Em 12/11 ainda não havia nenhuma contribuição paga pelo Portal.
