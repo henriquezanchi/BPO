@@ -1037,3 +1037,19 @@ A regra comercial do spread estava só na proposta em PDF e no WhatsApp; nunca t
 - **Taxa do Asaas:** no Pix, sai da parte da escola; no cartão, é repassada ao aluno.
 - **Sede Nacional:** é a filial de Brasília (BSB).
 - **Pendente no código:** ainda cobra 2% fixo. O item T11 troca isso pelas faixas e cria a fatura do fixo.
+
+## 12/11/2026 — Página do cronograma do spread no Portal: /admin/cronograma (Claude)
+
+A pedido do usuário ("quero uma página de internet, não um artefato"), o cronograma virou uma página do Portal. Só o dono do sistema acessa, porque ela tem condições comerciais.
+
+**Arquivos**
+- Dados: uma linha de `ResumoNacional`, chave `cronograma:spread`. É JSON com `{acoes: [...]}`, então não precisou de tabela nova nem de migração.
+- Conteúdo inicial: `CRONOGRAMA_INICIAL` em `src/lib/cronograma-spread.ts`, já com as respostas de 12/11.
+- Tipos, dias úteis (com feriados) e alertas: `src/lib/cronograma-spread-comum.ts`, sem acesso ao banco.
+- Ações de servidor: `src/lib/actions/cronograma-actions.ts`. Cada uma confere `ehDonoDoSistema` e grava o registro quando a situação muda.
+- Tela: `src/components/admin/cronograma-spread.tsx`. Inclui, edita e exclui ações; muda a situação; registra o andamento; tem filtros, busca e alertas.
+
+**Alertas de tempo**
+- **Atrasada:** o prazo passou e a ação não foi concluída.
+- **Prazo curto:** os dias úteis do prazo são menos que o tempo médio.
+- **Comece hoje:** a ação ainda não começou e os dias úteis que restam são menos que o tempo médio.
