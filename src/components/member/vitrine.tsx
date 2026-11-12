@@ -43,7 +43,7 @@ export function Vitrine({ destaques, automatico = true }: { destaques: Destaque[
     <section
       aria-roledescription="carrossel"
       aria-label="Destaques"
-      className="flex flex-col gap-2"
+      className="flex min-w-0 flex-col gap-2"
       onMouseEnter={() => setParado(true)}
       onMouseLeave={() => setParado(false)}
       onFocus={() => setParado(true)}
@@ -57,7 +57,9 @@ export function Vitrine({ destaques, automatico = true }: { destaques: Destaque[
         if (Math.abs(dx) > 40) ir(dx < 0 ? 1 : -1);
       }}
     >
-      <div className="grid">
+      {/* Coluna presa à largura da tela (12/11/2026): com "grid" simples, a coluna crescia até o conteúdo mais largo
+          (linha de evento com truncate) e empurrava a página para o lado nos celulares estreitos. */}
+      <div className="grid grid-cols-[minmax(0,1fr)]">
         {destaques.map((d, k) => (
           <div
             key={d.id}
@@ -66,7 +68,7 @@ export function Vitrine({ destaques, automatico = true }: { destaques: Destaque[
             aria-label={`${k + 1} de ${n}`}
             aria-hidden={k !== i}
             inert={k !== i}
-            className={`[grid-area:1/1] transition duration-500 motion-reduce:transition-none ${k === i ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-2 opacity-0"}`}
+            className={`min-w-0 [grid-area:1/1] transition duration-500 motion-reduce:transition-none ${k === i ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-2 opacity-0"}`}
           >
             {d.conteudo}
           </div>
@@ -208,8 +210,8 @@ export function DestaquePlay({ hoje }: { hoje: string }) {
       tom="claro"
       rotulo={`Acrópole Play · ${serie.colecao.replace(/\s*Acrópole Play$/, "")}`}
       titulo={serie.titulo}
-      texto="Assista quando quiser. Você entra direto, com o seu login do Portal."
-      acao="Assistir agora"
+      texto="Essa e outras séries no Acrópole Play. Você entra direto, com o seu login do Portal."
+      acao="Acessar o Acrópole Play"
       href="/api/portal/acropole-play/entrar"
       externo
       capa={

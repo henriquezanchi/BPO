@@ -162,36 +162,38 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   const cartaoContribuicao = (
     <div data-tour-id="contribuicao-status" className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
       {/* Coesão visual (pedido do usuário 10/11/2026): cartão branco como os demais; a situação vai numa etiqueta. */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      {/* Selo na linha do rótulo e mensagem na largura toda (12/11/2026): ao lado do selo, a mensagem virava uma coluna
+          estreita, uma ou duas palavras por linha, nos celulares pequenos e com a letra maior. */}
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400">Contribuição mensal</p>
-          <p className="mt-0.5 text-[15px] leading-snug font-bold text-gray-900 dark:text-gray-100">
-            {semDesconto
-              ? t.home.mensagemSemDesconto(member.name.split(" ")[0])
-              : situacao === "a_vencer"
-                ? t.home.mensagemAVencer(member.name.split(" ")[0])
-                : `${t.home.ola(member.name.split(" ")[0])} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
-          </p>
-          <p className="mt-1 text-[12px] text-gray-600 dark:text-gray-400">
-            {proximoVencimento.diasRestantes < 0
-              ? t.home.venceuHa(Math.abs(proximoVencimento.diasRestantes), proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes)
-              : proximoVencimento.diasRestantes === 0
-                ? t.home.venceHoje
-                : t.home.proximoVencimento(proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes, proximoVencimento.diasRestantes)}
-          </p>
+          <span
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+              isDelayed
+                ? "bg-na-danger-light text-na-danger-dark dark:bg-red-950/50 dark:text-red-300"
+                : semDesconto
+                  ? "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/50 dark:text-amber-300"
+                  : "bg-na-success-light text-na-success-dark dark:bg-emerald-950/50 dark:text-emerald-300"
+            }`}
+          >
+            {isDelayed || semDesconto ? <TriangleAlert size={12} /> : <CheckCircle2 size={12} />}
+            {isDelayed ? "Em atraso" : semDesconto ? "Sem desconto" : situacao === "a_vencer" ? "A vencer" : "Em dia"}
+          </span>
         </div>
-        <span
-          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-            isDelayed
-              ? "bg-na-danger-light text-na-danger-dark dark:bg-red-950/50 dark:text-red-300"
-              : semDesconto
-                ? "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/50 dark:text-amber-300"
-                : "bg-na-success-light text-na-success-dark dark:bg-emerald-950/50 dark:text-emerald-300"
-          }`}
-        >
-          {isDelayed || semDesconto ? <TriangleAlert size={12} /> : <CheckCircle2 size={12} />}
-          {isDelayed ? "Em atraso" : semDesconto ? "Sem desconto" : situacao === "a_vencer" ? "A vencer" : "Em dia"}
-        </span>
+        <p className="mt-0.5 text-[15px] leading-snug font-bold text-gray-900 dark:text-gray-100">
+          {semDesconto
+            ? t.home.mensagemSemDesconto(member.name.split(" ")[0])
+            : situacao === "a_vencer"
+              ? t.home.mensagemAVencer(member.name.split(" ")[0])
+              : `${t.home.ola(member.name.split(" ")[0])} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
+        </p>
+        <p className="mt-1 text-[12px] text-gray-600 dark:text-gray-400">
+          {proximoVencimento.diasRestantes < 0
+            ? t.home.venceuHa(Math.abs(proximoVencimento.diasRestantes), proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes)
+            : proximoVencimento.diasRestantes === 0
+              ? t.home.venceHoje
+              : t.home.proximoVencimento(proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes, proximoVencimento.diasRestantes)}
+        </p>
       </div>
 
       <button

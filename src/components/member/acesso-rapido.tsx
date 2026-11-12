@@ -96,7 +96,7 @@ export function DestaqueDoDia({ frase, acropolePlay, eventos, abrirAgenda }: { f
             <span className="min-w-0 flex-1">
               <span className="block text-[11px] font-bold tracking-wide text-na-gold uppercase">Acrópole Play</span>
               <span className="block text-[14px] leading-snug font-bold">Filosofia em vídeos e séries, quando quiser.</span>
-              <span className="mt-0.5 block text-[11px] text-white/80">Assistir agora →</span>
+              <span className="mt-0.5 block text-[11px] text-white/80">Acessar o Acrópole Play →</span>
             </span>
           </a>
         )}
