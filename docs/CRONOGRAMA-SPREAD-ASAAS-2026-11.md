@@ -11,6 +11,50 @@ Atualizado em 12/11/2026. Autorização do Diretor Nacional para cobrar pelo spr
 
 ---
 
+## 0. Regra comercial do spread (decidida; não reabrir)
+
+Fontes: proposta "Portal, Suporte e Serviços Financeiros" de 23/10/2026; confirmação à Ana Beatriz Pignataro em 05/11/2026; respostas do usuário em 12/11/2026.
+
+**Fixo e spread**
+- **Fixo nacional:** R$ 3.000 por mês, **abatido pelo spread do mês**. A conta é fixo = máx(0, 3.000 − spread).
+  - Exemplo: com R$ 2.000 de spread, o fixo cai para R$ 1.000.
+  - Com R$ 3.000 de spread ou mais, o fixo zera.
+- **O spread incide só sobre o que passa pelo Portal.** Se uma escola não teve nenhum pagamento pelo Portal no mês, não paga spread.
+
+**Faixas progressivas**
+- As faixas são contadas pelo **total de membros ativos das escolas aderentes**, inclusive os que pagam por fora (escala coletiva).
+- Cada faixa mantém a sua taxa. A **taxa média** que resulta é a mesma para todas as escolas.
+
+| Faixa de membros | Taxa da faixa |
+|---|---|
+| até 500 | 2% |
+| 501 a 1.500 | 1,5% |
+| 1.501 a 3.000 | 1% |
+| 3.001 a 5.000 | 0,75% |
+| 5.001 a 10.000 | 0,5% |
+| acima de 10.000 | 0,25% |
+
+Exemplos: com 700 membros, a média dá cerca de 1,86%; com todas as escolas, cerca de 0,5%.
+
+**Taxa do Asaas:** no Pix, sai da parte da escola. No cartão, é repassada ao aluno. As tarifas do Asaas são separadas do spread.
+
+**Duração:** é temporário. A ideia é cerca de 1 ano, com data para transferir o suporte às escolas.
+
+**Sede Nacional:** é a filial de Brasília (BSB).
+
+**Conta com o escopo atual**, contando os ativos no Mercúrio em 12/11:
+- BSB 448 + BGA 31 + GYN 322 + JAM 303 + STO 61 + GAR 35 = **1.200 membros**.
+- Taxa média = (500 × 2% + 700 × 1,5%) ÷ 1.200 ≈ **1,71%**.
+- A média ainda muda conforme as escolas de Goiás que entrarem.
+
+**O código ainda está desatualizado:** cobra 2% fixo (`PERCENTUAL_SPLIT_ESCOLA = 98` em `src/lib/billing-constants.ts`).
+
+Falta construir duas coisas (item T11):
+- o cálculo da taxa média pelas faixas, refeito todo mês com a contagem de membros das aderentes;
+- a fatura do fixo abatido pelo spread.
+
+---
+
 ## 1. Onde cada escola está hoje
 
 Dados lidos do banco do Portal em 12/11/2026.
@@ -33,6 +77,12 @@ Observações:
 ---
 
 ## 2. Decisões a tomar antes de começar (esta semana)
+
+**Respondidas em 12/11/2026:**
+- **D1:** a Sede Nacional é Brasília.
+- **D3:** o spread segue as faixas da seção 0.
+- **D4:** a taxa fica como está hoje (Pix pela escola, cartão pelo aluno).
+- **D2:** o usuário vai escolher quais escolas de Goiás entram.
 
 | # | Decisão | Por que importa |
 |---|---|---|
@@ -185,6 +235,7 @@ O aluno lê o QR com a câmera do celular, e o Portal faz o resto como um tutori
 | T7 | Conferência do split | não existe | rotina diária que compara pagamentos com splits recebidos por escola e alerta no painel de saúde |
 | T8 | Baixa no Mercúrio | só BGA (login do scraper) | depende da D6 |
 | T9 | Conta própria da escola | o campo de chave já aceita qualquer conta | rotina de cadastro da chave e do webhook pela tela de administração, em vez de script |
+| T11 | Spread por faixas e fixo abatido | 2% fixo no código | taxa média mensal pelas faixas (seção 0); split com essa taxa; fatura do fixo = máx(0, 3.000 − spread) |
 | T10 | Painel por escola para a tesouraria | parcial (Economia) | lista do mês: quem pagou, por qual meio, quem tem débito automático, quem falhou |
 
 **Ordem sugerida de desenvolvimento:** T4 (liberação BGA) → T6 → T1 → T7 → T3 → T9 → T2 → T10.

@@ -1026,3 +1026,14 @@ Plano, sem código: [CRONOGRAMA-SPREAD-ASAAS-2026-11.md](CRONOGRAMA-SPREAD-ASAAS
 - Escola com conta Asaas própria: usar a chave de API dela, com split para o BPO. Sem subconta nova e sem repasse posterior.
 - Bloqueio: a baixa no Mercúrio só funciona em BGA (login do scraper).
 - Itens de desenvolvimento T1–T10. Os principais: modo guiado por QR (`/pagar`), cartão recorrente com split e conferência de split.
+
+## 12/11/2026 — Regra do spread registrada (Claude)
+
+A regra comercial do spread estava só na proposta em PDF e no WhatsApp; nunca tinha sido gravada no repositório. Agora está na seção 0 de [CRONOGRAMA-SPREAD-ASAAS-2026-11.md](CRONOGRAMA-SPREAD-ASAAS-2026-11.md).
+
+- **Fixo:** R$ 3.000 por mês, abatido pelo spread do mês.
+- **Base do spread:** só o que passa pelo Portal.
+- **Faixas:** progressivas pelo total de membros das escolas aderentes; a taxa média vale igual para todas.
+- **Taxa do Asaas:** no Pix, sai da parte da escola; no cartão, é repassada ao aluno.
+- **Sede Nacional:** é a filial de Brasília (BSB).
+- **Pendente no código:** ainda cobra 2% fixo. O item T11 troca isso pelas faixas e cria a fatura do fixo.
