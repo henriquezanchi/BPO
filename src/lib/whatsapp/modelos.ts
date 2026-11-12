@@ -24,6 +24,42 @@ export const MODELOS = {
     texto: "Olá, {{1}}. A Nova Acrópole {{2}} registra {{3}} de contribuição em aberto, somando {{4}}. Você pode pagar pelo Portal do Membro ou responder esta mensagem para combinar com a secretaria. Se já pagou, desconsidere.",
     exemplo: ["Maria", "Goiânia Universitário", "2 meses", "R$ 300,00"],
   },
+  // Modelos da cobrança pelo Portal (12/11/2026, cronograma do spread). Ainda não cadastrados na Meta.
+  na_contribuicao_vence_em_breve: {
+    descricao: "Contribuição vence em poucos dias (antes do dia 10)",
+    texto: "Olá, {{1}}! A contribuição de {{2}} à Nova Acrópole {{3}}, no valor de {{4}}, vence em {{5}}. Você pode pagar com Pix ou cartão no Portal do Membro. Se já pagou, desconsidere.",
+    exemplo: ["Maria", "novembro/2026", "Goiânia Universitário", "R$ 150,00", "10/11/2026"],
+  },
+  na_contribuicao_vence_hoje: {
+    descricao: "Contribuição vence hoje (dia 10)",
+    texto: "Olá, {{1}}! Hoje é o último dia para pagar sem atraso a contribuição de {{2}} à Nova Acrópole {{3}}, no valor de {{4}}. Pague com Pix ou cartão no Portal do Membro. Se já pagou, desconsidere.",
+    exemplo: ["Maria", "novembro/2026", "Goiânia Universitário", "R$ 150,00"],
+  },
+  na_pix_codigo: {
+    descricao: "Código Pix Copia e Cola da contribuição (pedido pela pessoa ou enviado pela Economia)",
+    texto: "Olá, {{1}}! Segue o código Pix da contribuição de {{2}} à Nova Acrópole {{3}}, no valor de {{4}}. Copie o código abaixo e cole no app do seu banco, em Pix Copia e Cola:\n\n{{5}}\n\nO código vale até {{6}}. Se já pagou, desconsidere.",
+    exemplo: ["Maria", "novembro/2026", "Goiânia Universitário", "R$ 150,00", "00020101021226850014br.gov.bcb.pix2563qrpix.exemplo", "12/11/2026"],
+  },
+  na_debito_automatico_ativado: {
+    descricao: "Pix Automático autorizado (débito mensal ativo)",
+    texto: "Olá, {{1}}! O débito automático da sua contribuição à Nova Acrópole {{2}} está ativo. Todo mês, o valor de {{3}} será debitado perto do dia {{4}}, sem você precisar abrir o Portal. Você pode cancelar quando quiser pelo app do seu banco.",
+    exemplo: ["Maria", "Goiânia Universitário", "R$ 150,00", "10"],
+  },
+  na_debito_automatico_falhou: {
+    descricao: "Débito automático do mês não concluído pelo banco",
+    texto: "Olá, {{1}}. O débito automático da contribuição de {{2}} à Nova Acrópole {{3}}, no valor de {{4}}, não foi concluído pelo banco. Você pode pagar com Pix ou cartão no Portal do Membro. Se precisar de ajuda, responda esta mensagem.",
+    exemplo: ["Maria", "novembro/2026", "Goiânia Universitário", "R$ 150,00"],
+  },
+  na_debito_automatico_cancelado: {
+    descricao: "Autorização do débito automático cancelada, recusada ou vencida",
+    texto: "Olá, {{1}}. A autorização do débito automático da sua contribuição à Nova Acrópole {{2}} não está mais ativa. Para voltar a pagar sem precisar lembrar, ative de novo no Portal do Membro, em Contribuição. Se foi engano, responda esta mensagem.",
+    exemplo: ["Maria", "Goiânia Universitário"],
+  },
+  na_cartao_recusado: {
+    descricao: "Pagamento no cartão não aprovado pela operadora",
+    texto: "Olá, {{1}}. O pagamento no cartão da contribuição de {{2}} à Nova Acrópole {{3}} não foi aprovado pela operadora. Você pode tentar outro cartão ou pagar com Pix no Portal do Membro. Se precisar de ajuda, responda esta mensagem.",
+    exemplo: ["Maria", "novembro/2026", "Goiânia Universitário"],
+  },
   na_inscricao_confirmada: {
     descricao: "Pagamento de inscrição em evento confirmado",
     texto: "Olá, {{1}}! Recebemos o pagamento da sua inscrição em {{2}}, na Nova Acrópole {{3}}. O evento será em {{4}}. Até lá!",

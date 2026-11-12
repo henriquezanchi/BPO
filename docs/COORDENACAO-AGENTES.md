@@ -1077,3 +1077,28 @@ A pedido do usuário ("quero uma página de internet, não um artefato"), o cron
 - **Seletor de filial para o dono do sistema**, que vale para todas as abas da Economia.
 
 **Cronograma:** o conteúdo inicial foi atualizado com as escolas de Goiás, a regra corrigida e as ações a37 e a38.
+
+## 12/11/2026 — Problemas de pagamento na Economia e modelos de WhatsApp da cobrança (Claude)
+
+**Economia → Cobrança on-line → "Problemas no pagamento"** (`src/lib/problemas-pagamento.ts`). A seção mostra o que a Economia resolve:
+- **Lançamento parado para conferência:** `MercurioSyncTask` de `lancar_contribuicao_paga` em `falhou`, cujo erro pede ação humana (dia travado, ficha pendente diferente etc.).
+  - O botão "Já lancei no Mercúrio" (`marcarLancadoAMao`) marca a tarefa como `sincronizado` e registra quem lançou e quando.
+- **Cobrança parada:** gerada há mais de 3 dias e não paga.
+- **Débito automático:** autorização recusada, vencida ou cancelada.
+- **Composição vazia.**
+
+O que é de sistema fica com o dono do sistema. Hoje isso inclui os demais erros de lançamento e a conta Asaas não ligada. A Economia vê só a contagem desses casos.
+
+Também há um guia "mensagens que o aluno pode ver e quem resolve".
+
+**Modelos de WhatsApp:** sete modelos novos em `src/lib/whatsapp/modelos.ts`, ainda **não cadastrados na Meta**:
+- vence em breve e vence hoje;
+- código Pix;
+- débito automático ativado, falhou e cancelado;
+- cartão recusado.
+
+Os testes de regras da Meta passaram.
+
+**Recomendação:** um número só para o financeiro, separado do CRM. A migração `20261026180000_whatsapp_financeiro_instagram` e a variável `ZERNIO_WHATSAPP_ACCOUNT_ID` continuam paradas até o usuário confirmar.
+
+**Cronograma:** ações a39 e a40.

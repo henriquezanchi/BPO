@@ -1,14 +1,16 @@
+import { LancadoAMao } from "@/components/economia/lancado-a-mao";
 import { RepasseCartao } from "@/components/economia/repasse-cartao";
 import { asaasGetCreditCardFeeStatus } from "@/lib/asaas/client";
 import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { db } from "@/lib/db";
+import { GUIA_MENSAGENS, type Problema, problemasDePagamento } from "@/lib/problemas-pagamento";
 import { cartaoRepassaTaxa, configCobranca, contarEscopo, spreadDoMes } from "@/lib/spread";
 import { FAIXAS_SPREAD, FIXO_MENSAL, faixaDoSpread, pct } from "@/lib/spread-comum";
-import { CircleCheck, CircleX } from "lucide-react";
+import { CircleCheck, CircleX, Wrench } from "lucide-react";
 
 /**
  * Economia → Cobrança on-line (12/11/2026): taxa do cartão (repassar ou absorver), faixa do spread e situação da conta
- * Asaas da filial. A Economia vê a própria filial; o dono do sistema escolhe qualquer uma (página /economia?aba=cobranca).
+ * Asaas da filial, e os problemas de pagamento que a Economia resolve (os de sistema ficam com o dono). A Economia vê a própria filial; o dono do sistema escolhe qualquer uma (página /economia?aba=cobranca).
  */
 const EXEMPLO = 120;
 const MES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
@@ -18,11 +20,13 @@ const num = (n: number) => n.toLocaleString("pt-BR");
 export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; dono: boolean }) {
   const escola = await db.school.findUniqueOrThrow({ where: { id: schoolId }, select: { name: true, mercurioUnidade: true, asaasSubaccountApiKey: true } });
   const config = await configCobranca();
-  const [repassa, vigente, previa] = await Promise.all([
+  const [repassa, vigente, previa, problemas] = await Promise.all([
     cartaoRepassaTaxa(schoolId),
     spreadDoMes().catch(() => null),
     contarEscopo(config.escopo).catch(() => null),
+    problemasDePagamento(schoolId),
   ]);
+  const sistemaQtd = problemas.sistema.reduce((n, p) => n + p.pessoas.length, 0) + (escola.asaasSubaccountApiKey ? 0 : 1);
   const naEscala = !!escola.mercurioUnidade && config.escopo.includes(escola.mercurioUnidade);
 
   let exemplo: { base: number; comTaxa: number; taxa: number } | null = null;
@@ -39,6 +43,46 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
 
   return (
     <div className="grid max-w-3xl gap-4">
+      <section className={card} aria-labelledby="problemas-h">
+        <h2 id="problemas-h" className={h2}>Problemas no pagamento</h2>
+        {problemas.voluntario.length === 0 ? (
+          <p className="flex gap-2 text-[13px] text-gray-600 dark:text-gray-400">
+            <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+            Nenhum problema que dependa da Economia agora.
+          </p>
+        ) : (
+          problemas.voluntario.map((p) => <ListaProblema key={p.id} p={p} />)
+        )}
+        {sistemaQtd > 0 && (
+          <div className="grid gap-2 rounded-xl bg-gray-50 px-3 py-2.5 text-[13px] text-gray-700 dark:bg-gray-800/60 dark:text-gray-300">
+            <p className="flex gap-2">
+              <Wrench className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
+              {dono
+                ? "De sistema (com você):"
+                : `${sistemaQtd} ${sistemaQtd === 1 ? "problema é" : "problemas são"} de sistema e já ${sistemaQtd === 1 ? "está" : "estão"} com o administrador do Portal. A Economia não precisa fazer nada.`}
+            </p>
+            {dono && !escola.asaasSubaccountApiKey && <p>Conta Asaas da filial não ligada: o pagamento on-line está fechado.</p>}
+            {dono && problemas.sistema.map((p) => <ListaProblema key={p.id} p={p} />)}
+          </div>
+        )}
+        <details className="text-[13px]">
+          <summary className="cursor-pointer font-semibold text-gray-800 dark:text-gray-200">Mensagens que o aluno pode ver ao pagar, e quem resolve</summary>
+          <ul className="mt-2 grid gap-2">
+            {GUIA_MENSAGENS.map((g) => (
+              <li key={g.mensagem} className="grid gap-0.5 border-l-2 border-gray-200 pl-3 dark:border-gray-700">
+                <span className="font-semibold text-gray-900 dark:text-gray-100">“{g.mensagem}”</span>
+                <span className="text-gray-600 dark:text-gray-400">
+                  <b className={g.quem === "voluntario" ? "text-na-green-dark dark:text-emerald-400" : "text-gray-700 dark:text-gray-300"}>
+                    {g.quem === "voluntario" ? "Economia resolve: " : "Sistema: "}
+                  </b>
+                  {g.oQueFazer}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      </section>
+
       <section className={card} aria-labelledby="cartao-h">
         <h2 id="cartao-h" className={h2}>Taxa do cartão de crédito</h2>
         <p className="text-[13px] text-gray-600 dark:text-gray-400">
@@ -129,5 +173,28 @@ function Item({ ok, sim, nao }: { ok: boolean; sim: string; nao: string }) {
       <Icone className={`mt-0.5 size-4 shrink-0 ${ok ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400"}`} aria-hidden />
       <span className="text-gray-700 dark:text-gray-300">{ok ? sim : nao}</span>
     </li>
+  );
+}
+
+function ListaProblema({ p }: { p: Problema }) {
+  return (
+    <details className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5 dark:border-amber-900 dark:bg-amber-950/30" open={p.pessoas.length <= 5}>
+      <summary className="cursor-pointer text-sm font-bold text-gray-900 dark:text-gray-100">
+        {p.titulo} <span className="font-semibold tabular-nums text-amber-800 dark:text-amber-300">({p.pessoas.length})</span>
+      </summary>
+      <p className="mt-1 text-[13px] text-gray-700 dark:text-gray-300">{p.oQueFazer}</p>
+      <ul className="mt-2 grid gap-1.5">
+        {p.pessoas.map((x, i) => (
+          <li key={x.tarefaId ?? `${x.matricula}-${i}`} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 border-t border-amber-200/70 pt-1.5 text-[13px] dark:border-amber-900/60">
+            <span className="min-w-0">
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{x.nome}</span>
+              {x.matricula && <span className="text-gray-500"> · matrícula {x.matricula}</span>}
+              <span className="block text-gray-600 dark:text-gray-400">{x.detalhe}</span>
+            </span>
+            {x.tarefaId && p.id === "lancamento" && <LancadoAMao tarefaId={x.tarefaId} />}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

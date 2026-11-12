@@ -75,6 +75,14 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   a("a37", DEV, "2026-11-12", "2026-11-12", "Economia → Cobrança on-line: taxa do cartão por filial, faixa do spread e situação da conta", "Claude", [], "1 dia", 1, {
     status: "feito", registros: [R("No ar. O dono do sistema escolhe qualquer filial na Economia.")],
   }),
+  a("a39", S1, "2026-11-16", "2026-11-27", "WhatsApp do financeiro: número novo, só para cobrança, e cadastro dos modelos na Meta", "Henrique, Claude (cadastro dos modelos)", [
+    "Chip ou número virtual que nunca foi usado no WhatsApp", "Gerenciador de Negócios da Meta verificado", "Nome de exibição aprovado (ex.: Nova Acrópole — Contribuições)", "Conta na Zernio ligada ao número", "12 modelos de utilidade (src/lib/whatsapp/modelos.ts)",
+  ], "Número: 1 a 3 dias; aprovação de cada modelo: minutos a 48 h", 4, {
+    obs: "Separado do número do CRM, para que bloqueios e denúncias de prospecção não derrubem os avisos de pagamento. A migração do WhatsApp do financeiro ainda não foi aplicada: pede a sua confirmação.",
+  }),
+  a("a40", DEV, "2026-11-12", "2026-11-12", "Economia → Cobrança on-line: problemas de pagamento que a Economia resolve, e guia de mensagens", "Claude", [], "1 dia", 1, {
+    status: "feito", registros: [R("No ar: lançamentos que pararam para conferência, cobranças paradas, débito automático recusado e composição vazia. Os de sistema ficam com o dono.")],
+  }),
   a("a38", S0, "2026-11-13", "2026-11-17", "Atualizar a proposta: faixa fixa (não proporcional) e fixo abatido pelo spread; refazer a simulação", "Henrique, Claude (texto e tabela)", [
     "Proposta de 23/10/2026 (PDF)", "Nova tabela: total = máx(R$ 3.000, spread)",
   ], "1 dia", 1, { obs: "Antes de ir ao Diretor Nacional e às escolas." }),
