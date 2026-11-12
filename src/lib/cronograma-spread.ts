@@ -75,8 +75,8 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   a("a37", DEV, "2026-11-12", "2026-11-12", "Economia → Cobrança on-line: taxa do cartão por filial, faixa do spread e situação da conta", "Claude", [], "1 dia", 1, {
     status: "feito", registros: [R("No ar. O dono do sistema escolhe qualquer filial na Economia.")],
   }),
-  a("a39", S1, "2026-11-16", "2026-11-27", "WhatsApp do financeiro: número novo, só para cobrança, e cadastro dos modelos na Meta", "Henrique, Claude (cadastro dos modelos)", [
-    "Chip ou número virtual que nunca foi usado no WhatsApp", "Gerenciador de Negócios da Meta verificado", "Nome de exibição aprovado (ex.: Nova Acrópole — Contribuições)", "Conta na Zernio ligada ao número", "12 modelos de utilidade (src/lib/whatsapp/modelos.ts)",
+  a("a39", S1, "2026-11-16", "2026-11-27", "WhatsApp do financeiro: número novo, só para cobrança, e cadastro dos modelos na Meta", "Henrique (número e chaves), Claude (modelos e webhook)", [
+    "Número novo registrado no WhatsApp Cloud API (somos tech provider: direto na Meta, sem Zernio)", "Nome de exibição aprovado (ex.: Nova Acrópole — Contribuições)", "Variáveis na Vercel: WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN, WHATSAPP_WABA_ID", "Webhook /api/webhooks/whatsapp (campo messages)", "Cadastrar os 12 modelos: npx tsx scripts/whatsapp-modelos-meta.ts --cadastrar", "Autorizar a migração 20261026180000_whatsapp_financeiro_instagram (registro dos envios)",
   ], "Número: 1 a 3 dias; aprovação de cada modelo: minutos a 48 h", 4, {
     obs: "Separado do número do CRM, para que bloqueios e denúncias de prospecção não derrubem os avisos de pagamento. A migração do WhatsApp do financeiro ainda não foi aplicada: pede a sua confirmação.",
   }),

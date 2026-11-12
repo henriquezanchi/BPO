@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
 import { TIPOS_CHAVE, type TipoChave, chaveDaPropriaEscola, pedirSaque, saldoDaConta, validarChave } from "@/lib/asaas/saque";
 import { chavePixDaEscola, definirRepasseCartao, gravarChavePix } from "@/lib/spread";
+import { marcarContatoAtendido } from "@/lib/whatsapp/conversa";
 import { revalidatePath } from "next/cache";
 
 /** Economia → Cobrança on-line (12/11/2026): a filial escolhe se repassa a taxa do cartão ao aluno. */
@@ -87,6 +88,15 @@ export async function solicitarSaque(schoolId: string, valor: number) {
     revalidatePath("/economia");
     return { ok: false as const, error: `O Asaas recusou o saque: ${(e as Error).message.replace(/^Asaas: /, "")}` };
   }
+  revalidatePath("/economia");
+  return { ok: true as const };
+}
+
+/** Pedido de contato vindo do WhatsApp ("Falar com a Economia") já atendido. */
+export async function contatoAtendido(schoolId: string, memberId: string) {
+  const eu = await podeEconomia(schoolId);
+  if (!eu) return { ok: false as const, error: "Só a Economia e a direção da filial fazem isso." };
+  await marcarContatoAtendido(schoolId, memberId);
   revalidatePath("/economia");
   return { ok: true as const };
 }

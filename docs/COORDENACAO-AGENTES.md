@@ -1134,3 +1134,33 @@ Arquivos em `docs/propostas/Proposta-Piloto-Portal-2026-11.html` e `.pdf`, com 4
 - Taxas do Asaas, serviços opcionais e etapas de implantação. As datas dependem da parte burocrática de cada escola.
 
 A proposta de 23/10 não foi alterada; esta é uma proposta nova.
+
+## 12/11/2026 — WhatsApp do financeiro direto na Meta (tech provider), com conversa de Pix (Claude)
+
+O usuário é tech provider da Meta, então o número novo do financeiro **não passa pela Zernio**. A Zernio continua só no Instagram das filiais. O código está pronto, mas **desligado até o usuário configurar as variáveis**.
+
+**Arquivos**
+- `src/lib/whatsapp/meta.ts`: cliente da Graph API.
+  - Envia modelo (com payload dos botões de resposta rápida), texto e botões interativos.
+  - Confere a assinatura `X-Hub-Signature-256`.
+  - Os payloads dos botões são assinados (`acao:memberId:hmac`), para ninguém gerar cobrança de outra pessoa.
+- `src/lib/whatsapp/financeiro.ts`: agora envia pela Meta. Os modelos com botões "Quero o código Pix" e "Falar com a Economia" levam a pessoa no payload. A coluna `zernioMessageId` passa a guardar o `wamid`.
+- `src/lib/whatsapp/modelos.ts`: 6 modelos de pagamento ganharam esses dois botões. Ainda não foram cadastrados na Meta.
+- `src/lib/whatsapp/conversa.ts`, que trata as respostas:
+  - **Pix:** gera ou reaproveita a cobrança do mês mais antigo em aberto, pela subconta e com split, e manda o código Copia e Cola numa mensagem separada.
+    - Sem cliente Asaas da subconta (ou seja, sem nenhum pagamento pelo Portal desde 25/10), pede o primeiro pagamento pelo Portal, que é onde o CPF é confirmado.
+  - **Economia:** guarda o pedido em `ResumoNacional` (`whatsapp:contatos`), avisa por push o Secretário de Economia e a direção, e o pedido aparece em Economia → Cobrança on-line com o botão "Já falei com a pessoa".
+  - **Mensagem digitada:** a pessoa é encontrada pelo telefone, comparando DDD e os 8 últimos dígitos. Se o número bater com mais de uma pessoa, não adivinha.
+- `src/app/api/webhooks/whatsapp/route.ts`:
+  - GET: verificação (hub.challenge).
+  - POST: situação dos envios e respostas. Trata os botões, PIX, ECONOMIA, SAIR e ajuda.
+- `scripts/whatsapp-modelos-meta.ts`: cadastra e lista os modelos direto na Meta, pela conta do WhatsApp Business (`WHATSAPP_WABA_ID`).
+
+**Para ligar** (é o usuário quem faz)
+1. Número novo no Cloud API e nome de exibição aprovado.
+2. Variáveis na Vercel: `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TOKEN` (permanente, de usuário do sistema), `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_WABA_ID`. A variável `PORTAL_URL` é opcional.
+3. Webhook do app: `https://portal-na-one.vercel.app/api/webhooks/whatsapp`, campo `messages`.
+4. `npx tsx scripts/whatsapp-modelos-meta.ts --cadastrar`.
+5. **Autorizar a migração `20261026180000_whatsapp_financeiro_instagram`**, que cria as tabelas de registro dos envios e de descadastro. Ela continua sem aplicar. Sem ela, o envio falha ao gravar o registro; a resposta aos botões não depende dela, mas o SAIR depende.
+
+**Sem disparo automático por enquanto:** a régua continua com "Aprovar e enviar", conforme a decisão antiga.

@@ -8,6 +8,13 @@ export const IDIOMA_MODELOS = "pt_BR";
 
 export const RODAPE_MODELOS = "Responda SAIR para não receber mais estas mensagens.";
 
+/**
+ * Botões de resposta rápida dos avisos de pagamento (12/11/2026, WhatsApp direto na Meta). O texto do botão é fixo no
+ * modelo; o payload (ação + pessoa, assinado) vai no envio — ver lib/whatsapp/meta.ts e api/webhooks/whatsapp.
+ */
+export const BOTOES_PAGAR = ["Quero o código Pix", "Falar com a Economia"] as const;
+export const ACOES_BOTOES_PAGAR = ["pix", "economia"] as const;
+
 export const MODELOS = {
   na_contribuicao_recebida: {
     descricao: "Contribuição recebida (recibo novo no Mercúrio ou pagamento confirmado no Portal)",
@@ -18,22 +25,26 @@ export const MODELOS = {
     descricao: "Lembrete da contribuição do mês (régua: dia 10)",
     texto: "Olá, {{1}}! Lembrete da Nova Acrópole {{2}}: sua contribuição de {{3}}, no valor de {{4}}, está disponível para pagamento no Portal do Membro. Se já pagou, desconsidere esta mensagem.",
     exemplo: ["Maria", "Goiânia Universitário", "outubro/2026", "R$ 150,00"],
+    botoes: BOTOES_PAGAR,
   },
   na_contribuicao_em_aberto: {
     descricao: "Contribuição em aberto (régua: atraso)",
     texto: "Olá, {{1}}. A Nova Acrópole {{2}} registra {{3}} de contribuição em aberto, somando {{4}}. Você pode pagar pelo Portal do Membro ou responder esta mensagem para combinar com a secretaria. Se já pagou, desconsidere.",
     exemplo: ["Maria", "Goiânia Universitário", "2 meses", "R$ 300,00"],
+    botoes: BOTOES_PAGAR,
   },
   // Modelos da cobrança pelo Portal (12/11/2026, cronograma do spread). Ainda não cadastrados na Meta.
   na_contribuicao_vence_em_breve: {
     descricao: "Contribuição vence em poucos dias (antes do dia 10)",
     texto: "Olá, {{1}}! A contribuição de {{2}} à Nova Acrópole {{3}}, no valor de {{4}}, vence em {{5}}. Você pode pagar com Pix ou cartão no Portal do Membro. Se já pagou, desconsidere.",
     exemplo: ["Maria", "novembro/2026", "Goiânia Universitário", "R$ 150,00", "10/11/2026"],
+    botoes: BOTOES_PAGAR,
   },
   na_contribuicao_vence_hoje: {
     descricao: "Contribuição vence hoje (dia 10)",
     texto: "Olá, {{1}}! Hoje é o último dia para pagar sem atraso a contribuição de {{2}} à Nova Acrópole {{3}}, no valor de {{4}}. Pague com Pix ou cartão no Portal do Membro. Se já pagou, desconsidere.",
     exemplo: ["Maria", "novembro/2026", "Goiânia Universitário", "R$ 150,00"],
+    botoes: BOTOES_PAGAR,
   },
   na_pix_codigo: {
     descricao: "Código Pix Copia e Cola da contribuição (pedido pela pessoa ou enviado pela Economia)",
@@ -49,6 +60,7 @@ export const MODELOS = {
     descricao: "Débito automático do mês não concluído pelo banco",
     texto: "Olá, {{1}}. O débito automático da contribuição de {{2}} à Nova Acrópole {{3}}, no valor de {{4}}, não foi concluído pelo banco. Você pode pagar com Pix ou cartão no Portal do Membro. Se precisar de ajuda, responda esta mensagem.",
     exemplo: ["Maria", "novembro/2026", "Goiânia Universitário", "R$ 150,00"],
+    botoes: BOTOES_PAGAR,
   },
   na_debito_automatico_cancelado: {
     descricao: "Autorização do débito automático cancelada, recusada ou vencida",
@@ -59,6 +71,7 @@ export const MODELOS = {
     descricao: "Pagamento no cartão não aprovado pela operadora",
     texto: "Olá, {{1}}. O pagamento no cartão da contribuição de {{2}} à Nova Acrópole {{3}} não foi aprovado pela operadora. Você pode tentar outro cartão ou pagar com Pix no Portal do Membro. Se precisar de ajuda, responda esta mensagem.",
     exemplo: ["Maria", "novembro/2026", "Goiânia Universitário"],
+    botoes: BOTOES_PAGAR,
   },
   na_inscricao_confirmada: {
     descricao: "Pagamento de inscrição em evento confirmado",
@@ -70,7 +83,7 @@ export const MODELOS = {
     texto: "Olá, {{1}}! Recebemos o pagamento da sua matrícula em {{2}}, na Nova Acrópole {{3}}. A secretaria vai entrar em contato com os próximos passos. Boas-vindas!",
     exemplo: ["Maria", "Curso de Filosofia Prática", "Goiânia Universitário"],
   },
-} as const satisfies Record<string, { descricao: string; texto: string; exemplo: string[] }>;
+} as const satisfies Record<string, { descricao: string; texto: string; exemplo: string[]; botoes?: readonly string[] }>;
 
 export type NomeModelo = keyof typeof MODELOS;
 

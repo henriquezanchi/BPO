@@ -1,17 +1,18 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { enviarModeloWhatsapp, zernioConfigurado } from "@/lib/zernio/client";
-import { IDIOMA_MODELOS, MODELOS, telefoneInternacional, type NomeModelo } from "@/lib/whatsapp/modelos";
+import { enviarModeloMeta, metaConfigurado, payloadBotao } from "@/lib/whatsapp/meta";
+import { ACOES_BOTOES_PAGAR, IDIOMA_MODELOS, MODELOS, telefoneInternacional, type NomeModelo } from "@/lib/whatsapp/modelos";
 
 /**
- * WhatsApp do financeiro (pedido do usuário 2026-10-26): sai do número central da rede (ZERNIO_WHATSAPP_ACCOUNT_ID),
- * só com modelos de utilidade. Cada mensagem entregue custa à filial CUSTO_MENSAGEM_CENTAVOS (Meta, utilidade, Brasil:
+ * WhatsApp do financeiro (pedido do usuário 2026-10-26): sai do número central da rede, só com modelos de utilidade.
+ * Desde 12/11/2026 o envio é direto na Meta (WhatsApp Cloud API, lib/whatsapp/meta.ts): a empresa do usuário é tech
+ * provider e o número não passa mais pela Zernio. A coluna `zernioMessageId` guarda o id da mensagem da Meta (wamid). Cada mensagem entregue custa à filial CUSTO_MENSAGEM_CENTAVOS (Meta, utilidade, Brasil:
  * US$0,0068 + câmbio e IOF ≈ R$0,04), abatido do repasse dela — ver custosDoMes. Sem a conta configurada, nada sai
  * e nada é registrado: os fluxos de pagamento seguem iguais.
  */
 export const CUSTO_MENSAGEM_CENTAVOS = 4;
 
-export const whatsappFinanceiroAtivo = () => zernioConfigurado() && !!process.env.ZERNIO_WHATSAPP_ACCOUNT_ID;
+export const whatsappFinanceiroAtivo = () => metaConfigurado();
 
 export type EnvioFinanceiro = {
   schoolId: string;
@@ -45,7 +46,10 @@ export async function enviarWhatsappFinanceiro(e: EnvioFinanceiro): Promise<Resu
   if (motivo) return { status: "ignorada", erro: motivo };
 
   try {
-    const r = await enviarModeloWhatsapp({ accountId: process.env.ZERNIO_WHATSAPP_ACCOUNT_ID!, telefone: telefone!, modelo: e.modelo, idioma: IDIOMA_MODELOS, parametros: e.parametros });
+    // Botões "Quero o código Pix" / "Falar com a Economia": o payload leva a pessoa, assinado (lib/whatsapp/meta.ts).
+    const def = MODELOS[e.modelo] as { botoes?: readonly string[] };
+    const botoes = def.botoes && e.memberId ? def.botoes.map((_, i) => payloadBotao(ACOES_BOTOES_PAGAR[i] ?? "nada", e.memberId!)) : undefined;
+    const r = await enviarModeloMeta({ telefone: telefone!, modelo: e.modelo, idioma: IDIOMA_MODELOS, parametros: e.parametros, botoes });
     await db.whatsappEnvio.update({ where: { id: envioId }, data: { status: "enviada", enviadaEm: new Date(), zernioMessageId: r.messageId } });
     return { status: "enviada" };
   } catch (erro) {
@@ -63,7 +67,7 @@ export function avisarFinanceiroSemEsperar(e: EnvioFinanceiro) {
   });
 }
 
-/** Aviso de entrega/leitura/falha da Zernio (webhook): atualiza o envio e conta o custo quando a Meta entrega. */
+/** Aviso de entrega/leitura/falha (webhook da Meta): atualiza o envio e conta o custo quando a Meta entrega. */
 export async function registrarSituacaoEnvio(messageIds: string[], evento: "message.delivered" | "message.read" | "message.failed", quando: Date, erro?: string) {
   const ids = messageIds.filter(Boolean);
   if (!ids.length) return false;

@@ -1,4 +1,6 @@
+import { ContatoAtendido } from "@/components/economia/contato-atendido";
 import { LancadoAMao } from "@/components/economia/lancado-a-mao";
+import { pedidosDeContato } from "@/lib/whatsapp/conversa";
 import { RepasseCartao } from "@/components/economia/repasse-cartao";
 import { SaqueEscola } from "@/components/economia/saque-escola";
 import { conferirSaques, saldoDaConta, type Saque } from "@/lib/asaas/saque";
@@ -24,7 +26,7 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
   const escola = await db.school.findUniqueOrThrow({ where: { id: schoolId }, select: { name: true, mercurioUnidade: true, asaasSubaccountApiKey: true } });
   const config = await configCobranca();
   const chaveApi = escola.asaasSubaccountApiKey;
-  const [repassa, vigente, previa, problemas, saldo, saques, chavePix] = await Promise.all([
+  const [repassa, vigente, previa, problemas, saldo, saques, chavePix, contatos] = await Promise.all([
     cartaoRepassaTaxa(schoolId),
     spreadDoMes().catch(() => null),
     contarEscopo(config.escopo).catch(() => null),
@@ -32,6 +34,7 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
     chaveApi ? saldoDaConta(chaveApi).catch(() => null) : Promise.resolve(null),
     chaveApi ? conferirSaques(schoolId, chaveApi).catch(() => [] as Saque[]) : Promise.resolve([] as Saque[]),
     chavePixDaEscola(schoolId),
+    pedidosDeContato(schoolId).catch(() => []),
   ]);
   const sistemaQtd = problemas.sistema.reduce((n, p) => n + p.pessoas.length, 0) + (escola.asaasSubaccountApiKey ? 0 : 1);
   const naEscala = !!escola.mercurioUnidade && config.escopo.includes(escola.mercurioUnidade);
@@ -52,7 +55,29 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
     <div className="grid max-w-3xl gap-4">
       <section className={card} aria-labelledby="problemas-h">
         <h2 id="problemas-h" className={h2}>Problemas no pagamento</h2>
-        {problemas.voluntario.length === 0 ? (
+        {contatos.length > 0 && (
+          <details open className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5 dark:border-amber-900 dark:bg-amber-950/30">
+            <summary className="cursor-pointer text-sm font-bold text-gray-900 dark:text-gray-100">
+              Pediram para falar com a Economia pelo WhatsApp <span className="tabular-nums text-amber-800 dark:text-amber-300">({contatos.length})</span>
+            </summary>
+            <p className="mt-1 text-[13px] text-gray-700 dark:text-gray-300">Ligue ou mande mensagem do telefone da secretaria. Depois, marque como atendido.</p>
+            <ul className="mt-2 grid gap-1.5">
+              {contatos.map((c) => (
+                <li key={c.memberId} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 border-t border-amber-200/70 pt-1.5 text-[13px] dark:border-amber-900/60">
+                  <span className="min-w-0">
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{c.nome}</span>
+                    {c.matricula && <span className="text-gray-500"> · matrícula {c.matricula}</span>}
+                    <span className="block text-gray-600 dark:text-gray-400">
+                      WhatsApp +{c.telefone} · pedido em {new Date(c.em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </span>
+                  <ContatoAtendido schoolId={schoolId} memberId={c.memberId} />
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        {problemas.voluntario.length === 0 && contatos.length === 0 ? (
           <p className="flex gap-2 text-[13px] text-gray-600 dark:text-gray-400">
             <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
             Nenhum problema que dependa da Economia agora.
