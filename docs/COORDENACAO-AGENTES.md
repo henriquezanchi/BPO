@@ -1011,3 +1011,10 @@ com cartões brancos e ícone em destaque. Rótulos repetidos tirados.
   - cursos de integração;
   - nomes de rubricas criadas depois de 17/10;
   - composição fora de BGA.
+
+## 12/11/2026 — Filial Fortaleza Dionisio Torres (FOR) aberta no Portal (Claude, autorizado pelo usuário)
+
+- O pedido veio do caso de Carlos Rangel Neves Otto (matrícula 3006), que estava ligado a Goiânia Universitário no Portal mas é de Fortaleza. `scripts/abrir-filial-db.ts FOR --gravar`: 277 ativos importados, filial aberta (`portalAberto`), 260 logins criados. Ninguém que já tinha login foi tocado (só o Carlos tinha), e nenhum e-mail foi enviado. O Carlos passou para Fortaleza pela própria importação, com o mesmo login.
+- A 1ª execução parou num erro de `ClassGroup` durante a importação, antes de criar logins; a 2ª foi até o fim.
+- Sem login: 2 sem e-mail (Maria Clara Ferreira Maldonado, Maria das Dores Guerrero Dora) e 14 com e-mail já usado por outra conta (em geral filhos com o e-mail do responsável).
+- A filial entra na rotina diária de importação a partir de agora.
