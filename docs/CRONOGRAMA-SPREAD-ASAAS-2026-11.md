@@ -34,7 +34,11 @@ Fontes: proposta "Portal, Suporte e Serviços Financeiros" de 23/10/2026; confir
 | 5.001 a 10.000 | 0,5% |
 | acima de 10.000 | 0,25% |
 
-Exemplos: com 700 membros, a média dá cerca de 1,86%; com todas as escolas, cerca de 0,5%.
+Exemplos: com 700 membros, a média dá cerca de 1,86%. Com todas as escolas da proposta (7.027 membros), a média pelas faixas dá cerca de 0,93%.
+
+**Em aberto (12/11):**
+- **Taxa com todas as escolas.** No WhatsApp de 05/11 a resposta foi "se todas aderirem, fica 0,5%". Pelas faixas, 0,5% é só a taxa da faixa de 5.001 a 10.000; a média dá cerca de 0,93%. Falta definir qual dos dois vale.
+- **Total da simulação.** A tabela da página 3 do PDF soma o fixo inteiro e o spread. Com o fixo abatido (combinado no WhatsApp), o total fica no máximo entre R$ 3.000 e o spread. Exemplo com 7.027 membros: R$ 5.862, e não R$ 8.862. O PDF precisa ser corrigido antes de ir ao Diretor Nacional.
 
 **Taxa do Asaas:** no Pix, sai da parte da escola. No cartão, é repassada ao aluno. As tarifas do Asaas são separadas do spread.
 
