@@ -4,6 +4,7 @@ import { resumosParaTemas } from "@/lib/anotacoes";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { fraseDoDia, hojeNoFuso } from "@/lib/diario";
 import { escolasQueCobramOnline, pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
+import { cartaoRepassaTaxa } from "@/lib/spread";
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
 import {portalLabel} from "@/lib/display-labels";
@@ -510,6 +511,8 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
     // Depois de buscar a agenda (que tenta renovar a sessão): sem sessão válida do Ágora, a Agenda oferece reconectar.
     agoraReconectar: await agoraPrecisaReconectar(member.id),
     cobraOnline: escolasQueCobram.has(member.schoolId),
+    // Taxa do cartão repassada ao aluno ou absorvida pela escola (escolha da Economia, 12/11/2026; lib/spread.ts).
+    cartaoComTaxa: await cartaoRepassaTaxa(member.schoolId),
     // Pix Automático por filial (27/10/2026): a subconta de BGA ainda não tem o recurso liberado no Asaas.
     pixAutomaticoDisponivel: pixAutomaticoLiberado(member.school.mercurioUnidade) && escolasQueCobram.has(member.schoolId),
     avisosGrupos,

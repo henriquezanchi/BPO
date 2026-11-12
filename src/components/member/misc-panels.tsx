@@ -371,7 +371,7 @@ const FAQ: { pergunta: string; resposta: string }[] = [
   },
   {
     pergunta: "Posso pagar com cartão de crédito?",
-    resposta: "Sim — ao gerar a cobrança, escolha Cartão de Crédito em vez de PIX. O valor fica um pouco maior, cobrindo a taxa do cartão.",
+    resposta: "Sim — ao gerar a cobrança, escolha Cartão de Crédito em vez de PIX. Em algumas escolas o valor fica um pouco maior, cobrindo a taxa do cartão; a tela de pagamento avisa quando for o caso.",
   },
   {
     pergunta: "Como me inscrevo em um evento da escola?",

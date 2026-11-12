@@ -2,10 +2,11 @@
 
 Atualizado em 12/11/2026. Autorização do Diretor Nacional para cobrar pelo spread já dada.
 
-**Escopo**
-- Escolas de Goiânia e região: Goiânia Universitário, Jardim América, Setor Oeste e Garavelo.
-- Goiás e Barra do Garças, sem exceção.
-- Sede Nacional.
+**Escopo do piloto** (decidido em 12/11/2026)
+- Todas as escolas de Goiás, menos Valparaíso: GYN, JAM, STO, GAR, RVD, APS, GY2, ALT, ELD, PER, CAT e ITU.
+- Barra do Garças (BGA).
+- Sede Nacional, que é a filial de Brasília (BSB).
+- Total: 1.651 ativos no Mercúrio em 12/11.
 
 **Regra de cobrança, que não muda:** toda cobrança sai pela conta Asaas da própria escola. A margem do BPO volta por split na mesma transação, nunca por repasse posterior. Isso já está pronto no código: [conta-escola.ts](../src/lib/asaas/conta-escola.ts) e [split.ts](../src/lib/asaas/split.ts).
 
@@ -21,11 +22,12 @@ Fontes: proposta "Portal, Suporte e Serviços Financeiros" de 23/10/2026; confir
   - Com R$ 3.000 de spread ou mais, o fixo zera.
 - **O spread incide só sobre o que passa pelo Portal.** Se uma escola não teve nenhum pagamento pelo Portal no mês, não paga spread.
 
-**Faixas progressivas**
-- As faixas são contadas pelo **total de membros ativos das escolas aderentes**, inclusive os que pagam por fora (escala coletiva).
-- Cada faixa mantém a sua taxa. A **taxa média** que resulta é a mesma para todas as escolas.
+**Faixa fixa, não proporcional** (corrigido em 12/11/2026)
+- Conta-se o **total de membros ativos das escolas participantes**, inclusive os que pagam por fora (escala coletiva).
+- O total decide **uma taxa única**, que vale **no mês seguinte** para tudo o que passar pelo Portal, em todas as escolas.
+- Exemplo: com 5.001 membros, o spread do mês seguinte é 0,5%.
 
-| Faixa de membros | Taxa da faixa |
+| Membros ativos nas escolas participantes | Spread |
 |---|---|
 | até 500 | 2% |
 | 501 a 1.500 | 1,5% |
@@ -34,28 +36,22 @@ Fontes: proposta "Portal, Suporte e Serviços Financeiros" de 23/10/2026; confir
 | 5.001 a 10.000 | 0,5% |
 | acima de 10.000 | 0,25% |
 
-Exemplos: com 700 membros, a média dá cerca de 1,86%. Com todas as escolas da proposta (7.027 membros), a média pelas faixas dá cerca de 0,93%.
+**Piloto:** 1.651 ativos em 12/11, o que dá a faixa de **1%**. A margem para cair de faixa é de 150 membros: abaixo de 1.501 ativos, o spread sobe para 1,5%.
 
-**Em aberto (12/11):**
-- **Taxa com todas as escolas.** No WhatsApp de 05/11 a resposta foi "se todas aderirem, fica 0,5%". Pelas faixas, 0,5% é só a taxa da faixa de 5.001 a 10.000; a média dá cerca de 0,93%. Falta definir qual dos dois vale.
-- **Total da simulação.** A tabela da página 3 do PDF soma o fixo inteiro e o spread. Com o fixo abatido (combinado no WhatsApp), o total fica no máximo entre R$ 3.000 e o spread. Exemplo com 7.027 membros: R$ 5.862, e não R$ 8.862. O PDF precisa ser corrigido antes de ir ao Diretor Nacional.
+**Proposta em PDF desatualizada:** ela ainda fala em cálculo progressivo e soma o fixo inteiro ao spread na simulação. É preciso atualizar os dois pontos (ação a38 do cronograma).
 
-**Taxa do Asaas:** no Pix, sai da parte da escola. No cartão, é repassada ao aluno. As tarifas do Asaas são separadas do spread.
+**Taxa do Asaas** (as tarifas do Asaas são separadas do spread)
+- **Pix:** sai da parte da escola.
+- **Cartão:** cada filial escolhe na Economia → Cobrança on-line. O padrão é repassar ao aluno. A tela avisa que repassar aumenta a chance de atraso e inadimplência.
 
 **Duração:** é temporário. A ideia é cerca de 1 ano, com data para transferir o suporte às escolas.
 
-**Sede Nacional:** é a filial de Brasília (BSB).
-
-**Conta com o escopo atual**, contando os ativos no Mercúrio em 12/11:
-- BSB 448 + BGA 31 + GYN 322 + JAM 303 + STO 61 + GAR 35 = **1.200 membros**.
-- Taxa média = (500 × 2% + 700 × 1,5%) ÷ 1.200 ≈ **1,71%**.
-- A média ainda muda conforme as escolas de Goiás que entrarem.
-
-**O código ainda está desatualizado:** cobra 2% fixo (`PERCENTUAL_SPLIT_ESCOLA = 98` em `src/lib/billing-constants.ts`).
-
-Falta construir duas coisas (item T11):
-- o cálculo da taxa média pelas faixas, refeito todo mês com a contagem de membros das aderentes;
-- a fatura do fixo abatido pelo spread.
+**No código** (12/11/2026)
+- Arquivos: `src/lib/spread.ts` e `src/lib/spread-comum.ts`.
+- **Faixa do mês:** é congelada na primeira cobrança do mês, em `ResumoNacional` com a chave `spread:AAAA-MM`. A contagem vem dos ativos no Mercúrio, com o banco do Portal como reserva.
+- **Escopo e cartão:** a lista de escolas participantes e as filiais que absorvem a taxa do cartão ficam em `ResumoNacional`, chave `cobranca:config`. Sem essa linha, vale `ESCOPO_PILOTO`.
+- **Split:** `split.ts` usa a taxa da faixa. Substituiu os 2% fixos.
+- **Falta:** a fatura do fixo abatido e o demonstrativo por escola.
 
 ---
 

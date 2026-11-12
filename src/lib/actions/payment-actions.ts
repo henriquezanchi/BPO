@@ -13,6 +13,7 @@ import {
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
 import { contaDaEscolaId, contaDeLeituraId } from "@/lib/asaas/conta-escola";
 import { splitDoBpo, splitDoBpoCartao } from "@/lib/asaas/split";
+import { cartaoRepassaTaxa } from "@/lib/spread";
 import { requireContributionOrder } from "@/lib/contribution-payment-policy";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -125,11 +126,13 @@ export async function createContributionCharge(
 
   if (metodo === "CREDIT_CARD") {
     const { percentual, fixo } = await asaasGetCreditCardFeeStatus(conta);
-    // Repassa a taxa real do cartão ao aluno (decisão do usuário
-    // 2026-09-22) — "gross-up" pra que o valor líquido recebido (depois do
-    // Asaas descontar a taxa dele) bata exatamente com valorBase.
-    const valorCartao = Math.round(((valorBase + fixo) / (1 - percentual / 100)) * 100) / 100;
-    const split = await splitDoBpoCartao(valorBase);
+    // Repassa a taxa real do cartão ao aluno (decisão do usuário 2026-09-22) — "gross-up" pra que o valor líquido
+    // recebido (depois do Asaas descontar a taxa dele) bata exatamente com valorBase. Desde 12/11/2026 a Economia da
+    // filial pode escolher absorver a taxa (lib/spread.ts): o aluno paga só o valor base e a taxa sai da escola.
+    const repassa = await cartaoRepassaTaxa(member.schoolId);
+    const valorCartao = repassa ? Math.round(((valorBase + fixo) / (1 - percentual / 100)) * 100) / 100 : valorBase;
+    const liquido = valorCartao - (valorCartao * percentual) / 100 - fixo;
+    const split = await splitDoBpoCartao(valorBase, liquido);
     const pagamento = await asaasCreateCreditCardCharge(cliente.id, valorCartao, descricao, dueDate, split, conta);
     if (!pagamento.invoiceUrl) throw new Error("Asaas não retornou o link de pagamento do cartão.");
 

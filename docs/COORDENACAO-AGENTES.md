@@ -1053,3 +1053,27 @@ A pedido do usuário ("quero uma página de internet, não um artefato"), o cron
 - **Atrasada:** o prazo passou e a ação não foi concluída.
 - **Prazo curto:** os dias úteis do prazo são menos que o tempo médio.
 - **Comece hoje:** a ação ainda não começou e os dias úteis que restam são menos que o tempo médio.
+
+## 12/11/2026 — Spread por faixa fixa no split e aba "Cobrança on-line" na Economia (Claude)
+
+**Regra corrigida pelo usuário: as faixas são fixas, não proporcionais.** O total de membros ativos das escolas do escopo define uma taxa única, que vale no mês seguinte.
+- Escopo do piloto: Goiás sem Valparaíso, mais BGA e BSB. São 1.651 ativos, o que dá **1%**.
+- Detalhes na seção 0 de docs/CRONOGRAMA-SPREAD-ASAAS-2026-11.md.
+
+**Spread no código**
+- `src/lib/spread-comum.ts`: faixas, `faixaDoSpread` e o fixo abatido.
+- `src/lib/spread.ts`: escopo e configuração em `ResumoNacional` (`cobranca:config`); contagem no Mercúrio, com o Portal como reserva; faixa congelada por mês (`spread:AAAA-MM`).
+- `split.ts`: a margem passou a usar a faixa do mês, no lugar dos 2% fixos. Se a contagem falhar, usa a última faixa gravada e, sem nenhuma, os 2% antigos.
+  - **Muda as cobranças reais de BGA: a margem cai de 2% para 1%.**
+
+**Taxa do cartão por filial**
+- Fica em `cobranca:config.cartaoSemRepasse`. O padrão continua sendo repassar ao aluno.
+- `payment-actions.ts`: sem repasse, o aluno paga o valor base. O split do cartão fica limitado ao valor líquido.
+- O aviso "no cartão o valor sai maior" só aparece ao aluno quando a filial repassa a taxa (`cartaoComTaxa` em member-data).
+
+**Economia → aba "Cobrança on-line"** (`components/economia/cobranca-online.tsx`)
+- Escolha da taxa do cartão, com aviso de inadimplência e exemplo com a taxa real da conta.
+- Faixa em vigor e prévia do mês seguinte, tabela de faixas e situação da conta Asaas.
+- **Seletor de filial para o dono do sistema**, que vale para todas as abas da Economia.
+
+**Cronograma:** o conteúdo inicial foi atualizado com as escolas de Goiás, a regra corrigida e as ações a37 e a38.

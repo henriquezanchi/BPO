@@ -713,6 +713,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               fortunaBalances={fortunaBalances}
               pixAutomaticStatus={member.pixAutomaticStatus}
               pixAutomaticoDisponivel={dashboard.pixAutomaticoDisponivel}
+              cartaoComTaxa={dashboard.cartaoComTaxa}
               somenteConsulta={somenteConsulta}
               emBreve={emBreve}
               comprovanteAnual={member.school.language !== "en" && member.school.sistemaRegistro === "mercurio"}

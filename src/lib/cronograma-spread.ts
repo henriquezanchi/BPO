@@ -23,26 +23,23 @@ const S3 = "Semana 3 — materiais e treino";
 const S4 = "Semana 4 — lançamento";
 const DJ = "Dezembro e janeiro — acompanhamento";
 
-const FILIAIS = "GYN, JAM, STO, GAR, BSB e as escolas de Goiás escolhidas";
+const FILIAIS = "BSB, GYN, JAM, STO, GAR, RVD, APS, GY2, ALT, ELD, PER, CAT e ITU";
 
 export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   a("a01", S0, "2026-11-12", "2026-11-12", "Definir o que é a Sede Nacional", "Henrique", [], "1 dia", 1, {
     status: "feito", obs: "Sede Nacional = filial Brasília (BSB).", registros: [R("Decidido: Sede Nacional é a filial Brasília (BSB).")],
   }),
-  a("a02", S0, "2026-11-13", "2026-11-13", "Escolher quais escolas de Goiás entram", "Henrique", [
-    "Ativos no Mercúrio em 12/11:",
-    "Anápolis (APS) 121 · Catalão (CAT) 31 · Rio Verde (RVD) 130, Portal aberto",
-    "Goiânia: Alto da Glória (ALT) 41 · Cidade Jardim (PER) 39 · Eldorado (ELD) 40 · Goiânia II (GY2) 47",
-    "Já no escopo: Universitário (GYN) 322 · Jardim América (JAM) 303 · Setor Oeste (STO) 61 · Garavelo (GAR) 35",
-    "Itumbiara (ITU) 2 · Valparaíso (VAL) 28",
-  ], "1 dia", 1, { status: "andamento", obs: "A lista define a faixa do spread (mais membros, taxa média menor)." }),
+  a("a02", S0, "2026-11-12", "2026-11-12", "Escolher quais escolas de Goiás entram", "Henrique", [
+    "Entram: GYN 322, JAM 303, RVD 130, APS 121, STO 61, GY2 47, ALT 41, ELD 40, PER 39, GAR 35, CAT 31, ITU 2",
+    "Fica de fora: Valparaíso (VAL)",
+  ], "1 dia", 1, { status: "feito", registros: [R("Decidido: todas as escolas de Goiás, exceto Valparaíso.")] }),
   a("a03", S0, "2026-11-12", "2026-11-12", "Definir o percentual do spread", "Henrique, Diretor Nacional", ["Proposta de 23/10/2026"], "1 dia", 1, {
     status: "feito",
-    obs: "Faixas progressivas pelo total de membros das aderentes (até 500: 2% · 501–1.500: 1,5% · 1.501–3.000: 1% · 3.001–5.000: 0,75% · 5.001–10.000: 0,5% · acima: 0,25%), só sobre o que passa pelo Portal. Fixo de R$ 3.000/mês abatido pelo spread. Com o escopo atual (1.200 membros), média ≈ 1,71%.",
-    registros: [R("Decidido conforme a proposta de 23/10 e a conversa com Ana Beatriz de 05/11.")],
+    obs: "Faixa FIXA (não proporcional): o total de ativos das escolas participantes define uma taxa única, que vale no mês seguinte para o que passar pelo Portal (até 500: 2% · 501–1.500: 1,5% · 1.501–3.000: 1% · 3.001–5.000: 0,75% · 5.001–10.000: 0,5% · acima: 0,25%). Fixo de R$ 3.000/mês abatido pelo spread. Piloto: 1.651 ativos em 12/11 → 1%.",
+    registros: [R("Decidido conforme a proposta de 23/10 e a conversa com Ana Beatriz de 05/11."), R("Corrigido: faixa fixa, não proporcional. Piloto com 1.651 ativos → 1%.")],
   }),
   a("a04", S0, "2026-11-12", "2026-11-12", "Definir quem paga a taxa do Asaas", "Henrique, Diretor Nacional", [], "1 dia", 1, {
-    status: "feito", obs: "Pix: sai da parte da escola. Cartão: repassado ao aluno.", registros: [R("Mantida a regra atual.")],
+    status: "feito", obs: "Pix: sai da parte da escola. Cartão: cada filial escolhe na Economia → Cobrança on-line (padrão: repassar ao aluno).", registros: [R("Mantida a regra atual."), R("Cartão virou escolha da filial, com aviso de que repassar aumenta atraso e inadimplência.")],
   }),
   a("a05", S0, "2026-11-13", "2026-11-19", "Minuta do termo de adesão das escolas", "Henrique, Advogado ou jurídico, Diretor Nacional (revisão)", [
     "Faixas do spread e fixo abatido", "Regra da taxa do Asaas", "Cláusula de uso da chave de API e revogação", "Prazo de ~1 ano e transferência do suporte",
@@ -66,15 +63,21 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   a("a12", S1, "2026-11-17", "2026-11-24", "Enviar o link de documentos e selfie ao responsável legal de cada escola", "Henrique, Responsável legal de cada escola", [
     "Documento com foto", "Selfie pelo celular", "Estatuto e ata da diretoria ATUAL", "Comprovante de endereço", "Conta bancária da associação (saque)",
   ], "20 min para enviar; 2 a 7 dias para juntar os documentos", 5, { obs: "Recusa mais comum do Asaas: ata da diretoria vencida." }),
-  a("a13", S1, "2026-11-16", "2026-11-19", "Abrir no Portal Setor Oeste e Garavelo, completar a importação de Jardim América e abrir as escolas de Goiás escolhidas", "Claude, Henrique (autorização)", [
+  a("a13", S1, "2026-11-16", "2026-11-19", "Abrir no Portal Setor Oeste e Garavelo, completar Jardim América e abrir Anápolis, Goiânia II, Alto da Glória, Eldorado, Cidade Jardim, Catalão e Itumbiara", "Claude, Henrique (autorização)", [
     "Siglas no Mercúrio", "Mesmo processo de Fortaleza (logins sem envio de e-mail)",
-  ], "1 dia por filial", 2),
+  ], "1 dia por filial", 4),
   a("a16", S1, "2026-11-16", "2026-12-05", "Campanha em Barra do Garças: os 31 ativos autorizarem o Pix Automático até 05/12", "Henrique, Chefe de filial BGA, Tesoureiro BGA", [
     "Mensagem no WhatsApp das turmas", "Cartaz provisório", "Aviso em aula",
   ], "2 a 3 semanas para a maioria aderir", 12, { obs: "Assim o ciclo de 10/12 já roda sozinho." }),
-  a("a36", DEV, "2026-11-16", "2026-11-24", "Spread por faixas e fatura do fixo abatido (T11)", "Claude, Henrique (conferência)", [
-    "Contagem mensal de membros ativos das aderentes", "Taxa média pelas faixas no split", "Fatura do fixo = máx(0, 3.000 − spread do mês)", "Demonstrativo por escola",
-  ], "3 a 4 dias úteis", 3.5, { obs: "Hoje o código cobra 2% fixo (PERCENTUAL_SPLIT_ESCOLA = 98)." }),
+  a("a36", DEV, "2026-11-12", "2026-11-24", "Spread por faixa no split e fatura do fixo abatido (T11)", "Claude, Henrique (conferência)", [
+    "Faixa do mês congelada na primeira cobrança (feito)", "Split com a taxa da faixa (feito)", "Fatura do fixo = máx(0, 3.000 − spread do mês)", "Demonstrativo por escola",
+  ], "3 a 4 dias úteis", 3.5, { status: "andamento", registros: [R("Split passou a usar a faixa do mês (piloto: 1%). Falta a fatura do fixo e o demonstrativo.")] }),
+  a("a37", DEV, "2026-11-12", "2026-11-12", "Economia → Cobrança on-line: taxa do cartão por filial, faixa do spread e situação da conta", "Claude", [], "1 dia", 1, {
+    status: "feito", registros: [R("No ar. O dono do sistema escolhe qualquer filial na Economia.")],
+  }),
+  a("a38", S0, "2026-11-13", "2026-11-17", "Atualizar a proposta: faixa fixa (não proporcional) e fixo abatido pelo spread; refazer a simulação", "Henrique, Claude (texto e tabela)", [
+    "Proposta de 23/10/2026 (PDF)", "Nova tabela: total = máx(R$ 3.000, spread)",
+  ], "1 dia", 1, { obs: "Antes de ir ao Diretor Nacional e às escolas." }),
   a("a14", DEV, "2026-11-16", "2026-11-27", "Construir o modo guiado por QR code (/pagar)", "Claude, Henrique (testes)", [
     "Roteiro das telas do tutorial", "QR por filial com origem=patio", "Usuário de teste",
   ], "5 a 7 dias úteis", 6),

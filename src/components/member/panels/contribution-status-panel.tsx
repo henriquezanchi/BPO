@@ -54,6 +54,7 @@ export function ContributionStatusPanel({
   fortunaBalances,
   pixAutomaticStatus,
   pixAutomaticoDisponivel = false,
+  cartaoComTaxa = true,
   somenteConsulta,
   emBreve,
   comprovanteAnual = false,
@@ -67,6 +68,8 @@ export function ContributionStatusPanel({
   pixAutomaticStatus: string | null;
   /** Pix Automático liberado na subconta da filial (ver pixAutomaticoLiberado). Quem já tem autorização continua vendo. */
   pixAutomaticoDisponivel?: boolean;
+  /** A filial repassa a taxa do cartão ao aluno (escolha da Economia, lib/spread.ts). */
+  cartaoComTaxa?: boolean;
   somenteConsulta?: boolean;
   /** Filial brasileira ainda sem pagamento pelo Portal (School.mercurioEscrita). */
   emBreve?: boolean;
@@ -152,6 +155,7 @@ export function ContributionStatusPanel({
         mes={mesPagamento}
         amount={compositionTotal}
         podeRecarregarFortuna={fortunaBalances.length > 0}
+        cartaoComTaxa={cartaoComTaxa}
         onConfirmed={() => setConfirmedLocally(items=>[...items,{referenceYear:selectedYear,referenceMonth:mesPagamento,status:"pago"}])}
         onVoltar={() => setMesPagamento(null)}
       />
@@ -264,6 +268,7 @@ function RealPaymentScreen({
   mes,
   amount,
   podeRecarregarFortuna,
+  cartaoComTaxa,
   onVoltar,
   onConfirmed,
 }: {
@@ -272,6 +277,7 @@ function RealPaymentScreen({
   mes: number;
   amount: number;
   podeRecarregarFortuna: boolean;
+  cartaoComTaxa: boolean;
   onVoltar: () => void;
   onConfirmed: () => void;
 }) {
@@ -459,7 +465,7 @@ function RealPaymentScreen({
               <CreditCard size={14} /> Cartão de crédito
             </button>
           </div>
-          {metodo === "CREDIT_CARD" && (
+          {metodo === "CREDIT_CARD" && cartaoComTaxa && (
             <p className="text-[11px] text-gray-400 dark:text-gray-500">
               No cartão, o valor sai um pouco maior — cobre a taxa do Asaas (o PIX não tem essa taxa extra).
             </p>
