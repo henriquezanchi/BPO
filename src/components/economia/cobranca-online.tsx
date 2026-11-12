@@ -1,10 +1,12 @@
 import { LancadoAMao } from "@/components/economia/lancado-a-mao";
 import { RepasseCartao } from "@/components/economia/repasse-cartao";
+import { SaqueEscola } from "@/components/economia/saque-escola";
+import { conferirSaques, saldoDaConta, type Saque } from "@/lib/asaas/saque";
 import { asaasGetCreditCardFeeStatus } from "@/lib/asaas/client";
 import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { db } from "@/lib/db";
 import { GUIA_MENSAGENS, type Problema, problemasDePagamento } from "@/lib/problemas-pagamento";
-import { cartaoRepassaTaxa, configCobranca, contarEscopo, spreadDoMes } from "@/lib/spread";
+import { cartaoRepassaTaxa, chavePixDaEscola, configCobranca, contarEscopo, spreadDoMes } from "@/lib/spread";
 import { FAIXAS_SPREAD, FIXO_MENSAL, faixaDoSpread, pct } from "@/lib/spread-comum";
 import { CircleCheck, CircleX, Wrench } from "lucide-react";
 
@@ -16,15 +18,20 @@ const EXEMPLO = 120;
 const MES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const nomeMes = (aaaamm: string) => `${MES[Number(aaaamm.slice(5, 7)) - 1]} de ${aaaamm.slice(0, 4)}`;
 const num = (n: number) => n.toLocaleString("pt-BR");
+const STATUS_SAQUE: Record<Saque["status"], string> = { solicitado: "Pedido", aprovado: "Aprovado", enviado: "Em andamento", concluido: "Concluído", falhou: "Não realizado", cancelado: "Cancelado" };
 
 export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; dono: boolean }) {
   const escola = await db.school.findUniqueOrThrow({ where: { id: schoolId }, select: { name: true, mercurioUnidade: true, asaasSubaccountApiKey: true } });
   const config = await configCobranca();
-  const [repassa, vigente, previa, problemas] = await Promise.all([
+  const chaveApi = escola.asaasSubaccountApiKey;
+  const [repassa, vigente, previa, problemas, saldo, saques, chavePix] = await Promise.all([
     cartaoRepassaTaxa(schoolId),
     spreadDoMes().catch(() => null),
     contarEscopo(config.escopo).catch(() => null),
     problemasDePagamento(schoolId),
+    chaveApi ? saldoDaConta(chaveApi).catch(() => null) : Promise.resolve(null),
+    chaveApi ? conferirSaques(schoolId, chaveApi).catch(() => [] as Saque[]) : Promise.resolve([] as Saque[]),
+    chavePixDaEscola(schoolId),
   ]);
   const sistemaQtd = problemas.sistema.reduce((n, p) => n + p.pessoas.length, 0) + (escola.asaasSubaccountApiKey ? 0 : 1);
   const naEscala = !!escola.mercurioUnidade && config.escopo.includes(escola.mercurioUnidade);
@@ -83,6 +90,33 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
         </details>
       </section>
 
+      {chaveApi && (
+        <section className={card} aria-labelledby="saque-h">
+          <h2 id="saque-h" className={h2}>Saldo e saque</h2>
+          <p className="text-[13px] text-gray-600 dark:text-gray-400">
+            O dinheiro das contribuições pagas pelo Portal fica na conta Asaas da escola. Daqui a Economia transfere o saldo para a conta bancária da escola,
+            pela chave Pix cadastrada.
+          </p>
+          <SaqueEscola schoolId={schoolId} saldo={saldo} chave={chavePix} dono={dono} />
+          {saques.length > 0 && (
+            <ul className="grid gap-1 text-[13px]">
+              {saques.slice(-8).reverse().map((q) => (
+                <li key={q.id} className="flex flex-wrap justify-between gap-x-3 border-t border-gray-100 pt-1 dark:border-gray-800">
+                  <span className="tabular-nums">
+                    {new Date(q.em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} ·{" "}
+                    <b>{q.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</b> · {q.pedidoPor.replace(/\s*\(.*\)$/, "")}
+                  </span>
+                  <span className={q.status === "concluido" ? "text-emerald-700 dark:text-emerald-400" : q.status === "falhou" || q.status === "cancelado" ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"}>
+                    {STATUS_SAQUE[q.status]}
+                    {q.erro && ` — ${q.erro}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       <section className={card} aria-labelledby="cartao-h">
         <h2 id="cartao-h" className={h2}>Taxa do cartão de crédito</h2>
         <p className="text-[13px] text-gray-600 dark:text-gray-400">
@@ -97,7 +131,7 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
         <p className="text-[13px] text-gray-600 dark:text-gray-400">
           Remuneração do Portal, descontada só do que passa por ele, na divisão automática do pagamento (o dinheiro da escola não passa pela conta da
           prestadora). A taxa é uma só para todas as escolas e depende do total de membros ativos das escolas participantes: a faixa atingida num mês vale no
-          mês seguinte. O fixo nacional de R$ {num(FIXO_MENSAL)} por mês diminui na mesma medida do spread recebido.
+          mês seguinte. A escola paga só o spread: o fixo nacional de R$ {num(FIXO_MENSAL)} por mês é da Secretaria Nacional de Economia, que paga apenas o que faltar depois do spread do mês.
         </p>
         {!naEscala && <p className="rounded-lg bg-gray-100 px-3 py-2 text-[13px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">Esta filial ainda não está entre as escolas participantes.</p>}
         <div className="grid gap-2 sm:grid-cols-2">

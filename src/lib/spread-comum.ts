@@ -20,6 +20,6 @@ export function faixaDoSpread(membros: number): FaixaSpread {
 
 export const pct = (n: number) => `${n.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 
-/** Fixo nacional, abatido pelo spread do mês: fixo = máx(0, 3.000 − spread). */
+/** Fixo nacional, pago pela Secretaria Nacional de Economia (SNE) e abatido pelo spread do mês: SNE paga máx(0, 3.000 − spread). As escolas pagam só o spread. */
 export const FIXO_MENSAL = 3000;
 export const fixoDoMes = (spread: number) => Math.max(0, FIXO_MENSAL - spread);

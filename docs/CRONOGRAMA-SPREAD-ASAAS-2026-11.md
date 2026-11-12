@@ -17,9 +17,10 @@ Atualizado em 12/11/2026. Autorização do Diretor Nacional para cobrar pelo spr
 Fontes: proposta "Portal, Suporte e Serviços Financeiros" de 23/10/2026; confirmação à Ana Beatriz Pignataro em 05/11/2026; respostas do usuário em 12/11/2026.
 
 **Fixo e spread**
-- **Fixo nacional:** R$ 3.000 por mês, **abatido pelo spread do mês**. A conta é fixo = máx(0, 3.000 − spread).
-  - Exemplo: com R$ 2.000 de spread, o fixo cai para R$ 1.000.
-  - Com R$ 3.000 de spread ou mais, o fixo zera.
+- **Fixo nacional:** R$ 3.000 por mês, **pago pela Secretaria Nacional de Economia (SNE)** e **abatido pelo spread do mês**. A SNE paga máx(0, 3.000 − spread).
+  - Exemplo: com R$ 1.000 de spread, a SNE paga R$ 2.000.
+  - Com R$ 3.000 de spread ou mais, a SNE não paga nada.
+- **As escolas pagam só o spread**, descontado automaticamente no split. Não pagam nenhuma parte do fixo.
 - **O spread incide só sobre o que passa pelo Portal.** Se uma escola não teve nenhum pagamento pelo Portal no mês, não paga spread.
 
 **Faixa fixa, não proporcional** (corrigido em 12/11/2026)

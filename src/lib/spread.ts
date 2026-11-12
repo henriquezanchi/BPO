@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { consultarMercurio, sqlTexto } from "@/lib/mercurio-db/client";
+import type { ChavePix } from "@/lib/asaas/saque";
 import { faixaDoSpread } from "@/lib/spread-comum";
 
 /**
@@ -13,12 +14,16 @@ const CHAVE_CONFIG = "cobranca:config";
 /** Projeto piloto (12/11/2026): Goiás (sem Valparaíso), Barra do Garças e Sede Nacional (Brasília). */
 export const ESCOPO_PILOTO = ["BSB", "BGA", "GYN", "JAM", "STO", "GAR", "RVD", "APS", "GY2", "ALT", "ELD", "PER", "CAT", "ITU"];
 
-type Config = { escopo?: string[]; cartaoSemRepasse?: string[] };
+type Config = { escopo?: string[]; cartaoSemRepasse?: string[]; chavesPix?: Record<string, ChavePix> };
 
 export async function configCobranca(): Promise<Required<Config>> {
   const linha = await db.resumoNacional.findUnique({ where: { chave: CHAVE_CONFIG } });
   const c = (linha?.dados ?? {}) as Config;
-  return { escopo: Array.isArray(c.escopo) && c.escopo.length ? c.escopo : ESCOPO_PILOTO, cartaoSemRepasse: Array.isArray(c.cartaoSemRepasse) ? c.cartaoSemRepasse : [] };
+  return {
+    escopo: Array.isArray(c.escopo) && c.escopo.length ? c.escopo : ESCOPO_PILOTO,
+    cartaoSemRepasse: Array.isArray(c.cartaoSemRepasse) ? c.cartaoSemRepasse : [],
+    chavesPix: c.chavesPix && typeof c.chavesPix === "object" ? c.chavesPix : {},
+  };
 }
 
 async function gravarConfig(c: Required<Config>) {
@@ -36,6 +41,19 @@ export async function definirRepasseCartao(schoolId: string, repassa: boolean) {
   if (repassa) sem.delete(schoolId);
   else sem.add(schoolId);
   await gravarConfig({ ...c, cartaoSemRepasse: [...sem] });
+}
+
+/** Chave Pix da escola para saque (asaas/saque.ts). */
+export async function chavePixDaEscola(schoolId: string): Promise<ChavePix | null> {
+  return (await configCobranca()).chavesPix[schoolId] ?? null;
+}
+
+export async function gravarChavePix(schoolId: string, chave: ChavePix | null) {
+  const c = await configCobranca();
+  const chavesPix = { ...c.chavesPix };
+  if (chave) chavesPix[schoolId] = chave;
+  else delete chavesPix[schoolId];
+  await gravarConfig({ ...c, chavesPix });
 }
 
 export type ContagemEscopo = { total: number; porUnidade: Record<string, number>; fonte: "mercurio" | "portal"; contadoEm: string };

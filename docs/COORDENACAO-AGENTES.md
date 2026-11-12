@@ -1102,3 +1102,21 @@ Os testes de regras da Meta passaram.
 **Recomendação:** um número só para o financeiro, separado do CRM. A migração `20261026180000_whatsapp_financeiro_instagram` e a variável `ZERNIO_WHATSAPP_ACCOUNT_ID` continuam paradas até o usuário confirmar.
 
 **Cronograma:** ações a39 e a40.
+
+## 12/11/2026 — Saldo e saque na Economia; fixo pago pela SNE (Claude)
+
+**Regra do fixo** (correção do usuário): os R$ 3.000 por mês são pagos pela **Secretaria Nacional de Economia (SNE)**, que paga só o que faltar depois do spread do mês, ou seja, máx(0, 3.000 − spread). As escolas pagam só o spread. Isso foi registrado na seção 0 do cronograma, na tela e no código (`spread-comum.ts`).
+
+**Economia → Cobrança on-line → "Saldo e saque"** (`src/lib/asaas/saque.ts` e `components/economia/saque-escola.tsx`)
+- Mostra o saldo da conta Asaas da filial (`GET /finance/balance`).
+- **Chave Pix da escola:** fica em `cobranca:config.chavesPix`.
+  - A chave CNPJ igual ao CNPJ da filial vale na hora.
+  - Qualquer outra chave precisa de aprovação do dono do sistema.
+- **Pedido de saque:** só a Economia ou a direção pedem, com confirmação na tela. O valor não pode passar do saldo.
+  - O pedido é registrado em `saques:<schoolId>` antes do `POST /transfers`.
+  - A situação de cada saque é consultada no Asaas.
+- **Webhook de validação** (`api/webhooks/asaas-saque`): aprova `TRANSFER` só se houver um saque do Portal com o mesmo valor na última hora.
+
+**Não testado com dinheiro.** Nenhum saque foi feito. Pode ser preciso habilitar no Asaas as transferências pela API e a validação de saque nas subcontas.
+
+**Fora do escopo por enquanto:** a gestão das contas a pagar da escola.

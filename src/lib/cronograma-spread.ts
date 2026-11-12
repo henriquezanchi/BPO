@@ -70,8 +70,8 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
     "Mensagem no WhatsApp das turmas", "Cartaz provisório", "Aviso em aula",
   ], "2 a 3 semanas para a maioria aderir", 12, { obs: "Assim o ciclo de 10/12 já roda sozinho." }),
   a("a36", DEV, "2026-11-12", "2026-11-24", "Spread por faixa no split e fatura do fixo abatido (T11)", "Claude, Henrique (conferência)", [
-    "Faixa do mês congelada na primeira cobrança (feito)", "Split com a taxa da faixa (feito)", "Fatura do fixo = máx(0, 3.000 − spread do mês)", "Demonstrativo por escola",
-  ], "3 a 4 dias úteis", 3.5, { status: "andamento", registros: [R("Split passou a usar a faixa do mês (piloto: 1%). Falta a fatura do fixo e o demonstrativo.")] }),
+    "Faixa do mês congelada na primeira cobrança (feito)", "Split com a taxa da faixa (feito)", "Cobrança mensal à Secretaria Nacional de Economia: máx(0, 3.000 − spread do mês)", "Demonstrativo por escola",
+  ], "3 a 4 dias úteis", 3.5, { status: "andamento", registros: [R("Split passou a usar a faixa do mês (piloto: 1%). Falta a cobrança do fixo à SNE e o demonstrativo.")] }),
   a("a37", DEV, "2026-11-12", "2026-11-12", "Economia → Cobrança on-line: taxa do cartão por filial, faixa do spread e situação da conta", "Claude", [], "1 dia", 1, {
     status: "feito", registros: [R("No ar. O dono do sistema escolhe qualquer filial na Economia.")],
   }),

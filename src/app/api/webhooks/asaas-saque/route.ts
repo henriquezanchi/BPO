@@ -1,3 +1,4 @@
+import { aprovarTransferenciaDoPortal } from "@/lib/asaas/saque";
 import { db } from "@/lib/db";
 import crypto from "node:crypto";
 
@@ -16,7 +17,8 @@ import crypto from "node:crypto";
  *    enviado pelo Portal nos últimos 60 minutos, do mesmo valor
  *    (event-refunds.ts marca refundSubmittedAt antes de chamar o Asaas).
  *  - PAYMENT_SPLIT: aprova (os splits são criados pelas cobranças do Portal).
- *  - Demais tipos (TRANSFER, BILL, PIX_QR_CODE, MOBILE_PHONE_RECHARGE):
+ *  - TRANSFER: aprova se for saque pedido na Economia (asaas/saque.ts), mesmo valor, na última hora.
+ *  - Demais tipos (BILL, PIX_QR_CODE, MOBILE_PHONE_RECHARGE):
  *    recusa, salvo os listados em ASAAS_SAQUE_OUTROS_APROVADOS (ex.: se outro
  *    sistema da mesma conta fizer transferências pela API).
  */
@@ -37,6 +39,7 @@ type Corpo = {
   type?: string;
   pixRefund?: { id?: string; value?: number; status?: string; originalTransaction?: Record<string, unknown> };
   paymentSplit?: { id?: string; value?: number };
+  transfer?: { id?: string; value?: number };
 };
 
 export async function POST(req: Request) {
@@ -87,6 +90,12 @@ export async function POST(req: Request) {
   }
 
   if (tipo === "PAYMENT_SPLIT") return responder(true);
+
+  // Saque pedido na Economia → Cobrança on-line (12/11/2026): só o que o Portal registrou, com o mesmo valor.
+  if (tipo === "TRANSFER") {
+    const t = corpo.transfer ?? {};
+    if (await aprovarTransferenciaDoPortal(Number(t.value ?? 0), t.id)) return responder(true);
+  }
 
   const outros = (process.env.ASAAS_SAQUE_OUTROS_APROVADOS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (outros.includes(tipo)) return responder(true);
