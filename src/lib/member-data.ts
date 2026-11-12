@@ -16,6 +16,7 @@ import { avaliacaoPendente } from "@/lib/avaliacao";
 import { instrutoresParaAtendimento } from "@/lib/atendimentos";
 import { MENSAGEM_CONTA_PENDENTE } from "@/lib/asaas/conta-escola";
 import { getAvatarUrl } from "@/lib/avatar-url";
+import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
 import { db } from "@/lib/db";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
 import { boasVindasDoVoluntario } from "@/lib/boas-vindas-voluntario";
@@ -317,9 +318,10 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
     // Oportunidades abertas da filial para o destaque da vitrine (2026-10-29).
     voluntariadoVisivel ? destaqueDeOportunidades(member) : Promise.resolve(null),
     boasVindasDoVoluntario(member, destinosVoluntario),
-    // Link /portal?evento=<id> de outra filial (12/11/2026): evento público do Ulisses (inscrição aberta a qualquer
-    // pessoa pelo site) abre para quem recebeu o link, mesmo fora da agenda da pessoa, para ver e compartilhar.
-    opcoes.eventoDoLink
+    // Exceção só do dono do sistema (pedido do usuário 12/11/2026: "só pra mim, como exceção", não é regra para mais
+    // ninguém): pelo link /portal?evento=<id>, abre evento público do Ulisses de outra filial para ver e compartilhar.
+    // Não entra na agenda dele fora desse link.
+    opcoes.eventoDoLink && ehDonoDoSistema(member)
       ? db.event.findFirst({
           where: { id: opcoes.eventoDoLink, status: "publicado", registrationUrl: { not: null }, startsAt: { gte: new Date(Date.now() - 86400000) } },
           include: { _count: { select: { registrations: { where: { desistenciaEm: null } } } }, school: { select: { name: true, uf: true } } },
