@@ -141,7 +141,7 @@ export type AgendaItem =
  * Fortuna e a agenda unificada (eventos da escola + atividades das turmas
  * em que o membro está matriculado como aluno).
  */
-export async function getMemberDashboard(memberId: string) {
+export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLink?: string } = {}) {
   // Túnel do Ágora (2026-10-27, até 6 s): só precisa do id, então começa já e corre em paralelo com tudo (31/10/2026).
   const agendaAgora = eventosDoAgora(memberId);
   const member = await db.member.findUniqueOrThrow({
@@ -272,7 +272,7 @@ export async function getMemberDashboard(memberId: string) {
     .map((cm) => cm.classGroupId);
 
   const voluntariadoVisivel = recursos.voluntariado && (publicosDaPessoa(member).includes("membros") || acessoVoluntario);
-  const [schoolEvents, classActivities, classPolls, meetings, oportunidades, boasVindasVoluntario] = await Promise.all([
+  const [eventosDaAgenda, classActivities, classPolls, meetings, oportunidades, boasVindasVoluntario, eventoDoLink] = await Promise.all([
     // Eventos da própria filial + nacionais/regionais (importados — ver
     // sync-national-calendar.ts). Pedido do usuário 2026-10-09: por ora
     // nacional/regional aparece pra TODO MUNDO, sem recorte por perfil
@@ -317,7 +317,16 @@ export async function getMemberDashboard(memberId: string) {
     // Oportunidades abertas da filial para o destaque da vitrine (2026-10-29).
     voluntariadoVisivel ? destaqueDeOportunidades(member) : Promise.resolve(null),
     boasVindasDoVoluntario(member, destinosVoluntario),
+    // Link /portal?evento=<id> de outra filial (12/11/2026): evento público do Ulisses (inscrição aberta a qualquer
+    // pessoa pelo site) abre para quem recebeu o link, mesmo fora da agenda da pessoa, para ver e compartilhar.
+    opcoes.eventoDoLink
+      ? db.event.findFirst({
+          where: { id: opcoes.eventoDoLink, status: "publicado", registrationUrl: { not: null }, startsAt: { gte: new Date(Date.now() - 86400000) } },
+          include: { _count: { select: { registrations: { where: { desistenciaEm: null } } } }, school: { select: { name: true, uf: true } } },
+        })
+      : Promise.resolve(null),
   ]);
+  const schoolEvents = eventoDoLink && !eventosDaAgenda.some((e) => e.id === eventoDoLink.id) ? [...eventosDaAgenda, eventoDoLink] : eventosDaAgenda;
 
   const gafsDisponiveis = gafsDaFilial.map((g) => ({ id: g.id, nome: g.name, descricao: g.descricao, modalidade: g.modalidade, local: g.local, pedidoEm: g.gafRequests[0]?.createdAt.toISOString() ?? null }));
   const gruposDeEstudo = gruposDeEstudoDaFilial.map((g) => ({ id: g.id, nome: g.name, tipo: g.tipo === "LEITURA" ? "Leitura comentada" : "Grupo de estudo", descricao: g.descricao, modalidade: g.modalidade, local: g.local, participo: g.memberships.length > 0 }));

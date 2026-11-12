@@ -20,7 +20,7 @@ export default async function MemberPortalPage({ searchParams }: { searchParams:
   }
   if (!member.mercurioAtivo) return <InactiveMemberNotice schoolWhatsapp={member.school.whatsapp} />;
 
-  const [dashboard, boletim] = await Promise.all([getMemberDashboard(member.id), ultimaEdicaoAurora()]);
+  const [dashboard, boletim] = await Promise.all([getMemberDashboard(member.id, { eventoDoLink: eventoId }), ultimaEdicaoAurora()]);
 
   return <MemberPortalClient key={eventoId} dashboard={dashboard} eventoId={eventoId} abrir={abrir} boletim={boletim} />;
 }

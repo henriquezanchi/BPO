@@ -1,6 +1,7 @@
 "use client";
 
 import { chavePublicaPush, enviarNotificacaoTeste, removerInscricaoPush, salvarInscricaoPush } from "@/lib/actions/push-actions";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Bell, BellOff } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
@@ -152,16 +153,23 @@ export function AtivarNotificacoes({ variante = "cartao", aguardar = false }: { 
     if (!convite || !podeConvidar)
       return mensagem ? <p className="rounded-xl bg-na-success-light p-3 text-[12px] text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">{mensagem}</p> : null;
     const iphone = estado === "instalar_iphone";
+    // Janela Radix (12/11/2026): o convite também abre por cima da folha do evento (BottomSheet, Radix modal), que
+    // desliga os cliques em tudo fora dela; como diálogo Radix aninhado, o convite fica na camada de cima e clicável.
     return (
-      <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="convite-notificacoes">
-        <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-gray-900">
+      <Dialog.Root open onOpenChange={(aberto) => !aberto && setConvite(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/40" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            className="fixed inset-x-4 bottom-4 z-[101] mx-auto w-auto max-w-sm rounded-2xl bg-white p-5 shadow-xl sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 dark:bg-gray-900"
+          >
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-na-green text-white">
             <Bell size={18} />
           </span>
           {convite.motivo && <p className="mt-3 text-[12px] font-semibold text-na-green-dark dark:text-emerald-400">{convite.motivo}</p>}
-          <h2 id="convite-notificacoes" className="mt-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">
+          <Dialog.Title className="mt-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">
             Aceita receber notificações sobre eventos, contribuições e muito mais?
-          </h2>
+          </Dialog.Title>
           <p className="mt-1 text-[12px] leading-relaxed text-gray-600 dark:text-gray-300">
             {iphone
               ? "No iPhone, primeiro instale o Portal: toque em compartilhar e depois em \u201cAdicionar à Tela de Início\u201d. Abra pelo ícone e responda \u201cSim\u201d aqui."
@@ -181,8 +189,9 @@ export function AtivarNotificacoes({ variante = "cartao", aguardar = false }: { 
               Não
             </button>
           </div>
-        </div>
-      </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     );
   }
 
