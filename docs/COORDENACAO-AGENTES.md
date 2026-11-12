@@ -1018,3 +1018,11 @@ com cartões brancos e ícone em destaque. Rótulos repetidos tirados.
 - A 1ª execução parou num erro de `ClassGroup` durante a importação, antes de criar logins; a 2ª foi até o fim.
 - Sem login: 2 sem e-mail (Maria Clara Ferreira Maldonado, Maria das Dores Guerrero Dora) e 14 com e-mail já usado por outra conta (em geral filhos com o e-mail do responsável).
 - A filial entra na rotina diária de importação a partir de agora.
+
+## 12/11/2026 — Cronograma da cobrança com spread em Goiânia e região + Sede Nacional (Claude)
+
+Plano, sem código: [CRONOGRAMA-SPREAD-ASAAS-2026-11.md](CRONOGRAMA-SPREAD-ASAAS-2026-11.md). Autorização do Diretor Nacional dada.
+- Escopo: Goiânia (GYN, JAM, STO, GAR), Goiás, Barra do Garças e Sede Nacional.
+- Escola com conta Asaas própria: usar a chave de API dela, com split para o BPO. Sem subconta nova e sem repasse posterior.
+- Bloqueio: a baixa no Mercúrio só funciona em BGA (login do scraper).
+- Itens de desenvolvimento T1–T10. Os principais: modo guiado por QR (`/pagar`), cartão recorrente com split e conferência de split.
