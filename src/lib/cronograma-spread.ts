@@ -43,13 +43,13 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   }),
   a("a05", S0, "2026-11-13", "2026-11-19", "Minuta do termo de adesão das escolas", "Henrique, Advogado ou jurídico, Diretor Nacional (revisão)", [
     "Faixas do spread e fixo abatido", "Regra da taxa do Asaas", "Cláusula de uso da chave de API e revogação", "Prazo de ~1 ano e transferência do suporte",
-  ], "3 a 5 dias úteis (com revisão jurídica)", 4),
+  ], "3 a 5 dias úteis (com revisão jurídica)", 4, { status: "andamento", registros: [R("Minuta em docs/propostas/Termo-Adesao-Piloto.md. Falta revisão jurídica.")] }),
   a("a06", S0, "2026-11-13", "2026-11-27", `Pedir login do scraper com acesso a ${FILIAIS} (baixa no Mercúrio)`, "Henrique, João Guilherme (Mercúrio)", [
     "Lista das filiais e siglas", "Plano B: tesouraria dá a baixa enquanto isso",
   ], "2 a 10 dias úteis (depende do Mercúrio)", 5, { status: "bloqueado", obs: "Bloqueia o lançamento fora de Barra do Garças." }),
   a("a07", S0, "2026-11-13", "2026-11-13", "Escrever a mensagem de apresentação às escolas e a lista de documentos", "Henrique, Claude (rascunho)", [
     "O que muda e o que a escola ganha", "Lista de documentos do Asaas", "Termo de adesão (quando pronto)",
-  ], "1 dia", 1),
+  ], "1 dia", 1, { status: "andamento", registros: [R("Rascunho em docs/propostas/Mensagem-Escolas-Piloto.md (texto curto + lista de documentos). Falta revisão do Henrique.")] }),
   a("a08", S0, "2026-11-13", "2026-11-17", "Barra do Garças (piloto): liberar o Pix Automático e testar com 1 ou 2 pessoas da direção", "Henrique, Claude, 2 membros da direção de BGA", [
     "PIX_AUTOMATICO_UNIDADES=BGA na Vercel", "Celulares com app de banco que aceite Pix Automático",
   ], "1 a 2 dias", 1.5),
