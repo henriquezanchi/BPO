@@ -44,9 +44,17 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   a("a05", S0, "2026-11-13", "2026-11-19", "Minuta do termo de adesão das escolas", "Henrique, Advogado ou jurídico, Diretor Nacional (revisão)", [
     "Faixas do spread e fixo abatido", "Regra da taxa do Asaas", "Cláusula de uso da chave de API e revogação", "Prazo de ~1 ano e transferência do suporte",
   ], "3 a 5 dias úteis (com revisão jurídica)", 4, { status: "andamento", registros: [R("Minuta em docs/propostas/Termo-Adesao-Piloto.md. Falta revisão jurídica.")] }),
-  a("a06", S0, "2026-11-13", "2026-11-27", `Pedir login do scraper com acesso a ${FILIAIS} (baixa no Mercúrio)`, "Henrique, João Guilherme (Mercúrio)", [
-    "Lista das filiais e siglas", "Plano B: tesouraria dá a baixa enquanto isso",
-  ], "2 a 10 dias úteis (depende do Mercúrio)", 5, { status: "bloqueado", obs: "Bloqueia o lançamento fora de Barra do Garças." }),
+  a("a06", S0, "2026-11-12", "2026-11-27", "Acesso à TESOURARIA no Mercúrio para o login do Henrique (robô dos lançamentos) em todas as escolas do piloto", "Henrique, Mercúrio (quem libera acesso)", [
+    "O Mercúrio atual não terá escrita por API; o Mercúrio novo sai em fevereiro/2027",
+    "Até lá, os lançamentos saem pelo robô com o login do Henrique (matrícula 21596)",
+    "Hoje o login vê a TESOURARIA só de GYN e BGA (verificado em 12/11)",
+    "Pedir TESOURARIA (e CADASTRO) de: BSB, JAM, STO, GAR, RVD, APS, GY2, ALT, ELD, PER, CAT, ITU",
+    "Depois de liberado: npx tsx scripts/verificar-acesso-mercurio.ts e ligar a escrita da filial no Portal",
+  ], "2 a 10 dias úteis (depende do Mercúrio)", 5, {
+    status: "andamento",
+    obs: "Bloqueia o lançamento automático fora de GYN e BGA. Sem o acesso, a filial pode receber pelo Portal, mas o recibo vira pendência para a Economia lançar à mão.",
+    registros: [R("Notícia: sem escrita no Mercúrio atual; lançamentos via robô com o login do Henrique até o Mercúrio novo (fev/2027). Henrique vai pedir acesso às escolas."), R("Verificado: o login vê TESOURARIA de GYN e BGA; CADASTRO de GY2, JAM, GAR, STO e BGA.")],
+  }),
   a("a07", S0, "2026-11-13", "2026-11-13", "Escrever a mensagem de apresentação às escolas e a lista de documentos", "Henrique, Claude (rascunho)", [
     "O que muda e o que a escola ganha", "Lista de documentos do Asaas", "Termo de adesão (quando pronto)",
   ], "1 dia", 1, { status: "andamento", registros: [R("Rascunho em docs/propostas/Mensagem-Escolas-Piloto.md (texto curto + lista de documentos). Falta revisão do Henrique.")] }),

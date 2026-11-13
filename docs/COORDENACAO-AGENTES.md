@@ -1193,3 +1193,21 @@ O usuário é tech provider da Meta, então o número novo do financeiro **não 
 **Cartaz do pátio:** `/economia/cartaz` (o dono pode passar `?filial=ID`). É um A4 com o QR da filial e os 3 passos, com botão de imprimir. Há um link para ele em Economia → Cobrança on-line.
 
 **Não testado com pagamento real.** O primeiro teste deve ser em BGA, com alguém da direção.
+
+## 12/11/2026 — Lançamentos no Mercúrio pelo robô com o login do usuário até o Mercúrio novo (Claude)
+
+O usuário soube que **não haverá acesso de escrita ao Mercúrio atual**. A escrita só vem com o **Mercúrio novo, em fevereiro de 2027**. Até lá, os lançamentos das escolas do piloto saem pelo robô (fila `/api/cron/fila-mercurio`), com o login do usuário. O usuário vai pedir acesso às escolas.
+
+**Credencial:** o robô **já usa a matrícula 21596**, a do usuário (`MERCURIO_ROBO_MATRICULA`). Falta só o acesso no Mercúrio; não é preciso trocar a credencial.
+
+**`scripts/verificar-acesso-mercurio.ts`** (só leitura) lista os menus CADASTRO e TESOURARIA que o login enxerga e compara com o escopo do piloto. Em 12/11:
+- TESOURARIA: GYN e BGA.
+- CADASTRO: GY2, JAM, GAR, STO e BGA.
+- Pedir TESOURARIA (e CADASTRO) para BSB, JAM, STO, GAR, RVD, APS, GY2, ALT, ELD, PER, CAT e ITU.
+
+**Para ligar uma filial depois de liberada**
+1. Rodar o verificador.
+2. Preencher `School.mercurioFilialLabel`, que é o regex do rótulo no menu. Hoje BSB e RVD estão sem rótulo, e as escolas que ainda não estão no Portal ganham o seu na abertura.
+3. Ligar `mercurioEscrita` da filial, só depois de a conta Asaas também estar aprovada.
+
+**Antes do acesso:** se uma filial receber pelo Portal sem o acesso, o lançamento falha e vira pendência para a Economia lançar à mão (Cobrança on-line → "Já lancei no Mercúrio").
