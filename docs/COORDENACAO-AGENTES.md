@@ -1211,3 +1211,16 @@ O usuário soube que **não haverá acesso de escrita ao Mercúrio atual**. A es
 3. Ligar `mercurioEscrita` da filial, só depois de a conta Asaas também estar aprovada.
 
 **Antes do acesso:** se uma filial receber pelo Portal sem o acesso, o lançamento falha e vira pendência para a Economia lançar à mão (Cobrança on-line → "Já lancei no Mercúrio").
+
+## 14/11/2026 — E-mail pedindo escrita no Mercúrio atual pelo Portal (Claude)
+
+Rascunho em `docs/propostas/Email-Autorizacao-Mercurio.md`. O e-mail vai para a Ana Beatriz (assistente do Diretor Nacional), pedindo a autorização dele, e depois é encaminhado ao João Guilherme.
+
+**Parte para o João** (técnica)
+- As operações que o robô faz hoje: recibo, ficha, composição, cadastro e anotações econômicas.
+- Três caminhos, em ordem de preferência:
+  - A) uma API de escrita;
+  - B) procedimentos armazenados, com o usuário só podendo executá-los (`GRANT EXECUTE`);
+  - C) usuário de banco restrito às tabelas e colunas necessárias.
+- O escopo do piloto.
+- O pedido de transformar em VIEWs as 16 cópias paradas em 17/10.
