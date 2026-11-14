@@ -32,7 +32,11 @@ Funciona, mas tem quatro problemas:
 - **Só** as operações listadas abaixo, para o João. O Portal não apaga registros nem mexe em nada fora delas.
 - **Prazo:** até o Mercúrio novo entrar em produção, quando o assunto passa a ser tratado nele.
 
-Para o calendário do piloto, o ideal seria termos isso funcionando **até o início de dezembro**, antes das primeiras cobranças automáticas.
+**Prazo:** queremos os primeiros lançamentos financeiros pelo Portal já nos primeiros dias de dezembro. Para isso, tudo precisa estar liberado, testado e funcionando até **30 de novembro**. O calendário fica assim:
+- **até 17/11:** a sua autorização;
+- **até 23/11:** a liberação pelo João;
+- **de 24 a 27/11:** adaptamos o Portal e testamos em Barra do Garças, com o João acompanhando;
+- **30/11:** tudo pronto.
 
 Se você autorizar, peço que encaminhe este e-mail ao João Guilherme: a parte técnica abaixo é para ele. Fico à disposição para uma conversa rápida, se ajudar.
 
@@ -74,7 +78,7 @@ O Portal **não** precisa apagar recibos, estornar, mexer em caixa fechado nem a
 - Acesso por conexão segura (TLS ou túnel), de preferência com lista de IPs permitidos. Os IPs de saída do Portal (Vercel) podem ser fixados se for preciso.
 
 **C) Usuário de banco com `INSERT`/`UPDATE` direto e restrito às tabelas e colunas necessárias.**
-- É a última opção, porque o Portal teria que reproduzir as regras do Mercúrio (numeração do recibo, caixa) e o risco de inconsistência é maior. Só se A e B não forem viáveis até dezembro.
+- É a última opção, porque o Portal teria que reproduzir as regras do Mercúrio (numeração do recibo, caixa) e o risco de inconsistência é maior. Só se A e B não forem viáveis até 23/11.
 
 ### 3. Leitura (pedido que já tínhamos feito)
 
@@ -93,7 +97,13 @@ O pedido é **transformá-las em VIEWs**, ou, se não der, recarregá-las todo d
 - Tudo o que o Portal gravar fica registrado também do lado do Portal: quem pediu, quando, o que foi enviado e a resposta do Mercúrio.
 - As credenciais ficam guardadas só no servidor do Portal (variáveis de ambiente cifradas), nunca no navegador nem em mensagens.
 
-### 5. Do nosso lado
+### 5. Prazo
+
+Precisamos da liberação até **23/11**, para adaptar o Portal e testar em Barra do Garças de 24 a 27/11 e ter tudo funcionando até **30/11**. Os primeiros lançamentos financeiros pelo Portal estão previstos para os primeiros dias de dezembro.
+
+Se algum ponto não couber nesse prazo, me avise o quanto antes. Nesse caso, seguimos temporariamente com o robô nas escolas em que o meu login tiver acesso à Tesouraria e migramos assim que a liberação sair.
+
+### 6. Do nosso lado
 
 Assim que houver a liberação, adapto o Portal para usar esse acesso no lugar do robô e faço o primeiro teste em Barra do Garças, acompanhando com você. Fico à disposição para uma chamada técnica.
 

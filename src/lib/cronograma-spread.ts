@@ -55,6 +55,18 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
     obs: "Bloqueia o lançamento automático fora de GYN e BGA. Sem o acesso, a filial pode receber pelo Portal, mas o recibo vira pendência para a Economia lançar à mão.",
     registros: [R("Notícia: sem escrita no Mercúrio atual; lançamentos via robô com o login do Henrique até o Mercúrio novo (fev/2027). Henrique vai pedir acesso às escolas."), R("Verificado: o login vê TESOURARIA de GYN e BGA; CADASTRO de GY2, JAM, GAR, STO e BGA.")],
   }),
+  a("a41", S0, "2026-11-14", "2026-11-17", "Autorização da Bia para o Portal registrar direto no Mercúrio atual (e-mail com anexo técnico para o João)", "Henrique, Ana Beatriz Pignataro", [
+    "E-mail: docs/propostas/Email-Autorizacao-Mercurio.md",
+  ], "1 a 3 dias para resposta", 2, { status: "andamento", obs: "Meta: primeiros lançamentos financeiros nos primeiros dias de dezembro; tudo funcionando até 30/11." }),
+  a("a42", S1, "2026-11-17", "2026-11-23", "João libera a escrita no Mercúrio para o Portal (API, procedimentos ou usuário restrito) e transforma as cópias de 17/10 em VIEWs", "João Guilherme (Mercúrio), Henrique", [
+    "Operações: recibo + baixa da ficha, composição, cadastro, anotações econômicas",
+    "Acesso exclusivo do Portal, por filial do piloto, revogável",
+    "Ambiente ou filial de teste",
+  ], "3 a 5 dias úteis (depende do João)", 4, { obs: "Sem isso até 23/11, seguimos com o robô onde o login do Henrique tiver Tesouraria (a06)." }),
+  a("a43", DEV, "2026-11-24", "2026-11-27", "Adaptar o Portal para gravar pelo acesso novo do Mercúrio e testar em Barra do Garças", "Claude, Henrique, João Guilherme (acompanhamento)", [
+    "Trocar o robô pelo acesso novo na fila de escrita", "Teste com pagamento real em BGA", "Registro de cada gravação do lado do Portal",
+  ], "3 a 4 dias úteis", 3.5),
+  a("a44", S2, "2026-11-30", "2026-11-30", "Tudo liberado, testado e funcionando para os lançamentos de dezembro", "Henrique, Claude", ["Checklist: Mercúrio, Asaas, Portal, avisos"], "1 dia", 1),
   a("a07", S0, "2026-11-13", "2026-11-13", "Escrever a mensagem de apresentação às escolas e a lista de documentos", "Henrique, Claude (rascunho)", [
     "O que muda e o que a escola ganha", "Lista de documentos do Asaas", "Termo de adesão (quando pronto)",
   ], "1 dia", 1, { status: "andamento", registros: [R("Rascunho em docs/propostas/Mensagem-Escolas-Piloto.md (texto curto + lista de documentos). Falta revisão do Henrique.")] }),
