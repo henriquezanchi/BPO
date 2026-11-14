@@ -4,7 +4,7 @@
 
 Oi, Bia, tudo bem?
 
-Preciso da sua ajuda para apresentar ao Diretor Nacional um pedido de autorização. Escrevi a primeira parte de um jeito que você possa repassar a ele como está, se preferir.
+Venho pedir a sua autorização para uma mudança importante no piloto de pagamentos pelo Portal.
 
 **O que estamos pedindo**
 
@@ -34,7 +34,7 @@ Funciona, mas tem quatro problemas:
 
 Para o calendário do piloto, o ideal seria termos isso funcionando **até o início de dezembro**, antes das primeiras cobranças automáticas.
 
-Se o Diretor Nacional autorizar, peço que você encaminhe este e-mail ao João Guilherme: a parte técnica abaixo é para ele. Fico à disposição para uma conversa rápida com vocês três, se ajudar.
+Se você autorizar, peço que encaminhe este e-mail ao João Guilherme: a parte técnica abaixo é para ele. Fico à disposição para uma conversa rápida, se ajudar.
 
 Um abraço,
 Henrique
