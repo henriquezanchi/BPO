@@ -6,6 +6,7 @@ import {REFUND_LABELS} from "@/lib/event-refund-policy";
 
 import {usePaymentPolling} from "@/hooks/use-payment-polling";
 import { CompartilharEvento, CompartilharWhatsApp } from "@/components/member/compartilhar-evento";
+import { ProgramacaoDoMes } from "@/components/member/programacao-do-mes";
 import Link from "next/link";
 import { MeetingResponse } from "@/components/member/groups/meeting-response";
 import { eventoCompartilhavel, linkWhatsAppDoEvento, urlDoEventoNoPortal } from "@/lib/compartilhar-evento";
@@ -816,7 +817,7 @@ export function AgendaPanel(props: Parameters<typeof AgendaConteudo>[0]) {
   );
 }
 
-function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, podeMarcarAtendimento, agoraReconectar, fuso, hoje: hojeCivil }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string; podeMarcarAtendimento?: boolean; agoraReconectar?: boolean; fuso: string; hoje: string }) {
+function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, podeMarcarAtendimento, agoraReconectar, fuso, hoje: hojeCivil, publico = "Membros", escola = "", comAtribuicoes = false }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string; podeMarcarAtendimento?: boolean; agoraReconectar?: boolean; fuso: string; hoje: string; publico?: string; escola?: string; comAtribuicoes?: boolean }) {
   const eventoCompartilhado = items.find((item) => item.kind === "evento" && item.id === eventoId);
   const avisoEvento = eventoId && !eventoCompartilhado
     ? <p role="status" className="text-sm text-gray-600 dark:text-gray-300">Este evento não está disponível na sua agenda. Ele pode ter encerrado ou ser destinado a outra escola.</p>
@@ -1001,6 +1002,7 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
           })}
         </div>
       </div>
+      <ProgramacaoDoMes items={items} ano={ano} mes={mes + 1} fuso={fuso} publico={publico} escola={escola} somenteAbertos={!comAtribuicoes} />
 
       <div className="flex flex-col gap-3">
         {itensDoDiaSelecionado.length === 0 ? (

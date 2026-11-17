@@ -1224,3 +1224,30 @@ Rascunho em `docs/propostas/Email-Autorizacao-Mercurio.md`. O e-mail vai para a 
   - C) usuário de banco restrito às tabelas e colunas necessárias.
 - O escopo do piloto.
 - O pedido de transformar em VIEWs as 16 cópias paradas em 17/10.
+
+## 17/11/2026 — Arte "Programação do mês" para compartilhar no WhatsApp (Claude)
+
+Segue o modelo "Programação · Turma Hilárion" e o guia de marca que o usuário passou.
+
+**Arte** (`src/lib/arte-programacao.ts`): desenhada em canvas no navegador, em 1080×1350.
+- Fundo Heket, datas em Helios, círculos Kefer, Noto Sans 900/700/400.
+- Logotipo branco: versão negativa do `na-logo.png`, sem a linha "Escola de Filosofia".
+- Selo "ATENÇÃO" nas provas.
+- Os blocos se distribuem na altura. Acima de 7 itens, o texto encolhe (até 80%). O que não couber vira "+ N compromissos no Portal".
+
+**Texto do WhatsApp e itens** (`src/lib/programacao-mes.ts`)
+- Dia da semana real, horário no fuso da filial.
+- Atividades (prova, trabalho) saem sem hora, porque têm prazo e não horário de aula.
+- Até 3 emojis e até 900 caracteres, terminando com a mensagem-chave em itálico.
+- Testes em `tests/programacao-mes.test.ts`.
+
+**Onde aparece** (componente `components/member/programacao-do-mes.tsx`)
+1. **Agenda do Portal**, no botão abaixo do calendário, para o mês aberto.
+   - Quem tem área de voluntário (`dashboard.areaVoluntario`) gera com todos os seus compromissos.
+   - **Membro sem atribuições e aluno geram só com os eventos abertos** (os mesmos que já são compartilháveis um a um, `eventoCompartilhavel`). O título vira "Programação aberta da Nova Acrópole X".
+2. **Instrutor, na página da turma** (`/professor/turma/[id]`): "Programação da turma para o WhatsApp".
+   - Inclui aulas e encontros e as atividades publicadas (provas, trabalhos, leituras), lidos por `lib/programacao-turma.ts`.
+   - Dá para escolher o mês (atual e os 3 seguintes) e o público (Alunos ou Membros).
+3. **Grupos** (`/grupos/[id]`, para quem gere: GAF, GDVE, Pedagogos, secretarias): mesmo bloco, com os encontros e atividades do grupo. Público: Integrantes, Voluntários, Membros ou Alunos.
+
+**Compartilhar:** igual aos eventos. Usa o compartilhamento do celular com a arte e o texto. Onde ele não existe, baixa a arte e abre o WhatsApp com o texto; também há os botões "Copiar texto" e "Baixar arte".

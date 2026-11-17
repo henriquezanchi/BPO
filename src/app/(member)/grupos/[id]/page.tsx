@@ -9,6 +9,11 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { detalheDoGrupo } from "@/lib/grupos-dados";
+import { ProgramacaoTurma } from "@/components/member/professor/programacao-turma";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { agendaDaTurma } from "@/lib/programacao-turma";
+import { fusoDaEscola } from "@/lib/fuso-escola";
+import { hojeNoFuso } from "@/lib/diario";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -29,6 +34,22 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
   if (!dados) notFound();
   const orientacoes=dados.grupo.tipo==='SEC'&&member.mercurioAtivo&&podeAcessarSecretaria(await carregarContextoSecretaria(member),dados.grupo.name);
   // Uma tela só por grupo (pedido do usuário 2026-10-25): avisos/enquetes (antes em Professor) e orientações viram abas.
+  // Programação do grupo para o WhatsApp (17/11/2026): quem gere o grupo (GAF, GDVE, Pedagogos, secretarias...).
+  const fuso = fusoDaEscola(member.school?.uf);
+  const programacao = dados.papel.podeGerir ? (
+    <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+      <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Programação do grupo para o WhatsApp</h2>}>
+        <ProgramacaoTurma
+          items={await agendaDaTurma(dados.grupo.id)}
+          fuso={fuso}
+          escola={member.school?.name ?? ""}
+          hoje={hojeNoFuso(fuso)}
+          publicos={["Integrantes", "Voluntários", "Membros", "Alunos"]}
+          descricaoItens="encontros e atividades do grupo"
+        />
+      </CollapsibleSection>
+    </section>
+  ) : null;
   const painel = (
     <GrupoPainel
       dados={dados}
@@ -50,12 +71,14 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
           <ThemeToggle />
         </div>
         {painel}
+        {programacao}
       </main>
     );
   }
   return (
     <ShellTrabalho ativo={dados.grupo.tipo === "SEC" ? "/secretarias" : "/grupos"}>
       {painel}
+      {programacao}
     </ShellTrabalho>
   );
 }

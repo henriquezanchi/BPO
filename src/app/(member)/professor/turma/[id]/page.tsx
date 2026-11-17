@@ -12,6 +12,10 @@ import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { catalogoDaMateria } from "@/lib/temas-curriculo";
 import { getTeacherClassDetail } from "@/lib/teacher-data";
+import { ProgramacaoTurma } from "@/components/member/professor/programacao-turma";
+import { agendaDaTurma } from "@/lib/programacao-turma";
+import { fusoDaEscola } from "@/lib/fuso-escola";
+import { hojeNoFuso } from "@/lib/diario";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -53,6 +57,12 @@ export default async function TeacherClassPage(props: PageProps<"/professor/turm
         <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">{turma.name}</h1>
         <p className="text-xs text-gray-500 dark:text-gray-400">{turma.students.length} {pessoas}</p>
       </div>
+
+      <section>
+        <CollapsibleSection title={<h2 className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-200">Programação da turma para o WhatsApp</h2>}>
+          <ProgramacaoTurma items={await agendaDaTurma(turma.id)} fuso={fusoDaEscola(member.school?.uf)} escola={member.school?.name ?? ""} hoje={hojeNoFuso(fusoDaEscola(member.school?.uf))} />
+        </CollapsibleSection>
+      </section>
 
       <section>
         <CollapsibleSection title={<h2 className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-200">{ehGrupo ? "Integrantes" : "Alunos"}</h2>}>
