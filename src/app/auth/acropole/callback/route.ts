@@ -84,6 +84,9 @@ export async function GET(req: Request) {
           email: { equals: pessoa.email, mode: "insensitive" },
           mercurioAtivo: true,
           authUserId: null,
+          // Crianças dos programas não têm login (18/11/2026): o cadastro delas com o e-mail do pai ou da mãe não
+          // impede mais o responsável de entrar.
+          NOT: { nivel: { in: ["CO", "TA", "JN"] } },
         },
       });
     let membros = await buscar();

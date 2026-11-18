@@ -244,3 +244,24 @@ Sem `ZERNIO_WHATSAPP_ACCOUNT_ID` nada é enviado; sem `ZERNIO_API_KEY` o cartão
 5. Para ligar: o usuário roda `node scripts/ligar-ulisses-inscritos.mjs` (lê a credencial no banco do CRM com o `.env` do scraper, confere no Auth0, grava no `.env` e manda para a Vercel). Depois, um novo deploy.
 6. Teste: `tests/ulisses-inscritos.test.ts`.
 
+
+### Responsáveis das crianças e antecedentes do Maat (18/11/2026)
+
+O passo a passo está na COORDENACAO, bloco de 18/11/2026.
+
+**Arquivos principais**
+- `lib/criancas-comum.ts`
+- `lib/responsaveis.ts`
+- `lib/antecedentes.ts`
+- `lib/actions/responsaveis-actions.ts`
+- `lib/actions/antecedentes-actions.ts`
+- `lib/actions/login-responsavel-actions.ts`
+- `components/member/volunteer/responsaveis-panel.tsx`
+- `components/member/volunteer/antecedentes-panel.tsx`
+- `app/(member)/voluntario/merlin-janos/page.tsx`, agora com as abas Voluntários, Responsáveis e Antecedentes
+
+**Regras**
+- Criança (CO, TA, JN) não tem login.
+- O registro do Maat é só da direção, com senha exclusiva, e cada acesso fica registrado.
+
+**Esqueceu a senha exclusiva:** o administrador apaga a linha em `SenhaAntecedentes` daquele `memberId`, e o diretor cria outra.

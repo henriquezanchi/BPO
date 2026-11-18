@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
+import { ehCrianca } from "@/lib/criancas-comum";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
@@ -18,6 +19,9 @@ export async function provisionarLogin(
   listaUsuariosExistentes?: { id: string; email?: string }[],
 ): Promise<{ criado: boolean }> {
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
+  // Criança e adolescente dos programas não ganham login (18/11/2026): o acesso é do responsável. Também evita ligar o
+  // cadastro da criança ao login do pai ou da mãe quando os dois usam o mesmo e-mail.
+  if (ehCrianca(member)) return { criado: false };
 
   let authUserId = member.authUserId;
   if (!authUserId) {

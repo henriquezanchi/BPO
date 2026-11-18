@@ -1251,3 +1251,46 @@ Segue o modelo "Programação · Turma Hilárion" e o guia de marca que o usuár
 3. **Grupos** (`/grupos/[id]`, para quem gere: GAF, GDVE, Pedagogos, secretarias): mesmo bloco, com os encontros e atividades do grupo. Público: Integrantes, Voluntários, Membros ou Alunos.
 
 **Compartilhar:** igual aos eventos. Usa o compartilhamento do celular com a arte e o texto. Onde ele não existe, baixa a arte e abre o WhatsApp com o texto; também há os botões "Copiar texto" e "Baixar arte".
+
+## 18/11/2026 — Responsáveis das crianças (Merlin/Janos) e antecedentes do Maat: etapa 1 (Claude)
+
+**Pedido do usuário:** vincular Correntinha, Távolas (Merlin) e Janos aos responsáveis; passar a eles cadastro, contribuição e eventos; área dos programas com retorno dos instrutores; registro sigiloso do Maat.
+
+**Decisões do usuário**
+- O Portal sugere o vínculo pelo e-mail ou celular, e a secretaria confirma.
+- **Nenhuma criança tem login.**
+- O registro do Maat é visto **só pela direção, com senha exclusiva**.
+- A migração foi autorizada.
+
+**Migração `20261118120000_responsaveis_antecedentes`** (aplicada por `db execute` + `resolve`; só tabelas novas, com RLS):
+- `Responsavel` (CPF cifrado);
+- `VinculoResponsavel` (status sugerido, confirmado ou recusado; origem e-mail, celular ou manual);
+- `RetornoInstrutor` (para a etapa 3);
+- `AntecedenteVoluntario` (resultado e observação cifrados);
+- `AcessoAntecedente` (registro de cada consulta);
+- `SenhaAntecedentes` (scrypt).
+
+**Feito**
+- `lib/criancas-comum.ts`: os níveis CO, TA e JN são crianças.
+- **Crianças sem login**
+  - `provisionarLogin` não cria nem liga login para criança.
+  - O callback do login unificado ignora os cadastros de criança. Antes, o e-mail compartilhado entre pai e filho bloqueava o pai com a mensagem "mais de um cadastro usa este e-mail".
+  - `/portal` mostra para a criança o aviso "o acesso é pelo seu responsável".
+- **5 logins presos à criança com o e-mail do responsável** (o adulto não tinha login próprio): o aviso oferece "Sou o responsável: entrar como Fulano", que passa o mesmo login (mesma conta e mesma senha) para o cadastro do adulto (`login-responsavel-actions.ts`). Nada é recriado.
+- **Responsáveis** (`lib/responsaveis.ts`, aba "Responsáveis das crianças" em `/voluntario/merlin-janos`)
+  - Sugestões automáticas: adulto ativo da mesma filial com o mesmo e-mail ou celular.
+  - Confirmar ou recusar cada sugestão.
+  - Adicionar à mão um responsável que é membro ou que não é membro (nome, e-mail, celular e CPF cifrado).
+  - Acesso igual ao da página: direção, secretários do programa e administração nacional.
+- **Antecedentes do Maat** (`lib/antecedentes.ts`, aba "Antecedentes (Maat)", só para a direção)
+  - Cada diretor cria a sua senha exclusiva, com bloqueio de 15 min depois de 5 erros.
+  - A senha libera a consulta por 10 min, num cookie cifrado com `path` restrito.
+  - Cada consulta, alteração e erro de senha fica em `AcessoAntecedente`.
+  - Os secretários não veem esta parte. A certidão negativa (ECA) continua como estava, na aba Voluntários.
+
+**Próximas etapas**
+2. Área do responsável:
+   - "Meus dependentes" no Portal, para o responsável que é membro: contribuição (pagar pelo responsável), eventos e dados de cadastro da criança;
+   - login próprio para o responsável que não é membro (`Responsavel.authUserId`);
+   - as ações de pagamento passam a aceitar o responsável confirmado.
+3. Área dos programas: turmas do Merlin e do Janos, atividades e eventos, retorno do instrutor para os responsáveis (`RetornoInstrutor`) e os voluntários dos programas.

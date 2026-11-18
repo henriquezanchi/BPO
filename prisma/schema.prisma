@@ -1435,6 +1435,97 @@ model VoluntarioInfantojuvenil {
   @@index([schoolId, programa])
 }
 
+/// Responsáveis pelas crianças do Merlin (Correntinha, Távolas) e do Janos (pedido do usuário 18/11/2026). O Mercúrio
+/// não guarda quem é o responsável: o Portal sugere pelo e-mail/celular iguais aos de um adulto e a secretaria do
+/// programa confirma (lib/responsaveis.ts). O responsável pode ser membro (memberId) ou não (só nome e contatos; login
+/// próprio vem na etapa 2). CPF sempre cifrado.
+model Responsavel {
+  id          String   @id @default(cuid())
+  schoolId    String
+  memberId    String?  @unique
+  nome        String
+  email       String?
+  celular     String?
+  cpfCifrado  String?
+  authUserId  String?  @unique
+  criadoPorId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vinculos VinculoResponsavel[]
+
+  @@index([schoolId])
+}
+
+/// Criança ↔ responsável. status: sugerido | confirmado | recusado. origem: email | celular | manual.
+model VinculoResponsavel {
+  id              String      @id @default(cuid())
+  criancaId       String
+  responsavelId   String
+  responsavel     Responsavel @relation(fields: [responsavelId], references: [id], onDelete: Cascade)
+  parentesco      String?
+  principal       Boolean     @default(false)
+  status          String      @default("sugerido")
+  origem          String      @default("manual")
+  decididoPorId   String?
+  decididoEm      DateTime?
+  createdAt       DateTime    @default(now())
+
+  @@unique([criancaId, responsavelId])
+  @@index([status])
+}
+
+/// Retorno do instrutor do programa para os responsáveis (etapa 3 da área dos programas).
+model RetornoInstrutor {
+  id        String    @id @default(cuid())
+  criancaId String
+  autorId   String
+  programa  String
+  texto     String
+  createdAt DateTime  @default(now())
+  lidoEm    DateTime?
+
+  @@index([criancaId, createdAt])
+}
+
+/// Pesquisa de antecedentes do Instituto Maat sobre voluntários dos programas (pedido do usuário 18/11/2026).
+/// Sigilosa: só a direção (chefe e sub-chefe da filial, direção nacional) vê, depois de digitar uma senha exclusiva
+/// (SenhaAntecedentes); cada consulta fica em AcessoAntecedente. Resultado e observação sempre cifrados.
+model AntecedenteVoluntario {
+  id               String    @id @default(cuid())
+  memberId         String    @unique
+  schoolId         String
+  resultadoCifrado String
+  pesquisadoEm     DateTime? @db.Date
+  validade         DateTime? @db.Date
+  obsCifrada       String?
+  registradoPorId  String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([schoolId])
+}
+
+model AcessoAntecedente {
+  id        String   @id @default(cuid())
+  diretorId String
+  memberId  String?
+  acao      String
+  em        DateTime @default(now())
+
+  @@index([diretorId, em])
+}
+
+/// Senha exclusiva de cada diretor para os antecedentes (scrypt; nunca a senha do Portal).
+model SenhaAntecedentes {
+  memberId     String    @id
+  hash         String
+  falhas       Int       @default(0)
+  bloqueadoAte DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
 /// Caixa de sugestões do Portal (pedido do usuário 10/11/2026). Categorias do Portal vão para a administração
 /// nacional; as da escola, para a direção da filial. "anonima" esconde o nome de quem lê; o autor fica guardado só para
 /// ele acompanhar a resposta e para o limite diário (regras em lib/sugestoes-comum.ts).
