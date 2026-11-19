@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { fetchAcropole } from "@/lib/ponte";
+import { cifrar, decifrar } from "@/lib/segredo-cifrado";
 
 /**
  * Inscritos dos eventos do Ulisses (pedido do usuário 2026-10-27: o "Dia Mundial da Filosofia" de BGA aparecia sem
@@ -17,9 +18,26 @@ export function ulissesApiConfigurada() {
 }
 
 let token: { valor: string; ate: number } | null = null;
+const CHAVE_TOKEN = "token:ulisses-m2m";
 
+/**
+ * Token M2M do Auth0 (vale 24 h). Guardado cifrado no banco (19/11/2026): cada função da Vercel começa sem memória e
+ * pedia um token novo; o Auth0 avisou 80% da cota mensal de tokens M2M do tenant acropolebrasil. Agora sai ~1 por dia.
+ */
 async function tokenUlisses(): Promise<string> {
   if (token && token.ate - Date.now() > 60_000) return token.valor;
+  const salvo = await db.resumoNacional.findUnique({ where: { chave: CHAVE_TOKEN } }).catch(() => null);
+  if (salvo) {
+    const d = salvo.dados as { cifrado?: string; ate?: number };
+    if (d.cifrado && d.ate && d.ate - Date.now() > 10 * 60_000) {
+      try {
+        token = { valor: decifrar(d.cifrado, "token-ulisses"), ate: d.ate };
+        return token.valor;
+      } catch {
+        /* chave trocada: pede outro */
+      }
+    }
+  }
   const r = await fetch(AUTH0, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -30,6 +48,8 @@ async function tokenUlisses(): Promise<string> {
   const d = (await r.json().catch(() => ({}))) as { access_token?: string; expires_in?: number };
   if (!r.ok || !d.access_token) throw new Error(`Ulisses: token recusado (${r.status}).`);
   token = { valor: d.access_token, ate: Date.now() + (d.expires_in ?? 3600) * 1000 };
+  const dados = { cifrado: cifrar(token.valor, "token-ulisses"), ate: token.ate };
+  await db.resumoNacional.upsert({ where: { chave: CHAVE_TOKEN }, update: { dados, geradoEm: new Date() }, create: { chave: CHAVE_TOKEN, dados } }).catch(() => null);
   return token.valor;
 }
 
@@ -41,6 +61,11 @@ async function facade<T>(caminho: string, corpo?: unknown, method = corpo === un
     signal: AbortSignal.timeout(15_000),
     cache: "no-store",
   });
+  if (r.status === 401) {
+    // Token guardado deixou de valer antes da hora: descarta para o próximo pedido buscar outro.
+    token = null;
+    await db.resumoNacional.delete({ where: { chave: CHAVE_TOKEN } }).catch(() => null);
+  }
   if (!r.ok) {
     const texto = await r.text().catch(() => "");
     throw Object.assign(new Error(`Ulisses ${caminho} -> ${r.status}${texto ? `: ${texto.slice(0, 200)}` : ""}`), { status: r.status, texto });
