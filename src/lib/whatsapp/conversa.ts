@@ -1,5 +1,5 @@
 import { asaasCreatePixCharge, asaasGetPixQrCode } from "@/lib/asaas/client";
-import { contaDaEscola } from "@/lib/asaas/conta-escola";
+import { contaParaCobrar, pagamentoLiberado, recebeOnline, registrarProvisoria, somaSplit } from "@/lib/conta-provisoria";
 import { splitDoBpo } from "@/lib/asaas/split";
 import { oldestOpenContribution } from "@/lib/contribution-order";
 import { db } from "@/lib/db";
@@ -46,12 +46,13 @@ export async function pixPorWhatsapp(memberId: string): Promise<Resposta> {
       name: true,
       mercurioAtivo: true,
       status: true,
-      school: { select: { name: true, asaasSubaccountApiKey: true, mercurioEscrita: true } },
+      schoolId: true,
+      school: { select: { name: true, asaasSubaccountApiKey: true, mercurioEscrita: true, mercurioUnidade: true } },
     },
   });
   if (!m?.mercurioAtivo) return { texto: `Não encontrei um cadastro ativo para gerar o Pix. Fale com a secretaria da sua filial ou entre no Portal: ${PORTAL}` };
   const nome = primeiroNome(m.name);
-  if (!m.school.asaasSubaccountApiKey || !m.school.mercurioEscrita)
+  if (!(await pagamentoLiberado(m.school)) || !(await recebeOnline(m.schoolId)))
     return { texto: `${nome}, o pagamento on-line da sua filial ainda não foi liberado. Por enquanto, fale com a secretaria.` };
 
   const [mensal, cobrancas] = await Promise.all([
@@ -79,7 +80,7 @@ export async function pixPorWhatsapp(memberId: string): Promise<Resposta> {
   if (!ultima?.asaasCustomerId)
     return { texto: `${nome}, o primeiro pagamento precisa ser feito pelo Portal (é lá que confirmamos o seu CPF). Depois disso, o Pix também chega por aqui: ${PORTAL}` };
 
-  const conta = contaDaEscola(m.school);
+  const { conta, provisoria } = await contaParaCobrar(m.schoolId);
   const vencimento = new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10);
   const descricao = `Contribuição ${mes} — ${m.name}`;
   const split = await splitDoBpo(valor, conta);
@@ -99,6 +100,7 @@ export async function pixPorWhatsapp(memberId: string): Promise<Resposta> {
       memberWasOverdue: OVERDUE_STATUSES.has(m.status),
     },
   });
+  await registrarProvisoria({ provisoria, schoolId: m.schoolId, origem: "contribuicao", memberId, asaasId: pagamento.id, valorBruto: valor, splitBpo: somaSplit(split) });
   return {
     texto: `${nome}, segue o Pix da contribuição de ${mes} à Nova Acrópole ${nomeCurtoDaFilial(m.school.name)}, no valor de ${reais(valor)}. Copie o código da próxima mensagem e cole no app do seu banco, em Pix Copia e Cola. Assim que o banco confirmar, o recibo aparece no Portal.`,
     codigo: qr.payload,

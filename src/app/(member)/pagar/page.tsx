@@ -1,5 +1,5 @@
 import { PagamentoGuiado } from "@/components/member/pagamento-guiado";
-import { escolaCobraOnline } from "@/lib/asaas/conta-escola";
+import { pagamentoLiberado, recebeOnline } from "@/lib/conta-provisoria";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { oldestOpenContribution } from "@/lib/contribution-order";
 import { db } from "@/lib/db";
@@ -20,14 +20,14 @@ export default async function PagarPage(props: { searchParams: Promise<{ filial?
   const member = await getAuthenticatedMember();
   if (!member) redirect(`/login?${new URLSearchParams({ next: `/pagar?${new URLSearchParams(params as Record<string, string>)}` })}`);
 
-  const escola = await db.school.findUniqueOrThrow({ where: { id: member.schoolId }, select: { name: true, asaasSubaccountApiKey: true, mercurioEscrita: true } });
+  const escola = await db.school.findUniqueOrThrow({ where: { id: member.schoolId }, select: { name: true, asaasSubaccountApiKey: true, mercurioEscrita: true, mercurioUnidade: true } });
   const casca = (children: React.ReactNode) => (
     <main className="mx-auto grid min-h-dvh max-w-md content-start gap-4 px-4 py-6">
       <p className="text-xs font-semibold uppercase tracking-wider text-na-green dark:text-emerald-400">{escola.name}</p>
       {children}
     </main>
   );
-  if (!member.mercurioAtivo || !escolaCobraOnline(escola) || !escola.mercurioEscrita)
+  if (!member.mercurioAtivo || !(await pagamentoLiberado(escola)) || !(await recebeOnline(member.schoolId)))
     return casca(
       <div className="grid gap-3 rounded-2xl bg-white p-5 shadow-sm dark:bg-gray-900">
         <h1 className="text-xl font-black text-gray-900 dark:text-gray-100">Pagamento pelo Portal ainda não liberado</h1>

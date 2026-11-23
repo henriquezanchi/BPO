@@ -1,6 +1,6 @@
 "use server";
 
-import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
+import { exigirPagamentoLiberado } from "@/lib/conta-provisoria";
 import {
   asaasCancelPayment,
   asaasCreateCreditCardCharge,
@@ -11,7 +11,7 @@ import {
   asaasGetPixQrCode,
 } from "@/lib/asaas/client";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
-import { contaDaEscolaId, contaDeLeituraId } from "@/lib/asaas/conta-escola";
+import { contaDoPagamento, contaParaCobrar, registrarProvisoria, somaSplit, type Provisoria } from "@/lib/conta-provisoria";
 import { splitDoBpo, splitDoBpoCartao } from "@/lib/asaas/split";
 import { cartaoRepassaTaxa } from "@/lib/spread";
 import { requireContributionOrder } from "@/lib/contribution-payment-policy";
@@ -70,6 +70,16 @@ function paraResultadoCobranca(charge: PaymentCharge) {
 /** Desde 25/10/2026 toda cobrança sai pela subconta da filial: clientes Asaas anteriores são da conta principal. */
 const INICIO_SUBCONTA = new Date("2026-10-25T00:00:00-03:00");
 
+/** Cliente Asaas da última cobrança da pessoa feita pela mesma conta (própria da filial ou provisória da titular). */
+async function clienteDaMesmaConta(memberId: string, provisoria: Provisoria) {
+  const cobrancas = await db.paymentCharge.findMany({ where: { memberId, createdAt: { gte: INICIO_SUBCONTA } }, orderBy: { createdAt: "desc" }, take: 10, select: { asaasCustomerId: true, asaasPaymentId: true } });
+  for (const c of cobrancas) {
+    const p = await db.cobrancaProvisoria.findUnique({ where: { asaasId: c.asaasPaymentId }, select: { titularSchoolId: true } });
+    if ((p?.titularSchoolId ?? null) === (provisoria?.titularSchoolId ?? null)) return c.asaasCustomerId;
+  }
+  return null;
+}
+
 export async function createContributionCharge(
   memberId: string,
   year: number,
@@ -79,7 +89,7 @@ export async function createContributionCharge(
 ) {
   const member = await requireAuthenticatedMember(memberId);
   await requireContributionOrder(memberId, year, month);
-  exigirEscritaMercurio(member);
+  await exigirPagamentoLiberado(member);
   const metodo = opts?.metodo ?? "PIX";
   const fortunaTopUpAmount = opts?.fortunaTopUpAmount ? Math.round(opts.fortunaTopUpAmount * 100) / 100 : 0;
   if (fortunaTopUpAmount > 0) {
@@ -113,18 +123,17 @@ export async function createContributionCharge(
   if (valor <= 0) throw new Error("Composição da contribuição está vazia — nada a cobrar.");
   const valorBase = valor + fortunaTopUpAmount;
 
-  // Sempre pela subconta da filial (regra do usuário 2026-10-25).
-  const conta = await contaDaEscolaId(member.schoolId);
+  // Pela subconta da filial (regra do usuário 2026-10-25) ou, no piloto, pela conta provisória de Barra do Garças
+  // enquanto a da filial não for aprovada (lib/conta-provisoria.ts, 23/11/2026).
+  const { conta, provisoria } = await contaParaCobrar(member.schoolId);
   // CPF em branco (pagamento guiado pelo QR, /pagar, 12/11/2026): reaproveita o pagador da última cobrança feita pela
-  // subconta desta filial. Sem cobrança anterior, o CPF continua obrigatório.
+  // MESMA conta (o cliente do Asaas é por conta). Sem cobrança anterior nessa conta, o CPF continua obrigatório.
   const cliente = cpf
     ? await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined, conta)
-    : await db.paymentCharge
-        .findFirst({ where: { memberId, createdAt: { gte: INICIO_SUBCONTA } }, orderBy: { createdAt: "desc" }, select: { asaasCustomerId: true } })
-        .then((c) => {
-          if (!c?.asaasCustomerId) throw new Error("Digite o CPF de quem vai pagar.");
-          return { id: c.asaasCustomerId };
-        });
+    : await clienteDaMesmaConta(memberId, provisoria).then((id) => {
+        if (!id) throw new Error("Digite o CPF de quem vai pagar.");
+        return { id };
+      });
 
   const vencimento = new Date();
   vencimento.setDate(vencimento.getDate() + 2);
@@ -163,6 +172,7 @@ export async function createContributionCharge(
         memberWasOverdue,
       },
     });
+    await registrarProvisoria({ provisoria, schoolId: member.schoolId, origem: "contribuicao", referenciaId: charge.id, memberId, asaasId: pagamento.id, valorBruto: valorCartao, splitBpo: somaSplit(split) });
     return { chargeId: charge.id, metodo: "CREDIT_CARD" as const, invoiceUrl: pagamento.invoiceUrl, amount: valor, fortunaTopUpAmount, totalCobrado: valorCartao };
   }
 
@@ -185,6 +195,7 @@ export async function createContributionCharge(
       memberWasOverdue,
     },
   });
+  await registrarProvisoria({ provisoria, schoolId: member.schoolId, origem: "contribuicao", referenciaId: charge.id, memberId, asaasId: pagamento.id, valorBruto: valorBase, splitBpo: somaSplit(split) });
 
   return {
     chargeId: charge.id,
@@ -209,7 +220,7 @@ export async function checkChargeStatus(memberId: string, chargeId: string) {
   const vez = await db.paymentCharge.updateMany({ where: { id: chargeId, status: { not: "pago" }, updatedAt: { lt: new Date(Date.now() - 15_000) } }, data: { updatedAt: new Date() } });
   if (!vez.count) return { status: "pendente" as const };
 
-  const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, await contaDeLeituraId(member.schoolId));
+  const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, await contaDoPagamento(charge.asaasPaymentId, member.schoolId));
   if (pagamento.status === "RECEIVED" || pagamento.status === "CONFIRMED") {
     await confirmarPagamento(charge.id);
     return { status: "pago" as const };
@@ -241,6 +252,6 @@ export async function cancelarCobrancaContribuicaoPendente(memberId: string, cha
   if (charge.memberId !== memberId) throw new Error("Cobrança não pertence a este membro.");
   if (charge.status !== "pendente") throw new Error("Só é possível cancelar uma cobrança pendente.");
 
-  await asaasCancelPayment(charge.asaasPaymentId, await contaDeLeituraId(member.schoolId));
+  await asaasCancelPayment(charge.asaasPaymentId, await contaDoPagamento(charge.asaasPaymentId, member.schoolId));
   await db.paymentCharge.update({ where: { id: chargeId }, data: { status: "cancelado" } });
 }

@@ -2,7 +2,8 @@
 
 import {asaasCreatePixCharge,asaasFindOrCreateCustomer,asaasGetPaymentStatus,asaasGetPixQrCode} from '@/lib/asaas/client';
 import {splitDoBpo} from '@/lib/asaas/split';
-import {contaDaEscola,contaDeLeituraId,escolaCobraOnline,MENSAGEM_CONTA_PENDENTE} from '@/lib/asaas/conta-escola';
+import {MENSAGEM_CONTA_PENDENTE} from '@/lib/asaas/conta-escola';
+import {contaDoPagamento,contaParaCobrar,registrarProvisoria,somaSplit} from '@/lib/conta-provisoria';
 import {requireAuthenticatedMember,requireArea} from '@/lib/auth';
 import {podeLiberar,temAcessoVoluntario} from '@/lib/acesso-voluntario';
 import {db} from '@/lib/db';
@@ -129,7 +130,9 @@ async function enrollEvent(memberId:string,eventId:string,cpf?:string){
  if(price>0&&(!cpf||!/^[0-9]{11}$/.test(cpf)))throw new EventEnrollmentError('Informe o CPF com 11 números.');
  const school=await db.school.findUniqueOrThrow({where:{id:event.schoolId!},omit:{asaasSubaccountApiKey:false}});
  // Cobrança sempre pela subconta da filial (regra do usuário 2026-10-25): sem ela, sem inscrição paga.
- if(price>0&&!escolaCobraOnline(school))throw new EventEnrollmentError(MENSAGEM_CONTA_PENDENTE);
+ // Pela subconta da filial do evento ou, no piloto, pela conta provisória de Barra (23/11/2026).
+ const cobranca=price>0?await contaParaCobrar(school.id).catch(()=>null):null;
+ if(price>0&&!cobranca)throw new EventEnrollmentError(MENSAGEM_CONTA_PENDENTE);
  const registration=await db.$transaction(async tx=>{
   // Fila em vez de recusa (01/11/2026): a linha do evento fica travada até o fim desta transação, então inscrições
   // simultâneas esperam a vez e contam as vagas certas. Antes, a trava pela revisão recusava todos menos um e quem
@@ -157,13 +160,13 @@ async function enrollEvent(memberId:string,eventId:string,cpf?:string){
  if(registration.pixPayload)return {jaInscrito:true as const,pago:false as const,registrationId:registration.id,pixPayload:registration.pixPayload,pixQrCodeBase64:registration.pixQrCodeBase64!};
  if(registration.asaasPaymentId){
   try{
-  const qr=await asaasGetPixQrCode(registration.asaasPaymentId,contaDaEscola(school));
+  const qr=await asaasGetPixQrCode(registration.asaasPaymentId,await contaDoPagamento(registration.asaasPaymentId,school.id));
   await db.eventRegistration.update({where:{id:registration.id},data:{pixPayload:qr.payload,pixQrCodeBase64:qr.encodedImage}});
   return {jaInscrito:true as const,pago:false as const,registrationId:registration.id,pixPayload:qr.payload,pixQrCodeBase64:qr.encodedImage};
   }catch{throw new EventEnrollmentError('O PIX desta inscrição já existe, mas não foi possível recuperar o QR Code. Tente novamente mais tarde; não é necessário criar outra cobrança.');}
  }
  // Pré-condições de leitura antes de reservar a cobrança: falha aqui não emite PIX.
- const conta=contaDaEscola(school);
+ const conta=cobranca!.conta;
  let split:Awaited<ReturnType<typeof splitDoBpo>>=[];
  if(price>0){
   try{split=await splitDoBpo(price,conta);}catch(error){throw new EventEnrollmentError(eventPaymentFailure(error).message);}
@@ -179,6 +182,7 @@ async function enrollEvent(memberId:string,eventId:string,cpf?:string){
   const payment=await asaasCreatePixCharge(customer.id,price,`Inscrição: ${event.title} — ${member.name}`,dueDate,split,conta);
   // Persistir o ID antes de buscar QR: falha na consulta não cria cobrança duplicada.
   await db.eventRegistration.update({where:{id:registration.id},data:{asaasCustomerId:customer.id,asaasPaymentId:payment.id,paymentState:'pendente'}});
+  await registrarProvisoria({provisoria:cobranca!.provisoria,schoolId:school.id,origem:'evento',referenciaId:registration.id,memberId,asaasId:payment.id,valorBruto:price,splitBpo:somaSplit(split)});
   stage='qrcode';
   const qr=await asaasGetPixQrCode(payment.id,conta);
   await db.eventRegistration.update({where:{id:registration.id},data:{pixPayload:qr.payload,pixQrCodeBase64:qr.encodedImage}});
@@ -209,7 +213,7 @@ export async function checkStatusInscricaoEvento(memberId:string,registrationId:
  if(r.event.status==='cancelado')return {status:'cancelado' as const};
  if(r.paid)return {status:'pago' as const};
  if(!r.asaasPaymentId)return {status:'pendente' as const};
- const payment=await asaasGetPaymentStatus(r.asaasPaymentId,await contaDeLeituraId(r.event.schoolId));
+ const payment=await asaasGetPaymentStatus(r.asaasPaymentId,await contaDoPagamento(r.asaasPaymentId,r.event.schoolId));
  if(['RECEIVED','CONFIRMED'].includes(payment.status)){
   if(r.amount!==null&&Math.round(payment.value*100)!==Math.round(Number(r.amount)*100))throw Error('Valor recebido divergente. Procure a Economia.');
   await confirmEventPayment(r.id);refresh(r.eventId);return {status:'pago' as const};

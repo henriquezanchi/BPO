@@ -7,6 +7,7 @@ import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
 import { TIPOS_CHAVE, type TipoChave, chaveDaPropriaEscola, pedirSaque, saldoDaConta, validarChave } from "@/lib/asaas/saque";
 import { chavePixDaEscola, definirRepasseCartao, gravarChavePix } from "@/lib/spread";
 import { marcarContatoAtendido } from "@/lib/whatsapp/conversa";
+import { abrirFinanceiro, definirPin, devidoAOutras, fecharFinanceiro, pedirRepasse } from "@/lib/repasses";
 import { revalidatePath } from "next/cache";
 
 /** Economia → Cobrança on-line (12/11/2026): a filial escolhe se repassa a taxa do cartão ao aluno. */
@@ -81,7 +82,10 @@ export async function solicitarSaque(schoolId: string, valor: number) {
   if (!chave.aprovada) return { ok: false as const, error: "A chave Pix ainda espera a aprovação do administrador do Portal." };
   const saldo = await saldoDaConta(escola.asaasSubaccountApiKey).catch(() => null);
   if (saldo === null) return { ok: false as const, error: "Não deu para consultar o saldo agora. Tente de novo em alguns minutos." };
-  if (v > saldo) return { ok: false as const, error: `O saldo disponível é ${saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.` };
+  // Conta titular da conta provisória (Barra do Garças): o que é das outras escolas não pode ser sacado (23/11/2026).
+  const deOutras = await devidoAOutras(schoolId);
+  const livre = Math.round((saldo - deOutras) * 100) / 100;
+  if (v > livre) return { ok: false as const, error: `O saldo disponível para a escola é ${Math.max(0, livre).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}${deOutras > 0 ? ` (o resto, ${deOutras.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}, é de outras escolas e sai pelos repasses)` : ""}.` };
   try {
     await pedirSaque({ schoolId, apiKey: escola.asaasSubaccountApiKey, valor: v, chave, pedidoPor: `${eu.name} (${eu.mercurioId ?? "?"})`, escola: escola.name });
   } catch (e) {
@@ -99,4 +103,49 @@ export async function contatoAtendido(schoolId: string, memberId: string) {
   await marcarContatoAtendido(schoolId, memberId);
   revalidatePath("/economia");
   return { ok: true as const };
+}
+
+// ─────────────── Repasses da conta provisória, com PIN (23/11/2026; lib/repasses.ts) ───────────────
+
+export async function criarPinFinanceiro(novo: string, atual: string) {
+  const eu = await getAuthenticatedMember();
+  if (!eu) return { ok: false as const, error: "Entre no Portal de novo." };
+  try {
+    await definirPin(eu.id, novo, atual || undefined);
+  } catch (e) {
+    return { ok: false as const, error: (e as Error).message };
+  }
+  revalidatePath("/economia");
+  return { ok: true as const };
+}
+
+export async function abrirPainelFinanceiro(pin: string) {
+  const eu = await getAuthenticatedMember();
+  if (!eu) return { ok: false as const, error: "Entre no Portal de novo." };
+  try {
+    await abrirFinanceiro(eu.id, pin);
+  } catch (e) {
+    return { ok: false as const, error: (e as Error).message };
+  }
+  revalidatePath("/economia");
+  return { ok: true as const };
+}
+
+export async function fecharPainelFinanceiro() {
+  await fecharFinanceiro();
+  revalidatePath("/economia");
+  return { ok: true as const };
+}
+
+export async function solicitarRepasse(schoolId: string) {
+  const eu = await getAuthenticatedMember();
+  if (!eu) return { ok: false as const, error: "Entre no Portal de novo." };
+  try {
+    const r = await pedirRepasse(eu, schoolId);
+    revalidatePath("/economia");
+    return { ok: true as const, ...r };
+  } catch (e) {
+    revalidatePath("/economia");
+    return { ok: false as const, error: (e as Error).message };
+  }
 }

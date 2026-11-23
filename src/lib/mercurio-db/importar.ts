@@ -238,36 +238,46 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   // (ex: Barra — o Sub-Chefe é o único BRG do Grupo Masculino).
   const gruposDaFilial = Object.keys(GRUPOS).filter((r) => raiosAtivos.has(r));
   const gruposSemChefe = gruposDaFilial.filter((r) => ![...chefiaPor.values()].some((s) => s.has(r)));
-  const grupoIds = new Map<string, string>();
+  // Cache da PROMESSA (não do id): pessoas do mesmo lote em paralelo pedem o mesmo grupo e só um create acontece
+  // (23/11/2026: a abertura de APS/STO/ELD/PER falhava com ClassGroup_schoolId_name_key).
+  const grupoIds = new Map<string, Promise<string>>();
   // Grupo identificado pelo tipo (não pelo nome), pra renomear sem duplicar.
-  const grupoId = async (raio: string) => {
-    if (!grupoIds.has(raio)) {
-      const existente = await db.classGroup.findFirst({ where: { schoolId: school.id, tipo: raio } });
-      const cg = existente
-        ? existente.name === GRUPOS[raio]
-          ? existente
-          : await db.classGroup.update({ where: { id: existente.id }, data: { name: GRUPOS[raio] } })
-        : await db.classGroup.create({ data: { schoolId: school.id, name: GRUPOS[raio], tipo: raio } });
-      grupoIds.set(raio, cg.id);
-    }
+  const grupoId = (raio: string) => {
+    if (!grupoIds.has(raio))
+      grupoIds.set(
+        raio,
+        (async () => {
+          const existente = await db.classGroup.findFirst({ where: { schoolId: school.id, tipo: raio } });
+          const cg = existente
+            ? existente.name === GRUPOS[raio]
+              ? existente
+              : await db.classGroup.update({ where: { id: existente.id }, data: { name: GRUPOS[raio] } })
+            : await db.classGroup.upsert({ where: { schoolId_name: { schoolId: school.id, name: GRUPOS[raio] } }, update: { tipo: raio }, create: { schoolId: school.id, name: GRUPOS[raio], tipo: raio } });
+          return cg.id;
+        })(),
+      );
     return grupoIds.get(raio)!;
   };
-  const turmaIds = new Map<string, string>();
-  const turmaId = async (nome: string, tipo = "turma") => {
-    if (!turmaIds.has(nome)) {
-      // Grupo criado no Portal (GAF, secretaria, GDVE) com o mesmo nome de uma turma do Mercúrio: renomeia o
-      // do Portal (acrescenta o tipo) em vez de misturar alunos da turma nele.
-      const homonimo = await db.classGroup.findUnique({ where: { schoolId_name: { schoolId: school.id, name: nome } }, select: { id: true, tipo: true } });
-      if (homonimo && ehTipoGrupo(homonimo.tipo) && TIPOS_GRUPO[homonimo.tipo].doPortal) {
-        await db.classGroup.update({ where: { id: homonimo.id }, data: { name: `${nome} (${TIPOS_GRUPO[homonimo.tipo].nome})`.slice(0, 120) } });
-      }
-      const cg = await db.classGroup.upsert({
-        where: { schoolId_name: { schoolId: school.id, name: nome } },
-        update: tipo === "turma" ? { mercurioClassId: nome } : { tipo },
-        create: { schoolId: school.id, name: nome, tipo, mercurioClassId: tipo === "turma" ? nome : null },
-      });
-      turmaIds.set(nome, cg.id);
-    }
+  const turmaIds = new Map<string, Promise<string>>();
+  const turmaId = (nome: string, tipo = "turma") => {
+    if (!turmaIds.has(nome))
+      turmaIds.set(
+        nome,
+        (async () => {
+          // Grupo criado no Portal (GAF, secretaria, GDVE) com o mesmo nome de uma turma do Mercúrio: renomeia o
+          // do Portal (acrescenta o tipo) em vez de misturar alunos da turma nele.
+          const homonimo = await db.classGroup.findUnique({ where: { schoolId_name: { schoolId: school.id, name: nome } }, select: { id: true, tipo: true } });
+          if (homonimo && ehTipoGrupo(homonimo.tipo) && TIPOS_GRUPO[homonimo.tipo].doPortal) {
+            await db.classGroup.update({ where: { id: homonimo.id }, data: { name: `${nome} (${TIPOS_GRUPO[homonimo.tipo].nome})`.slice(0, 120) } });
+          }
+          const cg = await db.classGroup.upsert({
+            where: { schoolId_name: { schoolId: school.id, name: nome } },
+            update: tipo === "turma" ? { mercurioClassId: nome } : { tipo },
+            create: { schoolId: school.id, name: nome, tipo, mercurioClassId: tipo === "turma" ? nome : null },
+          });
+          return cg.id;
+        })(),
+      );
     return turmaIds.get(nome)!;
   };
   const reciboPorId = new Map(recibos.map((r) => [r.rec_id!, r]));

@@ -1,4 +1,5 @@
 import { aprovarTransferenciaDoPortal } from "@/lib/asaas/saque";
+import { repasseDoPortal } from "@/lib/repasses";
 import { db } from "@/lib/db";
 import crypto from "node:crypto";
 
@@ -95,6 +96,8 @@ export async function POST(req: Request) {
   if (tipo === "TRANSFER") {
     const t = corpo.transfer ?? {};
     if (await aprovarTransferenciaDoPortal(Number(t.value ?? 0), t.id)) return responder(true);
+    // Repasse da conta provisória para a escola (lib/repasses.ts, 23/11/2026).
+    if (await repasseDoPortal(Number(t.value ?? 0), t.id)) return responder(true);
   }
 
   const outros = (process.env.ASAAS_SAQUE_OUTROS_APROVADOS ?? "").split(",").map((s) => s.trim()).filter(Boolean);

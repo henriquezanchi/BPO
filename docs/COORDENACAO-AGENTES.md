@@ -1342,3 +1342,16 @@ Pedido do usuário: autoatendimento **na lanchonete, sem caixa**. A pessoa pega 
 - As telas ("Meus dados" e "Mais dados") dizem que a alteração vale na hora, com os botões "Corrigir" e "Salvar".
 
 **Demonstração do autoatendimento:** `/cafe?caixa=demo` mostra um cardápio de exemplo, saldo fictício de R$ 50 e compra simulada, com a faixa "DEMONSTRAÇÃO · nada é cobrado".
+
+## 23/11/2026 — Conta provisória de Barra do Garças, repasses com PIN e abertura do piloto (Claude)
+
+Autorização do responsável pela contabilidade nacional: enquanto a escola do piloto não tem conta Asaas aprovada, cobra pela conta de Barra do Garças (titular) e o valor é repassado depois.
+
+1. **Migração `20261123180000_conta_provisoria_repasses`** (aplicada com `db execute` + `migrate resolve`): `CobrancaProvisoria`, `RepasseFilial`, `PinFinanceiro`, todas com RLS.
+2. **`lib/conta-provisoria.ts`**: `contaParaCobrar(schoolId)` decide a conta (própria aprovada → titular, se a escola está no escopo do piloto e a titular aprovada → chave própria → erro). Titular por `CONTA_PROVISORIA_TITULAR` (padrão BGA). Toda cobrança provisória fica registrada (contribuição, Pix Automático, evento, recarga do Fortuna); leitura, estorno e cancelamento usam `contaDoPagamento(asaasId, schoolId)`. `conferirProvisoria` grava taxa e líquido reais (`netValue` − split do BPO); estorno depois do repasse vira linha negativa `ajuste_estorno`.
+   - **Pagamento liberado** (`pagamentoLiberado`): `mercurioEscrita` OU filial do piloto. O lançamento que o robô não fizer vira pendência na Economia ("Já lancei no Mercúrio").
+   - **Pix Automático autorizado pela titular fica preso a ela.** Quando a escola abrir a conta, quem autorizou precisa autorizar de novo.
+3. **`lib/repasses.ts`**: PIN do financeiro (6 números, scrypt, 5 erros bloqueiam; cookie cifrado `na_financeiro` por 10 min, só em `/economia`), só para a direção (`escolasDaDirecao`). `resumoDaEscola`, `pedirRepasse` (reserva as linhas numa transação, `POST /transfers` pela chave da titular, tarifa vira `ajuste_tarifa` descontado no próximo), `conferirRepasses` (cron financeiro), `devidoAOutras` (o saque da titular fica limitado ao que é dela). Webhook `asaas-saque` aprova `TRANSFER` que seja repasse do Portal.
+4. **Tela**: Economia → Cobrança on-line → "Recebimentos pela conta de Barra do Garças" (`components/economia/repasses-panel.tsx`), com chave Pix (`SaqueEscola soChave`) para escola sem conta própria.
+5. **Abertura do piloto** (`scripts/abrir-filial-db.ts --gravar`): JAM 279 logins, STO 60, GAR 33, APS 113, GY2 51, ALT 39, ELD 37, PER 38, CAT 31, ITU 1.
+   - Correção em `mercurio-db/importar.ts`: o cache de grupo e turma guarda a promessa, não o id. Pessoas do mesmo lote, em paralelo, criavam o mesmo grupo e esbarravam em `ClassGroup_schoolId_name_key`.

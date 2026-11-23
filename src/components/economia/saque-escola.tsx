@@ -14,6 +14,8 @@ export function SaqueEscola(p: {
   saldo: number | null;
   chave: { tipo: Tipo; chave: string; aprovada: boolean; cadastradaPor: string } | null;
   dono: boolean;
+  /** Só a chave (escola sem conta própria, que recebe pelos repasses da conta provisória). */
+  soChave?: boolean;
 }) {
   const [editando, setEditando] = useState(!p.chave);
   const [tipo, setTipo] = useState<Tipo>(p.chave?.tipo ?? "CNPJ");
@@ -33,16 +35,16 @@ export function SaqueEscola(p: {
 
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-end justify-between gap-2">
+      {!p.soChave && <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Saldo disponível</p>
           <p className="text-3xl font-black tabular-nums text-gray-900 dark:text-gray-100">{p.saldo === null ? "—" : brl(p.saldo)}</p>
         </div>
         {p.saldo === null && <p className="text-[13px] text-gray-500">Não deu para consultar o saldo agora.</p>}
-      </div>
+      </div>}
 
       <div className="grid gap-2 rounded-xl bg-gray-50 p-3 text-[13px] dark:bg-gray-800/60">
-        <p className="font-semibold text-gray-800 dark:text-gray-200">Chave Pix da escola (destino do saque)</p>
+        <p className="font-semibold text-gray-800 dark:text-gray-200">Chave Pix da escola ({p.soChave ? "destino do repasse" : "destino do saque"})</p>
         {p.chave && !editando ? (
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono">{TIPOS[p.chave.tipo]}: {p.chave.chave}</span>
@@ -78,7 +80,7 @@ export function SaqueEscola(p: {
         )}
       </div>
 
-      {p.chave?.aprovada && p.saldo !== null && p.saldo > 0 && (
+      {!p.soChave && p.chave?.aprovada && p.saldo !== null && p.saldo > 0 && (
         <form
           className="flex flex-wrap items-center gap-2 text-sm"
           onSubmit={(e) => {

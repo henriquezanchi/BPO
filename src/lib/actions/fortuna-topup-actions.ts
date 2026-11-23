@@ -1,8 +1,8 @@
 "use server";
 
-import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
+import { exigirPagamentoLiberado } from "@/lib/conta-provisoria";
 import { asaasCreatePixCharge, asaasFindOrCreateCustomer, asaasGetPixQrCode } from "@/lib/asaas/client";
-import { contaDaEscolaId } from "@/lib/asaas/conta-escola";
+import { contaParaCobrar, registrarProvisoria, somaSplit } from "@/lib/conta-provisoria";
 import { splitDoBpo } from "@/lib/asaas/split";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -28,7 +28,7 @@ const VALOR_MAXIMO = 1000;
  */
 export async function createFortunaTopUpCharge(memberId: string, valor: number, cpf: string, branchId: number) {
   const member = await requireAuthenticatedMember(memberId);
-  exigirEscritaMercurio(member);
+  await exigirPagamentoLiberado(member);
   if (!Number.isFinite(valor) || valor < VALOR_MINIMO || valor > VALOR_MAXIMO) {
     throw new Error(`Valor deve estar entre ${VALOR_MINIMO} e ${VALOR_MAXIMO}.`);
   }
@@ -49,8 +49,8 @@ export async function createFortunaTopUpCharge(memberId: string, valor: number, 
   });
   if (emAberto) return { chargeId: emAberto.id, pixPayload: emAberto.pixPayload!, pixQrCodeBase64: emAberto.pixQrCodeBase64 ?? "", amount: valor };
 
-  // Sempre pela subconta da filial (regra do usuário 2026-10-25).
-  const conta = await contaDaEscolaId(member.schoolId);
+  // Pela subconta da filial ou, no piloto, pela conta provisória de Barra (lib/conta-provisoria.ts, 23/11/2026).
+  const { conta, provisoria } = await contaParaCobrar(member.schoolId);
   const cliente = await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined, conta);
 
   const vencimento = new Date();
@@ -83,6 +83,7 @@ export async function createFortunaTopUpCharge(memberId: string, valor: number, 
     },
   });
 
+  await registrarProvisoria({ provisoria, schoolId: member.schoolId, origem: "fortuna", referenciaId: charge.id, memberId, asaasId: pagamento.id, valorBruto: valor, splitBpo: somaSplit(split) });
   return { chargeId: charge.id, pixPayload: qrcode.payload, pixQrCodeBase64: qrcode.encodedImage, amount: valor };
 }
 

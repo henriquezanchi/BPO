@@ -1,4 +1,6 @@
 import { confirmarContribuicoesPendentes, criarCicloPixAutomatico } from "@/lib/asaas/pix-automatico-ciclo";
+import { conferirProvisoriasPendentes } from "@/lib/conta-provisoria";
+import { conferirRepasses } from "@/lib/repasses";
 import { conferirRecargasPendentes } from "@/lib/fortuna/confirmar-recarga";
 import { conferirMatriculasPendentes } from "@/lib/matricula-online";
 import { autorizadoCron, executarRotina } from "@/lib/rotinas";
@@ -15,6 +17,10 @@ export async function GET(req: Request) {
   if (!autorizadoCron(req)) return Response.json({ erro: "Não autorizado." }, { status: 401 });
   const r = await executarRotina("financeiro", {
     contribuicoes: confirmarContribuicoesPendentes,
+    // Conta provisória (23/11/2026): confirma pagamentos e estornos das cobranças feitas pela conta de Barra e
+    // acompanha os repasses em andamento.
+    contaProvisoria: () => conferirProvisoriasPendentes(),
+    repasses: conferirRepasses,
     recargasFortuna: conferirRecargasPendentes,
     matriculas: () => conferirMatriculasPendentes(),
     pixAutomatico: criarCicloPixAutomatico,

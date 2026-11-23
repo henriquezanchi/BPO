@@ -3,7 +3,8 @@ import { agoraPrecisaReconectar } from "@/lib/agora/sessao";
 import { resumosParaTemas } from "@/lib/anotacoes";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { fraseDoDia, hojeNoFuso } from "@/lib/diario";
-import { escolasQueCobramOnline, pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
+import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
+import { escolasQueRecebem, pagamentoLiberado } from "@/lib/conta-provisoria";
 import { cartaoRepassaTaxa } from "@/lib/spread";
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
@@ -357,7 +358,7 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
       orderBy: { createdAt: "asc" },
     }),
     // Cobrança sempre pela subconta da filial (2026-10-25): só filiais com a conta Asaas ligada e aprovada (27/10) cobram on-line.
-    escolasQueCobramOnline([member.schoolId, ...schoolEvents.map((e) => e.schoolId).filter((id): id is string => !!id)]),
+    escolasQueRecebem([member.schoolId, ...schoolEvents.map((e) => e.schoolId).filter((id): id is string => !!id)]),
     Promise.all(schoolEvents.map(async (e) => [e.id, await eventPosterUrl(e.posterPath)] as const)).then((pares) => new Map(pares)),
     // Resumos das anotações (próprios e dos colegas, conferidos) para os temas das provas (2026-10-29).
     resumosParaTemas(member, [...new Set(classActivities.flatMap((a) => (a.type === "prova" ? a.temas : [])))]),
@@ -511,6 +512,8 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
     // Depois de buscar a agenda (que tenta renovar a sessão): sem sessão válida do Ágora, a Agenda oferece reconectar.
     agoraReconectar: await agoraPrecisaReconectar(member.id),
     cobraOnline: escolasQueCobram.has(member.schoolId),
+    // Pagamento liberado: escrita no Mercúrio ou filial do piloto (conta provisória, 23/11/2026).
+    pagamentoLiberado: await pagamentoLiberado(member.school),
     // Taxa do cartão repassada ao aluno ou absorvida pela escola (escolha da Economia, 12/11/2026; lib/spread.ts).
     cartaoComTaxa: await cartaoRepassaTaxa(member.schoolId),
     // Pix Automático por filial (27/10/2026): a subconta de BGA ainda não tem o recurso liberado no Asaas.

@@ -1,7 +1,7 @@
 import { requireContributionOrder } from "@/lib/contribution-payment-policy";
 import { asaasCreatePixAutomaticCharge, asaasGetPaymentStatus } from "@/lib/asaas/client";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
-import { contaDaEscola, contaDeLeitura, escolaCobraOnline } from "@/lib/asaas/conta-escola";
+import { contaDoPagamento, registrarProvisoria } from "@/lib/conta-provisoria";
 import { splitDoBpo } from "@/lib/asaas/split";
 import { db } from "@/lib/db";
 import { OVERDUE_STATUSES } from "@/lib/member-data";
@@ -50,8 +50,8 @@ export async function confirmarContribuicoesPendentes() {
   let pagas = 0;
   for (const charge of pendentes) {
     try {
-      const membro = await db.member.findUnique({ where: { id: charge.memberId }, select: { school: { select: { asaasSubaccountApiKey: true } } } });
-      const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, contaDeLeitura(membro?.school));
+      const membro = await db.member.findUnique({ where: { id: charge.memberId }, select: { schoolId: true } });
+      const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, await contaDoPagamento(charge.asaasPaymentId, membro?.schoolId));
       if (pagamento.status === "RECEIVED" || pagamento.status === "CONFIRMED") {
         await confirmarPagamento(charge.id);
         pagas++;
@@ -98,9 +98,10 @@ export async function criarCicloPixAutomatico() {
 
     try {
       const nomeMes = vencimento.toLocaleDateString("pt-BR", { month: "long", timeZone: "UTC" });
-      // Sempre pela subconta da filial (regra do usuário 2026-10-25); sem ela, não cobra.
-      if (!escolaCobraOnline(membro.school)) { console.log(`Membro ${membro.id}: filial sem subconta Asaas; ciclo não criado.`); continue; }
-      const conta = contaDaEscola(membro.school);
+      // A cobrança sai pela MESMA conta da autorização (própria da filial ou provisória de Barra, 23/11/2026).
+      const conta = await contaDoPagamento(membro.pixAutomaticAuthorizationId, membro.schoolId);
+      if (!conta) { console.log(`Membro ${membro.id}: sem conta Asaas para a autorização; ciclo não criado.`); continue; }
+      const autorizacaoProvisoria = await db.cobrancaProvisoria.findUnique({ where: { asaasId: membro.pixAutomaticAuthorizationId! }, select: { titularSchoolId: true } });
       const split = await splitDoBpo(valorBase, conta);
       const pagamento = await asaasCreatePixAutomaticCharge(
         membro.asaasCustomerId!,
@@ -125,6 +126,7 @@ export async function criarCicloPixAutomatico() {
           memberWasOverdue: OVERDUE_STATUSES.has(membro.status),
         },
       });
+      await registrarProvisoria({ provisoria: autorizacaoProvisoria, schoolId: membro.schoolId, origem: "contribuicao", memberId: membro.id, asaasId: pagamento.id, valorBruto: valorBase, splitBpo: split.reduce((s, x) => s + Number((x as { fixedValue?: number }).fixedValue ?? 0), 0) });
       criadas++;
     } catch (e) {
       console.error(`Membro ${membro.id}: falha ao criar cobrança automática — ${(e as Error).message}`);

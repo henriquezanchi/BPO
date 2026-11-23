@@ -1526,6 +1526,62 @@ model SenhaAntecedentes {
   updatedAt    DateTime  @updatedAt
 }
 
+/// Cobrança feita pela conta Asaas de outra escola (a "titular", Barra do Garças) em nome de uma escola do piloto que
+/// ainda não tem conta própria aprovada (autorizado pela contabilidade nacional em 23/11/2026; lib/conta-provisoria.ts).
+/// Guarda de onde ler o pagamento e quanto é da escola (líquido = valor − taxa do Asaas − spread), para o repasse.
+/// origem: contribuicao | evento | fortuna | autorizacao_pix. status: pendente | pago | cancelado | estornado.
+model CobrancaProvisoria {
+  id              String    @id @default(cuid())
+  schoolId        String
+  titularSchoolId String
+  origem          String
+  referenciaId    String?
+  memberId        String?
+  asaasId         String    @unique
+  valorBruto      Decimal   @db.Decimal(10, 2)
+  splitBpo        Decimal   @default(0) @db.Decimal(10, 2)
+  taxaAsaas       Decimal?  @db.Decimal(10, 2)
+  valorLiquido    Decimal?  @db.Decimal(10, 2)
+  status          String    @default("pendente")
+  pagoEm          DateTime?
+  repasseId       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([schoolId, status])
+  @@index([repasseId])
+}
+
+/// Repasse da conta titular para a escola (transferência Pix pelo Asaas), pedido pela direção da escola com PIN.
+/// status: solicitado | enviado | concluido | falhou | cancelado. tarifa = tarifa da transferência (desconta do repasse).
+model RepasseFilial {
+  id              String    @id @default(cuid())
+  schoolId        String
+  titularSchoolId String
+  valor           Decimal   @db.Decimal(10, 2)
+  tarifa          Decimal   @default(0) @db.Decimal(10, 2)
+  chavePix        String
+  tipoChave       String
+  status          String    @default("solicitado")
+  transferId      String?   @unique
+  pedidoPorId     String
+  erro            String?
+  createdAt       DateTime  @default(now())
+  concluidoEm     DateTime?
+
+  @@index([schoolId, createdAt])
+}
+
+/// PIN do financeiro da direção (scrypt), para ver recebimentos e pedir repasses (23/11/2026).
+model PinFinanceiro {
+  memberId     String    @id
+  hash         String
+  falhas       Int       @default(0)
+  bloqueadoAte DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
 /// Caixa de sugestões do Portal (pedido do usuário 10/11/2026). Categorias do Portal vão para a administração
 /// nacional; as da escola, para a direção da filial. "anonima" esconde o nome de quem lê; o autor fica guardado só para
 /// ele acompanhar a resposta e para o limite diário (regras em lib/sugestoes-comum.ts).

@@ -1,13 +1,14 @@
 "use server";
 
-import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
+import { exigirPagamentoLiberado } from "@/lib/conta-provisoria";
 import {
   asaasCancelPixAutomaticAuthorization,
   asaasCreatePixAutomaticAuthorization,
   asaasFindOrCreateCustomer,
   asaasGetPixAutomaticAuthorization,
 } from "@/lib/asaas/client";
-import { contaDaEscolaId, contaDeLeituraId, pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
+import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
+import { contaDoPagamento, contaParaCobrar, registrarProvisoria } from "@/lib/conta-provisoria";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -22,7 +23,7 @@ import { db } from "@/lib/db";
  */
 export async function ativarPixAutomatico(memberId: string, cpf: string) {
   const member = await requireAuthenticatedMember(memberId);
-  exigirEscritaMercurio(member);
+  await exigirPagamentoLiberado(member);
   const unidade = (await db.school.findUnique({ where: { id: member.schoolId }, select: { mercurioUnidade: true } }))?.mercurioUnidade;
   if (!pixAutomaticoLiberado(unidade)) throw new Error("O débito automático ainda não está disponível na sua filial. Por enquanto, pague pelo Pix do mês.");
 
@@ -30,11 +31,13 @@ export async function ativarPixAutomatico(memberId: string, cpf: string) {
   const valor = itens.reduce((soma, i) => soma + Number(i.amount), 0);
   if (valor <= 0) throw new Error("Composição da contribuição está vazia — nada a cobrar.");
 
-  // Sempre pela subconta da filial (regra do usuário 2026-10-25); a autorização fica presa a essa conta.
-  const conta = await contaDaEscolaId(member.schoolId);
+  // Pela subconta da filial ou, no piloto, pela conta provisória de Barra (23/11/2026). A autorização fica presa à
+  // conta em que foi criada: quando a filial abrir a dela, quem autorizou pela provisória precisa autorizar de novo.
+  const { conta, provisoria } = await contaParaCobrar(member.schoolId);
   const cliente = await asaasFindOrCreateCustomer(member.name, cpf, member.email ?? undefined, conta);
   const autorizacao = await asaasCreatePixAutomaticAuthorization(cliente.id, memberId, valor, `Contribuição mensal — ${member.name}`, conta);
 
+  await registrarProvisoria({ provisoria, schoolId: member.schoolId, origem: "autorizacao_pix", memberId, asaasId: autorizacao.id, valorBruto: 0 });
   await db.member.update({
     where: { id: memberId },
     data: {
@@ -53,7 +56,7 @@ export async function checkPixAutomaticoStatus(memberId: string) {
   if (!member.pixAutomaticAuthorizationId) return { status: null };
   if (member.pixAutomaticStatus === "ACTIVE") return { status: "ACTIVE" as const };
 
-  const autorizacao = await asaasGetPixAutomaticAuthorization(member.pixAutomaticAuthorizationId, await contaDeLeituraId(member.schoolId));
+  const autorizacao = await asaasGetPixAutomaticAuthorization(member.pixAutomaticAuthorizationId, await contaDoPagamento(member.pixAutomaticAuthorizationId, member.schoolId));
   if (autorizacao.status !== member.pixAutomaticStatus) {
     await db.member.update({
       where: { id: memberId },
@@ -68,6 +71,6 @@ export async function desativarPixAutomatico(memberId: string) {
   const member = await requireAuthenticatedMember(memberId);
   if (!member.pixAutomaticAuthorizationId) return;
 
-  await asaasCancelPixAutomaticAuthorization(member.pixAutomaticAuthorizationId, await contaDeLeituraId(member.schoolId)).catch(() => {});
+  await asaasCancelPixAutomaticAuthorization(member.pixAutomaticAuthorizationId, await contaDoPagamento(member.pixAutomaticAuthorizationId, member.schoolId)).catch(() => {});
   await db.member.update({ where: { id: memberId }, data: { pixAutomaticStatus: "CANCELLED" } });
 }

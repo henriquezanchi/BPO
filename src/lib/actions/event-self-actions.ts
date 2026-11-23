@@ -1,7 +1,7 @@
 "use server";
 
 import { asaasDeleteEventPayment, asaasGetPaymentStatus } from "@/lib/asaas/client";
-import { contaDeLeituraId } from "@/lib/asaas/conta-escola";
+import { contaDoPagamento } from "@/lib/conta-provisoria";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { db } from "@/lib/db";
@@ -47,7 +47,7 @@ export async function cancelarMinhaInscricao(memberId: string, registrationId: s
   // PIX gerado: confere no Asaas antes de mexer — se já foi pago, a inscrição vale.
   if (r.asaasPaymentId && !r.paid) {
     try {
-      const conta = await contaDeLeituraId(r.event.schoolId);
+      const conta = await contaDoPagamento(r.asaasPaymentId, r.event.schoolId);
       const pagamento = await asaasGetPaymentStatus(r.asaasPaymentId, conta);
       if (["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(pagamento.status)) {
         await confirmEventPayment(r.id);

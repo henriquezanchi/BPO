@@ -151,9 +151,9 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   // `somenteConsulta` e escondem qualquer ação de cobrança).
   // Filiais em inglês (Mercury) e filiais ainda sem escrita no Mercúrio liberada (School.mercurioEscrita —
   // pedido do usuário 2026-10-19) só consultam; nas brasileiras aparece "em breve".
-  const somenteConsulta = member.school.language === "en" || !member.school.mercurioEscrita;
+  const somenteConsulta = member.school.language === "en" || !dashboard.pagamentoLiberado;
   // Pagamento pelo Portal: escrita no Mercúrio liberada E conta Asaas da filial ligada (cobrança sempre pela subconta).
-  const emBreve = member.school.language !== "en" && (!member.school.mercurioEscrita || !dashboard.cobraOnline);
+  const emBreve = member.school.language !== "en" && (!dashboard.pagamentoLiberado || !dashboard.cobraOnline);
   // "Pagar agora" (10/11/2026): com algo em aberto e pagamento pelo Portal liberado, o botão já paga o mês mais antigo.
   const podePagarAgora = !somenteConsulta && !emBreve && (isDelayed || semDesconto || situacao === "a_vencer");
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

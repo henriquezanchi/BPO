@@ -3,7 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import {processEventRefund} from "@/lib/event-refunds";
 import {confirmEventPayment} from "@/lib/event-payments";
 import {asaasGetPaymentStatus} from "@/lib/asaas/client";
-import { contaDeLeituraId } from "@/lib/asaas/conta-escola";
+import { conferirProvisoria, contaDoPagamento } from "@/lib/conta-provisoria";
 import { confirmarPagamento } from "@/lib/asaas/confirm-payment";
 import { confirmarRecargaFortuna } from "@/lib/fortuna/confirmar-recarga";
 import { db } from "@/lib/db";
@@ -46,6 +46,9 @@ export async function POST(req: Request) {
     pixAutomaticRecurringAuthorization?: { id?: string };
   };
 
+  // Conta provisória (23/11/2026): toda mudança de pagamento atualiza o registro (pago com taxa e líquido reais,
+  // estorno, cancelamento). Nunca derruba o webhook.
+  if (body.event?.startsWith("PAYMENT_") && body.payment?.id) await conferirProvisoria(body.payment.id).catch((e) => console.error("Conta provisória:", (e as Error).message));
   if ((body.event === "PAYMENT_RECEIVED" || body.event === "PAYMENT_CONFIRMED") && body.payment?.id) {
     const charge = await db.paymentCharge.findUnique({ where: { asaasPaymentId: body.payment.id } });
     if (charge) await confirmarPagamento(charge.id);
@@ -57,7 +60,7 @@ export async function POST(req: Request) {
     if(recarga)await confirmarRecargaFortuna(recarga.id);
     const registration=await db.eventRegistration.findUnique({where:{asaasPaymentId:body.payment.id},include:{event:{select:{schoolId:true}}}});
     if(registration){
-      const payment=await asaasGetPaymentStatus(body.payment.id,await contaDeLeituraId(registration.event.schoolId));
+      const payment=await asaasGetPaymentStatus(body.payment.id,await contaDoPagamento(body.payment.id,registration.event.schoolId));
       // Responde 200 mesmo sem confirmar (01/11/2026): com erro, o Asaas reenvia e, depois de várias falhas, pode
       // pausar a fila de avisos da conta inteira (parando a confirmação dos outros pagamentos). A conferência fica
       // com a tela do aluno e com a Economia, avisada quando o valor diverge.

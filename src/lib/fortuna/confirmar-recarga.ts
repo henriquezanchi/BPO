@@ -1,5 +1,5 @@
 import { asaasGetPaymentStatus } from "@/lib/asaas/client";
-import { contaDeLeituraId } from "@/lib/asaas/conta-escola";
+import { contaDoPagamento } from "@/lib/conta-provisoria";
 import { db } from "@/lib/db";
 import { notificarErroSuporte } from "@/lib/error-notify";
 import { fortunaCreditarSaldo } from "@/lib/fortuna/client";
@@ -15,7 +15,7 @@ export async function confirmarRecargaFortuna(chargeId: string): Promise<"pago" 
   if (charge.status === "pago") return "pago";
   if (charge.status !== "pendente") return "pendente";
 
-  const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, await contaDeLeituraId(charge.member.schoolId));
+  const pagamento = await asaasGetPaymentStatus(charge.asaasPaymentId, await contaDoPagamento(charge.asaasPaymentId, charge.member.schoolId));
   if (pagamento.status !== "RECEIVED" && pagamento.status !== "CONFIRMED") return "pendente";
 
   const marcou = await db.fortunaTopUpCharge.updateMany({ where: { id: chargeId, status: "pendente" }, data: { status: "pago", paidAt: new Date() } });

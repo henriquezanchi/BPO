@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import { asaasGetPaymentStatus,asaasRefundEventPayment,asaasDeleteEventPayment } from "@/lib/asaas/client";
-import { contaDeLeituraId } from "@/lib/asaas/conta-escola";
+import { contaDoPagamento } from "@/lib/conta-provisoria";
 import { refundErrorMessage,refundPosition } from "@/lib/event-refund-policy";
 
 /** Reembolsa quando a filial cancelou o evento com devolução ou quando o próprio aluno desistiu no prazo (2026-10-22). */
@@ -19,7 +19,7 @@ export async function processEventRefund(registrationId:string) {
   if(!r.asaasPaymentId){
    await save({refundState:'sem_pagamento',refundCheckedAt:now,refundNextAttemptAt:new Date(now.getTime()+900_000)});return;
   }
-  const conta=await contaDeLeituraId(r.event.schoolId);
+  const conta=await contaDoPagamento(r.asaasPaymentId,r.event.schoolId);
   const payment=await asaasGetPaymentStatus(r.asaasPaymentId,conta);
   if(payment.id!==r.asaasPaymentId||r.amount===null||Math.round(Number(r.amount)*100)!==Math.round(payment.value*100))throw Object.assign(Error('Pagamento divergente da inscrição.'),{code:'payment_mismatch'});
   const position=refundPosition(payment);

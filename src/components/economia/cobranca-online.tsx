@@ -3,6 +3,9 @@ import { LancadoAMao } from "@/components/economia/lancado-a-mao";
 import { pedidosDeContato } from "@/lib/whatsapp/conversa";
 import { RepasseCartao } from "@/components/economia/repasse-cartao";
 import { SaqueEscola } from "@/components/economia/saque-escola";
+import { RepassesPanel } from "@/components/economia/repasses-panel";
+import { getAuthenticatedMember } from "@/lib/auth";
+import { devidoAOutras, financeiroAberto, podeVerFinanceiro, resumoDaEscola, temPin } from "@/lib/repasses";
 import { conferirSaques, saldoDaConta, type Saque } from "@/lib/asaas/saque";
 import { asaasGetCreditCardFeeStatus } from "@/lib/asaas/client";
 import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
@@ -39,6 +42,20 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
   ]);
   const sistemaQtd = problemas.sistema.reduce((n, p) => n + p.pessoas.length, 0) + (escola.asaasSubaccountApiKey ? 0 : 1);
   const naEscala = !!escola.mercurioUnidade && config.escopo.includes(escola.mercurioUnidade);
+
+  // Conta provisória (23/11/2026): recebimentos pela conta de Barra e repasse, só para a direção, com PIN.
+  const eu = await getAuthenticatedMember();
+  const titularUni = (process.env.CONTA_PROVISORIA_TITULAR ?? "BGA").toUpperCase();
+  const ehTitular = escola.mercurioUnidade === titularUni;
+  const temProvisoria = !ehTitular && (naEscala || (await db.cobrancaProvisoria.count({ where: { schoolId } })) > 0);
+  let repasse: { pode: boolean; temPin: boolean; resumo: Awaited<ReturnType<typeof resumoDaEscola>> | null } | null = null;
+  if (temProvisoria && eu) {
+    const pode = await podeVerFinanceiro(eu, schoolId);
+    const comPin = pode ? await temPin(eu.id) : false;
+    const aberto = comPin && (await financeiroAberto(eu.id));
+    repasse = { pode, temPin: comPin, resumo: aberto ? await resumoDaEscola(schoolId) : null };
+  }
+  const deOutras = ehTitular ? await devidoAOutras(schoolId).catch(() => 0) : 0;
 
   let exemplo: { base: number; comTaxa: number; taxa: number } | null = null;
   if (escola.asaasSubaccountApiKey) {
@@ -116,6 +133,24 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
         </details>
       </section>
 
+      {repasse && (
+        <section className={card} aria-labelledby="repasse-h">
+          <h2 id="repasse-h" className={h2}>Recebimentos pela conta de Barra do Garças</h2>
+          <p className="text-[13px] text-gray-600 dark:text-gray-400">
+            Enquanto a conta Asaas da escola não é aprovada, as cobranças do Portal saem pela conta da escola de Barra do Garças, com autorização da
+            contabilidade nacional. Cada centavo fica registrado em nome desta escola; a direção vê os valores e pede o repasse para a chave Pix da escola.
+          </p>
+          {repasse.pode ? (
+            <>
+              <RepassesPanel schoolId={schoolId} temPin={repasse.temPin} resumo={repasse.resumo} chaveOk={!!chavePix?.aprovada} />
+              {!chaveApi && <SaqueEscola schoolId={schoolId} saldo={null} chave={chavePix} dono={dono} soChave />}
+            </>
+          ) : (
+            <p className="text-sm text-gray-700 dark:text-gray-300">Só a direção da filial abre estes valores, com o PIN do financeiro.</p>
+          )}
+        </section>
+      )}
+
       {chaveApi && (
         <section className={card} aria-labelledby="saque-h">
           <h2 id="saque-h" className={h2}>Saldo e saque</h2>
@@ -123,6 +158,12 @@ export async function CobrancaOnline({ schoolId, dono }: { schoolId: string; don
             O dinheiro das contribuições pagas pelo Portal fica na conta Asaas da escola. Daqui a Economia transfere o saldo para a conta bancária da escola,
             pela chave Pix cadastrada.
           </p>
+          {deOutras > 0 && (
+            <p className="rounded-lg bg-amber-50 p-3 text-[13px] text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+              Desta conta, {deOutras.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} são de outras escolas do piloto (conta provisória) e saem pelos repasses delas. O saque da
+              escola fica limitado ao restante.
+            </p>
+          )}
           <SaqueEscola schoolId={schoolId} saldo={saldo} chave={chavePix} dono={dono} />
           {saques.length > 0 && (
             <ul className="grid gap-1 text-[13px]">
