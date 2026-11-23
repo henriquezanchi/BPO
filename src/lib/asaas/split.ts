@@ -10,7 +10,7 @@ import { spreadDoMes } from "@/lib/spread";
  * A taxa do Asaas é descontada da subconta que emite; a margem do BPO é sobre o valor da contribuição.
  *
  * Desde 12/11/2026 a margem segue a FAIXA do mês (lib/spread.ts): o total de ativos das escolas do escopo decide uma
- * taxa única (2% até 500 membros ... 0,25% acima de 10.000). Antes era 2% fixo (PERCENTUAL_SPLIT_ESCOLA = 98).
+ * taxa única (2% até 500 membros, 1,5% até 1.500 e 1% acima disso — piso de 1% desde 23/11/2026). Antes era 2% fixo (PERCENTUAL_SPLIT_ESCOLA = 98).
  */
 async function percentualDoBpo(): Promise<number> {
   try {

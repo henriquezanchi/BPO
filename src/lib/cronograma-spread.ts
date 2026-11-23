@@ -35,7 +35,7 @@ export const CRONOGRAMA_INICIAL: AcaoCronograma[] = [
   ], "1 dia", 1, { status: "feito", registros: [R("Decidido: todas as escolas de Goiás, exceto Valparaíso.")] }),
   a("a03", S0, "2026-11-12", "2026-11-12", "Definir o percentual do spread", "Henrique, Diretor Nacional", ["Proposta de 23/10/2026"], "1 dia", 1, {
     status: "feito",
-    obs: "Faixa FIXA (não proporcional): o total de ativos das escolas participantes define uma taxa única, que vale no mês seguinte para o que passar pelo Portal (até 500: 2% · 501–1.500: 1,5% · 1.501–3.000: 1% · 3.001–5.000: 0,75% · 5.001–10.000: 0,5% · acima: 0,25%). Fixo de R$ 3.000/mês abatido pelo spread. Piloto: 1.651 ativos em 12/11 → 1%.",
+    obs: "Faixa FIXA (não proporcional): o total de ativos das escolas participantes define uma taxa única, que vale no mês seguinte para o que passar pelo Portal (até 500: 2% · 501–1.500: 1,5% · acima de 1.500: 1%, piso desde 23/11/2026). Fixo de R$ 3.000/mês abatido pelo spread. Piloto: 1.651 ativos em 12/11 → 1%.",
     registros: [R("Decidido conforme a proposta de 23/10 e a conversa com Ana Beatriz de 05/11."), R("Corrigido: faixa fixa, não proporcional. Piloto com 1.651 ativos → 1%.")],
   }),
   a("a04", S0, "2026-11-12", "2026-11-12", "Definir quem paga a taxa do Asaas", "Henrique, Diretor Nacional", [], "1 dia", 1, {

@@ -1355,3 +1355,7 @@ Autorização do responsável pela contabilidade nacional: enquanto a escola do 
 4. **Tela**: Economia → Cobrança on-line → "Recebimentos pela conta de Barra do Garças" (`components/economia/repasses-panel.tsx`), com chave Pix (`SaqueEscola soChave`) para escola sem conta própria.
 5. **Abertura do piloto** (`scripts/abrir-filial-db.ts --gravar`): JAM 279 logins, STO 60, GAR 33, APS 113, GY2 51, ALT 39, ELD 37, PER 38, CAT 31, ITU 1.
    - Correção em `mercurio-db/importar.ts`: o cache de grupo e turma guarda a promessa, não o id. Pessoas do mesmo lote, em paralelo, criavam o mesmo grupo e esbarravam em `ClassGroup_schoolId_name_key`.
+
+## 23/11/2026 — Spread com piso de 1% (Claude)
+
+Decisão do usuário: a faixa mais baixa passa a ser 1%. Tabela em `lib/spread-comum.ts`: até 500 membros 2%, de 501 a 1.500 1,5%, acima de 1.500 1% (antes 0,75%, 0,5% e 0,25% acima de 3.000). Proposta Piloto (HTML e PDF) e cronograma atualizados.

@@ -6,10 +6,8 @@
 export const FAIXAS_SPREAD = [
   { de: 1, ate: 500, percentual: 2 },
   { de: 501, ate: 1500, percentual: 1.5 },
-  { de: 1501, ate: 3000, percentual: 1 },
-  { de: 3001, ate: 5000, percentual: 0.75 },
-  { de: 5001, ate: 10000, percentual: 0.5 },
-  { de: 10001, ate: Infinity, percentual: 0.25 },
+  // Piso de 1% (decisão do usuário em 23/11/2026; antes caía para 0,75%, 0,5% e 0,25% acima de 3.000 membros).
+  { de: 1501, ate: Infinity, percentual: 1 },
 ] as const;
 
 export type FaixaSpread = (typeof FAIXAS_SPREAD)[number];
