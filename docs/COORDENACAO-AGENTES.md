@@ -1367,3 +1367,9 @@ Pedido do usuário: um app que a pessoa baixa por um link. Feito como Trusted We
 - APK em `public/app/portal-nova-acropole.apk`; página pública de download em `/app` (Android e instruções para iPhone).
 - Tela cheia: `public/.well-known/assetlinks.json` com a impressão do certificado. A chave de assinatura fica fora do repositório (`C:\Users\Henrique Zanchi\Android\portal-na-release.jks`, senha `ANDROID_KEYSTORE_SENHA` no `.env`); sem ela não há atualização do app.
 - Domínio no app: `portal-na-one.vercel.app`. Trocar de domínio exige gerar o APK de novo.
+
+## 23/11/2026 — Repasse automático e régua automática do WhatsApp (Claude)
+
+- **Repasse automático** (`repassesAutomaticos` em `lib/repasses.ts`, rotina financeira): dias 11, 21 e último dia do mês, a partir das 9h de Brasília, uma tentativa por escola por dia, mínimo R$ 10, só com chave Pix liberada. Registro com `pedidoPorId = "automatico"`; o painel marca "automático". O pedido manual e o automático usam o mesmo núcleo (`transferirRepasse`).
+- **Régua automática do WhatsApp** (`lib/whatsapp/regua.ts`, rotina financeira): dia 7 "vence em breve", dia 10 "vence hoje", dia 20 em diante "em aberto", só nas filiais que recebem pelo Portal. Desligada até `WHATSAPP_REGUA=ligada` e o WhatsApp oficial configurado. Teto diário `WHATSAPP_REGUA_TETO` (padrão 100), 40 por rodada, das 9h às 20h. Depende da migração `20261026180000_whatsapp_financeiro_instagram` (tabela `WhatsappEnvio`), ainda não aplicada.
+- Guia dos dirigentes atualizado (`/guia-dirigentes.pdf`).

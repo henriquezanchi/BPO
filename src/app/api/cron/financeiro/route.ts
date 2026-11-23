@@ -1,9 +1,10 @@
 import { confirmarContribuicoesPendentes, criarCicloPixAutomatico } from "@/lib/asaas/pix-automatico-ciclo";
 import { conferirProvisoriasPendentes } from "@/lib/conta-provisoria";
-import { conferirRepasses } from "@/lib/repasses";
+import { conferirRepasses, repassesAutomaticos } from "@/lib/repasses";
 import { conferirRecargasPendentes } from "@/lib/fortuna/confirmar-recarga";
 import { conferirMatriculasPendentes } from "@/lib/matricula-online";
 import { autorizadoCron, executarRotina } from "@/lib/rotinas";
+import { reguaAutomatica } from "@/lib/whatsapp/regua";
 
 /**
  * Rotina financeira (vercel.json, a cada 10 minutos; 26/10/2026, substitui o Railway): confere no Asaas as cobranças
@@ -21,6 +22,8 @@ export async function GET(req: Request) {
     // acompanha os repasses em andamento.
     contaProvisoria: () => conferirProvisoriasPendentes(),
     repasses: conferirRepasses,
+    repassesAutomaticos: () => repassesAutomaticos(),
+    reguaWhatsapp: () => reguaAutomatica(),
     recargasFortuna: conferirRecargasPendentes,
     matriculas: () => conferirMatriculasPendentes(),
     pixAutomatico: criarCicloPixAutomatico,

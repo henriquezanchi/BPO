@@ -89,7 +89,7 @@ export type ResumoRepasse = {
   aReceber: number;
   aReceberQtd: number;
   cobrancas: { data: string; origem: string; quem: string; bruto: number; liquido: number | null; status: string; repassado: boolean }[];
-  repasses: { id: string; data: string; valor: number; tarifa: number; status: string; chave: string; erro: string | null }[];
+  repasses: { id: string; data: string; valor: number; tarifa: number; status: string; chave: string; erro: string | null; automatico: boolean }[];
 };
 
 export async function resumoDaEscola(schoolId: string): Promise<ResumoRepasse> {
@@ -127,7 +127,7 @@ export async function resumoDaEscola(schoolId: string): Promise<ResumoRepasse> {
       status: l.status,
       repassado: !!l.repasseId,
     })),
-    repasses: repasses.map((r) => ({ id: r.id, data: r.createdAt.toISOString(), valor: dec(r.valor), tarifa: dec(r.tarifa), status: r.status, chave: r.chavePix, erro: r.erro })),
+    repasses: repasses.map((r) => ({ id: r.id, data: r.createdAt.toISOString(), valor: dec(r.valor), tarifa: dec(r.tarifa), status: r.status, chave: r.chavePix, erro: r.erro, automatico: r.pedidoPorId === REPASSE_AUTOMATICO })),
   };
 }
 
@@ -146,13 +146,21 @@ const STATUS: Record<string, string> = { PENDING: "enviado", BANK_PROCESSING: "e
 export async function pedirRepasse(m: Pessoa, schoolId: string) {
   if (!(await podeVerFinanceiro(m, schoolId))) throw new Error("Só a direção da filial pede repasse.");
   if (!(await financeiroAberto(m.id))) throw new Error("Digite o PIN de novo.");
+  return transferirRepasse(schoolId, m.id);
+}
+
+/** Pedido de repasse feito pela rotina (repasse automático), não por uma pessoa. */
+export const REPASSE_AUTOMATICO = "automatico";
+
+/** Núcleo do repasse: confere a chave Pix, reserva as cobranças livres e pede a transferência ao Asaas. */
+async function transferirRepasse(schoolId: string, pedidoPorId: string, minimo = 1) {
   const chave = await chavePixDaEscola(schoolId);
   if (!chave) throw new Error("Cadastre antes a chave Pix da escola (Saldo e saque → chave Pix).");
   if (!chave.aprovada) throw new Error("A chave Pix da escola ainda espera a aprovação do administrador do Portal.");
   const linhas = await db.cobrancaProvisoria.findMany({ where: { schoolId, status: "pago", origem: { in: ORIGENS }, repasseId: null } });
   if (!linhas.length) throw new Error("Não há valor disponível para repasse.");
   const valor = r2(linhas.reduce((s, l) => s + dec(l.valorLiquido), 0));
-  if (valor < 1) throw new Error("O valor disponível ainda é menor que R$ 1,00.");
+  if (valor < minimo) throw new Error(`O valor disponível ainda é menor que ${minimo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`);
   const titularId = linhas[0].titularSchoolId;
   const titular = await db.school.findUniqueOrThrow({ where: { id: titularId }, select: { asaasSubaccountApiKey: true, name: true } });
   if (!titular.asaasSubaccountApiKey) throw new Error("A conta titular não está ligada ao Portal.");
@@ -160,7 +168,7 @@ export async function pedirRepasse(m: Pessoa, schoolId: string) {
 
   // Reserva as cobranças no repasse antes de transferir (só as que ainda estão livres).
   const repasse = await db.$transaction(async (tx) => {
-    const r = await tx.repasseFilial.create({ data: { schoolId, titularSchoolId: titularId, valor, chavePix: chave.chave, tipoChave: chave.tipo, pedidoPorId: m.id } });
+    const r = await tx.repasseFilial.create({ data: { schoolId, titularSchoolId: titularId, valor, chavePix: chave.chave, tipoChave: chave.tipo, pedidoPorId } });
     const marcadas = await tx.cobrancaProvisoria.updateMany({ where: { id: { in: linhas.map((l) => l.id) }, repasseId: null }, data: { repasseId: r.id } });
     if (marcadas.count !== linhas.length) throw new Error("Outro pedido de repasse acabou de ser feito. Atualize a tela.");
     return r;
@@ -190,6 +198,40 @@ export async function pedirRepasse(m: Pessoa, schoolId: string) {
     ]);
     throw new Error(`O Asaas recusou o repasse: ${(e as Error).message}`);
   }
+}
+
+/**
+ * Repasse automático (pedido do usuário em 23/11/2026): nos dias 11, 21 e no último dia do mês, a partir das 9h de
+ * Brasília, cada escola com valor disponível recebe o repasse na chave Pix dela. Exige a chave Pix cadastrada e liberada;
+ * sem ela, a escola fica de fora (o painel avisa) e o valor espera o próximo dia de repasse ou o pedido da direção.
+ * Uma tentativa por escola por dia (a rotina roda a cada 10 minutos). Mínimo de R$ 10, para a tarifa não comer o valor.
+ */
+export async function repassesAutomaticos(agora = new Date()) {
+  const sp = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const ultimo = new Date(sp.getFullYear(), sp.getMonth() + 1, 0).getDate();
+  if (![11, 21, ultimo].includes(sp.getDate()) || sp.getHours() < 9) return { hoje: false };
+  const inicioDoDia = new Date(agora.getTime() - ((sp.getHours() * 60 + sp.getMinutes()) * 60 + sp.getSeconds()) * 1000);
+  const escolas = await db.cobrancaProvisoria.groupBy({ by: ["schoolId"], where: { status: "pago", origem: { in: ORIGENS }, repasseId: null } });
+  let feitos = 0;
+  let semChave = 0;
+  const falhas: string[] = [];
+  for (const { schoolId } of escolas) {
+    const jaHoje = await db.repasseFilial.findFirst({ where: { schoolId, pedidoPorId: REPASSE_AUTOMATICO, createdAt: { gte: inicioDoDia } }, select: { id: true } });
+    if (jaHoje) continue;
+    const chave = await chavePixDaEscola(schoolId);
+    if (!chave?.aprovada) {
+      semChave++;
+      continue;
+    }
+    try {
+      await transferirRepasse(schoolId, REPASSE_AUTOMATICO, 10);
+      feitos++;
+    } catch (e) {
+      // Valor abaixo do mínimo não é falha: espera o próximo dia de repasse.
+      if (!/menor que|Não há valor/.test((e as Error).message)) falhas.push(`${schoolId}: ${(e as Error).message}`);
+    }
+  }
+  return { hoje: true, feitos, semChave, falhas };
 }
 
 /** Rotina: atualiza os repasses em andamento; repasse que falhou libera as cobranças para um novo pedido. */

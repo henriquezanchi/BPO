@@ -88,7 +88,7 @@ export function RepassesPanel(p: { schoolId: string; temPin: boolean; resumo: Re
       {r.titular && <p className="text-xs text-gray-500">Recebido pela conta de {r.titular} em nome da escola, enquanto a conta própria não é aprovada.</p>}
 
       {!p.chaveOk ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">Para receber, cadastre a chave Pix da escola logo abaixo (ela precisa estar liberada).</p>
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">Para receber, cadastre a chave Pix da escola logo abaixo (ela precisa estar liberada). Sem a chave, o repasse automático não acontece.</p>
       ) : r.disponivel >= 1 ? (
         <div className="flex flex-wrap items-center gap-2">
           {!confirmar ? (
@@ -104,7 +104,7 @@ export function RepassesPanel(p: { schoolId: string; temPin: boolean; resumo: Re
               <button type="button" onClick={() => setConfirmar(false)} className="min-h-10 rounded-lg px-3 text-sm font-semibold">Não</button>
             </>
           )}
-          <span className="basis-full text-xs text-gray-500">A tarifa da transferência, quando houver, é descontada no repasse seguinte.</span>
+          <span className="basis-full text-xs text-gray-500">O repasse também sai sozinho nos dias 11, 21 e no último dia do mês, a partir de R$ 10. A tarifa da transferência, quando houver, é descontada no repasse seguinte.</span>
         </div>
       ) : (
         <p className="text-sm text-gray-500">Nada disponível para repasse agora.</p>
@@ -117,7 +117,7 @@ export function RepassesPanel(p: { schoolId: string; temPin: boolean; resumo: Re
           <ul className="mt-1 grid gap-1">
             {r.repasses.map((x) => (
               <li key={x.id} className="flex flex-wrap justify-between gap-x-3 border-t border-gray-100 pt-1 tabular-nums dark:border-gray-800">
-                <span>{new Date(x.data).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · <b>{brl(x.valor)}</b>{x.tarifa ? ` (tarifa ${brl(x.tarifa)})` : ""}</span>
+                <span>{new Date(x.data).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · <b>{brl(x.valor)}</b>{x.tarifa ? ` (tarifa ${brl(x.tarifa)})` : ""}{x.automatico ? " · automático" : ""}</span>
                 <span className={x.status === "concluido" ? "text-emerald-700 dark:text-emerald-400" : x.status === "falhou" ? "text-red-700 dark:text-red-400" : "text-gray-600"}>{STATUS_REP[x.status] ?? x.status}{x.erro ? ` — ${x.erro}` : ""}</span>
               </li>
             ))}
