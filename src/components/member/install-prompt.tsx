@@ -32,6 +32,9 @@ function getSnapshotIOS(): boolean {
 function getServerSnapshotIOS(): boolean {
   return false;
 }
+function getSnapshotAndroid(): boolean {
+  return /Android/i.test(navigator.userAgent);
+}
 
 function marcarDispensado() {
   try {
@@ -53,6 +56,8 @@ export function InstallPrompt() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const dispensado = useSyncExternalStore(subscribe, getSnapshotDispensado, getServerSnapshotDispensado);
   const isIOS = useSyncExternalStore(subscribe, getSnapshotIOS, getServerSnapshotIOS);
+  // Android sem o convite do Chrome (outro navegador, ou o Chrome ainda não ofereceu): leva ao app (APK) em /app (23/11/2026).
+  const isAndroid = useSyncExternalStore(subscribe, getSnapshotAndroid, getServerSnapshotIOS);
 
   useEffect(() => {
     function handler(e: Event) {
@@ -70,7 +75,7 @@ export function InstallPrompt() {
     if (outcome === "accepted") setPromptEvent(null);
   }
 
-  if (dispensado || (!promptEvent && !isIOS)) return null;
+  if (dispensado || (!promptEvent && !isIOS && !isAndroid)) return null;
 
   return (
     <div className="mx-4 mb-3 flex items-start gap-2.5 rounded-xl border border-na-green/30 bg-na-green-light p-3 text-left dark:border-emerald-900 dark:bg-emerald-950/30">
@@ -81,6 +86,10 @@ export function InstallPrompt() {
           <p className="text-[11px] text-gray-600 dark:text-gray-400">
             Toque em compartilhar <span aria-hidden>⎋</span> e depois em &quot;Adicionar à Tela de Início&quot;. Assim você também recebe as notificações dos encontros e avisos.
           </p>
+        ) : !promptEvent ? (
+          <a href="/app" className="mt-1 inline-block text-[11px] font-semibold text-na-green underline dark:text-emerald-400">
+            Baixar o app
+          </a>
         ) : (
           <button onClick={handleInstalar} className="mt-1 text-[11px] font-semibold text-na-green underline dark:text-emerald-400">
             Instalar agora
