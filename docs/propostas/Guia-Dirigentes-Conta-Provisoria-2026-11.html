@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Guia dos dirigentes: recebimentos pelo Portal</title>
+<style>
+  /* Fonte do PDF: gerar com `npx tsx scripts/gerar-guia-dirigentes.ts`. Mesmo visual da Proposta Piloto. */
+  @page { size: A4; margin: 18mm 18mm 20mm; }
+  :root { --verde: #0f3d33; --verde2: #0b6b55; --linha: #dfe7e3; --fundo: #f0f5f2; --texto: #1d2a25; --cinza: #5c6b65; --ambar: #8a5a00; --ambarfundo: #fbf3e2; }
+  * { box-sizing: border-box; }
+  body { font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif; color: var(--texto); font-size: 10.5pt; line-height: 1.45; margin: 0; }
+  .quebra { break-before: page; }
+  table, .caixa, .atencao, h2, h3 { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .olho { font-size: 8.5pt; color: var(--cinza); letter-spacing: .04em; text-transform: uppercase; margin: 0 0 6mm; }
+  h1 { font-size: 24pt; line-height: 1.1; color: var(--verde); margin: 0 0 4mm; }
+  h2 { font-size: 14pt; color: var(--verde2); margin: 6mm 0 2mm; }
+  h3 { font-size: 11pt; color: var(--verde); margin: 4mm 0 1mm; }
+  .sub { font-size: 12pt; color: var(--cinza); margin: 0 0 5mm; }
+  p { margin: 1.2mm 0 2mm; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 9.6pt; }
+  th { background: var(--fundo); text-align: left; font-weight: 700; color: #4a5853; padding: 1.8mm 3mm; border-bottom: 1.4px solid var(--verde2); }
+  td { padding: 1.5mm 3mm; border-bottom: 1px solid var(--linha); vertical-align: top; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.destaque td { background: #e3f1ea; font-weight: 700; color: var(--verde); }
+  ul, ol { margin: 1mm 0 2mm; padding-left: 5mm; }
+  li { margin: 0.9mm 0; }
+  .nota { font-size: 8.8pt; color: var(--cinza); }
+  .caixa { background: var(--fundo); border-left: 3px solid var(--verde2); padding: 3mm 4mm; margin: 3mm 0; }
+  .atencao { background: var(--ambarfundo); border-left: 3px solid var(--ambar); padding: 3mm 4mm; margin: 3mm 0; }
+  .passo { display: grid; grid-template-columns: 9mm 1fr; gap: 3mm; margin: 2.5mm 0; break-inside: avoid; }
+  .num { width: 8mm; height: 8mm; border-radius: 50%; background: var(--verde2); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 10pt; }
+  .passo p { margin: 0.5mm 0; }
+  .check { list-style: none; padding-left: 0; }
+  .check li::before { content: "☐ "; color: var(--verde2); font-weight: 700; }
+  .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+</style>
+</head>
+<body>
+
+<section>
+  <p class="olho">Portal Nova Acrópole · Brasil Norte · Dezembro de 2026</p>
+  <h1>Recebimentos pelo Portal: guia para a direção da escola</h1>
+  <p class="sub">O que muda em dezembro, como acompanhar o dinheiro da sua escola e como abrir a conta Asaas própria.</p>
+
+  <div class="caixa">
+    <b>Em resumo</b>
+    <ul>
+      <li>A partir de dezembro, os membros da sua escola pagam contribuições, eventos e recargas do Fortuna pelo Portal, com Pix ou cartão.</li>
+      <li>Enquanto a conta Asaas da sua escola não estiver aprovada, o dinheiro entra na <b>conta da escola de Barra do Garças</b>, em nome da sua escola. A contabilidade nacional autorizou esse arranjo.</li>
+      <li>Cada pagamento fica registrado em nome da sua escola. A direção vê tudo no Portal, protegido por um PIN, e pede o repasse para a chave Pix da escola quando quiser.</li>
+      <li>O objetivo é que a sua escola tenha a <b>conta própria aprovada ainda em dezembro</b>. Quando isso acontecer, as cobranças novas passam sozinhas para ela.</li>
+    </ul>
+  </div>
+
+  <h2>1. O que muda para os membros</h2>
+  <ul>
+    <li>No Portal, em <b>Pagar</b>, o membro vê o que está em aberto e paga com Pix, cartão ou débito automático por Pix.</li>
+    <li>O pagamento é lançado no Mercúrio automaticamente. Quando o lançamento automático não der certo, ele aparece para a Economia em <b>Economia → Cobrança on-line → Problemas no pagamento</b>. A Economia lança à mão e marca "Já lancei no Mercúrio".</li>
+    <li>O membro corrige os próprios dados de cadastro (endereço, celular, e-mail) e a alteração vale na hora. Um filtro recusa o que não é dado de cadastro.</li>
+  </ul>
+
+  <h2>2. Por que a conta de Barra do Garças</h2>
+  <p>Toda cobrança do Portal sai por uma conta Asaas em nome de uma escola. Abrir a conta de cada escola depende de documentos e da análise do Asaas, e isso leva alguns dias. Para não adiar o início, a contabilidade nacional autorizou que, <b>neste período</b>, as escolas do piloto sem conta aprovada recebam pela conta de Barra do Garças, com repasse depois.</p>
+  <p>A conta de Barra do Garças apenas guarda o dinheiro. O valor de cada escola é separado no Portal, centavo por centavo, e não pode ser sacado por Barra do Garças: o Portal limita o saque de Barra ao que é dela.</p>
+
+  <h2>3. Quanto chega à escola</h2>
+  <table>
+    <tr><th>Item</th><th>Como é calculado</th></tr>
+    <tr><td>Valor pago pelo membro</td><td>O valor da contribuição, do evento ou da recarga.</td></tr>
+    <tr><td>(−) Taxa do Asaas</td><td>A taxa real de cada pagamento (Pix ou cartão), lida do próprio Asaas.</td></tr>
+    <tr><td>(−) Spread do Portal</td><td>1% do valor, a faixa do piloto. Já é separado no momento do pagamento.</td></tr>
+    <tr><td>(−) Tarifa da transferência</td><td>Quando o Asaas cobrar pela transferência do repasse, ela é descontada no repasse seguinte.</td></tr>
+    <tr class="destaque"><td>= Líquido da escola</td><td>O que aparece como "Disponível para repasse".</td></tr>
+  </table>
+  <p class="nota">Se um pagamento for estornado depois de repassado, o valor volta como desconto no próximo repasse. Tudo aparece na lista de cobranças do painel.</p>
+</section>
+
+<section>
+  <h2>4. Como acompanhar e pedir o repasse</h2>
+  <p>Só a direção da escola (diretor ou diretora e quem responde pela filial no Mercúrio) abre estes valores.</p>
+
+  <div class="passo"><div class="num">1</div><div>
+    <p><b>Entre no Portal</b> e vá em <b>Economia → Cobrança on-line</b>. Procure o quadro <b>"Recebimentos pela conta de Barra do Garças"</b>.</p>
+  </div></div>
+  <div class="passo"><div class="num">2</div><div>
+    <p><b>Crie o seu PIN do financeiro</b>, de 6 números, na primeira vez. Ele é pessoal: não compartilhe com ninguém. Evite sequências como 123456 ou números repetidos; o Portal recusa.</p>
+  </div></div>
+  <div class="passo"><div class="num">3</div><div>
+    <p><b>Digite o PIN para abrir.</b> Os valores ficam visíveis por 10 minutos e depois fecham sozinhos. Há também o botão "Fechar agora". Cinco erros seguidos bloqueiam o PIN por um tempo.</p>
+  </div></div>
+  <div class="passo"><div class="num">4</div><div>
+    <p><b>Confira os números:</b></p>
+    <ul>
+      <li><b>Disponível para repasse:</b> o líquido já pago e ainda não transferido.</li>
+      <li><b>A receber dos alunos:</b> cobranças emitidas e ainda não pagas.</li>
+      <li><b>Já repassado:</b> o que já foi transferido para a escola.</li>
+      <li>Abaixo, a lista de cada cobrança (data, pessoa, tipo, valor, líquido e situação) e o histórico de repasses.</li>
+    </ul>
+  </div></div>
+  <div class="passo"><div class="num">5</div><div>
+    <p><b>Cadastre a chave Pix da escola</b>, logo abaixo do painel. Use de preferência a chave <b>CNPJ da própria escola</b>: ela é liberada na hora. Outra chave (e-mail, telefone, aleatória) só é liberada depois da aprovação do administrador do Portal. Isso evita que o dinheiro vá para a conta de uma pessoa.</p>
+  </div></div>
+  <div class="passo"><div class="num">6</div><div>
+    <p><b>Toque em "Solicitar repasse"</b> e confirme. O Portal pede a transferência ao Asaas na hora, para a chave Pix da escola. A situação aparece no histórico: Pedido, Em andamento, Concluído ou Não realizado (com o motivo).</p>
+  </div></div>
+
+  <div class="atencao">
+    <b>Débito automático por Pix.</b> Quem autorizar o débito automático enquanto a escola recebe pela conta de Barra do Garças terá a autorização ligada a essa conta. Quando a conta própria da escola for aprovada, essas pessoas precisarão autorizar de novo pelo Portal.
+  </div>
+
+  <h2>5. Responsabilidades</h2>
+  <table>
+    <tr><th>Quem</th><th>O que faz</th></tr>
+    <tr><td>Direção da escola</td><td>Cria o PIN, cadastra a chave Pix, confere os valores e pede os repasses. Providencia os documentos da conta Asaas.</td></tr>
+    <tr><td>Economia da escola</td><td>Acompanha os problemas de pagamento e lança à mão no Mercúrio o que o lançamento automático não fizer.</td></tr>
+    <tr><td>Escola de Barra do Garças</td><td>Mantém a conta ativa. Não precisa fazer nada nos repasses: o Portal transfere direto.</td></tr>
+    <tr><td>Equipe do Portal</td><td>Abre a conta Asaas de cada escola, envia o link de documentos, aprova chaves Pix e acompanha os repasses.</td></tr>
+  </table>
+</section>
+
+<section class="quebra">
+  <h2>6. Passo a passo: conta Asaas própria da escola</h2>
+  <p>A conta é aberta no CNPJ da escola. É ela que deixa a escola receber direto, sem repasse.</p>
+
+  <h3>Antes de começar, separe</h3>
+  <ul class="check">
+    <li><b>Estatuto social</b> da associação, em PDF.</li>
+    <li><b>Ata de eleição da diretoria atual</b>, registrada e dentro do mandato. Ata vencida é o motivo de recusa mais comum.</li>
+    <li><b>Documento com foto do representante legal</b> (presidente ou quem a ata indica): RG ou CNH, frente e verso.</li>
+    <li><b>Celular do representante legal</b>, com câmera, para a selfie.</li>
+    <li><b>Comprovante de endereço</b> da escola.</li>
+    <li><b>Conta bancária no CNPJ da escola</b> (banco, agência e conta), para onde o dinheiro vai.</li>
+  </ul>
+
+  <div class="passo"><div class="num">1</div><div>
+    <p><b>Envie à equipe do Portal</b>: CNPJ, razão social, e-mail e celular do representante legal, e o endereço da escola. Se a escola <b>já tem conta Asaas</b>, avise: nesse caso não abrimos outra (o Asaas não aceita duas contas no mesmo CNPJ), e combinamos a ligação da conta existente.</p>
+  </div></div>
+  <div class="passo"><div class="num">2</div><div>
+    <p><b>Nós abrimos a conta</b> em nome da escola e enviamos ao representante legal o <b>link de envio de documentos</b>. O Asaas também manda um e-mail para criar a senha de acesso.</p>
+  </div></div>
+  <div class="passo"><div class="num">3</div><div>
+    <p><b>O representante legal abre o link no celular</b> e envia, nesta ordem:</p>
+    <ol>
+      <li>documento com foto (frente e verso, sem reflexo, legível);</li>
+      <li>selfie, seguindo as instruções da tela (rosto descoberto, boa luz);</li>
+      <li>estatuto social e ata de eleição da diretoria atual;</li>
+      <li>comprovante de endereço.</li>
+    </ol>
+  </div></div>
+  <div class="passo"><div class="num">4</div><div>
+    <p><b>Cadastre a conta bancária da escola</b> no Asaas (Minha conta → Dados bancários), no mesmo CNPJ.</p>
+  </div></div>
+  <div class="passo"><div class="num">5</div><div>
+    <p><b>O Asaas analisa</b>, em geral em 1 a 3 dias úteis. Se pedir correção, o aviso chega por e-mail ao representante. Responda logo: cada dia parado é um dia a mais de repasse.</p>
+  </div></div>
+  <div class="passo"><div class="num">6</div><div>
+    <p><b>Aprovada a conta, nós fazemos um teste</b> e ligamos a conta ao Portal. As cobranças novas passam a sair pela conta da escola. O que já foi recebido por Barra do Garças continua no painel até o último repasse.</p>
+  </div></div>
+
+  <div class="caixa">
+    <b>Onde a escola de Barra do Garças está hoje</b> (para dar ideia do que costuma faltar): dados comerciais aprovados; ata de eleição em análise; <b>documento com foto e selfie do representante ainda não enviados</b>; conta bancária pendente. As escolas do piloto passam a receber pela conta de Barra assim que ela for aprovada.
+  </div>
+
+  <h2>7. Datas</h2>
+  <table>
+    <tr><th>Quando</th><th>O quê</th></tr>
+    <tr><td>Até 30/11</td><td>Direção cria o PIN e cadastra a chave Pix CNPJ. Escola envia os dados do passo 1.</td></tr>
+    <tr><td>1ª semana de dezembro</td><td>Envio dos documentos e da selfie pelo link. Cobranças de dezembro pelo Portal.</td></tr>
+    <tr><td>Dezembro</td><td>Repasses sempre que a direção pedir. Contas próprias aprovadas e ligadas ao Portal.</td></tr>
+    <tr><td>Janeiro de 2027</td><td>Escolas do piloto recebendo pela conta própria. Fim do uso da conta de Barra do Garças para novas cobranças.</td></tr>
+  </table>
+
+  <p class="nota">Dúvidas: fale com a equipe do Portal. Nunca envie senha, PIN ou chave de API por WhatsApp ou e-mail.</p>
+</section>
+
+</body>
+</html>
