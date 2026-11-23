@@ -13,7 +13,7 @@ import { useMemo, useState, useTransition } from "react";
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const novaChave = () => (crypto.randomUUID?.() ?? `${Date.now()}${Math.random()}`).replace(/[^A-Za-z0-9]/g, "").slice(0, 32);
 
-export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produtos: FortunaProduto[]; saldo: number | null; nome: string }) {
+export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produtos: FortunaProduto[]; saldo: number | null; nome: string; demo?: boolean }) {
   const [qtd, setQtd] = useState<Record<number, number>>({});
   const [chave, setChave] = useState(novaChave);
   const [venda, setVenda] = useState<FortunaVendaResultado | null>(null);
@@ -25,6 +25,17 @@ export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produ
   const total = itens.reduce((s, i) => s + Number(p.produtos.find((x) => x.id === i.productId)?.price ?? 0) * i.amount, 0);
   const falta = p.saldo !== null && total > p.saldo;
 
+  // Demonstração: mesma tela e mesmo comprovante, sem chamar o Fortuna.
+  const simular = (): { ok: true; venda: FortunaVendaResultado } => {
+    const linhas = itens.map((i) => {
+      const x = p.produtos.find((y) => y.id === i.productId)!;
+      return { productId: x.id, title: x.title, amount: i.amount, unitPrice: x.price, value: (Number(x.price) * i.amount).toFixed(2) };
+    });
+    return {
+      ok: true,
+      venda: { invoiceId: 1000 + (parseInt(chave.slice(0, 5), 36) % 9000), saleDate: new Date().toISOString(), cashier: { id: 0, title: p.caixa, branchId: 0 }, items: linhas, total: total.toFixed(2), balance: ((p.saldo ?? 0) - total).toFixed(2) },
+    };
+  };
   const mudar = (id: number, delta: number, max: number) => setQtd((q) => ({ ...q, [id]: Math.max(0, Math.min(max, (q[id] ?? 0) + delta)) }));
 
   if (venda)
@@ -61,7 +72,7 @@ export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produ
             disabled={pendente}
             onClick={() =>
               iniciar(async () => {
-                const r = await cancelarCompraCafe(venda.invoiceId);
+                const r = p.demo ? { ok: true } : await cancelarCompraCafe(venda.invoiceId);
                 if (r.ok) setCancelada(true);
                 else setErro(r.error ?? "Não deu para cancelar.");
               })
@@ -145,7 +156,7 @@ export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produ
             onClick={() =>
               iniciar(async () => {
                 setErro("");
-                const r = await comprarNoCafe(p.cashierId, itens, chave);
+                const r = p.demo ? simular() : await comprarNoCafe(p.cashierId, itens, chave);
                 if (r.ok) setVenda(r.venda);
                 else setErro(r.error);
               })

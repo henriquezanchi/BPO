@@ -156,12 +156,16 @@ function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; 
     startTransition(async () => {
       try {
         const res = await solicitarAlteracaoContato(memberId, { whatsapp: novoWhatsapp.trim(), email: novoEmail.trim() });
+        if (res.erro) {
+          setAviso({ ok: false, texto: res.erro });
+          return;
+        }
         if (!res.solicitado) {
-          setAviso({ ok: false, texto: "Nada mudou: altere o WhatsApp ou o e-mail antes de enviar." });
+          setAviso({ ok: false, texto: "Nada mudou: altere o WhatsApp ou o e-mail antes de salvar." });
           return;
         }
         setEditando(false);
-        setAviso({ ok: true, texto: "Solicitação enviada. A secretaria vai conferir antes de alterar seu cadastro." });
+        setAviso({ ok: true, texto: "Contato atualizado no seu cadastro." });
         getSolicitacaoContatoPendente(memberId).then(setPendente);
       } catch (e) {
         setAviso({ ok: false, texto: (e as Error).message || "Não foi possível enviar agora. Tente de novo." });
@@ -188,7 +192,7 @@ function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; 
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={handleSolicitar} disabled={isPending} className="rounded-lg bg-na-green transition hover:bg-na-green-dark px-3 min-h-10 text-[13px] font-semibold text-white disabled:opacity-60">
-              {isPending ? <Loader2 size={12} className="animate-spin" /> : "Enviar solicitação"}
+              {isPending ? <Loader2 size={12} className="animate-spin" /> : "Salvar"}
             </button>
             <button
               type="button"
@@ -213,7 +217,7 @@ function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; 
             onClick={() => setEditando(true)}
             className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-3 text-[12px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
           >
-            <Pencil size={12} /> Pedir correção
+            <Pencil size={12} /> Corrigir
           </button>
         </div>
       )}
@@ -232,7 +236,7 @@ function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; 
 export function ProfileEditPanel(props: ProfileEditPanelProps) {
   const { memberId, name, avatarUrl } = props;
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ changed: boolean; alerted: boolean } | null>(null);
+  const [result, setResult] = useState<{ changed: boolean; alerted: boolean; erro?: string | null } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   // "Meus dados" em modo leitura (avaliação de design e relato de aluno, 10/11/2026): o endereço só vira formulário
   // depois de "Pedir correção", para não parecer editável na hora.
@@ -285,7 +289,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       <div className="mb-4 flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
         <Clock size={14} className="mt-0.5 shrink-0 text-gray-400" />
         <span>
-          Estes são os dados do seu cadastro na escola. Para corrigir algo, toque em <strong className="text-gray-800 dark:text-gray-100">Pedir correção</strong>: a secretaria confere e
+          Estes são os dados do seu cadastro na escola. Para corrigir algo, toque em <strong className="text-gray-800 dark:text-gray-100">Corrigir</strong>: a alteração vale na hora e
           atualiza o cadastro.
         </span>
       </div>
@@ -308,12 +312,12 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
             onClick={() => setCorrigindoEndereco(true)}
             className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-3 text-[12px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
           >
-            <Pencil size={12} /> Pedir correção
+            <Pencil size={12} /> Corrigir
           </button>
         </div>
       ) : (
       <div className="mb-5 flex flex-col rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-      <p className="mb-3 text-[12px] text-gray-600 dark:text-gray-400">Corrija o que estiver errado e envie. O endereço muda no cadastro depois que a secretaria conferir.</p>
+      <p className="mb-3 text-[12px] text-gray-600 dark:text-gray-400">Corrija o que estiver errado e salve. O endereço muda no seu cadastro na hora.</p>
 
       <div className="mb-3 grid grid-cols-3 gap-2">
         <div className="col-span-2 flex flex-col gap-1">
@@ -422,7 +426,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       >
         <span>
           Mais dados
-          <span className="block text-[12px] font-normal text-gray-500 dark:text-gray-400">Nascimento, documentos, profissão (correção também por pedido)</span>
+          <span className="block text-[12px] font-normal text-gray-500 dark:text-gray-400">Nascimento, documentos, profissão</span>
         </span>
         <ChevronRight size={16} className="text-gray-400 dark:text-gray-500" />
       </Link>
@@ -430,13 +434,13 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       {result?.changed && (
         <div className="mt-3 flex items-start gap-2 rounded-lg bg-na-success-light p-3 text-[11px] text-na-success-dark dark:bg-green-950/30 dark:text-green-300">
           <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-          <span>Pedido enviado. A secretaria vai conferir; o endereço muda no seu cadastro depois da aprovação.</span>
+          <span>Endereço atualizado no seu cadastro.</span>
         </div>
       )}
 
       {/* Antes, sem mudança nenhuma o botão só voltava ao normal, sem resposta (31/10/2026). */}
       {result && !result.changed && (
-        <p role="status" className="mt-3 text-[11px] text-gray-600 dark:text-gray-400">Nada foi alterado no endereço.</p>
+        <p role={result.erro ? "alert" : "status"} className={`mt-3 text-[11px] ${result.erro ? "text-na-danger-dark dark:text-red-300" : "text-gray-600 dark:text-gray-400"}`}>{result.erro ?? "Nada foi alterado no endereço."}</p>
       )}
       {erro && (
         <p role="alert" className="mt-3 text-[11px] text-na-danger-dark dark:text-red-300">
@@ -448,7 +452,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         <div className="mt-2 flex items-start gap-2 rounded-lg bg-na-warning-light p-3 text-[11px] text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
           <span>
-            Como sua contribuição está em atraso, a secretaria de economia também foi avisada desta solicitação.
+            Como sua contribuição está em atraso, a secretaria de economia também foi avisada desta alteração.
           </span>
         </div>
       )}

@@ -1326,3 +1326,19 @@ Pedido do usuário: autoatendimento **na lanchonete, sem caixa**. A pessoa pega 
 - `/voluntario/cafe/qr`: cartaz A4 com o QR de cada caixa, a partir do id do caixa no Fortuna. Há um link para ele na área do Café.
 
 **Antes de o Fortuna publicar as rotas**, a página mostra "autoatendimento ainda não liberado".
+
+## 23/11/2026 — Cadastro editado pelo próprio membro, com filtro; demonstração do autoatendimento (Claude)
+
+**Cadastro sem a Escolástica** (pedido do usuário, com recusa na hora quando o filtro barra)
+- `lib/filtro-cadastro.ts` (testes em `tests/filtro-cadastro.test.ts`) barra o que não é dado de cadastro:
+  - texto digitado sem querer: letras repetidas, consoantes demais seguidas, quase nenhuma vogal;
+  - mensagem que era para o WhatsApp: saudação, "kkk", ? ou !, emoji, link;
+  - telefone inválido: DDD, 9º dígito, sequências;
+  - e-mail com erro de domínio comum (gmail.con, hotmial etc.);
+  - CEP, UF, número da casa, RG ou datas impossíveis;
+  - campo desconhecido.
+- `lib/cadastro-aplicar.ts` (`aplicarAlteracaoCadastro`) é o núcleo que estava na aprovação da Escolástica. Ele grava no Portal, troca o e-mail de login, põe na fila do robô do Mercúrio e, sem escrita liberada, cria a pendência para a secretaria. A aprovação da Escolástica continua usando o mesmo núcleo, para os pedidos antigos ainda pendentes.
+- `member-actions.ts` e `personal-data-actions.ts`: o filtro roda primeiro. Se barrar, devolve `erro`, que a tela mostra, e nada é gravado. Se passar, registra em `ContactChangeLog` e aplica na hora. Se a aplicação falhar (por exemplo, e-mail de login em uso), marca como rejeitado e devolve o motivo.
+- As telas ("Meus dados" e "Mais dados") dizem que a alteração vale na hora, com os botões "Corrigir" e "Salvar".
+
+**Demonstração do autoatendimento:** `/cafe?caixa=demo` mostra um cardápio de exemplo, saldo fictício de R$ 50 e compra simulada, com a faixa "DEMONSTRAÇÃO · nada é cobrado".

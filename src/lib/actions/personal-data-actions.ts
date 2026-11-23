@@ -2,6 +2,8 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { aplicarAlteracaoCadastro } from "@/lib/cadastro-aplicar";
+import { conferirAlteracao, mensagemDoFiltro } from "@/lib/filtro-cadastro";
 import { revalidatePath } from "next/cache";
 
 export interface PersonalDataInput {
@@ -64,7 +66,7 @@ export async function updatePersonalData(memberId: string, changes: PersonalData
   }
 
   if (Object.keys(newValues).length === 0) {
-    return { changed: false, alerted: false };
+    return { changed: false, alerted: false, pendente: false, erro: null as string | null };
   }
 
   const wasOverdue = OVERDUE_STATUSES.has(member.status);
@@ -72,11 +74,20 @@ export async function updatePersonalData(memberId: string, changes: PersonalData
   // Pedido do usuário 2026-10-19: vira SOLICITAÇÃO pendente — nada muda no
   // Portal nem no Mercúrio até a Escolástica/Direção aprovar (ver
   // aprovarSolicitacaoCadastro). Datas ficam como "AAAA-MM-DD" no registro.
-  await db.contactChangeLog.create({
+  // Desde 23/11/2026: o membro altera direto; o filtro barra o que não é dado de cadastro (lib/filtro-cadastro.ts).
+  const filtro = conferirAlteracao(newValues);
+  if (!filtro.ok) return { changed: false, alerted: false, pendente: false, erro: mensagemDoFiltro(filtro.erros) };
+  const log = await db.contactChangeLog.create({
     data: { memberId, oldValues, newValues, status: "pendente", memberWasOverdue: wasOverdue, alertedEconomia: wasOverdue },
   });
+  try {
+    await aplicarAlteracaoCadastro(log.id);
+  } catch (e) {
+    await db.contactChangeLog.update({ where: { id: log.id }, data: { status: "rejeitado", reviewedAt: new Date() } });
+    return { changed: false, alerted: false, pendente: false, erro: (e as Error).message };
+  }
 
   revalidatePath("/portal");
   revalidatePath("/portal/mais-dados");
-  return { changed: true, alerted: wasOverdue, pendente: true };
+  return { changed: true, alerted: wasOverdue, pendente: false, erro: null };
 }

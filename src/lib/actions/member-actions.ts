@@ -4,6 +4,8 @@ import { camposDoPedido, situacaoDoPedido } from "@/lib/pedidos-correcao";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { OVERDUE_STATUSES } from "@/lib/member-data";
+import { aplicarAlteracaoCadastro } from "@/lib/cadastro-aplicar";
+import { conferirAlteracao, mensagemDoFiltro } from "@/lib/filtro-cadastro";
 import { revalidatePath } from "next/cache";
 
 export interface AddressChangeInput {
@@ -34,6 +36,24 @@ const CAMPOS_ENDERECO = [
 const CAMPOS_SENSIVEIS = ["whatsapp", "email"] as const;
 
 /**
+ * Desde 23/11/2026 (pedido do usuário) o próprio membro altera o cadastro sem a Escolástica: o filtro barra o que não é
+ * dado de cadastro (recusa na hora, com o motivo) e o resto é aplicado já (Portal + Mercúrio). Fica registrado em
+ * ContactChangeLog, como antes.
+ */
+async function registrarEAplicar(memberId: string, oldValues: Record<string, string | null>, newValues: Record<string, string | null>, extra: { memberWasOverdue: boolean; alertedEconomia?: boolean }) {
+  const filtro = conferirAlteracao(newValues);
+  if (!filtro.ok) return { erro: mensagemDoFiltro(filtro.erros) };
+  const log = await db.contactChangeLog.create({ data: { memberId, oldValues, newValues, status: "pendente", ...extra } });
+  try {
+    await aplicarAlteracaoCadastro(log.id);
+  } catch (e) {
+    await db.contactChangeLog.update({ where: { id: log.id }, data: { status: "rejeitado", reviewedAt: new Date() } });
+    return { erro: (e as Error).message };
+  }
+  return { erro: null };
+}
+
+/**
  * Pedido do usuário 2026-10-19: NENHUM dado de cadastro muda sozinho — nem
  * no Portal, nem no Mercúrio. O endereço vira uma SOLICITAÇÃO pendente,
  * igual a WhatsApp/e-mail, e só é aplicado (e enfileirado pro Mercúrio)
@@ -60,16 +80,15 @@ export async function updateMemberAddress(memberId: string, changes: AddressChan
   }
 
   if (Object.keys(newValues).length === 0) {
-    return { changed: false, alerted: false, pendente: false };
+    return { changed: false, alerted: false, pendente: false, erro: null };
   }
 
   const wasOverdue = OVERDUE_STATUSES.has(member.status);
-  await db.contactChangeLog.create({
-    data: { memberId, oldValues, newValues, status: "pendente", memberWasOverdue: wasOverdue, alertedEconomia: wasOverdue },
-  });
+  const r = await registrarEAplicar(memberId, oldValues, newValues, { memberWasOverdue: wasOverdue, alertedEconomia: wasOverdue });
+  if (r.erro) return { changed: false, alerted: false, pendente: false, erro: r.erro };
 
   revalidatePath("/portal");
-  return { changed: true, alerted: wasOverdue, pendente: true };
+  return { changed: true, alerted: wasOverdue, pendente: false, erro: null };
 }
 
 /**
@@ -94,22 +113,15 @@ export async function solicitarAlteracaoContato(memberId: string, changes: Sensi
   }
 
   if (Object.keys(newValues).length === 0) {
-    return { solicitado: false };
+    return { solicitado: false, erro: null };
   }
 
-  await db.contactChangeLog.create({
-    data: {
-      memberId,
-      oldValues,
-      newValues,
-      status: "pendente",
-      memberWasOverdue: OVERDUE_STATUSES.has(member.status),
-    },
-  });
+  const r = await registrarEAplicar(memberId, oldValues, newValues, { memberWasOverdue: OVERDUE_STATUSES.has(member.status) });
+  if (r.erro) return { solicitado: false, erro: r.erro };
 
   revalidatePath("/portal");
 
-  return { solicitado: true };
+  return { solicitado: true, aplicado: true, erro: null };
 }
 
 /** Pra UI mostrar "você já tem uma solicitação em aberto" e não deixar mandar duplicada. */

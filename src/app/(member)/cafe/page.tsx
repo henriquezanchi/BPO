@@ -15,6 +15,27 @@ export default async function CafePage(props: { searchParams: Promise<{ caixa?: 
   const { caixa } = await props.searchParams;
   const member = await getAuthenticatedMember();
   if (!member) redirect(`/login?${new URLSearchParams({ next: `/cafe${caixa ? `?caixa=${caixa}` : ""}` })}`);
+  // Demonstração (23/11/2026, pedido do usuário para testar): cardápio de exemplo e compra simulada, nada é cobrado.
+  if (caixa === "demo")
+    return (
+      <main className="mx-auto max-w-md p-4">
+        <p className="mb-3 rounded-xl bg-amber-100 px-3 py-2 text-center text-sm font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-200">DEMONSTRAÇÃO · nada é cobrado</p>
+        <CafeAutoatendimento
+          demo
+          cashierId={0}
+          caixa="Lanchonete (exemplo)"
+          saldo={50}
+          nome={member.name.split(" ")[0]}
+          produtos={[
+            { id: 1, title: "Café coado", description: "Copo de 200 ml", price: "4.00", stock: 30 },
+            { id: 2, title: "Pão de queijo", description: "Unidade", price: "5.50", stock: 20 },
+            { id: 3, title: "Bolo de cenoura", description: "Fatia com cobertura de chocolate", price: "8.00", stock: 6 },
+            { id: 4, title: "Suco natural", description: "Laranja, 300 ml", price: "9.00", stock: 0 },
+            { id: 5, title: "Água mineral", description: "500 ml", price: "3.50", stock: 40 },
+          ]}
+        />
+      </main>
+    );
   const cashierId = Number(caixa);
   const aviso = (titulo: string, texto: string) => (
     <main className="mx-auto grid min-h-dvh max-w-md content-center gap-3 p-6 text-center">

@@ -3,14 +3,9 @@
 import { requireEscolasticaOuDirecao } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { avisarSemEsperar } from "@/lib/push";
-import { enqueueMercurioContactUpdate, enqueueMercurioPersonalUpdate } from "@/lib/mercurio/sync-queue";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { aplicarAlteracaoCadastro } from "@/lib/cadastro-aplicar";
 import { revalidatePath } from "next/cache";
 
-// Campos de "Mais Dados" (ver personal-data-actions.ts) — o resto de uma
-// solicitação é contato/endereço.
-const CAMPOS_DATA_CADASTRO = new Set(["birthDate", "rgDataEmissao"]);
-const CAMPOS_PESSOAIS_CADASTRO = new Set(["naturalidade", "profession", "estadoCivil", "escolaridade", "rgNumero", "rgOrgaoEmissor"]);
 
 /**
  * Agenda de pendências do Secretário de Escolástica — pedido do usuário
@@ -92,41 +87,7 @@ export async function aprovarSolicitacaoCadastro(schoolId: string, logId: string
   if (log.member.schoolId !== schoolId) throw new Error("Solicitação não pertence a esta escola.");
   if (log.status !== "pendente") throw new Error("Solicitação já foi revisada.");
 
-  // Uma solicitação pode ter contato/endereço e/ou "Mais Dados" — cada grupo
-  // vai pra sua tarefa de propagação ao Mercúrio. Só aqui, depois de um
-  // humano aprovar, é que o Mercúrio é alterado (pedido do usuário 2026-10-19).
-  const novos = log.newValues as Record<string, string | null>;
-  const contato: Record<string, string | null> = {};
-  const pessoais: Record<string, string | Date | null> = {};
-  for (const [campo, valor] of Object.entries(novos)) {
-    if (CAMPOS_DATA_CADASTRO.has(campo)) pessoais[campo] = valor ? new Date(`${valor}T00:00:00Z`) : null;
-    else if (CAMPOS_PESSOAIS_CADASTRO.has(campo)) pessoais[campo] = valor;
-    else contato[campo] = valor;
-  }
-
-  // E-mail é também o login: troca no Auth junto, senão a pessoa continuaria entrando com o antigo.
-  if (contato.email && log.member.authUserId) {
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(log.member.authUserId, { email: contato.email, email_confirm: true });
-    if (error) throw new Error("Não foi possível trocar o e-mail de login (pode já estar em uso por outra conta). Nada foi alterado.");
-  }
-
-  await db.$transaction([
-    db.member.update({ where: { id: log.memberId }, data: { ...contato, ...pessoais } }),
-    db.contactChangeLog.update({ where: { id: logId }, data: { status: "aprovado", reviewedAt: new Date() } }),
-  ]);
-
-  const escola = await db.school.findUniqueOrThrow({ where: { id: schoolId }, select: { mercurioEscrita: true } });
-  if (escola.mercurioEscrita) {
-    if (Object.keys(contato).length) await enqueueMercurioContactUpdate(log.memberId, contato);
-    if (Object.keys(pessoais).length) await enqueueMercurioPersonalUpdate(log.memberId, pessoais);
-  } else {
-    // Filial ainda sem escrita no Mercúrio liberada (School.mercurioEscrita, 2026-10-19): o Portal não grava lá;
-    // fica um lembrete na agenda de pendências para a secretaria atualizar o Mercúrio à mão.
-    const campos = Object.entries({ ...contato, ...pessoais }).map(([c, v]) => `${c}: ${v instanceof Date ? v.toLocaleDateString("pt-BR") : String(v ?? "")}`);
-    await db.scholasticPendency.create({
-      data: { schoolId, memberId: log.memberId, tipo: "atualizar_mercurio", title: `Atualizar no Mercúrio o cadastro de ${log.member.name}`, notes: campos.join("; "), dueDate: new Date() },
-    });
-  }
+  await aplicarAlteracaoCadastro(logId);
 
   await avisarSemEsperar([log.memberId], { titulo: "Cadastro atualizado", corpo: "A secretaria aprovou a alteração dos seus dados.", url: "/portal", etiqueta: `cadastro-${logId}` });
   revalidatePath("/escolastica");

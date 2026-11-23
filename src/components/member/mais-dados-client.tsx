@@ -27,7 +27,7 @@ const LABEL_CLASS = "text-[11px] font-semibold text-gray-800 dark:text-gray-300"
 export function MaisDadosClient(props: MaisDadosClientProps) {
   const { memberId } = props;
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ changed: boolean; pendente?: boolean } | null>(null);
+  const [result, setResult] = useState<{ changed: boolean; pendente?: boolean; erro?: string | null } | null>(null);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -63,7 +63,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
 
       <form action={handleSubmit} autoComplete="on" className="flex flex-1 flex-col gap-4 p-5 text-left">
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Esses dados vêm do seu cadastro oficial na escola. Se algo estiver errado, peça a correção por aqui — a secretaria confere antes de alterar.
+          Esses dados vêm do seu cadastro oficial na escola. Se algo estiver errado, corrija aqui: a alteração vale na hora.
         </p>
 
         <div className="flex flex-col gap-1">
@@ -138,15 +138,16 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
         >
           {isPending && <Loader2 size={14} className="animate-spin" />}
-          {isPending ? "Enviando..." : "Solicitar alteração"}
+          {isPending ? "Salvando..." : "Salvar"}
         </button>
 
         {result?.changed && (
           <div className="flex items-start gap-2 rounded-lg bg-na-success-light p-3 text-[11px] text-na-success-dark dark:bg-green-950/30 dark:text-green-300">
             <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-            <span>Solicitação enviada. A secretaria vai conferir — os dados só mudam no seu cadastro depois da aprovação.</span>
+            <span>Dados atualizados no seu cadastro.</span>
           </div>
         )}
+        {result?.erro && <p role="alert" className="text-[11px] text-na-danger-dark dark:text-red-300">{result.erro}</p>}
       </form>
 
       <div className="px-5 pb-8">
