@@ -338,10 +338,10 @@ function GerarRodada({ grupoId, hoje, programas, programaDe, pedagogos, pendente
       {/* Programa de cada pedagogo (23/11/2026): fica gravado e vale para as próximas rodadas. */}
       <div className="flex flex-col gap-1.5">
         <p className={ROTULO}>Programa de cada pedagogo</p>
-        <ul className="grid gap-1.5 sm:grid-cols-2">
+        <ul className="grid gap-x-3 gap-y-2.5 sm:grid-cols-2">
           {pedagogos.map((p) => (
-            <li key={p.id} className="flex items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-[13px] text-gray-800 dark:text-gray-200">{p.nome}</span>
+            <li key={p.id} className="flex min-w-0 flex-col gap-1">
+              <span className="truncate text-[13px] font-semibold text-gray-800 dark:text-gray-200" title={p.nome}>{p.nome}</span>
               <select
                 aria-label={`Programa de ${p.nome}`}
                 value={deCada[p.id] ?? programas[0]?.sigla}
@@ -351,7 +351,7 @@ function GerarRodada({ grupoId, hoje, programas, programaDe, pedagogos, pendente
                   setLinhas(null);
                   rodar(() => definirProgramaDoPedagogo(grupoId, p.id, sigla));
                 }}
-                className={`${CAMPO} w-44`}
+                className={CAMPO}
               >
                 {programas.map((x) => <option key={x.sigla} value={x.sigla}>{x.nome}</option>)}
               </select>
