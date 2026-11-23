@@ -19,13 +19,13 @@ import numpy as np
 VOZ = "pt-BR-FranciscaNeural"
 ROTEIRO = [
     "Pague sua contribuição pelo Portal da Nova Acrópole. É rápido, e você faz tudo pelo celular.",
-    "Primeiro, abra o Portal no celular, pelo endereço que aparece na tela.",
-    "Toque em Entrar com a conta Nova Acrópole, e use o e-mail cadastrado na secretaria. Se for a primeira vez, faça o cadastro com esse mesmo e-mail.",
-    "Na tela inicial, aparece a sua contribuição. Toque em Pagar agora.",
-    "Escolha como pagar. Para Pix, toque em Gerar Pix. Se preferir, pague com cartão de crédito.",
-    "Toque em Copiar o código. Depois, abra o app do seu banco, entre em Pix Copia e Cola, cole o código, confira o valor e confirme.",
-    "Pronto! O pagamento é registrado sozinho na sua ficha, e o recibo fica no Portal.",
-    "Comece agora, pelo endereço na tela, ou baixe o app. Qualquer dúvida, fale com a secretaria da sua escola.",
+    "Abra o link de pagamento que aparece na tela, e toque em Entrar com a conta Nova Acrópole.",
+    "Entre com o e-mail cadastrado na secretaria e a sua senha, ou com o Google. Se for a primeira vez, toque em Cadastre-se e use esse mesmo e-mail.",
+    "O Portal mostra a sua contribuição, com o mês e o valor, e já prepara o seu Pix.",
+    "Só na primeira vez, digite o CPF de quem vai pagar e toque em Gerar Pix. Se preferir, dá para pagar no cartão.",
+    "Toque em Copiar o código. Abra o app do seu banco, entre em Pix Copia e Cola, cole o código, confira o valor e confirme.",
+    "Pronto! Aparece Pagamento confirmado. O pagamento é registrado sozinho, e o recibo fica no Portal.",
+    "Comece agora, pelo link na tela. Qualquer dúvida, fale com a secretaria da sua escola.",
 ]
 PAUSA_ANTES = 0.6   # segundos de silêncio no começo de cada tela
 PAUSA_DEPOIS = 0.9  # depois da fala, antes de trocar de tela

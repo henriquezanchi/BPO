@@ -5,48 +5,30 @@
 <title>Como pagar pelo Portal</title>
 <!--
   Passo a passo para os membros (23/11/2026). Uma fonte só para três saídas (scripts/gerar-guia-membros.ts):
-  ?f=pdf (A4), ?f=img (imagem única 1080 px para o WhatsApp) e ?f=quadro&n=0..6 (quadros 1080×1920 do vídeo).
-  Telas ilustradas, com os rótulos reais dos botões do Portal.
+  ?f=pdf (A4), ?f=img (imagem única 1080 px para o WhatsApp) e ?f=quadro&n=0..7 (quadros 1080×1920 do vídeo).
+  Telas REAIS do Portal (docs/guias/telas, scripts/capturar-telas-guia.ts e a simulação /pagar?demo=1).
 -->
 <style>
-  :root { --verde: #086357; --verde-esc: #0f3d33; --verde-cl: #e3f1ea; --fundo: #f3f7f5; --texto: #1d2a25; --cinza: #5c6b65; --linha: #dfe7e3; --ouro: #b8862b; }
+  :root { --verde: #086357; --verde-esc: #0f3d33; --verde-cl: #e3f1ea; --fundo: #f3f7f5; --texto: #1d2a25; --cinza: #5c6b65; }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: "Segoe UI", "DejaVu Sans", Arial, sans-serif; color: var(--texto); background: #fff; }
   b { color: var(--verde-esc); }
 
-  /* Celular ilustrado */
-  .cel { width: 250px; height: 430px; border-radius: 34px; background: #111; padding: 10px; flex: none; box-shadow: 0 10px 24px rgba(0,0,0,.16); }
-  .tela { width: 100%; height: 100%; border-radius: 26px; background: #fff; overflow: hidden; display: flex; flex-direction: column; font-size: 12px; }
-  .barra { background: var(--verde); color: #fff; padding: 14px 14px 10px; font-weight: 800; font-size: 13px; }
-  .conteudo { padding: 14px; display: grid; gap: 10px; align-content: start; flex: 1; }
-  .linha { height: 9px; border-radius: 5px; background: var(--linha); }
-  .cartao { border: 1px solid var(--linha); border-radius: 14px; padding: 10px; display: grid; gap: 6px; }
-  .rotulo { font-size: 10px; color: var(--cinza); text-transform: uppercase; letter-spacing: .05em; }
-  .valor { font-size: 22px; font-weight: 900; color: var(--verde-esc); }
-  .botao { border-radius: 12px; background: var(--verde); color: #fff; font-weight: 800; text-align: center; padding: 11px 8px; font-size: 13px; }
-  .botao.claro { background: #fff; color: var(--verde); border: 1.5px solid var(--verde); }
-  .alvo { position: relative; outline: 3px solid var(--ouro); outline-offset: 3px; }
-  .alvo::after { content: "👆"; position: absolute; right: -6px; bottom: -22px; font-size: 26px; }
-  .logo { width: 110px; margin: 20px auto 6px; display: block; }
-  .codigo { font-family: Consolas, monospace; font-size: 10px; background: var(--fundo); border-radius: 8px; padding: 8px; word-break: break-all; color: var(--cinza); }
-  .ok { width: 64px; height: 64px; border-radius: 50%; background: var(--verde-cl); color: var(--verde); font-size: 36px; display: flex; align-items: center; justify-content: center; margin: 24px auto 4px; font-weight: 900; }
-  .centro { text-align: center; }
+  /* Celular com a captura real (390×844) */
+  .cel { width: 230px; border-radius: 30px; background: #111; padding: 9px; flex: none; box-shadow: 0 10px 24px rgba(0,0,0,.16); }
+  .cel img { display: block; width: 100%; aspect-ratio: 390 / 844; object-fit: cover; object-position: top; border-radius: 22px; background: #fff; }
 
-  /* Passo */
-  .passo { display: flex; gap: 26px; align-items: center; }
   .num { width: 46px; height: 46px; border-radius: 50%; background: var(--verde); color: #fff; font-weight: 900; font-size: 22px; display: flex; align-items: center; justify-content: center; flex: none; }
   .texto h2 { margin: 8px 0 6px; font-size: 22px; color: var(--verde-esc); line-height: 1.15; }
   .texto p { margin: 0 0 6px; font-size: 15px; line-height: 1.45; }
   .dica { font-size: 13px !important; color: var(--cinza); }
 
   /* PDF (A4) */
-  body.pdf { padding: 0; }
   .pdf .capa { background: var(--verde); color: #fff; padding: 26px 30px; border-radius: 0 0 22px 22px; }
   .pdf .capa h1 { margin: 0 0 4px; font-size: 30px; }
   .pdf .capa p { margin: 0; font-size: 15px; opacity: .9; }
-  .pdf .lista { display: grid; gap: 22px; padding: 24px 30px; }
-  .pdf .passo { break-inside: avoid; }
-  .pdf .cel { transform: scale(.78); transform-origin: left center; margin-right: -55px; height: 430px; }
+  .pdf .lista { display: grid; gap: 26px; padding: 24px 30px; }
+  .pdf .passo { display: flex; gap: 26px; align-items: center; break-inside: avoid; }
   .pdf .rodape { margin: 0 30px 20px; padding: 14px 16px; background: var(--fundo); border-radius: 14px; font-size: 13px; line-height: 1.5; break-inside: avoid; }
 
   /* Imagem única (WhatsApp) */
@@ -54,21 +36,24 @@
   .img .capa { background: var(--verde); color: #fff; padding: 56px 60px 48px; }
   .img .capa h1 { margin: 0 0 8px; font-size: 64px; line-height: 1.05; }
   .img .capa p { margin: 0; font-size: 30px; opacity: .92; }
-  .img .lista { display: grid; gap: 22px; padding: 44px 60px 30px; }
+  .img .telas { display: flex; gap: 18px; justify-content: center; padding: 40px 30px 10px; }
+  .img .telas .cel { width: 236px; padding: 8px; border-radius: 28px; }
+  .img .lista { display: grid; gap: 20px; padding: 30px 60px 24px; }
   .img .item { display: flex; gap: 26px; align-items: flex-start; }
-  .img .num { width: 72px; height: 72px; font-size: 36px; }
-  .img .item h2 { margin: 6px 0 4px; font-size: 38px; color: var(--verde-esc); }
-  .img .item p { margin: 0; font-size: 28px; line-height: 1.35; }
+  .img .num { width: 68px; height: 68px; font-size: 34px; }
+  .img .item h2 { margin: 4px 0 2px; font-size: 36px; color: var(--verde-esc); }
+  .img .item p { margin: 0; font-size: 27px; line-height: 1.35; }
   .img .fim { margin: 10px 60px 56px; padding: 30px 36px; border-radius: 26px; background: var(--verde-cl); font-size: 28px; line-height: 1.4; }
-  .img .fim b { font-size: 34px; }
+  .img .fim b { font-size: 36px; }
 
   /* Quadros do vídeo (1080×1920) */
   body.quadro { width: 1080px; height: 1920px; overflow: hidden; background: var(--fundo); }
-  .quadro .q { height: 1920px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 70px; padding: 90px; text-align: center; }
-  .quadro .cel { transform: scale(2.15); margin: 230px 0 250px; }
-  .quadro .num { width: 110px; height: 110px; font-size: 56px; margin: 0 auto; }
-  .quadro h2 { font-size: 76px; margin: 26px 0 18px; color: var(--verde-esc); line-height: 1.08; }
-  .quadro p { font-size: 42px; margin: 0; line-height: 1.35; }
+  .quadro .q { height: 1920px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 56px; padding: 80px; text-align: center; }
+  .quadro .cel { width: 560px; padding: 18px; border-radius: 64px; }
+  .quadro .cel img { border-radius: 48px; }
+  .quadro .num { width: 104px; height: 104px; font-size: 54px; margin: 0 auto; }
+  .quadro h2 { font-size: 72px; margin: 22px 0 14px; color: var(--verde-esc); line-height: 1.08; }
+  .quadro p { font-size: 40px; margin: 0; line-height: 1.35; }
   .quadro .grande { font-size: 92px; font-weight: 900; color: var(--verde-esc); line-height: 1.05; }
   .quadro .sub { font-size: 46px; color: var(--cinza); }
   .quadro .url { font-size: 54px; font-weight: 900; color: var(--verde); background: #fff; padding: 22px 36px; border-radius: 30px; }
@@ -77,48 +62,40 @@
 <body>
 <div id="raiz"></div>
 <script>
-const URL_PORTAL = "portal-na-one.vercel.app";
-const URL_APP = "portal-na-one.vercel.app/app";
-
-const telas = {
-  abrir: `<div class="tela"><div class="barra">${URL_PORTAL}</div><div class="conteudo"><img class="logo" src="../../public/na-logo.png" alt=""><div class="centro" style="font-weight:800;color:var(--verde-esc)">Portal do Membro</div><div class="linha" style="width:70%;margin:auto"></div><div class="botao alvo" style="margin-top:28px">Entrar com a conta Nova Acrópole</div></div></div>`,
-  entrar: `<div class="tela"><div class="barra">Conta Nova Acrópole</div><div class="conteudo"><div class="rotulo">E-mail</div><div class="cartao" style="padding:9px">seu e-mail da secretaria</div><div class="rotulo">Senha</div><div class="cartao" style="padding:9px">••••••••</div><div class="botao alvo">Entrar</div><div class="centro" style="color:var(--verde);font-weight:700">Primeira vez? Cadastre-se</div></div></div>`,
-  inicio: `<div class="tela"><div class="barra">Olá, Maria!</div><div class="conteudo"><div class="cartao"><div class="rotulo">Contribuição de dezembro</div><div class="valor">R$ 150,00</div><div class="linha" style="width:60%"></div><div class="botao alvo">Pagar agora</div></div><div class="cartao"><div class="rotulo">Agenda</div><div class="linha"></div><div class="linha" style="width:75%"></div></div></div></div>`,
-  pix: `<div class="tela"><div class="barra">Pagar pelo Portal</div><div class="conteudo"><div class="cartao"><div class="rotulo">Total</div><div class="valor">R$ 150,00</div></div><div class="botao alvo">Gerar Pix</div><div class="botao claro">Cartão de crédito</div></div></div>`,
-  copiar: `<div class="tela"><div class="barra">Agora é com o app do seu banco</div><div class="conteudo"><div class="codigo">00020126580014br.gov.bcb.pix0136a1b2c3d4…5204000053039865802BR</div><div class="botao alvo">Copiar o código</div><div class="linha"></div><div class="linha" style="width:80%"></div><div class="centro" style="color:var(--cinza)">Banco → Pix → Pix Copia e Cola</div></div></div>`,
-  pronto: `<div class="tela"><div class="barra">Portal do Membro</div><div class="conteudo"><div class="ok">✓</div><div class="centro" style="font-weight:900;font-size:16px;color:var(--verde-esc)">Pagamento recebido</div><div class="centro" style="color:var(--cinza)">Já registrado na sua ficha</div><div class="cartao"><div class="rotulo">Recibo</div><div class="linha"></div><div class="linha" style="width:60%"></div></div></div></div>`,
-};
+const LINK = "portal-na-one.vercel.app/pagar";
+const APP = "portal-na-one.vercel.app/app";
+const T = (n) => `<div class="cel"><img src="telas/${n}.png" alt=""></div>`;
 
 const passos = [
-  { tela: "abrir", t: "Abra o Portal", p: `No celular, acesse <b>${URL_PORTAL}</b>.`, d: `Quer o app? Android: <b>${URL_APP}</b>. iPhone: no Safari, toque em Compartilhar → Adicionar à Tela de Início.` },
-  { tela: "entrar", t: "Entre com a sua conta", p: `Toque em <b>Entrar com a conta Nova Acrópole</b> e use o <b>e-mail cadastrado na secretaria</b>.`, d: "Primeira vez? Toque em Cadastre-se, use esse mesmo e-mail e confirme pelo link que chega na sua caixa de entrada." },
-  { tela: "inicio", t: "Toque em Pagar agora", p: `Na tela inicial aparece a sua contribuição. Toque em <b>Pagar agora</b>.`, d: "" },
-  { tela: "pix", t: "Escolha Pix ou cartão", p: `Para Pix, toque em <b>Gerar Pix</b>. Prefere cartão? Escolha <b>Cartão de crédito</b> e preencha os dados.`, d: "Na primeira vez, o Portal pode pedir o CPF de quem vai pagar." },
-  { tela: "copiar", t: "Pague no app do banco", p: `Toque em <b>Copiar o código</b>. Abra o app do seu banco em <b>Pix → Pix Copia e Cola</b>, cole, confira o valor e confirme.`, d: "Vai pagar por outro celular? Use o QR code que aparece na tela." },
-  { tela: "pronto", t: "Pronto!", p: `O pagamento é registrado sozinho na sua ficha, e o recibo fica no Portal.`, d: "" },
+  { tela: "01-entrar", t: "Abra o link de pagamento", p: `No celular, acesse <b>${LINK}</b> e toque em <b>Entrar com a conta Nova Acrópole</b>.`, d: "É o mesmo link do QR code do pátio da escola." },
+  { tela: "02-login-acropole", t: "Entre com o seu e-mail", p: `Use o <b>e-mail cadastrado na secretaria</b> e a sua senha, ou <b>Continuar com o Google</b>.`, d: "Primeira vez? Toque em Cadastre-se, use esse mesmo e-mail e confirme pelo link que chega na sua caixa de entrada." },
+  { tela: "04-contribuicao", t: "Confira a sua contribuição", p: `O Portal mostra o mês e o valor, e já prepara o seu Pix.`, d: "" },
+  { tela: "05-cpf", t: "Só na primeira vez: o CPF", p: `Digite o <b>CPF de quem vai pagar</b> e toque em <b>Gerar Pix</b>. Nas próximas vezes o Portal já lembra.`, d: "Prefere cartão? Toque em Prefiro pagar no cartão." },
+  { tela: "06-pix", t: "Pague no app do banco", p: `Toque em <b>Copiar o código</b>, abra o app do seu banco em <b>Pix → Pix Copia e Cola</b>, cole, confira o valor e confirme.`, d: "Pode deixar esta tela aberta: ela avisa quando o banco confirmar." },
+  { tela: "07-pago", t: "Pronto!", p: `Aparece <b>Pagamento confirmado</b>. O pagamento é registrado sozinho, e o recibo fica no Portal.`, d: "" },
 ];
 
-const extra = `No Portal você também vê a agenda e os eventos da escola e corrige seus dados em <b>Meus dados</b> (endereço, celular, e-mail).`;
 const q = new URLSearchParams(location.search);
 const f = q.get("f") || "pdf";
 document.body.className = f;
 const raiz = document.getElementById("raiz");
 
 if (f === "pdf") {
-  raiz.innerHTML = `<div class="capa"><h1>Como pagar a contribuição pelo Portal</h1><p>Em 6 passos, pelo celular. Leva 2 minutos.</p></div>
-  <div class="lista">${passos.map((s, i) => `<div class="passo"><div class="cel">${telas[s.tela]}</div><div class="texto"><div class="num">${i + 1}</div><h2>${s.t}</h2><p>${s.p}</p>${s.d ? `<p class="dica">${s.d}</p>` : ""}</div></div>`).join("")}</div>
-  <div class="rodape">${extra}<br>Dúvidas? Fale com a secretaria da sua escola.</div>`;
+  raiz.innerHTML = `<div class="capa"><h1>Como pagar a contribuição pelo Portal</h1><p>Pelo celular, com Pix ou cartão. Leva 2 minutos.</p></div>
+  <div class="lista">${passos.map((s, i) => `<div class="passo">${T(s.tela)}<div class="texto"><div class="num">${i + 1}</div><h2>${s.t}</h2><p>${s.p}</p>${s.d ? `<p class="dica">${s.d}</p>` : ""}</div></div>`).join("")}</div>
+  <div class="rodape">Quer o Portal como app? Android: <b>${APP}</b>. iPhone: no Safari, toque em Compartilhar → Adicionar à Tela de Início.<br>No Portal você também vê a agenda e os eventos da escola e corrige seus dados em <b>Meus dados</b>.<br>Dúvidas? Fale com a secretaria da sua escola.</div>`;
 } else if (f === "img") {
-  raiz.innerHTML = `<div class="capa"><h1>Pague sua contribuição pelo Portal</h1><p>Pix ou cartão, pelo celular, em 2 minutos</p></div>
+  raiz.innerHTML = `<div class="capa"><h1>Pague sua contribuição pelo Portal</h1><p>Pelo celular, com Pix ou cartão, em 2 minutos</p></div>
+  <div class="telas">${["01-entrar", "04-contribuicao", "06-pix", "07-pago"].map(T).join("")}</div>
   <div class="lista">${passos.map((s, i) => `<div class="item"><div class="num">${i + 1}</div><div><h2>${s.t}</h2><p>${s.p}</p></div></div>`).join("")}</div>
-  <div class="fim"><b>${URL_PORTAL}</b><br>App para Android: ${URL_APP}<br>Primeira vez? Cadastre-se com o e-mail da secretaria.</div>`;
+  <div class="fim"><b>${LINK}</b><br>Primeira vez? Cadastre-se com o e-mail da secretaria.<br>App para Android: ${APP}</div>`;
 } else {
   const n = Number(q.get("n") || 0);
   if (n === 0) raiz.innerHTML = `<div class="q"><img src="../../public/na-logo.png" style="width:420px" alt=""><div class="grande">Como pagar sua contribuição pelo Portal</div><div class="sub">Pix ou cartão, pelo celular</div></div>`;
   else if (n <= passos.length) {
     const s = passos[n - 1];
-    raiz.innerHTML = `<div class="q"><div><div class="num">${n}</div><h2>${s.t}</h2><p>${s.p}</p></div><div class="cel">${telas[s.tela]}</div></div>`;
-  } else raiz.innerHTML = `<div class="q"><div class="grande">Pronto para começar?</div><div class="url">${URL_PORTAL}</div><p>App para Android:<br><b>${URL_APP}</b></p><p class="sub">Dúvidas? Fale com a secretaria da sua escola.</p></div>`;
+    raiz.innerHTML = `<div class="q"><div><div class="num">${n}</div><h2>${s.t}</h2><p>${s.p}</p></div>${T(s.tela)}</div>`;
+  } else raiz.innerHTML = `<div class="q"><div class="grande">Pronto para começar?</div><div class="url">${LINK}</div><p>App para Android:<br><b>${APP}</b></p><p class="sub">Dúvidas? Fale com a secretaria da sua escola.</p></div>`;
 }
 </script>
 </body>
