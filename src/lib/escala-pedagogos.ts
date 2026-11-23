@@ -2,7 +2,7 @@ import "server-only";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { localInZone } from "@/lib/group-meetings";
-import { chaveTema, programaDaDisciplina, programaDaSigla, programasDosPedagogos, proximoTema, STATUS_NA_TRILHA, temasFeitos, type Programa } from "@/lib/pedagogos-programa";
+import { chaveTema, programaDaDisciplina, programasDosPedagogos, proximoNaSequencia, proximoTema, sequenciaDosPedagogos, STATUS_NA_TRILHA, temasFeitos, type Programa, type TemaDoPrograma, type UltimaApresentacao } from "@/lib/pedagogos-programa";
 import { PROVAS_CONJUNTAS, TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
 
 /**
@@ -136,6 +136,24 @@ export async function gravarProgramaDoPedagogo(grupoId: string, pedagogoId: stri
   await db.resumoNacional.upsert({ where: { chave: chaveProgramas(grupoId) }, update: { dados: { programas }, geradoEm: new Date() }, create: { chave: chaveProgramas(grupoId), dados: { programas } } });
 }
 
+/**
+ * Próximo tema de cada pedagogo na sequência da formação, a partir da ÚLTIMA apresentação dele (data mais recente; no
+ * empate, a mais adiantada na sequência). Canceladas não contam; "faltou" repete o tema.
+ */
+export async function proximosDosPedagogos(ids: string[]): Promise<Map<string, TemaDoPrograma | null>> {
+  const linhas = ids.length
+    ? await db.apresentacaoPedagogo.findMany({ where: { pedagogoId: { in: ids }, status: { not: "cancelada" } }, select: { pedagogoId: true, data: true, materiaSigla: true, tema: true, status: true } })
+    : [];
+  const posicao = new Map(sequenciaDosPedagogos().map((t, i) => [chaveTema(t.sigla, t.titulo), i]));
+  const ultima = new Map<string, (typeof linhas)[number]>();
+  for (const l of linhas) {
+    const atual = ultima.get(l.pedagogoId);
+    const pos = (x: typeof l) => posicao.get(chaveTema(x.materiaSigla, x.tema)) ?? -1;
+    if (!atual || l.data > atual.data || (l.data === atual.data && pos(l) > pos(atual))) ultima.set(l.pedagogoId, l);
+  }
+  return new Map(ids.map((id) => [id, proximoNaSequencia((ultima.get(id) as UltimaApresentacao | undefined) ?? null)]));
+}
+
 /** Pedagogos da turma, primeiro quem apresentou há mais tempo (ou nunca), para o rodízio ser justo. */
 export async function pedagogosEmRodizio(grupoId: string) {
   const integrantes = await db.classMembership.findMany({
@@ -161,12 +179,9 @@ export async function previaDaEscala(grupoId: string, opcoes: { inicio: string; 
   const grupo = await db.classGroup.findUniqueOrThrow({ where: { id: grupoId }, select: { school: { select: { uf: true } } } });
   const fuso = fusoDaEscola(grupo.school.uf);
   const todos = await pedagogosEmRodizio(grupoId);
-  if (!todos.length) return { fuso, linhas: [], concluiram: [], trilhas: {} };
-  const [trilhas, programaDe] = await Promise.all([trilhasDosPedagogos(todos.map((p) => p.id)), programasDaTurma(grupoId, todos.map((p) => p.id))]);
-  const comTema = todos.map((p) => {
-    const programa = programaDaSigla(programaDe[p.id]);
-    return { ...p, programa: programa?.sigla ?? "", tema: programa ? proximoTema(programa, trilhas.get(p.id) ?? []) : null };
-  });
+  if (!todos.length) return { fuso, linhas: [], concluiram: [], trilhas: {}, proximos: {} };
+  const [trilhas, proximos] = await Promise.all([trilhasDosPedagogos(todos.map((p) => p.id)), proximosDosPedagogos(todos.map((p) => p.id))]);
+  const comTema = todos.map((p) => ({ ...p, tema: proximos.get(p.id) ?? null }));
   const pedagogos = comTema.filter((p) => p.tema);
   const porEncontro = Math.max(1, Math.min(6, Math.floor(opcoes.porEncontro)));
   const datas = pedagogos.length ? await datasDosEncontros(grupoId, fuso, opcoes.inicio, Math.ceil(pedagogos.length / porEncontro), opcoes.diaSemana) : [];
@@ -175,7 +190,6 @@ export async function previaDaEscala(grupoId: string, opcoes: { inicio: string; 
     linhas: pedagogos.map((p, i) => ({
       pedagogoId: p.id,
       pedagogo: p.name,
-      programa: p.programa,
       data: datas[Math.floor(i / porEncontro)],
       ordem: (i % porEncontro) + 1,
       materiaSigla: p.tema!.sigla,
@@ -185,6 +199,7 @@ export async function previaDaEscala(grupoId: string, opcoes: { inicio: string; 
     concluiram: comTema.filter((p) => !p.tema).map((p) => p.name),
     // Trilha de todos da turma, para a tela marcar os temas já feitos e sugerir o próximo ao trocar a pessoa.
     trilhas: Object.fromEntries(trilhas),
+    proximos: Object.fromEntries([...proximos].map(([id, t]) => [id, t ? chaveTema(t.sigla, t.titulo) : null])),
   };
 }
 

@@ -50,3 +50,25 @@ export function temasFeitos(programa: Programa, feitos: Iterable<string>) {
   const set = new Set(feitos);
   return programa.temas.filter((t) => set.has(chaveTema(t.sigla, t.titulo))).length;
 }
+
+/**
+ * Sequência única da formação (pedido do usuário em 23/11/2026): Ética, Sociedade, Filosofia da História, Psicologia e
+ * ISO, nessa ordem. A rodada marca para cada pedagogo o tema seguinte ao da última apresentação dele; quem faltou
+ * repete; quem nunca apresentou começa no primeiro. Mudou uma aula à mão para qualquer tema? A próxima parte dali.
+ */
+const ORDEM_DA_FORMACAO = ["NET", "NSC", "NFH", "PSI", "IS1"];
+export function sequenciaDosPedagogos(): TemaDoPrograma[] {
+  const todos = programasDosPedagogos().flatMap((p) => p.temas);
+  return [...ORDEM_DA_FORMACAO.flatMap((sigla) => todos.filter((t) => t.sigla === sigla)), ...todos.filter((t) => !ORDEM_DA_FORMACAO.includes(t.sigla))];
+}
+
+export type UltimaApresentacao = { materiaSigla: string | null; tema: string; status: string } | null;
+export function proximoNaSequencia(ultima: UltimaApresentacao): TemaDoPrograma | null {
+  const seq = sequenciaDosPedagogos();
+  if (!ultima) return seq[0] ?? null;
+  const i = seq.findIndex((t) => chaveTema(t.sigla, t.titulo) === chaveTema(ultima.materiaSigla, ultima.tema));
+  // Tema fora do catálogo (digitado à mão): segue do começo da disciplina dele, ou do começo da formação.
+  if (i < 0) return seq.find((t) => t.sigla === ultima.materiaSigla) ?? seq[0] ?? null;
+  if (ultima.status === "faltou") return seq[i];
+  return seq[i + 1] ?? null;
+}

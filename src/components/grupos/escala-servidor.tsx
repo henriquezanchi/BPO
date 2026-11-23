@@ -1,7 +1,8 @@
 import { EscalaPedagogos, type ApresentacaoView } from "@/components/grupos/escala-pedagogos";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
-import { disciplinasDisponiveis, hojeNoFuso, prazoDoPlano, programasDaTurma, progressoNoPrograma, situacaoDoPlano, trilhasDosPedagogos } from "@/lib/escala-pedagogos";
+import { disciplinasDisponiveis, hojeNoFuso, prazoDoPlano, progressoNoPrograma, proximosDosPedagogos, situacaoDoPlano, trilhasDosPedagogos } from "@/lib/escala-pedagogos";
+import { chaveTema } from "@/lib/pedagogos-programa";
 import { programasDosPedagogos } from "@/lib/pedagogos-programa";
 import { catalogoDaMateria } from "@/lib/temas-curriculo";
 
@@ -62,7 +63,7 @@ export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: str
       euId={euId}
       podeGerir={podeGerir}
       podeAjustar={podeGerir || integrantes.some((i) => i.member.id === euId)}
-      programaDe={await programasDaTurma(grupoId, integrantes.map((i) => i.member.id))}
+      proximos={Object.fromEntries([...(await proximosDosPedagogos(integrantes.map((i) => i.member.id)))].map(([id, t]) => [id, t ? chaveTema(t.sigla, t.titulo) : null]))}
       trilhas={Object.fromEntries(await trilhasDosPedagogos(integrantes.map((i) => i.member.id)))}
       pedagogos={integrantes.map((i) => ({ id: i.member.id, nome: i.member.name }))}
       disciplinas={disciplinasDisponiveis().map((d) => ({ ...d, temas: (catalogoDaMateria(d.sigla)?.temas ?? []).map((t) => ({ titulo: t.titulo, topicos: t.topicos ?? [] })) }))}
