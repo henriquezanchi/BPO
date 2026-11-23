@@ -1,0 +1,22 @@
+plugins { id "com.android.application" }
+
+// Domínio do Portal. Trocou? Mude aqui, gere o APK de novo e publique o assetlinks.json no domínio novo.
+def HOST = "portal-na-one.vercel.app"
+
+android {
+    namespace "br.org.acropole.portal"
+    compileSdk 35
+    defaultConfig {
+        applicationId "br.org.acropole.portal"
+        minSdk 21
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+        manifestPlaceholders = [host: HOST, url: "https://" + HOST + "/portal"]
+        resValue "string", "asset_statements", '[{\\"relation\\": [\\"delegate_permission/common.handle_all_urls\\"], \\"target\\": {\\"namespace\\": \\"web\\", \\"site\\": \\"https://' + HOST + '\\"}}]'
+    }
+    buildTypes { release { minifyEnabled false } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+
+dependencies { implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.5.0" }

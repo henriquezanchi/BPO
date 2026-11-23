@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.org.acropole.portal",
+      "sha256_cert_fingerprints": ["40:9E:01:DD:91:E9:22:5C:E1:67:87:A1:9D:76:5A:7D:B6:F3:0D:DF:39:69:5C:7F:FB:48:79:F1:18:BA:26:A5"]
+    }
+  }
+]

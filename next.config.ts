@@ -32,6 +32,19 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(), payment=(), usb=()" },
         ],
       },
+      // App Android (23/11/2026): o APK baixa como instalável, e o assetlinks.json libera a tela cheia (android/README.md).
+      {
+        source: "/app/:arquivo*.apk",
+        headers: [
+          { key: "Content-Type", value: "application/vnd.android.package-archive" },
+          { key: "Content-Disposition", value: 'attachment; filename="portal-nova-acropole.apk"' },
+          { key: "Cache-Control", value: "no-cache" },
+        ],
+      },
+      {
+        source: "/.well-known/assetlinks.json",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
       {
         source: "/sw.js",
         headers: [

@@ -1359,3 +1359,11 @@ Autorização do responsável pela contabilidade nacional: enquanto a escola do 
 ## 23/11/2026 — Spread com piso de 1% (Claude)
 
 Decisão do usuário: a faixa mais baixa passa a ser 1%. Tabela em `lib/spread-comum.ts`: até 500 membros 2%, de 501 a 1.500 1,5%, acima de 1.500 1% (antes 0,75%, 0,5% e 0,25% acima de 3.000). Proposta Piloto (HTML e PDF) e cronograma atualizados.
+
+## 23/11/2026 — App Android do Portal (APK) (Claude)
+
+Pedido do usuário: um app que a pessoa baixa por um link. Feito como Trusted Web Activity: o app abre o Portal em tela cheia pelo Chrome e se atualiza com o site.
+- Projeto em `android/` (pacote `br.org.acropole.portal`, leia `android/README.md`). Gerar: `npx tsx --env-file=.env scripts/gerar-apk.ts`.
+- APK em `public/app/portal-nova-acropole.apk`; página pública de download em `/app` (Android e instruções para iPhone).
+- Tela cheia: `public/.well-known/assetlinks.json` com a impressão do certificado. A chave de assinatura fica fora do repositório (`C:\Users\Henrique Zanchi\Android\portal-na-release.jks`, senha `ANDROID_KEYSTORE_SENHA` no `.env`); sem ela não há atualização do app.
+- Domínio no app: `portal-na-one.vercel.app`. Trocar de domínio exige gerar o APK de novo.
