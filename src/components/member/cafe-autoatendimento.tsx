@@ -1,6 +1,7 @@
 "use client";
 
 import { cancelarCompraCafe, comprarNoCafe } from "@/lib/actions/cafe-actions";
+import { fotoDoProduto } from "@/lib/cafe-fotos";
 import type { FortunaProduto, FortunaVendaResultado } from "@/lib/fortuna/client";
 import { CircleCheck, Loader2, Minus, Plus } from "lucide-react";
 import Link from "next/link";
@@ -13,7 +14,21 @@ import { useMemo, useState, useTransition } from "react";
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const novaChave = () => (crypto.randomUUID?.() ?? `${Date.now()}${Math.random()}`).replace(/[^A-Za-z0-9]/g, "").slice(0, 32);
 
-export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produtos: FortunaProduto[]; saldo: number | null; nome: string; demo?: boolean }) {
+type Resultado = { ok: true; venda: FortunaVendaResultado } | { ok: false; error: string };
+
+export function CafeAutoatendimento(p: {
+  cashierId: number;
+  caixa: string;
+  produtos: FortunaProduto[];
+  saldo: number | null;
+  nome: string;
+  demo?: boolean;
+  /** Quiosque (23/11/2026): como comprar e cancelar (com a sessão do aluno), voltar ao começo e tela grande. */
+  comprar?: (itens: { productId: number; amount: number }[], chave: string) => Promise<Resultado>;
+  cancelar?: (invoiceId: number) => Promise<{ ok: boolean; error?: string }>;
+  aoTerminar?: () => void;
+  quiosque?: boolean;
+}) {
   const [qtd, setQtd] = useState<Record<number, number>>({});
   const [chave, setChave] = useState(novaChave);
   const [venda, setVenda] = useState<FortunaVendaResultado | null>(null);
@@ -72,7 +87,7 @@ export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produ
             disabled={pendente}
             onClick={() =>
               iniciar(async () => {
-                const r = p.demo ? { ok: true } : await cancelarCompraCafe(venda.invoiceId);
+                const r = p.demo ? { ok: true } : await (p.cancelar ?? cancelarCompraCafe)(venda.invoiceId);
                 if (r.ok) setCancelada(true);
                 else setErro(r.error ?? "Não deu para cancelar.");
               })
@@ -85,6 +100,7 @@ export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produ
         <button
           type="button"
           onClick={() => {
+            if (p.aoTerminar) return p.aoTerminar();
             setVenda(null);
             setCancelada(false);
             setQtd({});
@@ -93,7 +109,7 @@ export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produ
           }}
           className="min-h-12 rounded-2xl border border-gray-300 font-bold dark:border-gray-700"
         >
-          Nova compra
+          {p.aoTerminar ? "Concluir" : "Nova compra"}
         </button>
         {erro && <p role="alert" className="text-center text-sm text-red-700 dark:text-red-400">{erro}</p>}
       </div>
@@ -109,16 +125,26 @@ export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produ
               Seu saldo aqui: <b className="tabular-nums text-gray-900 dark:text-gray-100">{brl(p.saldo)}</b>.{" "}
             </>
           )}
-          Escolha, pague e pegue o produto.
+          {p.quiosque ? `${p.nome}, toque no que você pegou.` : "Escolha, pague e pegue o produto."}
         </p>
       </header>
       {!p.produtos.length && <p className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700">Nenhum produto disponível agora.</p>}
-      <ul className="grid gap-2">
+      <ul className={p.quiosque ? "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" : "grid gap-2"}>
         {p.produtos.map((x) => {
           const n = qtd[x.id] ?? 0;
           const esgotado = x.stock <= 0;
           return (
-            <li key={x.id} className={`flex items-center gap-3 rounded-2xl border p-3 ${n ? "border-na-green bg-na-green-light/50 dark:border-emerald-700 dark:bg-emerald-950/40" : "border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"}`}>
+            <li key={x.id} className={`flex gap-3 rounded-2xl border p-3 ${p.quiosque ? "flex-col" : "items-center"} ${n ? "border-na-green bg-na-green-light/50 dark:border-emerald-700 dark:bg-emerald-950/40" : "border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"}`}>
+              {/* Foto do produto pelo nome (lib/cafe-fotos.ts): reconhecer pela imagem é mais rápido que ler. */}
+              {fotoDoProduto(x.title) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={fotoDoProduto(x.title)!}
+                  alt=""
+                  loading="lazy"
+                  className={`shrink-0 rounded-xl bg-gray-100 object-cover dark:bg-gray-800 ${p.quiosque ? "aspect-[4/3] w-full" : "size-16"} ${esgotado ? "opacity-40 grayscale" : ""}`}
+                />
+              ) : null}
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-gray-900 dark:text-gray-100">{x.title}</p>
                 {x.description && <p className="line-clamp-2 text-xs text-gray-500">{x.description}</p>}
@@ -143,11 +169,11 @@ export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produ
       </ul>
       {erro && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-300">{erro}</p>}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur dark:border-gray-800 dark:bg-gray-950/95">
-        <div className="mx-auto grid max-w-md gap-2">
+        <div className={`mx-auto grid gap-2 ${p.quiosque ? "max-w-3xl" : "max-w-md"}`}>
           {falta && itens.length > 0 && (
             <p className="text-center text-sm text-amber-800 dark:text-amber-300">
               Falta {brl(total - (p.saldo ?? 0))}.{" "}
-              <Link href="/portal" className="font-semibold underline">Recarregar o saldo</Link>
+              {p.quiosque ? "Recarregue pelo Portal, no celular." : <Link href="/portal" className="font-semibold underline">Recarregar o saldo</Link>}
             </p>
           )}
           <button
@@ -156,7 +182,7 @@ export function CafeAutoatendimento(p: { cashierId: number; caixa: string; produ
             onClick={() =>
               iniciar(async () => {
                 setErro("");
-                const r = p.demo ? simular() : await comprarNoCafe(p.cashierId, itens, chave);
+                const r = p.demo ? simular() : p.comprar ? await p.comprar(itens, chave) : await comprarNoCafe(p.cashierId, itens, chave);
                 if (r.ok) setVenda(r.venda);
                 else setErro(r.error);
               })
