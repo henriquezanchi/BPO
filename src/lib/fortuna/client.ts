@@ -238,3 +238,41 @@ export async function fortunaExtrato(clientId: number, inicio: string, fim: stri
 export async function fortunaConsumo(clientId: number, inicio: string, fim: string, pagina = 1) {
   return integracao<Pagina<FortunaVenda>>(`/client/${clientId}/consumo?start=${inicio}&end=${fim}&page=${pagina}&pageSize=50`);
 }
+
+// ─────────── Autoatendimento na lanchonete (23/11/2026) ───────────
+// Rotas novas da API de integração, entregues ao Fortuna como pacote (projetos/fortuna/entrega-autoatendimento). Até o
+// Fortuna publicá-las, respondem 404 e o Portal mostra "autoatendimento ainda não liberado".
+export type FortunaProduto = { id: number; title: string; description: string; price: string; stock: number };
+export type FortunaVendaResultado = {
+  invoiceId: number;
+  saleDate: string;
+  cashier: { id: number; title: string; branchId: number };
+  items: { productId: number; title: string; amount: number; unitPrice: string; value: string }[];
+  total: string;
+  balance: string | null;
+};
+
+export async function fortunaProdutosDoCaixa(cashierId: number) {
+  return integracao<{ cashier: { id: number; title: string; branchId: number }; products: FortunaProduto[] }>(`/cashier/${cashierId}/products`);
+}
+
+/** Venda com o saldo do cliente. `chave` = Idempotency-Key: repetir nunca debita duas vezes. */
+export async function fortunaVender(clientId: number, cashierId: number, itens: { productId: number; amount: number }[], chave: string) {
+  if (!/^[\x21-\x7e]{1,128}$/.test(chave)) throw new Error("Chave de idempotência inválida para o Fortuna.");
+  const enviar = () =>
+    integracao<FortunaVendaResultado>(`/client/${clientId}/sale`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": chave },
+      body: JSON.stringify({ cashierId, items: itens }),
+    });
+  try {
+    return await enviar();
+  } catch (e) {
+    if (e instanceof FortunaErro && e.status < 500) throw e;
+    return enviar(); // mesma chave: se já tinha vendido, o Fortuna devolve a mesma venda
+  }
+}
+
+export async function fortunaCancelarVenda(invoiceId: number) {
+  return integracao<{ invoiceId: number; canceled: boolean }>(`/sale/${invoiceId}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+}

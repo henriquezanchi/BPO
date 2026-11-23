@@ -1294,3 +1294,35 @@ Segue o modelo "Programação · Turma Hilárion" e o guia de marca que o usuár
    - login próprio para o responsável que não é membro (`Responsavel.authUserId`);
    - as ações de pagamento passam a aceitar o responsável confirmado.
 3. Área dos programas: turmas do Merlin e do Janos, atividades e eventos, retorno do instrutor para os responsáveis (`RetornoInstrutor`) e os voluntários dos programas.
+
+## 23/11/2026 — Autoatendimento na lanchonete (Fortuna + Portal) (Claude)
+
+Pedido do usuário: autoatendimento **na lanchonete, sem caixa**. A pessoa pega o produto e paga com o próprio saldo do Fortuna, e **um toque basta** para confirmar. As mudanças do Fortuna são **criadas por nós e enviadas prontas** ao Paulo.
+
+**Fortuna** (código lido pela API do GitLab com `GITLAB_TOKEN`, que só permite leitura)
+- O pacote está em `projetos/fortuna/entrega-autoatendimento/`: o patch, o `LEIA-ME.md` e os achados de segurança.
+- Rotas de integração novas:
+  - `GET /cashier/{id}/products`;
+  - `POST /client/{id}/sale`: preço do servidor, saldo e estoque debitados com `updateMany` condicional, idempotência em `IntegrationSale`, `Invoice.integrationId` e auditoria;
+  - `POST /sale/{id}/cancel`: prazo de 10 min e estorno.
+- Migração aditiva.
+- **Testes:** 20 de 20 num MySQL 8.0 isolado (incluindo 8 vendas simultâneas sem saldo negativo) e 51 de 51 unitários.
+- **Achados de segurança que já existem no Fortuna**, documentados e não alterados:
+  - `POST /api/invoice` confia no valor vindo da tela;
+  - o carrinho não confere o dono (IDOR);
+  - `GET /api/cashier` responde sem login.
+
+**Portal**
+- `lib/fortuna/client.ts`: `fortunaProdutosDoCaixa`, `fortunaVender` (repete com a mesma chave em timeout ou erro 500) e `fortunaCancelarVenda`.
+- `lib/actions/cafe-actions.ts`:
+  - a chave de idempotência é `portal-cafe-<memberId>-<uuid>`;
+  - as últimas 20 compras de cada pessoa ficam em `ResumoNacional` (`cafe:compras:<memberId>`), para conferir o dono antes de cancelar.
+- `/cafe?caixa=<id>` (`components/member/cafe-autoatendimento.tsx`):
+  - produtos com os botões + e −;
+  - barra fixa "Pagar R$ X com meu saldo";
+  - comprovante verde "Pago. Pode pegar!", com o número da compra e o saldo novo;
+  - "cancelar esta compra" em até 10 min;
+  - aviso de saldo insuficiente com link para recarregar.
+- `/voluntario/cafe/qr`: cartaz A4 com o QR de cada caixa, a partir do id do caixa no Fortuna. Há um link para ele na área do Café.
+
+**Antes de o Fortuna publicar as rotas**, a página mostra "autoatendimento ainda não liberado".

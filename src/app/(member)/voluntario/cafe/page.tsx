@@ -18,6 +18,10 @@ export default async function CafePage(props:{searchParams:Promise<{aba?:string}
       <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Café · Caixa Fortuna</h1>
       <AbasArea base="/voluntario/cafe" atual="caixa" abas={[["caixa","Caixa Fortuna"],["orientacoes","Orientações e gestão"]]}/>
       <CafeArea schoolId={member.schoolId} data={paraCafe(await getDirectorDashboard(member.schoolId))} />
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Autoatendimento: imprima o QR de cada caixa e cole no balcão. A pessoa lê, escolhe, paga com o saldo e pega o produto.{" "}
+        <a href="/voluntario/cafe/qr" className="font-semibold text-na-green underline dark:text-emerald-400">Gerar o QR de um caixa</a>
+      </p>
     </ShellTrabalho>
   );
 }
