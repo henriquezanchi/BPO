@@ -168,6 +168,7 @@ export function CafeAutoatendimento(p: {
         })}
       </ul>
       {erro && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-300">{erro}</p>}
+      <a href="/cafe/fotos/creditos.txt" className="text-center text-[11px] text-gray-400 underline">Créditos das fotos (Wikimedia Commons)</a>
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur dark:border-gray-800 dark:bg-gray-950/95">
         <div className={`mx-auto grid gap-2 ${p.quiosque ? "max-w-3xl" : "max-w-md"}`}>
           {falta && itens.length > 0 && (
