@@ -15,7 +15,7 @@ export default async function QuiosquePage(props: { searchParams: Promise<{ demo
     return (
       <Quiosque
         demo
-        caixa="Lanchonete (exemplo)"
+        caixa="Exemplo"
         cashierId={0}
         produtos={[
           { id: 1, title: "Café coado", description: "Copo de 200 ml", price: "4.00", stock: 30 },
