@@ -16,6 +16,8 @@ type Etapa = "contribuicao" | "cpf" | "gerando" | "pix" | "pago" | "erro";
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const ESPERA_CONTRIBUICAO_MS = 2500;
+// Código fictício da simulação: formato de Pix Copia e Cola, sem chave real (não paga nada em banco nenhum).
+const PIX_DEMO = "00020101021226580014br.gov.bcb.pix0136demonstracao-portal-nova-acropole5204000053039865802BR5925NOVA ACROPOLE DEMONSTRACAO6009SAO PAULO62070503***6304ABCD";
 
 export function PagamentoGuiado(p: {
   memberId: string;
@@ -24,6 +26,8 @@ export function PagamentoGuiado(p: {
   itens: { rotulo: string; valor: number }[];
   temPagadorSalvo: boolean;
   cartaoComTaxa: boolean;
+  /** Simulação (/pagar?demo=1, 23/11/2026): mesma tela, dados fictícios, nada é gerado no Asaas nem cobrado. */
+  demo?: boolean;
 }) {
   const [etapa, setEtapa] = useState<Etapa>("contribuicao");
   const [cobranca, setCobranca] = useState<Cobranca | null>(null);
@@ -39,6 +43,12 @@ export function PagamentoGuiado(p: {
       if (!p.alvo) return;
       setEtapa("gerando");
       setErro("");
+      if (p.demo) {
+        await new Promise((r) => setTimeout(r, 1200));
+        setCobranca({ metodo: "PIX", chargeId: "demo", totalCobrado: total, pixPayload: PIX_DEMO, pixQrCodeBase64: "" } as unknown as Cobranca);
+        setEtapa("pix");
+        return;
+      }
       try {
         const existente = await getPendingContributionCharge(p.memberId, p.alvo.year, p.alvo.month);
         const c = existente ?? (await createContributionCharge(p.memberId, p.alvo.year, p.alvo.month, cpfDigitado, { metodo: "PIX" }));
@@ -55,7 +65,7 @@ export function PagamentoGuiado(p: {
         setEtapa("erro");
       }
     },
-    [p.alvo, p.memberId],
+    [p.alvo, p.memberId, p.demo, total],
   );
 
   // Passo 1 → 2 sozinho: depois de mostrar a contribuição, gera o Pix (ou pede o CPF na primeira vez).
@@ -72,6 +82,10 @@ export function PagamentoGuiado(p: {
   // Espera a confirmação do banco (o webhook do Asaas atualiza; a consulta é o plano B).
   useEffect(() => {
     if (etapa !== "pix" || !cobranca) return;
+    if (p.demo) {
+      const t = setTimeout(() => setEtapa("pago"), 9000);
+      return () => clearTimeout(t);
+    }
     let ativo = true;
     const inicio = Date.now();
     const tick = async () => {
@@ -86,7 +100,7 @@ export function PagamentoGuiado(p: {
       ativo = false;
       clearTimeout(t);
     };
-  }, [etapa, cobranca, p.memberId]);
+  }, [etapa, cobranca, p.memberId, p.demo]);
 
   const copiar = async () => {
     if (!cobranca || cobranca.metodo !== "PIX") return;
@@ -204,11 +218,11 @@ export function PagamentoGuiado(p: {
             aria-label="Código Pix Copia e Cola"
             className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-2 font-mono text-[11px] text-gray-600 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400"
           />
-          <details className="text-sm text-gray-600 dark:text-gray-400">
+          {!p.demo && <details className="text-sm text-gray-600 dark:text-gray-400">
             <summary className="cursor-pointer font-semibold">Vai pagar por outro celular? Mostrar o QR code</summary>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`data:image/png;base64,${cobranca.pixQrCodeBase64}`} alt="QR code do Pix" className="mx-auto mt-2 size-56" />
-          </details>
+          </details>}
           <p className="flex items-center gap-2 text-sm text-gray-500" role="status">
             <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden /> Esperando a confirmação do banco. Pode deixar esta tela aberta.
           </p>

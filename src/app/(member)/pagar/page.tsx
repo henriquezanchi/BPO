@@ -15,8 +15,27 @@ export const dynamic = "force-dynamic";
  * gera o Pix sozinha e só pede o CPF de quem paga na primeira vez (depois reaproveita o pagador da última cobrança).
  * O aluno só digita a senha do Portal (se precisar) e confirma no app do banco.
  */
-export default async function PagarPage(props: { searchParams: Promise<{ filial?: string; origem?: string }> }) {
+export default async function PagarPage(props: { searchParams: Promise<{ filial?: string; origem?: string; demo?: string }> }) {
   const params = await props.searchParams;
+  // Simulação aberta (23/11/2026): a mesma tela com dados fictícios, para treinar e para o passo a passo dos membros.
+  if (params.demo === "1") {
+    const hojeDemo = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+    return (
+      <main className="mx-auto grid min-h-dvh max-w-md content-start gap-4 px-4 py-6">
+        <p className="rounded-full bg-amber-100 px-3 py-1 text-center text-xs font-bold tracking-wide text-amber-900 dark:bg-amber-950 dark:text-amber-200">DEMONSTRAÇÃO · nada é cobrado</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-na-green dark:text-emerald-400">Nova Acrópole</p>
+        <PagamentoGuiado
+          memberId="demo"
+          nome="Maria"
+          alvo={{ year: Number(hojeDemo.slice(0, 4)), month: Number(hojeDemo.slice(5, 7)) }}
+          itens={[{ rotulo: "Contribuição mensal", valor: 150 }]}
+          temPagadorSalvo={false}
+          cartaoComTaxa={false}
+          demo
+        />
+      </main>
+    );
+  }
   const member = await getAuthenticatedMember();
   if (!member) redirect(`/login?${new URLSearchParams({ next: `/pagar?${new URLSearchParams(params as Record<string, string>)}` })}`);
 
