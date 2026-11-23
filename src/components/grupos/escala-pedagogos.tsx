@@ -92,6 +92,7 @@ export function EscalaPedagogos({
   hoje,
   euId,
   podeGerir,
+  podeAjustar,
   pedagogos,
   disciplinas,
   programas,
@@ -102,6 +103,8 @@ export function EscalaPedagogos({
   hoje: string;
   euId: string;
   podeGerir: boolean;
+  /** Pedagogo da turma ou quem gere: ajusta disciplina, tema e data das apresentações (23/11/2026). */
+  podeAjustar?: boolean;
   pedagogos: { id: string; nome: string }[];
   disciplinas: Disciplina[];
   programas: Programa[];
@@ -188,7 +191,7 @@ export function EscalaPedagogos({
                 <CalendarClock size={14} className="text-na-green" /> {dataBR(data)}
               </p>
               {lista.map((a) => (
-                <LinhaEscala key={a.id} a={a} podeGerir={podeGerir} pedagogos={pedagogos} disciplinas={disciplinas} pendente={pendente} rodar={rodar} />
+                <LinhaEscala key={a.id} a={a} podeGerir={podeGerir} podeAjustar={podeGerir || !!podeAjustar} pedagogos={pedagogos} disciplinas={disciplinas} pendente={pendente} rodar={rodar} />
               ))}
             </div>
           ))
@@ -527,11 +530,11 @@ function TemasAnteriores({
   );
 }
 
-function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: { a: ApresentacaoView; podeGerir: boolean; pedagogos: { id: string; nome: string }[]; disciplinas: Disciplina[]; pendente: boolean; rodar: Rodar }) {
+function LinhaEscala({ a, podeGerir, podeAjustar, pedagogos, disciplinas, pendente, rodar }: { a: ApresentacaoView; podeGerir: boolean; podeAjustar: boolean; pedagogos: { id: string; nome: string }[]; disciplinas: Disciplina[]; pendente: boolean; rodar: Rodar }) {
   const [modo, setModo] = useState<"nada" | "plano" | "editar">("nada");
   const [comentario, setComentario] = useState(a.plano?.comentarioInstrutor ?? "");
-  const [ed, setEd] = useState({ pedagogoId: a.pedagogoId, data: a.data, tema: a.tema });
-  const temas = disciplinas.find((d) => d.sigla === a.materiaSigla)?.temas ?? [];
+  const [ed, setEd] = useState({ pedagogoId: a.pedagogoId, data: a.data, tema: a.tema, materiaSigla: a.materiaSigla });
+  const temas = disciplinas.find((d) => d.sigla === ed.materiaSigla)?.temas ?? [];
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-gray-100 p-2.5 dark:border-gray-800">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -542,9 +545,9 @@ function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: 
         </div>
         <Etiqueta a={a} />
       </div>
-      {podeGerir && (
+      {podeAjustar && (
         <div className="flex flex-wrap gap-3 text-[12px] font-semibold">
-          {a.plano && a.plano.status !== "rascunho" && (
+          {podeGerir && a.plano && a.plano.status !== "rascunho" && (
             <button onClick={() => setModo(modo === "plano" ? "nada" : "plano")} className="flex items-center gap-1 text-na-green-dark hover:underline dark:text-emerald-400">
               <FileText size={13} /> {modo === "plano" ? "Fechar plano" : "Ver plano"}
             </button>
@@ -552,9 +555,11 @@ function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: 
           <button onClick={() => setModo(modo === "editar" ? "nada" : "editar")} className="flex items-center gap-1 text-gray-600 hover:underline dark:text-gray-300">
             <Pencil size={13} /> Ajustar
           </button>
-          <button disabled={pendente} onClick={() => rodar(() => removerApresentacao(a.id))} className="flex items-center gap-1 text-gray-500 hover:text-na-danger-dark">
-            <Trash2 size={13} /> Remover
-          </button>
+          {podeGerir && (
+            <button disabled={pendente} onClick={() => rodar(() => removerApresentacao(a.id))} className="flex items-center gap-1 text-gray-500 hover:text-na-danger-dark">
+              <Trash2 size={13} /> Remover
+            </button>
+          )}
         </div>
       )}
       {modo === "plano" && a.plano && (
@@ -572,9 +577,26 @@ function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: 
         </div>
       )}
       {modo === "editar" && (
-        <div className="grid gap-2 rounded-xl bg-gray-50 p-3 sm:grid-cols-[1fr_9rem_1.4fr_auto] dark:bg-gray-950/40">
-          <select aria-label="Pedagogo" value={ed.pedagogoId} onChange={(e) => setEd({ ...ed, pedagogoId: e.target.value })} className={CAMPO}>
-            {pedagogos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+        <div className="grid gap-2 rounded-xl bg-gray-50 p-3 sm:grid-cols-2 dark:bg-gray-950/40">
+          {podeGerir ? (
+            <select aria-label="Pedagogo" value={ed.pedagogoId} onChange={(e) => setEd({ ...ed, pedagogoId: e.target.value })} className={CAMPO}>
+              {pedagogos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            </select>
+          ) : (
+            <p className="self-center text-[13px] font-semibold text-gray-700 dark:text-gray-200">{a.pedagogo}</p>
+          )}
+          {/* Disciplina (23/11/2026): trocar a disciplina põe o primeiro tema dela; o tema se escolhe ao lado. */}
+          <select
+            aria-label="Disciplina"
+            value={ed.materiaSigla ?? ""}
+            onChange={(e) => {
+              const sigla = e.target.value || null;
+              setEd({ ...ed, materiaSigla: sigla, tema: disciplinas.find((d) => d.sigla === sigla)?.temas[0]?.titulo ?? ed.tema });
+            }}
+            className={CAMPO}
+          >
+            {!disciplinas.some((d) => d.sigla === ed.materiaSigla) && <option value={ed.materiaSigla ?? ""}>{ed.materiaSigla ?? "Sem disciplina"}</option>}
+            {disciplinas.map((d) => <option key={d.sigla} value={d.sigla}>{d.nome}</option>)}
           </select>
           <input aria-label="Data" type="date" value={ed.data} onChange={(e) => setEd({ ...ed, data: e.target.value })} className={CAMPO} />
           {temas.length ? (
@@ -586,12 +608,12 @@ function LinhaEscala({ a, podeGerir, pedagogos, disciplinas, pendente, rodar }: 
           )}
           <button
             disabled={pendente}
-            onClick={() => rodar(() => editarApresentacao(a.id, { ...ed, materiaSigla: a.materiaSigla }), () => setModo("nada"))}
+            onClick={() => rodar(() => editarApresentacao(a.id, { ...ed, pedagogoId: podeGerir ? ed.pedagogoId : undefined }), () => setModo("nada"))}
             className="rounded-lg bg-na-green px-3 text-[12px] font-semibold text-white"
           >
             Salvar
           </button>
-          {ed.pedagogoId !== a.pedagogoId && a.plano && <p className="text-[11px] text-na-warning-dark sm:col-span-4 dark:text-amber-300">Trocar a pessoa apaga o plano já feito para esta apresentação.</p>}
+          {ed.pedagogoId !== a.pedagogoId && a.plano && <p className="text-[11px] text-na-warning-dark sm:col-span-2 dark:text-amber-300">Trocar a pessoa apaga o plano já feito para esta apresentação.</p>}
         </div>
       )}
     </div>

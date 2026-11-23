@@ -1380,3 +1380,9 @@ Pedido do usuário: um app que a pessoa baixa por um link. Feito como Trusted We
 - O autoatendimento pelo celular (QR do caixa, `/cafe`) continua: é a mesma tela de compra (`CafeAutoatendimento`, que agora recebe `comprar`/`cancelar`/`aoTerminar` e mostra fotos por nome do produto, `lib/cafe-fotos.ts`).
 - Os dois dependem das rotas novas do Fortuna (pacote do autoatendimento, ainda com o Paulo).
 - **Simulação do pagamento** em `/pagar?demo=1` (mesmo componente, dados fictícios, nada vai ao Asaas). O passo a passo dos membros (`docs/guias`, `public/guia-membros.*`) usa telas reais: login, login Nova Acrópole e as 4 etapas do `/pagar` (capturas em `docs/guias/telas`, `scripts/capturar-telas-guia.ts`).
+
+## 23/11/2026 — Escala dos pedagogos: trocar a disciplina e ajuste por qualquer pedagogo (Claude)
+
+Pedido do usuário: trocar a disciplina programada para um pedagogo (ajustes na formação), e isso deve ser possível para qualquer pedagogo.
+- "Ajustar" de uma apresentação ganhou o campo **Disciplina** (os temas acompanham a disciplina escolhida; `editarApresentacao` grava `materiaSigla` e os tópicos do tema novo).
+- Quem pode ajustar disciplina, tema e data: qualquer integrante da turma de pedagogos ou quem gere (`pedagogoOuGestor` em `escala-actions.ts`; `podeAjustar` na tela). Trocar a pessoa, remover, marcar presença e aprovar planos continuam só com quem gere.

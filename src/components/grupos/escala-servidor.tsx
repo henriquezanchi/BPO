@@ -63,6 +63,7 @@ export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: str
       hoje={hoje}
       euId={euId}
       podeGerir={podeGerir}
+      podeAjustar={podeGerir || integrantes.some((i) => i.member.id === euId)}
       pedagogos={integrantes.map((i) => ({ id: i.member.id, nome: i.member.name }))}
       disciplinas={disciplinasDisponiveis().map((d) => ({ ...d, temas: (catalogoDaMateria(d.sigla)?.temas ?? []).map((t) => ({ titulo: t.titulo, topicos: t.topicos ?? [] })) }))}
       programas={programas}

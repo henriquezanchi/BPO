@@ -23,6 +23,20 @@ async function gestor(grupoId: string) {
   return papel.tipo === "PED" && papel.podeGerir ? { m, papel } : null;
 }
 
+/**
+ * Pedagogo da turma (integrante) ou quem gere (23/11/2026, pedido do usuário: qualquer pedagogo pode ajustar a
+ * disciplina programada de um colega, para ajustes na formação).
+ */
+async function pedagogoOuGestor(grupoId: string) {
+  const m = await getAuthenticatedMember();
+  if (!m) return null;
+  const papel = await papelNoGrupo(m, grupoId);
+  if (papel.tipo !== "PED") return null;
+  if (papel.podeGerir) return { m, gere: true };
+  const integra = await db.classMembership.count({ where: { classGroupId: grupoId, memberId: m.id, role: "aluno" } });
+  return integra ? { m, gere: false } : null;
+}
+
 function atualizar(grupoId: string) {
   revalidatePath(`/grupos/${grupoId}`);
   revalidatePath("/professor");
@@ -108,8 +122,11 @@ export async function gravarEscala(grupoId: string, linhas: { pedagogoId: string
 }
 
 export async function editarApresentacao(id: string, campos: { pedagogoId?: string; data?: string; tema?: string; materiaSigla?: string | null }): Promise<Resultado> {
-  const a = await db.apresentacaoPedagogo.findUnique({ where: { id }, select: { classGroupId: true, pedagogoId: true } });
-  if (!a || !(await gestor(a.classGroupId))) return falha("Sem permissão.");
+  const a = await db.apresentacaoPedagogo.findUnique({ where: { id }, select: { classGroupId: true, pedagogoId: true, materiaSigla: true } });
+  const quem = a ? await pedagogoOuGestor(a.classGroupId) : null;
+  if (!a || !quem) return falha("Sem permissão.");
+  if (!quem.gere && campos.pedagogoId && campos.pedagogoId !== a.pedagogoId) return falha("Só o instrutor dos pedagogos troca a pessoa da apresentação.");
+  if (campos.materiaSigla !== undefined && campos.materiaSigla !== null && !catalogoDaMateria(campos.materiaSigla)) return falha("Disciplina inválida.");
   if (campos.data !== undefined && !dataValida(campos.data)) return falha("Data inválida.");
   if (campos.tema !== undefined && !campos.tema.trim()) return falha("Informe o tema.");
   if (campos.pedagogoId && !(await db.classMembership.count({ where: { classGroupId: a.classGroupId, memberId: campos.pedagogoId, role: "aluno" } }))) return falha("Escolha um pedagogo da turma.");
