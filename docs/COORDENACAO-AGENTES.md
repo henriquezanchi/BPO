@@ -1386,3 +1386,4 @@ Pedido do usuário: um app que a pessoa baixa por um link. Feito como Trusted We
 Pedido do usuário: trocar a disciplina programada para um pedagogo (ajustes na formação), e isso deve ser possível para qualquer pedagogo.
 - "Ajustar" de uma apresentação ganhou o campo **Disciplina** (os temas acompanham a disciplina escolhida; `editarApresentacao` grava `materiaSigla` e os tópicos do tema novo).
 - Quem pode ajustar disciplina, tema e data: qualquer integrante da turma de pedagogos ou quem gere (`pedagogoOuGestor` em `escala-actions.ts`; `podeAjustar` na tela). Trocar a pessoa, remover, marcar presença e aprovar planos continuam só com quem gere.
+- (mesmo dia) Nomes curtos das disciplinas do N1 na escala (Ética, Sociedade, Filosofia da História, de `PROVAS_CONJUNTAS`) e progresso da formação com todos os programas (N1, ISO e Psicologia liberados para os pedagogos; antes só N1 e programas já em uso na turma).

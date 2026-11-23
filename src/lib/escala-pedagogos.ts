@@ -3,7 +3,7 @@ import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { localInZone } from "@/lib/group-meetings";
 import { chaveTema, programaDaDisciplina, programaDaSigla, proximoTema, STATUS_NA_TRILHA, temasFeitos, type Programa } from "@/lib/pedagogos-programa";
-import { TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
+import { PROVAS_CONJUNTAS, TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
 
 /**
  * Escala de apresentações da turma de pedagogos (pedido do usuário 2026-10-26): os encontros são semanais, com
@@ -21,7 +21,9 @@ export const EXTENSOES_PLANO = ["pdf", "doc", "docx", "odt", "ppt", "pptx", "odp
 
 /** Disciplinas com catálogo de temas (as demais entram quando o usuário mandar as listas). */
 export function disciplinasDisponiveis() {
-  return Object.entries(TEMAS_POR_MATERIA).map(([sigla, c]) => ({ sigla, nome: c.bloco ? `${c.curso} · ${c.bloco}` : c.curso, temas: c.temas.length }));
+  // Nome curto das disciplinas do N1 (Ética, Sociedade, Filosofia da História), pedido do usuário em 23/11/2026.
+  const curtos = new Map(Object.values(PROVAS_CONJUNTAS).flatMap((c) => c.materias.map((m) => [m.sigla, m.rotulo] as const)));
+  return Object.entries(TEMAS_POR_MATERIA).map(([sigla, c]) => ({ sigla, nome: curtos.get(sigla) ?? (c.bloco ? `${c.curso} · ${c.bloco}` : c.curso), temas: c.temas.length }));
 }
 
 const somaDias = (iso: string, dias: number) => new Date(Date.parse(`${iso}T12:00:00Z`) + dias * 864e5).toISOString().slice(0, 10);
