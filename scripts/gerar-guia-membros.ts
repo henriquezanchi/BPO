@@ -2,8 +2,8 @@
  * Passo a passo para os membros (23/11/2026): gera, a partir de docs/guias/passo-a-passo-membros.html,
  *  - public/guia-membros.pdf  (A4)
  *  - public/guia-membros.png  (imagem única para o WhatsApp)
- *  - public/guia-membros.mp4  (vídeo vertical 1080×1920, ~40 s, sem narração)
- * Requisitos: Playwright (já no projeto) e ffmpeg no PATH (ou FFMPEG=<caminho>).
+ *  - public/guia-membros.mp4  (vídeo vertical 1080×1920 com narração e trilha: scripts/video-guia-membros.py)
+ * Requisitos: Playwright (já no projeto), Python com edge-tts e numpy, e ffmpeg (FFMPEG=<caminho> ou no PATH).
  * Uso: npx tsx scripts/gerar-guia-membros.ts
  */
 import { chromium } from "playwright";
@@ -16,8 +16,6 @@ import { pathToFileURL } from "node:url";
 const FONTE = pathToFileURL(path.resolve("docs/guias/passo-a-passo-membros.html")).href;
 const FFMPEG = process.env.FFMPEG || "ffmpeg";
 const QUADROS = 8; // capa, 6 passos, final
-const SEGUNDOS = [4, 6, 7, 5, 6, 7, 5, 5];
-const TRANSICAO = 0.5;
 
 async function main() {
   const browser = await chromium.launch();
@@ -40,18 +38,7 @@ async function main() {
   }
   await browser.close();
 
-  // Vídeo: cada quadro parado alguns segundos, com transição suave entre eles.
-  const entradas = SEGUNDOS.flatMap((s, n) => ["-loop", "1", "-t", String(s), "-i", path.join(pasta, `q${n}.png`)]);
-  let filtro = "";
-  let anterior = "[0:v]";
-  let deslocamento = 0;
-  for (let n = 1; n < QUADROS; n++) {
-    deslocamento += SEGUNDOS[n - 1] - TRANSICAO;
-    const saida = n === QUADROS - 1 ? "[v]" : `[x${n}]`;
-    filtro += `${anterior}[${n}:v]xfade=transition=fade:duration=${TRANSICAO}:offset=${deslocamento.toFixed(2)}${saida};`;
-    anterior = saida;
-  }
-  execFileSync(FFMPEG, ["-y", ...entradas, "-filter_complex", filtro.replace(/;$/, ""), "-map", "[v]", "-r", "30", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "26", "-movflags", "+faststart", "public/guia-membros.mp4"], { stdio: "ignore" });
+  execFileSync("python", ["scripts/video-guia-membros.py", pasta, FFMPEG], { stdio: "inherit" });
   console.log("Gerados: public/guia-membros.pdf, .png e .mp4");
 }
 main();
