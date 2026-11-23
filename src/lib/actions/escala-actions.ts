@@ -2,7 +2,7 @@
 
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { BUCKET_PLANOS, DATA_ANTES_DO_PORTAL, EXTENSOES_PLANO, TAMANHO_MAX_PLANO, previaDaEscala } from "@/lib/escala-pedagogos";
+import { BUCKET_PLANOS, DATA_ANTES_DO_PORTAL, EXTENSOES_PLANO, TAMANHO_MAX_PLANO, gravarProgramaDoPedagogo, previaDaEscala } from "@/lib/escala-pedagogos";
 import { papelNoGrupo } from "@/lib/grupos-portal";
 import { avisarSemEsperar } from "@/lib/push";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -80,13 +80,22 @@ export async function registrarTemasAnteriores(grupoId: string, pedagogoId: stri
   return { ok: true };
 }
 
-export async function preverEscala(grupoId: string, opcoes: { programa: string; inicio: string; porEncontro: number; diaSemana?: number }) {
+/** Programa (N1, ISO, Psicologia...) de um pedagogo da turma: quem gere ou qualquer pedagogo da turma (23/11/2026). */
+export async function definirProgramaDoPedagogo(grupoId: string, pedagogoId: string, sigla: string): Promise<Resultado> {
+  if (!(await pedagogoOuGestor(grupoId))) return falha("Sem permissão.");
+  if (!programaDaSigla(sigla)) return falha("Programa não encontrado.");
+  if (!(await db.classMembership.count({ where: { classGroupId: grupoId, memberId: pedagogoId, role: "aluno" } }))) return falha("A pessoa não é pedagogo desta turma.");
+  await gravarProgramaDoPedagogo(grupoId, pedagogoId, sigla);
+  atualizar(grupoId);
+  return { ok: true };
+}
+
+export async function preverEscala(grupoId: string, opcoes: { inicio: string; porEncontro: number; diaSemana?: number }) {
   if (!(await gestor(grupoId))) return falha("Sem permissão.");
-  if (!programaDaSigla(opcoes.programa)) return falha("Escolha o programa.");
   if (!dataValida(opcoes.inicio)) return falha("Escolha a data de início.");
   const p = await previaDaEscala(grupoId, opcoes);
   if (!p.linhas.length)
-    return falha(p.concluiram.length ? "Todos os pedagogos da turma já têm todos os temas do programa marcados ou apresentados." : "A turma ainda não tem pedagogos. Inclua os instrutores na aba Pessoas.");
+    return falha(p.concluiram.length ? "Todos os pedagogos da turma já têm todos os temas do próprio programa marcados ou apresentados." : "A turma ainda não tem pedagogos. Inclua os instrutores na aba Pessoas.");
   return { ok: true as const, linhas: p.linhas, concluiram: p.concluiram, trilhas: p.trilhas };
 }
 
@@ -112,6 +121,32 @@ export async function gravarEscala(grupoId: string, linhas: { pedagogoId: string
     })),
   });
   avisarSemEsperar([...new Set(linhas.map((l) => l.pedagogoId))], {
+    titulo: "Escala de apresentações",
+    corpo: "Sua apresentação na turma de pedagogos foi marcada. Veja a data, o tema e o prazo do plano de aula.",
+    url: `/grupos/${grupoId}?aba=escala`,
+    etiqueta: `escala-${grupoId}`,
+  });
+  atualizar(grupoId);
+  return { ok: true };
+}
+
+/**
+ * Marca UMA apresentação, fora da rodada (pedido do usuário em 23/11/2026): quem gere ou qualquer pedagogo da turma.
+ * A ordem no dia é a seguinte às já marcadas. A pessoa é avisada como na rodada.
+ */
+export async function marcarApresentacaoAvulsa(grupoId: string, l: { pedagogoId: string; data: string; materiaSigla: string; tema: string }): Promise<Resultado> {
+  if (!(await pedagogoOuGestor(grupoId))) return falha("Sem permissão.");
+  if (!(await db.classMembership.count({ where: { classGroupId: grupoId, memberId: l.pedagogoId, role: "aluno" } }))) return falha("Escolha um pedagogo da turma.");
+  if (!dataValida(l.data)) return falha("Escolha a data.");
+  const catalogo = catalogoDaMateria(l.materiaSigla);
+  const tema = catalogo?.temas.find((t) => t.titulo === l.tema);
+  if (!catalogo || !tema) return falha("Escolha a disciplina e o tema.");
+  const grupo = await db.classGroup.findUniqueOrThrow({ where: { id: grupoId }, select: { schoolId: true } });
+  const noDia = await db.apresentacaoPedagogo.count({ where: { classGroupId: grupoId, data: l.data, status: { not: "cancelada" } } });
+  await db.apresentacaoPedagogo.create({
+    data: { classGroupId: grupoId, schoolId: grupo.schoolId, pedagogoId: l.pedagogoId, data: l.data, ordem: Math.min(9, noDia + 1), materiaSigla: l.materiaSigla, tema: tema.titulo, topicos: tema.topicos ?? [] },
+  });
+  avisarSemEsperar([l.pedagogoId], {
     titulo: "Escala de apresentações",
     corpo: "Sua apresentação na turma de pedagogos foi marcada. Veja a data, o tema e o prazo do plano de aula.",
     url: `/grupos/${grupoId}?aba=escala`,

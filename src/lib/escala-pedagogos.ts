@@ -2,7 +2,7 @@ import "server-only";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { localInZone } from "@/lib/group-meetings";
-import { chaveTema, programaDaDisciplina, programaDaSigla, proximoTema, STATUS_NA_TRILHA, temasFeitos, type Programa } from "@/lib/pedagogos-programa";
+import { chaveTema, programaDaDisciplina, programaDaSigla, programasDosPedagogos, proximoTema, STATUS_NA_TRILHA, temasFeitos, type Programa } from "@/lib/pedagogos-programa";
 import { PROVAS_CONJUNTAS, TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
 
 /**
@@ -110,6 +110,32 @@ export async function datasDosEncontros(grupoId: string, fuso: string, inicio: s
   return datas.slice(0, quantas);
 }
 
+/**
+ * Programa de cada pedagogo (pedido do usuário em 23/11/2026: o programa varia por pedagogo, não por turma). Guardado em
+ * ResumoNacional "ped-programa:<grupoId>"; sem escolha gravada, vale o programa da apresentação mais recente da pessoa
+ * e, sem nenhuma, o primeiro (N1).
+ */
+const chaveProgramas = (grupoId: string) => `ped-programa:${grupoId}`;
+export async function programasDaTurma(grupoId: string, ids: string[]): Promise<Record<string, string>> {
+  const linha = await db.resumoNacional.findUnique({ where: { chave: chaveProgramas(grupoId) } });
+  const gravados = ((linha?.dados as { programas?: Record<string, string> } | null)?.programas ?? {}) as Record<string, string>;
+  const validos = new Set(programasDosPedagogos().map((x) => x.sigla));
+  const padrao = programasDosPedagogos()[0]?.sigla ?? "";
+  const faltam = ids.filter((id) => !validos.has(gravados[id]));
+  const ultimas = faltam.length
+    ? await db.apresentacaoPedagogo.findMany({ where: { pedagogoId: { in: faltam }, status: { not: "cancelada" }, materiaSigla: { not: null } }, orderBy: { data: "desc" }, select: { pedagogoId: true, materiaSigla: true } })
+    : [];
+  const deduzido = new Map<string, string>();
+  for (const u of ultimas) if (!deduzido.has(u.pedagogoId)) { const s = programaDaDisciplina(u.materiaSigla)?.sigla; if (s) deduzido.set(u.pedagogoId, s); }
+  return Object.fromEntries(ids.map((id) => [id, validos.has(gravados[id]) ? gravados[id] : (deduzido.get(id) ?? padrao)]));
+}
+
+export async function gravarProgramaDoPedagogo(grupoId: string, pedagogoId: string, sigla: string) {
+  const linha = await db.resumoNacional.findUnique({ where: { chave: chaveProgramas(grupoId) } });
+  const programas = { ...(((linha?.dados as { programas?: Record<string, string> } | null)?.programas ?? {}) as Record<string, string>), [pedagogoId]: sigla };
+  await db.resumoNacional.upsert({ where: { chave: chaveProgramas(grupoId) }, update: { dados: { programas }, geradoEm: new Date() }, create: { chave: chaveProgramas(grupoId), dados: { programas } } });
+}
+
 /** Pedagogos da turma, primeiro quem apresentou há mais tempo (ou nunca), para o rodízio ser justo. */
 export async function pedagogosEmRodizio(grupoId: string) {
   const integrantes = await db.classMembership.findMany({
@@ -131,14 +157,16 @@ export async function pedagogosEmRodizio(grupoId: string) {
  * Monta (sem gravar) a próxima rodada: cada pedagogo que ainda não concluiu o programa apresenta uma vez, o próximo
  * tema da própria trilha; `porEncontro` por data. Quem já tem todos os temas marcados ou feitos fica de fora.
  */
-export async function previaDaEscala(grupoId: string, opcoes: { programa: string; inicio: string; porEncontro: number; diaSemana?: number }) {
-  const programa = programaDaSigla(opcoes.programa);
+export async function previaDaEscala(grupoId: string, opcoes: { inicio: string; porEncontro: number; diaSemana?: number }) {
   const grupo = await db.classGroup.findUniqueOrThrow({ where: { id: grupoId }, select: { school: { select: { uf: true } } } });
   const fuso = fusoDaEscola(grupo.school.uf);
   const todos = await pedagogosEmRodizio(grupoId);
-  if (!programa || !todos.length) return { fuso, linhas: [], concluiram: [], trilhas: {} };
-  const trilhas = await trilhasDosPedagogos(todos.map((p) => p.id));
-  const comTema = todos.map((p) => ({ ...p, tema: proximoTema(programa, trilhas.get(p.id) ?? []) }));
+  if (!todos.length) return { fuso, linhas: [], concluiram: [], trilhas: {} };
+  const [trilhas, programaDe] = await Promise.all([trilhasDosPedagogos(todos.map((p) => p.id)), programasDaTurma(grupoId, todos.map((p) => p.id))]);
+  const comTema = todos.map((p) => {
+    const programa = programaDaSigla(programaDe[p.id]);
+    return { ...p, programa: programa?.sigla ?? "", tema: programa ? proximoTema(programa, trilhas.get(p.id) ?? []) : null };
+  });
   const pedagogos = comTema.filter((p) => p.tema);
   const porEncontro = Math.max(1, Math.min(6, Math.floor(opcoes.porEncontro)));
   const datas = pedagogos.length ? await datasDosEncontros(grupoId, fuso, opcoes.inicio, Math.ceil(pedagogos.length / porEncontro), opcoes.diaSemana) : [];
@@ -147,6 +175,7 @@ export async function previaDaEscala(grupoId: string, opcoes: { programa: string
     linhas: pedagogos.map((p, i) => ({
       pedagogoId: p.id,
       pedagogo: p.name,
+      programa: p.programa,
       data: datas[Math.floor(i / porEncontro)],
       ordem: (i % porEncontro) + 1,
       materiaSigla: p.tema!.sigla,

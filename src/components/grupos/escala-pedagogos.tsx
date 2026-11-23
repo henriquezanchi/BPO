@@ -7,6 +7,8 @@ import {
   gravarEscala,
   registrarTemasAnteriores,
   linkEnvioPlano,
+  definirProgramaDoPedagogo,
+  marcarApresentacaoAvulsa,
   marcarApresentacao,
   preverEscala,
   registrarArquivoPlano,
@@ -51,7 +53,7 @@ export type ProgressoView = {
   total: number;
   pessoas: { id: string; nome: string; apresentados: number; marcados: number; proximo: string | null; anteriores: string[]; pelaEscala: string[] }[];
 };
-type Linha = { pedagogoId: string; pedagogo: string; data: string; ordem: number; materiaSigla: string; tema: string; topicos: string[] };
+type Linha = { pedagogoId: string; pedagogo: string; programa: string; data: string; ordem: number; materiaSigla: string; tema: string; topicos: string[] };
 
 const CARTAO = "rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900";
 const TITULO = "text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300";
@@ -93,6 +95,8 @@ export function EscalaPedagogos({
   euId,
   podeGerir,
   podeAjustar,
+  programaDe = {},
+  trilhas = {},
   pedagogos,
   disciplinas,
   programas,
@@ -105,6 +109,10 @@ export function EscalaPedagogos({
   podeGerir: boolean;
   /** Pedagogo da turma ou quem gere: ajusta disciplina, tema e data das apresentações (23/11/2026). */
   podeAjustar?: boolean;
+  /** Programa de cada pedagogo (sigla), 23/11/2026. */
+  programaDe?: Record<string, string>;
+  /** Temas já marcados ou feitos de cada pedagogo (chaves), para sugerir o próximo. */
+  trilhas?: Record<string, string[]>;
   pedagogos: { id: string; nome: string }[];
   disciplinas: Disciplina[];
   programas: Programa[];
@@ -174,7 +182,8 @@ export function EscalaPedagogos({
         </p>
       )}
 
-      {podeGerir && <GerarRodada grupoId={grupoId} hoje={hoje} programas={programas} pedagogos={pedagogos} pendente={pendente} rodar={rodar} />}
+      {podeGerir && <GerarRodada grupoId={grupoId} hoje={hoje} programas={programas} programaDe={programaDe} pedagogos={pedagogos} pendente={pendente} rodar={rodar} />}
+      {(podeGerir || podeAjustar) && pedagogos.length > 0 && <MarcarUma grupoId={grupoId} hoje={hoje} programas={programas} programaDe={programaDe} trilhas={trilhas} pedagogos={pedagogos} pendente={pendente} rodar={rodar} />}
 
       {progresso.some((p) => p.pessoas.length > 0) && <ProgressoPrograma grupoId={grupoId} progresso={progresso} programas={programas} podeGerir={podeGerir} pendente={pendente} rodar={rodar} />}
 
@@ -230,16 +239,92 @@ export function EscalaPedagogos({
 
 type Rodar = (acao: () => Promise<{ ok: boolean; error?: string }>, depois?: () => void) => void;
 
-function GerarRodada({ grupoId, hoje, programas, pedagogos, pendente, rodar }: { grupoId: string; hoje: string; programas: Programa[]; pedagogos: { id: string; nome: string }[]; pendente: boolean; rodar: Rodar }) {
+/** Marcar uma apresentação só, fora da rodada (23/11/2026): pessoa, data e tema (sugere o próximo da trilha dela). */
+function MarcarUma({ grupoId, hoje, programas, programaDe, trilhas, pedagogos, pendente, rodar }: { grupoId: string; hoje: string; programas: Programa[]; programaDe: Record<string, string>; trilhas: Record<string, string[]>; pedagogos: { id: string; nome: string }[]; pendente: boolean; rodar: Rodar }) {
   const [aberto, setAberto] = useState(false);
-  const [sigla, setSigla] = useState(programas[0]?.sigla ?? "");
+  const programaDe_ = (id: string) => programas.find((p) => p.sigla === programaDe[id]) ?? programas[0];
+  const sugestao = (id: string, sigla?: string) => {
+    const prog = programas.find((p) => p.sigla === sigla) ?? programaDe_(id);
+    const t = prog ? proximoTema(prog, trilhas[id] ?? []) ?? prog.temas[0] : null;
+    return { programa: prog?.sigla ?? "", chave: t ? chaveTema(t.sigla, t.titulo) : "" };
+  };
+  const [pessoa, setPessoa] = useState(pedagogos[0]?.id ?? "");
+  const [sel, setSel] = useState(() => sugestao(pedagogos[0]?.id ?? ""));
+  const [data, setData] = useState("");
+  const programa = programas.find((p) => p.sigla === sel.programa) ?? programas[0];
+  const disciplinas = programa ? [...new Set(programa.temas.map((t) => t.disciplina))] : [];
+  const feitos = new Set(trilhas[pessoa] ?? []);
+  if (!aberto)
+    return (
+      <button onClick={() => setAberto(true)} className="flex w-fit items-center gap-1.5 rounded-xl border border-na-green px-4 py-2 text-[13px] font-bold text-na-green-dark dark:text-emerald-400">
+        <CalendarClock size={15} /> Marcar uma apresentação
+      </button>
+    );
+  return (
+    <section className={`${CARTAO} flex flex-col gap-3`}>
+      <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100">Marcar uma apresentação</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className={ROTULO}>
+          Pedagogo
+          <select value={pessoa} onChange={(e) => { setPessoa(e.target.value); setSel(sugestao(e.target.value)); }} className={CAMPO}>
+            {pedagogos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+        </label>
+        <label className={ROTULO}>
+          Data
+          <input type="date" value={data} min={hoje} onChange={(e) => setData(e.target.value)} className={CAMPO} />
+        </label>
+        <label className={ROTULO}>
+          Programa
+          <select value={sel.programa} onChange={(e) => setSel(sugestao(pessoa, e.target.value))} className={CAMPO}>
+            {programas.map((p) => <option key={p.sigla} value={p.sigla}>{p.nome}</option>)}
+          </select>
+        </label>
+        <label className={ROTULO}>
+          Tema
+          <select value={sel.chave} onChange={(e) => setSel({ ...sel, chave: e.target.value })} className={CAMPO}>
+            {programa &&
+              disciplinas.map((d) => (
+                <optgroup key={d} label={d}>
+                  {programa.temas
+                    .filter((t) => t.disciplina === d)
+                    .map((t) => {
+                      const k = chaveTema(t.sigla, t.titulo);
+                      return <option key={k} value={k}>{feitos.has(k) ? "✓ " : ""}{t.titulo}</option>;
+                    })}
+                </optgroup>
+              ))}
+          </select>
+        </label>
+      </div>
+      <p className="text-[11px] text-gray-500 dark:text-gray-400">Já vem o próximo tema da trilha da pessoa. ✓ = tema que ela já apresentou ou tem marcado.</p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          disabled={pendente || !data || !sel.chave}
+          onClick={() => {
+            const t = programa?.temas.find((x) => chaveTema(x.sigla, x.titulo) === sel.chave);
+            if (!t) return;
+            rodar(() => marcarApresentacaoAvulsa(grupoId, { pedagogoId: pessoa, data, materiaSigla: t.sigla, tema: t.titulo }), () => { setAberto(false); setData(""); });
+          }}
+          className="flex items-center gap-1.5 rounded-xl bg-na-green px-4 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+        >
+          {pendente && <Loader2 size={14} className="animate-spin" />} Marcar e avisar a pessoa
+        </button>
+        <button onClick={() => setAberto(false)} className="px-2 text-[13px] font-semibold text-gray-500">Cancelar</button>
+      </div>
+    </section>
+  );
+}
+
+function GerarRodada({ grupoId, hoje, programas, programaDe, pedagogos, pendente, rodar }: { grupoId: string; hoje: string; programas: Programa[]; programaDe: Record<string, string>; pedagogos: { id: string; nome: string }[]; pendente: boolean; rodar: Rodar }) {
+  const [aberto, setAberto] = useState(false);
+  const [deCada, setDeCada] = useState<Record<string, string>>(programaDe);
   const [inicio, setInicio] = useState(() => new Date(Date.parse(`${hoje}T12:00:00Z`) + 8 * 864e5).toISOString().slice(0, 10));
   const [porEncontro, setPorEncontro] = useState(2);
   const [linhas, setLinhas] = useState<Linha[] | null>(null);
   const [trilhas, setTrilhas] = useState<Record<string, string[]>>({});
   const [concluiram, setConcluiram] = useState<string[]>([]);
-  const programa = programas.find((p) => p.sigla === sigla);
-  const disciplinas = programa ? [...new Set(programa.temas.map((t) => t.disciplina))] : [];
+  const programaDaPessoa = (id: string) => programas.find((p) => p.sigla === (deCada[id] ?? programas[0]?.sigla)) ?? programas[0];
 
   if (!aberto)
     return (
@@ -250,17 +335,31 @@ function GerarRodada({ grupoId, hoje, programas, pedagogos, pendente, rodar }: {
   return (
     <section className={`${CARTAO} flex flex-col gap-3 border-na-green/40`}>
       <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100">Próxima rodada: cada pedagogo apresenta o próximo tema da própria trilha</p>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className={ROTULO}>
-          Programa
-          <select value={sigla} onChange={(e) => { setSigla(e.target.value); setLinhas(null); }} className={CAMPO}>
-            {programas.map((p) => (
-              <option key={p.sigla} value={p.sigla}>
-                {p.nome} · {p.temas.length} temas
-              </option>
-            ))}
-          </select>
-        </label>
+      {/* Programa de cada pedagogo (23/11/2026): fica gravado e vale para as próximas rodadas. */}
+      <div className="flex flex-col gap-1.5">
+        <p className={ROTULO}>Programa de cada pedagogo</p>
+        <ul className="grid gap-1.5 sm:grid-cols-2">
+          {pedagogos.map((p) => (
+            <li key={p.id} className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-[13px] text-gray-800 dark:text-gray-200">{p.nome}</span>
+              <select
+                aria-label={`Programa de ${p.nome}`}
+                value={deCada[p.id] ?? programas[0]?.sigla}
+                onChange={(e) => {
+                  const sigla = e.target.value;
+                  setDeCada((d) => ({ ...d, [p.id]: sigla }));
+                  setLinhas(null);
+                  rodar(() => definirProgramaDoPedagogo(grupoId, p.id, sigla));
+                }}
+                className={`${CAMPO} w-44`}
+              >
+                {programas.map((x) => <option key={x.sigla} value={x.sigla}>{x.nome}</option>)}
+              </select>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className={ROTULO}>
           A partir de
           <input type="date" value={inicio} min={hoje} onChange={(e) => { setInicio(e.target.value); setLinhas(null); }} className={CAMPO} />
@@ -273,14 +372,14 @@ function GerarRodada({ grupoId, hoje, programas, pedagogos, pendente, rodar }: {
         </label>
       </div>
       <p className="text-[11px] text-gray-500 dark:text-gray-400">
-        Para concluir, cada pedagogo apresenta todos os temas de todas as disciplinas do programa{programa && programa.disciplinas > 1 ? ` (${disciplinas.join(", ")})` : ""}. Cada um segue a própria trilha, na ordem do programa, sem ligação com os colegas; quem não apresentou repete o tema. As datas seguem os encontros da aba Encontros (ou semanais, no dia da data de início). Quem apresentou há mais tempo vem primeiro.
+        Para concluir, cada pedagogo apresenta todos os temas de todas as disciplinas do próprio programa. Cada um segue a própria trilha, na ordem do programa, sem ligação com os colegas; quem não apresentou repete o tema. As datas seguem os encontros da aba Encontros (ou semanais, no dia da data de início). Quem apresentou há mais tempo vem primeiro.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
           disabled={pendente}
           onClick={() =>
             rodar(async () => {
-              const r = await preverEscala(grupoId, { programa: sigla, inicio, porEncontro });
+              const r = await preverEscala(grupoId, { inicio, porEncontro });
               if (r.ok) {
                 setLinhas(r.linhas);
                 setTrilhas(r.trilhas);
@@ -295,7 +394,7 @@ function GerarRodada({ grupoId, hoje, programas, pedagogos, pendente, rodar }: {
         </button>
         <button onClick={() => { setAberto(false); setLinhas(null); }} className="px-2 text-[13px] font-semibold text-gray-500">Cancelar</button>
       </div>
-      {linhas && programa && (
+      {linhas && (
         <div className="flex flex-col gap-2">
           {concluiram.length > 0 && (
             <p className="rounded-lg bg-na-success-light px-3 py-2 text-[12px] text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300">
@@ -306,6 +405,8 @@ function GerarRodada({ grupoId, hoje, programas, pedagogos, pendente, rodar }: {
           {linhas.map((l, i) => {
             const mudar = (parte: Partial<Linha>) => setLinhas((atual) => atual!.map((x, k) => (k === i ? { ...x, ...parte } : x)));
             const feitos = new Set(trilhas[l.pedagogoId] ?? []);
+            const programa = programaDaPessoa(l.pedagogoId);
+            const disciplinas = [...new Set(programa.temas.map((t) => t.disciplina))];
             const temaDe = (t: TemaDoPrograma) => ({ materiaSigla: t.sigla, tema: t.titulo, topicos: t.topicos });
             return (
               <div key={i} className="grid gap-2 rounded-xl border border-gray-200 p-2 sm:grid-cols-[1fr_9rem_1.4fr] dark:border-gray-800">
@@ -314,15 +415,16 @@ function GerarRodada({ grupoId, hoje, programas, pedagogos, pendente, rodar }: {
                     aria-label="Pedagogo"
                     value={l.pedagogoId}
                     onChange={(e) => {
-                      const proximo = proximoTema(programa, trilhas[e.target.value] ?? []);
-                      mudar({ pedagogoId: e.target.value, pedagogo: pedagogos.find((p) => p.id === e.target.value)?.nome ?? "", ...(proximo ? temaDe(proximo) : {}) });
+                      const dele = programaDaPessoa(e.target.value);
+                      const proximo = proximoTema(dele, trilhas[e.target.value] ?? []);
+                      mudar({ pedagogoId: e.target.value, pedagogo: pedagogos.find((p) => p.id === e.target.value)?.nome ?? "", programa: dele.sigla, ...(proximo ? temaDe(proximo) : {}) });
                     }}
                     className={CAMPO}
                   >
                     {pedagogos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
                   </select>
                   <span className="px-1 text-[11px] text-gray-500 dark:text-gray-400">
-                    {temasFeitos(programa, feitos)} de {programa.temas.length} temas na trilha
+                    {programa.nome} · {temasFeitos(programa, feitos)} de {programa.temas.length} temas
                   </span>
                 </div>
                 <input aria-label="Data" type="date" value={l.data} onChange={(e) => mudar({ data: e.target.value })} className={CAMPO} />
