@@ -26,16 +26,13 @@ Fontes: proposta "Portal, Suporte e Serviços Financeiros" de 23/10/2026; confir
 **Faixa fixa, não proporcional** (corrigido em 12/11/2026)
 - Conta-se o **total de membros ativos das escolas participantes**, inclusive os que pagam por fora (escala coletiva).
 - O total decide **uma taxa única**, que vale **no mês seguinte** para tudo o que passar pelo Portal, em todas as escolas.
-- Exemplo: com 5.001 membros, o spread do mês seguinte é 0,5%.
+- Exemplo: com 5.001 membros, o spread do mês seguinte é 1%. **1% é o piso** (decisão de 23/11/2026).
 
 | Membros ativos nas escolas participantes | Spread |
 |---|---|
 | até 500 | 2% |
 | 501 a 1.500 | 1,5% |
-| 1.501 a 3.000 | 1% |
-| 3.001 a 5.000 | 0,75% |
-| 5.001 a 10.000 | 0,5% |
-| acima de 10.000 | 0,25% |
+| acima de 1.500 | 1% |
 
 **Piloto:** 1.651 ativos em 12/11, o que dá a faixa de **1%**. A margem para cair de faixa é de 150 membros: abaixo de 1.501 ativos, o spread sobe para 1,5%.
 
