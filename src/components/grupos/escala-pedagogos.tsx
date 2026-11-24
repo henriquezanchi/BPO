@@ -655,18 +655,26 @@ function LinhaEscala({ a, hoje, minha, podeGerir, podeAjustar, pedagogos, discip
             </button>
           )}
           {/* Pedagogo cancela a própria apresentação até 4 dias antes (24/11/2026); avisa o instrutor e o encontro seguinte. */}
-          {minha && !podeGerir && a.status === "agendada" && (Date.parse(`${a.data}T12:00:00Z`) - Date.parse(`${hoje}T12:00:00Z`)) / 864e5 >= 4 && (
-            <button
-              disabled={pendente}
-              onClick={() => {
-                if (!confirmarCancelamento) return setConfirmarCancelamento(true);
-                rodar(() => cancelarMinhaApresentacao(a.id), () => setConfirmarCancelamento(false));
-              }}
-              className="flex items-center gap-1 text-gray-500 hover:text-na-danger-dark"
-            >
-              <Trash2 size={13} /> {confirmarCancelamento ? "Confirmar: não vou apresentar" : "Não vou poder apresentar"}
+          {minha && !podeGerir && a.status === "agendada" && !confirmarCancelamento && (Date.parse(`${a.data}T12:00:00Z`) - Date.parse(`${hoje}T12:00:00Z`)) / 864e5 >= 4 && (
+            <button disabled={pendente} onClick={() => setConfirmarCancelamento(true)} className="flex items-center gap-1 text-gray-500 hover:text-na-danger-dark">
+              <Trash2 size={13} /> Não vou poder apresentar
             </button>
           )}
+        </div>
+      )}
+      {/* Confirmação em destaque (24/11/2026): caixa vermelha com o efeito e dois botões diferentes, para a pessoa ler. */}
+      {confirmarCancelamento && (
+        <div role="alertdialog" aria-label="Confirmar cancelamento" className="rounded-xl border-2 border-na-danger bg-na-danger-light p-3 text-[13px] text-na-danger-dark dark:bg-red-950/40 dark:text-red-200">
+          <p className="font-bold">Cancelar sua apresentação de {a.data.slice(8, 10)}/{a.data.slice(5, 7)}?</p>
+          <p className="mt-1">O instrutor é avisado, e quem apresenta no encontro seguinte recebe a pergunta se pode antecipar. O tema “{a.tema}” volta na próxima rodada. Não dá para desfazer por aqui.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button disabled={pendente} onClick={() => rodar(() => cancelarMinhaApresentacao(a.id), () => setConfirmarCancelamento(false))} className="flex items-center gap-1.5 rounded-lg bg-na-danger px-3 py-2 text-[13px] font-bold text-white">
+              {pendente && <Loader2 size={13} className="animate-spin" />} Sim, cancelar e avisar
+            </button>
+            <button disabled={pendente} onClick={() => setConfirmarCancelamento(false)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-[13px] font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200">
+              Não, manter
+            </button>
+          </div>
         </div>
       )}
       {modo === "plano" && a.plano && (
