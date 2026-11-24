@@ -2,7 +2,8 @@
 
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { BUCKET_PLANOS, DATA_ANTES_DO_PORTAL, EXTENSOES_PLANO, TAMANHO_MAX_PLANO, gravarProgramaDoPedagogo, previaDaEscala } from "@/lib/escala-pedagogos";
+import { BUCKET_PLANOS, DATA_ANTES_DO_PORTAL, EXTENSOES_PLANO, TAMANHO_MAX_PLANO, gravarProgramaDoPedagogo, hojeNoFuso, previaDaEscala } from "@/lib/escala-pedagogos";
+import { fusoDaEscola } from "@/lib/atendimentos";
 import { papelNoGrupo } from "@/lib/grupos-portal";
 import { avisarSemEsperar } from "@/lib/push";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -185,6 +186,42 @@ export async function marcarApresentacao(id: string, status: "agendada" | "apres
   const a = await db.apresentacaoPedagogo.findUnique({ where: { id }, select: { classGroupId: true } });
   if (!a || !(await gestor(a.classGroupId)) || !["agendada", "apresentada", "faltou", "cancelada"].includes(status)) return falha("Sem permissão.");
   await db.apresentacaoPedagogo.update({ where: { id }, data: { status } });
+  atualizar(a.classGroupId);
+  return { ok: true };
+}
+
+/**
+ * O próprio pedagogo cancela a apresentação até 4 dias antes (pedido do usuário 24/11/2026). Avisa o instrutor
+ * (ciência) e quem apresenta no encontro seguinte, perguntando se pode antecipar. O tema fica para a próxima rodada.
+ */
+export async function cancelarMinhaApresentacao(id: string): Promise<Resultado> {
+  const m = await getAuthenticatedMember();
+  if (!m) return falha("Entre no Portal de novo.");
+  const a = await db.apresentacaoPedagogo.findUnique({ where: { id }, select: { classGroupId: true, pedagogoId: true, data: true, tema: true, status: true, school: { select: { uf: true } } } });
+  if (!a || a.pedagogoId !== m.id) return falha("Sem permissão.");
+  if (a.status !== "agendada") return falha("Esta apresentação já não está marcada.");
+  const hoje = hojeNoFuso(fusoDaEscola(a.school.uf));
+  const faltam = Math.round((Date.parse(`${a.data}T12:00:00Z`) - Date.parse(`${hoje}T12:00:00Z`)) / 864e5);
+  if (faltam < 4) return falha("Só dá para cancelar pelo Portal até 4 dias antes. Fale com o instrutor dos pedagogos.");
+  await db.apresentacaoPedagogo.update({ where: { id }, data: { status: "cancelada" } });
+  const nome = m.name.split(/\s+/).slice(0, 2).join(" ");
+  const quando = `${a.data.slice(8, 10)}/${a.data.slice(5, 7)}`;
+  avisarSemEsperar(await instrutoresDaTurma(a.classGroupId), {
+    titulo: "Apresentação cancelada",
+    corpo: `${nome} cancelou a apresentação de ${quando} ("${a.tema}"). O tema volta na próxima rodada.`,
+    url: `/grupos/${a.classGroupId}?aba=escala`,
+    etiqueta: `escala-${a.classGroupId}`,
+  });
+  const seguinte = await db.apresentacaoPedagogo.findFirst({ where: { classGroupId: a.classGroupId, status: "agendada", data: { gt: a.data } }, orderBy: { data: "asc" }, select: { data: true } });
+  if (seguinte) {
+    const proximos = await db.apresentacaoPedagogo.findMany({ where: { classGroupId: a.classGroupId, status: "agendada", data: seguinte.data, pedagogoId: { not: m.id } }, select: { pedagogoId: true } });
+    avisarSemEsperar([...new Set(proximos.map((p) => p.pedagogoId))], {
+      titulo: `Vaga no encontro de ${quando}`,
+      corpo: `${nome} cancelou a apresentação de ${quando}. Você consegue antecipar a sua? Ajuste a data na escala ou fale com o instrutor.`,
+      url: `/grupos/${a.classGroupId}?aba=escala`,
+      etiqueta: `escala-${a.classGroupId}`,
+    });
+  }
   atualizar(a.classGroupId);
   return { ok: true };
 }

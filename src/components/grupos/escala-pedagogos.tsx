@@ -8,6 +8,7 @@ import {
   registrarTemasAnteriores,
   linkEnvioPlano,
   marcarApresentacaoAvulsa,
+  cancelarMinhaApresentacao,
   marcarApresentacao,
   preverEscala,
   registrarArquivoPlano,
@@ -199,7 +200,7 @@ export function EscalaPedagogos({
                 <CalendarClock size={14} className="text-na-green" /> {dataBR(data)}
               </p>
               {lista.map((a) => (
-                <LinhaEscala key={a.id} a={a} podeGerir={podeGerir} podeAjustar={podeGerir || !!podeAjustar} pedagogos={pedagogos} disciplinas={disciplinas} pendente={pendente} rodar={rodar} />
+                <LinhaEscala key={a.id} a={a} hoje={hoje} minha={a.pedagogoId === euId} podeGerir={podeGerir} podeAjustar={podeGerir || !!podeAjustar} pedagogos={pedagogos} disciplinas={disciplinas} pendente={pendente} rodar={rodar} />
               ))}
             </div>
           ))
@@ -622,8 +623,9 @@ function TemasAnteriores({
   );
 }
 
-function LinhaEscala({ a, podeGerir, podeAjustar, pedagogos, disciplinas, pendente, rodar }: { a: ApresentacaoView; podeGerir: boolean; podeAjustar: boolean; pedagogos: { id: string; nome: string }[]; disciplinas: Disciplina[]; pendente: boolean; rodar: Rodar }) {
+function LinhaEscala({ a, hoje, minha, podeGerir, podeAjustar, pedagogos, disciplinas, pendente, rodar }: { a: ApresentacaoView; hoje: string; minha: boolean; podeGerir: boolean; podeAjustar: boolean; pedagogos: { id: string; nome: string }[]; disciplinas: Disciplina[]; pendente: boolean; rodar: Rodar }) {
   const [modo, setModo] = useState<"nada" | "plano" | "editar">("nada");
+  const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
   const [comentario, setComentario] = useState(a.plano?.comentarioInstrutor ?? "");
   const [ed, setEd] = useState({ pedagogoId: a.pedagogoId, data: a.data, tema: a.tema, materiaSigla: a.materiaSigla });
   const temas = disciplinas.find((d) => d.sigla === ed.materiaSigla)?.temas ?? [];
@@ -650,6 +652,19 @@ function LinhaEscala({ a, podeGerir, podeAjustar, pedagogos, disciplinas, penden
           {podeGerir && (
             <button disabled={pendente} onClick={() => rodar(() => removerApresentacao(a.id))} className="flex items-center gap-1 text-gray-500 hover:text-na-danger-dark">
               <Trash2 size={13} /> Remover
+            </button>
+          )}
+          {/* Pedagogo cancela a própria apresentação até 4 dias antes (24/11/2026); avisa o instrutor e o encontro seguinte. */}
+          {minha && !podeGerir && a.status === "agendada" && (Date.parse(`${a.data}T12:00:00Z`) - Date.parse(`${hoje}T12:00:00Z`)) / 864e5 >= 4 && (
+            <button
+              disabled={pendente}
+              onClick={() => {
+                if (!confirmarCancelamento) return setConfirmarCancelamento(true);
+                rodar(() => cancelarMinhaApresentacao(a.id), () => setConfirmarCancelamento(false));
+              }}
+              className="flex items-center gap-1 text-gray-500 hover:text-na-danger-dark"
+            >
+              <Trash2 size={13} /> {confirmarCancelamento ? "Confirmar: não vou apresentar" : "Não vou poder apresentar"}
             </button>
           )}
         </div>

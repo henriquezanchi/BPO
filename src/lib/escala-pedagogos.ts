@@ -229,3 +229,25 @@ export async function minhaTurmaDePedagogos(memberId: string, fuso: string) {
   })();
   return { grupoId: proxima?.grupoId ?? turma.classGroup.id, nome: turma.classGroup.name, proxima };
 }
+
+/**
+ * Apresentações marcadas para a divulgação (pedido do usuário 24/11/2026: a programação da turma de pedagogos mostra
+ * quem apresenta e o tema). Por grupo e data local: "Nome Sobrenome — Ética · 1. Filosofia natural".
+ */
+export async function apresentacoesPorEncontro(grupoIds: string[], hoje: string) {
+  if (!grupoIds.length) return new Map<string, string[]>();
+  const lista = await db.apresentacaoPedagogo.findMany({
+    where: { classGroupId: { in: grupoIds }, status: "agendada", data: { gte: hoje } },
+    orderBy: [{ data: "asc" }, { ordem: "asc" }],
+    select: { classGroupId: true, data: true, materiaSigla: true, tema: true, pedagogo: { select: { name: true } } },
+  });
+  const saida = new Map<string, string[]>();
+  for (const a of lista) {
+    const programa = programaDaDisciplina(a.materiaSigla);
+    const disciplina = programa && programa.disciplinas > 1 ? programa.temas.find((t) => t.sigla === a.materiaSigla)?.disciplina : programa?.nome;
+    const nome = a.pedagogo.name.split(/\s+/).slice(0, 2).join(" ");
+    const k = `${a.classGroupId}:${a.data}`;
+    saida.set(k, [...(saida.get(k) ?? []), `${nome} — ${disciplina ? `${disciplina} · ` : ""}${a.tema}`]);
+  }
+  return saida;
+}

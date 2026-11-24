@@ -23,7 +23,9 @@ import { db } from "@/lib/db";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
 import { boasVindasDoVoluntario } from "@/lib/boas-vindas-voluntario";
 import { destaqueDeOportunidades } from "@/lib/oportunidades";
-import { minhaTurmaDePedagogos } from "@/lib/escala-pedagogos";
+import { localInZone } from "@/lib/group-meetings";
+import { leiturasEmSequencia } from "@/lib/gaf-leituras";
+import { apresentacoesPorEncontro, minhaTurmaDePedagogos } from "@/lib/escala-pedagogos";
 import { minhaTurma } from "@/lib/turma-aluno";
 import { celebracaoDeHoje } from "@/lib/aniversarios";
 
@@ -72,7 +74,7 @@ export interface PollOptionView {
 }
 
 export type AgendaItem =
-  | {kind:"reuniao";id:string;title:string;date:Date;endsAt:Date;className:string;description:string;fullUniform:boolean;status:string;cancellationReason:string|null;version:number;myResponse:string|null}
+  | {kind:"reuniao";id:string;title:string;date:Date;endsAt:Date;className:string;description:string;fullUniform:boolean;status:string;cancellationReason:string|null;version:number;myResponse:string|null;/** Turma de pedagogos: quem apresenta neste encontro e o tema (24/11/2026). */apresentacoes?:string[];/** GAF: leitura do encontro (24/11/2026). */leitura?:string}
   | {
       kind: "evento";
       id: string;
@@ -313,7 +315,7 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
           db.groupMeeting.findMany({
             where: { classGroupId: { in: groupIds }, endsAt: { gte: new Date() } },
             orderBy: { startsAt: "asc" },
-            select: { id: true, title: true, startsAt: true, endsAt: true, publicDetails: true, fullUniform: true, status: true, cancellationReason: true, version: true, classGroup: { select: { name: true } }, responses: { where: { memberId }, select: { response: true } } },
+            select: { id: true, title: true, startsAt: true, endsAt: true, publicDetails: true, fullUniform: true, status: true, cancellationReason: true, version: true, classGroup: { select: { id: true, name: true, tipo: true } }, responses: { where: { memberId }, select: { response: true } } },
           }),
         )
       : Promise.resolve([]),
@@ -392,9 +394,11 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
     return [...contagemPorEmoji.entries()].map(([emoji, count]) => ({ emoji, count, reactedByMe: minhasReacoes.has(emoji) }));
   }
 
+  const apresentacoesDosEncontros = await apresentacoesPorEncontro([...new Set(meetings.filter((m) => m.classGroup.tipo === "PED").map((m) => m.classGroup.id))], hojeNoFuso(fusoDaEscola(member.school.uf)));
+  const leiturasDosEncontros = await leiturasDosEncontrosGaf(meetings.filter((m) => m.classGroup.tipo === "GAF").map((m) => m.classGroup.id));
   const agendaItems: AgendaItem[] = [
     ...(await agendaAgora),
-    ...meetings.map((m):AgendaItem=>({kind:'reuniao',id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:souFV&&m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
+    ...meetings.map((m):AgendaItem=>({kind:'reuniao',leitura:leiturasDosEncontros.get(m.id),apresentacoes:apresentacoesDosEncontros.get(`${m.classGroup.id}:${localInZone(m.startsAt,fusoDaEscola(member.school.uf)).slice(0,10)}`),id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:souFV&&m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
     ...schoolEvents.map(
       (e): AgendaItem => ({
         kind: "evento",
@@ -560,3 +564,16 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
 }
 
 export type MemberDashboard = Awaited<ReturnType<typeof getMemberDashboard>>;
+
+/**
+ * Leitura de cada encontro dos GAFs da pessoa (pedido do usuário 24/11/2026: a programação do GAF mostra a leitura).
+ * A sequência depende de todos os encontros do grupo, por isso a consulta é por grupo inteiro.
+ */
+async function leiturasDosEncontrosGaf(grupoIds: string[]) {
+  const saida = new Map<string, string>();
+  for (const grupoId of new Set(grupoIds)) {
+    const todos = await db.groupMeeting.findMany({ where: { classGroupId: grupoId, status: { not: "cancelada" } }, orderBy: { startsAt: "asc" }, select: { id: true, leituraGaf: true } });
+    for (const [id, l] of leiturasEmSequencia(todos)) if (l.texto) saida.set(id, `Leitura: ${l.texto.numero ? `${l.texto.numero}. ` : ""}${l.texto.titulo}`);
+  }
+  return saida;
+}

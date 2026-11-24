@@ -1397,3 +1397,10 @@ Pedido do usuário: trocar a disciplina programada para um pedagogo (ajustes na 
 - `GerarRodada` (`components/grupos/escala-pedagogos.tsx`): lista "Quem entra nesta rodada" com todos marcados; desmarcar manda `excluir` para `preverEscala` → `previaDaEscala` (`lib/escala-pedagogos.ts`), que tira a pessoa antes de distribuir as datas (sem buracos). Na prévia, cada linha tem um botão (lixeira) para tirar aquela apresentação antes de gravar.
 - Quem fica fora não perde a posição: na próxima rodada continua do tema seguinte ao da última apresentação dela.
 - Sem migração. tsc e lint limpos; não visto no navegador.
+
+## 24/11/2026 — Divulgação dos grupos com apresentações e leituras; pedagogo cancela até 4 dias antes (Claude)
+
+- **Programação do mês** (`member-data.ts` → `programacao-mes.ts` → arte e texto do WhatsApp): reunião de turma de pedagogos traz `apresentacoes` ("Nome — Disciplina · tema", via `apresentacoesPorEncontro` em `escala-pedagogos.ts`); encontro do GAF traz `leitura` ("Leitura: nº. título", via `leiturasEmSequencia`, consulta por grupo inteiro). No WhatsApp as apresentações saem uma por linha (•); na arte vão na descrição (até 2 linhas).
+- **Arte** (`arte-programacao.ts`): com turma, o nome do grupo é o título grande (encolhe de 104 px até 56 px; depois quebra em 2 linhas) e a linha de baixo vira "Programação de <mês>"; o cabeçalho à direita fica só com o público. Sem turma, igual a antes. Vale para todos os grupos. Não vista no navegador.
+- **Cancelamento pelo pedagogo** (`cancelarMinhaApresentacao` em `escala-actions.ts`; botão "Não vou poder apresentar" com confirmação na aba Escala, só na própria apresentação e com ≥ 4 dias): status `cancelada` (fica fora da sequência, o tema volta na próxima rodada); push ao instrutor (ciência) e aos pedagogos do encontro seguinte perguntando se antecipam. Quem gere continua com "Remover".
+- Já existia: qualquer pedagogo da turma ajusta data, disciplina e tema (23/11).

@@ -67,7 +67,9 @@ export function itensDoMes(items: AgendaItem[], ano: number, mes: number, fuso: 
     if (it.kind === "reuniao") {
       if (/cancel/i.test(it.status)) continue;
       const revisao = /revis/i.test(it.title);
-      base = { titulo: it.title || "Aula", descricao: primeiraLinha(it.description), horario: hora(it.date, fuso), tipo: revisao ? "revisao" : "aula" };
+      // Turma de pedagogos (24/11/2026): a descrição passa a ser quem apresenta e o tema.
+      const descricao = it.apresentacoes?.length ? it.apresentacoes.join("; ") : it.leitura ?? primeiraLinha(it.description);
+      base = { titulo: it.title || "Aula", descricao, horario: hora(it.date, fuso), tipo: revisao ? "revisao" : "aula" };
     } else if (it.kind === "atividade") {
       const assunto = [it.materiaNome, it.temas?.length ? it.temas.join(", ") : null].filter(Boolean).join(" · ") || primeiraLinha(it.description);
       const rotulo = ROTULO_ATIVIDADE[it.type] ?? "Atividade";
@@ -111,7 +113,8 @@ export function textoWhatsappProgramacao(d: { turma: string | null; publico: str
   for (const i of d.itens) {
     const quando = `*${dd(i.dia)}/${dd(i.mes)} (${SEMANA_ABREV[i.semana].toLowerCase()})${i.horario ? `, ${i.horario}` : ""}*`;
     const titulo = i.tipo === "prova" ? "*Prova*" : i.titulo;
-    let linha = `${quando} – ${titulo}${i.descricao ? `: ${i.descricao}` : ""}`;
+    const apresentacoes = i.descricao?.includes(" — ") ? i.descricao.split("; ").filter((x) => x.includes(" — ")) : [];
+    let linha = apresentacoes.length ? `${quando} – ${titulo}\n${apresentacoes.map((a) => `   • ${a}`).join("\n")}` : `${quando} – ${titulo}${i.descricao ? `: ${i.descricao}` : ""}`;
     if (i.tipo === "prova" && emojis < 3) {
       linha = `⚠️ ${linha}`;
       emojis++;

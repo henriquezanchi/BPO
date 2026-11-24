@@ -103,7 +103,8 @@ export async function gerarArteProgramacao(d: {
   ctx.fillStyle = COR.claro;
   ctx.font = f(700, 18);
   espacar(ctx, 0.18, 18);
-  const cab = [d.turma, d.publico].filter(Boolean).map((s) => s!.toUpperCase());
+  // Com turma, o nome dela vira o título grande (pedido do usuário 24/11/2026) e sai do cabeçalho.
+  const cab = [d.publico].filter(Boolean).map((s) => s!.toUpperCase());
   cab.forEach((l, i) => ctx.fillText(l, W - PAD.lado, PAD.topo + 8 + i * 28));
   espacar(ctx, 0, 1);
   ctx.textAlign = "left";
@@ -157,12 +158,27 @@ export async function gerarArteProgramacao(d: {
   espacar(ctx, 0, 1);
   y += 40;
   ctx.fillStyle = COR.branco;
-  ctx.font = f(900, 104);
-  ctx.fillText("Programação", PAD.lado, y);
-  y += 118;
-  ctx.fillStyle = COR.claro;
-  ctx.font = f(400, 32);
-  ctx.fillText(`da nossa escola em ${MESES[d.mes - 1]}`, PAD.lado, y);
+  if (d.turma) {
+    // Nome do grupo em destaque, encolhendo até caber em uma linha (mínimo 56 px; aí quebra em duas).
+    let tam = 104;
+    ctx.font = f(900, tam);
+    while (tam > 56 && ctx.measureText(d.turma).width > W - 2 * PAD.lado) ctx.font = f(900, (tam -= 4));
+    const linhas = quebrar(ctx, d.turma, W - 2 * PAD.lado, 2);
+    const altoLinha = Math.round(tam * 1.05);
+    const desloca = Math.round(((linhas.length - 1) * altoLinha) / 2);
+    linhas.forEach((l, i) => ctx.fillText(l, PAD.lado, y - desloca + i * altoLinha));
+    y += 118 + desloca;
+    ctx.fillStyle = COR.claro;
+    ctx.font = f(400, 32);
+    ctx.fillText(`Programação de ${MESES[d.mes - 1]}`, PAD.lado, y);
+  } else {
+    ctx.font = f(900, 104);
+    ctx.fillText("Programação", PAD.lado, y);
+    y += 118;
+    ctx.fillStyle = COR.claro;
+    ctx.font = f(400, 32);
+    ctx.fillText(`da nossa escola em ${MESES[d.mes - 1]}`, PAD.lado, y);
+  }
   y = yLista0 + 2 * extra;
 
   const linhaDivisoria = (yy: number) => {
