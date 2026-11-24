@@ -6,7 +6,7 @@ import type { AgendaItem } from "@/lib/member-data";
  * "Programação da Turma Hilárion"). Sem invenção: o que não existe no compromisso (horário, descrição) fica de fora.
  * Atendimentos individuais e enquetes não entram (são pessoais ou não têm data própria).
  */
-export type TipoProgramacao = "aula" | "revisao" | "prova" | "especial" | "evento_publico";
+export type TipoProgramacao = "aula" | "revisao" | "prova" | "especial" | "evento_publico" | "cancelada";
 
 export type ItemProgramacao = {
   /** AAAA-MM-DD no fuso da filial. */
@@ -64,8 +64,10 @@ export function itensDoMes(items: AgendaItem[], ano: number, mes: number, fuso: 
     const d = dataNoFuso(it.date, it.kind === "evento" && it.fusoLocal ? it.fusoLocal : fuso, diaInteiro);
     if (d.ano !== ano || d.mes !== mes) continue;
     let base: { titulo: string; descricao: string | null; horario: string | null; tipo: TipoProgramacao };
-    if (it.kind === "reuniao") {
-      if (/cancel/i.test(it.status)) continue;
+    if (it.kind === "reuniao" && /cancel/i.test(it.status)) {
+      // Reunião cancelada (24/11/2026): na arte aparece "Sem reunião" com o motivo (ex.: RECESSO); no texto, não.
+      base = { titulo: "Sem reunião", descricao: limpa(it.cancellationReason) || null, horario: hora(it.date, fuso), tipo: "cancelada" };
+    } else if (it.kind === "reuniao") {
       const revisao = /revis/i.test(it.title);
       // Turma de pedagogos (24/11/2026): a descrição passa a ser quem apresenta e o tema.
       // O que foi feito de fato (24/11/2026) vale sobre o programado.
@@ -114,6 +116,7 @@ export function textoWhatsappProgramacao(d: { turma: string | null; publico: str
   // Texto do WhatsApp (24/11/2026): só o que ainda vai acontecer; a arte mostra o mês inteiro.
   for (const i of d.itens) {
     if (d.hoje && i.data < d.hoje) continue;
+    if (i.tipo === "cancelada") continue;
     const quando = `*${dd(i.dia)}/${dd(i.mes)} (${SEMANA_ABREV[i.semana].toLowerCase()})${i.horario ? `, ${i.horario}` : ""}*`;
     const titulo = i.tipo === "prova" ? "*Prova*" : i.titulo;
     const apresentacoes = i.descricao?.includes(" — ") ? i.descricao.split("; ").filter((x) => x.includes(" — ")) : [];

@@ -10,6 +10,8 @@ const W = 1080;
 const H = 1350;
 const COR = { fundo: "#086357", destaque: "#FFCA00", branco: "#FFFFFF", claro: "#B2DFD9", kefer: "#009485", selo: "#062F29" };
 const PAD = { topo: 72, lado: 80, base: 64 };
+/** Selo ao lado do título: "ATENÇÃO" na prova; o motivo do cancelamento (ex.: "RECESSO") na reunião cancelada. */
+const seloDe = (i: ItemProgramacao) => (i.tipo === "prova" ? "ATENÇÃO" : i.tipo === "cancelada" ? (i.descricao || "Cancelada").toUpperCase().slice(0, 18) : null);
 const MAX_ITENS = 10;
 
 function carregar(src: string): Promise<HTMLImageElement> {
@@ -139,10 +141,11 @@ export async function gerarArteProgramacao(d: {
 
   const medir = (i: ItemProgramacao) => {
     ctx.font = f(900, T.titulo);
-    const tit = quebrar(ctx, i.titulo, larguraConteudo - (i.tipo === "prova" ? 150 : 0), 2);
+    const selo = seloDe(i);
+    const tit = quebrar(ctx, i.titulo, larguraConteudo - (selo ? (i.tipo === "prova" ? 150 : 230) : 0), 2);
     ctx.font = f(400, T.desc);
     // Horário fica junto da data (24/11/2026), não no fim da descrição.
-    const desc = i.descricao;
+    const desc = i.tipo === "cancelada" ? null : i.descricao;
     // Apresentações dos pedagogos (24/11/2026): uma por linha, até 4, para o nome e o tema ficarem legíveis.
     const linhasDesc = !desc ? [] : desc.includes(" — ") ? desc.split("; ").slice(0, 4).map((l) => quebrar(ctx, l, larguraConteudo, 1)[0]) : quebrar(ctx, desc, larguraConteudo, 2);
     const altoConteudo = tit.length * T.titulo * 1.12 + (linhasDesc.length ? 6 + linhasDesc.length * T.desc * 1.3 : 0);
@@ -205,8 +208,9 @@ export async function gerarArteProgramacao(d: {
     const topo = y + padV;
     // Dia já passado (24/11/2026): meio apagado, com ✓ no título; só a agenda futura fica "aberta".
     const passado = !!d.hoje && i.data < d.hoje;
+    const cancelada = i.tipo === "cancelada";
     ctx.save();
-    if (passado) ctx.globalAlpha = 0.55;
+    if (passado || cancelada) ctx.globalAlpha = 0.55;
     // Data.
     ctx.fillStyle = COR.destaque;
     ctx.font = f(900, T.dia);
@@ -227,7 +231,7 @@ export async function gerarArteProgramacao(d: {
     ctx.font = f(900, T.titulo);
     m.tit.forEach((l, n) => {
       ctx.fillText(l, xConteudo, yy);
-      if (passado && n === 0) {
+      if (passado && !cancelada && n === 0) {
         // Já aconteceu (24/11/2026): ✓ ao lado do título, sem risco; a linha fica só meio apagada.
         const larg = ctx.measureText(l).width;
         ctx.save();
@@ -237,12 +241,13 @@ export async function gerarArteProgramacao(d: {
         ctx.fillText("✓", xConteudo + larg + 14, yy);
         ctx.restore();
       }
-      if (n === 0 && i.tipo === "prova") {
-        // Selo "ATENÇÃO" ao lado do título.
+      const selo = seloDe(i);
+      if (n === 0 && selo) {
+        // Selo ao lado do título: "ATENÇÃO" na prova; o motivo ("RECESSO") na reunião cancelada.
         const largTit = ctx.measureText(l).width;
         ctx.font = f(900, 15);
         espacar(ctx, 0.12, 15);
-        const largSelo = ctx.measureText("ATENÇÃO").width + 32;
+        const largSelo = ctx.measureText(selo).width + 32;
         const xs = xConteudo + largTit + 18;
         const ys = yy + (T.titulo - 30) / 2 + 2;
         ctx.fillStyle = COR.destaque;
@@ -250,7 +255,7 @@ export async function gerarArteProgramacao(d: {
         ctx.roundRect(xs, ys, largSelo, 30, 15);
         ctx.fill();
         ctx.fillStyle = COR.selo;
-        ctx.fillText("ATENÇÃO", xs + 16, ys + 7);
+        ctx.fillText(selo, xs + 16, ys + 7);
         espacar(ctx, 0, 1);
         ctx.fillStyle = COR.branco;
         ctx.font = f(900, T.titulo);

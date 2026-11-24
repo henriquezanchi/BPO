@@ -6,17 +6,20 @@ import { itensDoMes, textoWhatsappProgramacao, turmaDoMes } from "../src/lib/pro
 const reuniao = (id: string, iso: string, title: string, description = ""): AgendaItem => ({ kind: "reuniao", id, title, date: new Date(iso), endsAt: new Date(iso), className: "Turma Hilárion", description, fullUniform: false, status: "agendada", cancellationReason: null, version: 1, myResponse: null });
 const prova: AgendaItem = { kind: "atividade", id: "p", title: "Prova", date: new Date("2026-12-09T22:30:00Z"), type: "prova", materiaNome: "Psicologia", temas: ["Vontade"], observacao: null, resumos: [], studyItems: null, description: null, className: "Turma Hilárion", reactions: [] };
 
-test("itens do mês: dia da semana real, horário no fuso, prova marcada, cancelada fora", () => {
+test("itens do mês: dia da semana real, horário no fuso, prova marcada, cancelada entra como \"Sem reunião\" (só na arte)", () => {
   const itens = itensDoMes(
     [reuniao("a", "2026-12-02T22:30:00Z", "Revisão para a prova", "ISO e Psicologia"), prova, { ...(reuniao("c", "2026-12-16T22:30:00Z", "Aula") as object), status: "cancelada" } as AgendaItem, reuniao("n", "2026-11-25T22:30:00Z", "Aula")],
     2026,
     12,
     "America/Sao_Paulo",
   );
-  assert.equal(itens.length, 2);
+  assert.equal(itens.length, 3);
   assert.deepEqual([itens[0].dia, itens[0].semana, itens[0].horario, itens[0].tipo], [2, 3, "19h30", "revisao"]);
   assert.equal(itens[1].tipo, "prova");
   assert.equal(itens[1].descricao, "Psicologia · Vontade");
+  // Cancelada (24/11/2026): vai para a arte como "Sem reunião" e fica fora do texto do WhatsApp.
+  assert.deepEqual([itens[2].tipo, itens[2].titulo], ["cancelada", "Sem reunião"]);
+  assert.doesNotMatch(textoWhatsappProgramacao({ turma: null, publico: "Membros", ano: 2026, mes: 12, itens }), /Sem reunião/);
 });
 
 test("texto do WhatsApp: formato, prova com aviso, até 3 emojis e mensagem-chave", () => {

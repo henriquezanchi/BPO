@@ -1,10 +1,10 @@
 "use client";
 
-import { getCalendarioMes } from "@/lib/actions/calendario-actions";
+import { cancelarReunioesEmLote, getCalendarioMes, reunioesDoPeriodo } from "@/lib/actions/calendario-actions";
 import { ROTULO_CAMADA } from "@/lib/calendario-comum";
 import type { Camada, ItemCalendario } from "@/lib/calendario-filial";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { CalendarOff, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -60,6 +60,7 @@ export function CalendarioTab({ schoolId }: { schoolId: string }) {
 
   return (
     <div className="flex flex-col gap-5">
+      <Recesso schoolId={schoolId} aoConcluir={() => { setItens(null); getCalendarioMes(schoolId, ano, mes).then(setItens).catch(() => setErro(true)); }} />
       <section className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
         <div className="flex items-center justify-between">
           <button onClick={() => mudar(-1)} aria-label="Mês anterior" className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">
@@ -168,5 +169,88 @@ export function CalendarioTab({ schoolId }: { schoolId: string }) {
 
       <a href="/voluntario/eventos?aba=eventos" className="w-fit text-xs font-semibold text-na-green-dark hover:underline dark:text-emerald-400">Criar evento e encontrar uma data →</a>
     </div>
+  );
+}
+
+/**
+ * Período sem reuniões (recesso; pedido do usuário 24/11/2026): a direção informa o período e o motivo, vê todas as
+ * reuniões dos grupos da filial nesse intervalo (todas marcadas) e desmarca as que seguem acontecendo. As marcadas
+ * são canceladas com o motivo, que aparece na arte da programação ("Sem reunião · RECESSO").
+ */
+function Recesso({ schoolId, aoConcluir }: { schoolId: string; aoConcluir: () => void }) {
+  const [aberto, setAberto] = useState(false);
+  const [de, setDe] = useState("");
+  const [ate, setAte] = useState("");
+  const [motivo, setMotivo] = useState("Recesso");
+  const [lista, setLista] = useState<Awaited<ReturnType<typeof reunioesDoPeriodo>> | null>(null);
+  const [fora, setFora] = useState<Set<string>>(new Set());
+  const [confirmar, setConfirmar] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+  const campo = "min-h-10 rounded-lg border border-gray-300 bg-white px-2.5 text-[13px] dark:border-gray-600 dark:bg-gray-950";
+  const buscar = () =>
+    iniciar(async () => {
+      setMsg(null); setConfirmar(false);
+      try { setLista(await reunioesDoPeriodo(schoolId, de, ate)); setFora(new Set()); } catch (e) { setMsg((e as Error).message); }
+    });
+  const marcadas = (lista ?? []).filter((r) => !fora.has(r.id));
+  const cancelar = () =>
+    iniciar(async () => {
+      try {
+        const r = await cancelarReunioesEmLote(schoolId, marcadas.map((m) => m.id), motivo);
+        setMsg(`${r.canceladas} ${r.canceladas === 1 ? "reunião cancelada" : "reuniões canceladas"} com o motivo "${motivo.trim() || "Recesso"}".`);
+        setLista(null); setConfirmar(false); aoConcluir();
+      } catch (e) { setMsg((e as Error).message); }
+    });
+  if (!aberto)
+    return (
+      <button onClick={() => setAberto(true)} className="flex w-fit items-center gap-1.5 rounded-xl border border-gray-300 px-3 py-2 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800">
+        <CalendarOff size={15} /> Período sem reuniões (recesso)
+      </button>
+    );
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
+      <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">Período sem reuniões</h3>
+      <p className="text-[12px] text-gray-500 dark:text-gray-400">Todas as reuniões dos grupos da filial no período vêm marcadas para cancelar. Desmarque as que seguem acontecendo. O motivo aparece na arte da programação de cada grupo.</p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1 text-[12px] font-semibold">De<input type="date" value={de} onChange={(e) => setDe(e.target.value)} className={campo} /></label>
+        <label className="flex flex-col gap-1 text-[12px] font-semibold">Até<input type="date" value={ate} min={de} onChange={(e) => setAte(e.target.value)} className={campo} /></label>
+        <label className="flex min-w-40 flex-col gap-1 text-[12px] font-semibold">Motivo<input value={motivo} maxLength={60} onChange={(e) => setMotivo(e.target.value)} className={campo} /></label>
+        <button disabled={pendente || !de || !ate} onClick={buscar} className="min-h-10 rounded-lg bg-na-green px-3 text-[13px] font-semibold text-white disabled:opacity-50">{pendente && !lista ? <Loader2 size={14} className="animate-spin" /> : "Ver reuniões"}</button>
+        <button onClick={() => { setAberto(false); setLista(null); setMsg(null); }} className="min-h-10 px-2 text-[13px] font-semibold text-gray-500">Fechar</button>
+      </div>
+      {lista && (
+        <div className="flex flex-col gap-2">
+          {lista.length === 0 ? (
+            <p className="text-[13px] text-gray-500">Nenhuma reunião futura agendada nesse período.</p>
+          ) : (
+            <ul className="grid gap-1 text-[13px]">
+              {lista.map((r) => (
+                <li key={r.id} className="flex items-center gap-2">
+                  <input id={`rec-${r.id}`} type="checkbox" checked={!fora.has(r.id)} onChange={() => setFora((f) => { const n = new Set(f); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })} className="h-4 w-4 accent-na-green" />
+                  <label htmlFor={`rec-${r.id}`} className={fora.has(r.id) ? "text-gray-500" : ""}>
+                    {new Date(r.inicio).toLocaleString("pt-BR", { timeZone: ZONA, weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · <b>{r.grupo}</b> · {r.titulo}{fora.has(r.id) ? " · continua" : ""}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+          {marcadas.length > 0 && !confirmar && (
+            <button disabled={pendente} onClick={() => setConfirmar(true)} className="w-fit rounded-lg border border-na-danger px-3 py-2 text-[13px] font-semibold text-na-danger-dark">Cancelar {marcadas.length} {marcadas.length === 1 ? "reunião" : "reuniões"}…</button>
+          )}
+          {confirmar && (
+            <div role="alertdialog" className="rounded-xl border-2 border-na-danger bg-na-danger-light p-3 text-[13px] text-na-danger-dark dark:bg-red-950/40 dark:text-red-200">
+              <p className="font-bold">Cancelar {marcadas.length} {marcadas.length === 1 ? "reunião" : "reuniões"} com o motivo “{motivo.trim() || "Recesso"}”?</p>
+              <p className="mt-1">Os grupos veem o cancelamento na Agenda e na arte da programação. Para reativar uma reunião depois, é preciso criá-la de novo no grupo.</p>
+              <div className="mt-2 flex gap-2">
+                <button disabled={pendente} onClick={cancelar} className="rounded-lg bg-na-danger px-3 py-2 font-bold text-white">{pendente ? <Loader2 size={14} className="animate-spin" /> : "Sim, cancelar"}</button>
+                <button disabled={pendente} onClick={() => setConfirmar(false)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200">Não, manter</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {msg && <p className="text-[13px] font-semibold text-gray-700 dark:text-gray-200">{msg}</p>}
+    </section>
   );
 }
