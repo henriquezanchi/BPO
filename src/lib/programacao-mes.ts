@@ -122,8 +122,8 @@ export function textoWhatsappProgramacao(d: { turma: string | null; publico: str
       linha = `${linha} 🎉`;
       emojis++;
     }
-    // Dia já passado (24/11/2026): riscado no WhatsApp.
-    if (d.hoje && i.data < d.hoje) linha = linha.split("\n").map((l) => `~${l.trim()}~`).join("\n");
+    // Dia já passado (24/11/2026): ✓ no fim da primeira linha, no WhatsApp.
+    if (d.hoje && i.data < d.hoje) linha = linha.replace(/^(.*?)(\n|$)/, "$1 ✓$2");
     eventos.push(linha);
   }
   const fim = ["", d.abertos ? "Contamos com a sua presença! Qualquer dúvida, é só chamar." : "Contamos com a presença de todos! Qualquer dúvida, é só chamar.", "", `_${MENSAGEM_CHAVE}_`];

@@ -203,10 +203,10 @@ export async function gerarArteProgramacao(d: {
   itens.forEach((i, k) => {
     const m = medidas[k];
     const topo = y + padV;
-    // Dia já passado (24/11/2026): semiapagado e riscado; só a agenda futura fica "aberta".
+    // Dia já passado (24/11/2026): meio apagado, com ✓ no título; só a agenda futura fica "aberta".
     const passado = !!d.hoje && i.data < d.hoje;
     ctx.save();
-    if (passado) ctx.globalAlpha = 0.42;
+    if (passado) ctx.globalAlpha = 0.55;
     // Data.
     ctx.fillStyle = COR.destaque;
     ctx.font = f(900, T.dia);
@@ -227,9 +227,15 @@ export async function gerarArteProgramacao(d: {
     ctx.font = f(900, T.titulo);
     m.tit.forEach((l, n) => {
       ctx.fillText(l, xConteudo, yy);
-      if (passado) {
-        // Risco sobre o título.
-        ctx.fillRect(xConteudo, yy + T.titulo * 0.42, ctx.measureText(l).width, 3);
+      if (passado && n === 0) {
+        // Já aconteceu (24/11/2026): ✓ ao lado do título, sem risco; a linha fica só meio apagada.
+        const larg = ctx.measureText(l).width;
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = COR.destaque;
+        ctx.font = f(900, T.titulo);
+        ctx.fillText("✓", xConteudo + larg + 14, yy);
+        ctx.restore();
       }
       if (n === 0 && i.tipo === "prova") {
         // Selo "ATENÇÃO" ao lado do título.
