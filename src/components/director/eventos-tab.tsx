@@ -2,6 +2,7 @@
 
 import { PRAZOS_DESISTENCIA } from '@/lib/event-policy';
 import {EventPosterInput} from "./event-poster-input";
+import {SugestoesRepertorio} from "./sugestoes-repertorio";
 import {EventReceptionSelector} from "./event-reception-selector";
 import {salvarEvento,excluirEvento,definirRecepcaoEvento,definirPostagemOficial} from '@/lib/actions/event-actions';
 import {ABERTURAS,EVENT_AUDIENCES} from '@/lib/event-policy';
@@ -55,6 +56,7 @@ export function EventosTab({schoolId,data}:{schoolId:string;data:DadosEventos}){
     <label className="flex flex-col gap-1 text-xs">Local<input name="location" required maxLength={300} defaultValue={editing?.location??''} className={field}/></label>
     <PublicosEvento inicial={editing?.publicos?.length?editing.publicos:editing?[editing.audience]:undefined}/><EventDateSuggestions schoolId={schoolId}/><AvisoConflitosEvento schoolId={schoolId}/>
     <AberturaEvento inicial={editing?.abertoA} valoresIniciais={editing?.abertoValores}/>
+    <SugestoesRepertorio schoolId={schoolId}/>
     <label className="flex flex-col gap-1 text-xs">Contribuição por inscrição (R$; zero para gratuito)<input type="number" name="price" min={0} max={999999.99} step="0.01" required defaultValue={editing?.price??0} className={field}/></label>
     {/* Lanche compartilhado (pedido do usuário 2026-10-21): aparece em destaque no evento, como a contribuição. */}
     <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2.5 text-sm dark:border-gray-700"><input type="checkbox" name="lancheCompartilhado" defaultChecked={editing?.lancheCompartilhado??false} className="h-4 w-4 accent-na-green"/>Lanche compartilhado <span className="text-xs text-gray-500">(cada participante leva algo para partilhar)</span></label>

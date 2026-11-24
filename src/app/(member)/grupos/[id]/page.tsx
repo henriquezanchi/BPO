@@ -10,6 +10,7 @@ import { destinosDaPessoa } from "@/lib/area-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { detalheDoGrupo } from "@/lib/grupos-dados";
 import { ProgramacaoTurma } from "@/components/member/professor/programacao-turma";
+import { RepertorioArtes } from "@/components/grupos/repertorio-artes";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { agendaDaTurma } from "@/lib/programacao-turma";
 import { fusoDaEscola } from "@/lib/fuso-escola";
@@ -58,6 +59,7 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
       abaInicial={aba}
       avisos={dados.papel.podeGerir ? <AvisosDoGrupo grupoId={dados.grupo.id} /> : undefined}
       orientacoes={orientacoes ? <AreaSecretaria secretaria={dados.grupo.name} /> : undefined}
+      repertorio={dados.grupo.tipo === "SEC" && /\barte/i.test(dados.grupo.name) ? <RepertorioArtes grupoId={dados.grupo.id} podeEditar={dados.papel.podeGerir || dados.papel.integrante} /> : undefined}
       escala={dados.grupo.tipo === "PED" ? <EscalaDoGrupo grupoId={dados.grupo.id} euId={member.id} podeGerir={dados.papel.podeGerir} /> : undefined}
       diarioFv={dados.grupo.tipo === "GDVE" && (dados.papel.integrante || dados.papel.responsavel) ? <DiarioFvDoGrupo member={member} dia={dia} /> : undefined}
     />

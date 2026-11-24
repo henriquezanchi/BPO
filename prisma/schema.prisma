@@ -1196,6 +1196,7 @@ model ClassGroup {
 
   @@unique([schoolId, name])
   @@index([schoolId])
+  repertorio      RepertorioArtistico[]
 }
 
 model ClassMembership {
@@ -1725,6 +1726,32 @@ model GroupMeetingSeries {
   intervaloSemanas Int        @default(1)
   createdAt        DateTime   @default(now())
 
+  @@index([classGroupId])
+}
+
+/// Repertório da Secretaria de Artes (24/11/2026): apresentações artísticas (artista voluntário e o número), com o
+/// que precisam tecnicamente e um formato simplificado, para sugerir nos eventos.
+model RepertorioArtistico {
+  id                  String     @id @default(cuid())
+  schoolId            String
+  classGroupId        String
+  classGroup          ClassGroup @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  artistaId           String?
+  artistaNome         String
+  titulo              String
+  tipo                String     @default("musica") // musica | poesia | teatro | danca | outro
+  duracaoMin          Int?
+  observacoes         String?
+  requisitos          String[]   @default([]) // chaves de REQUISITOS_REPERTORIO (lib/repertorio.ts)
+  requisitosOutros    String?
+  formatoSimplificado String?
+  apresentadoEm       String? // AAAA-MM-DD da última apresentação
+  evento              String?
+  criadoPorId         String
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@index([schoolId])
   @@index([classGroupId])
 }
 

@@ -81,7 +81,8 @@ export type AbaGrupo =
   | "atividades"
   | "equipe"
   | "sobre"
-  | "orientacoes";
+  | "orientacoes"
+  | "repertorio";
 type Aba = AbaGrupo;
 
 /**
@@ -94,6 +95,7 @@ export function GrupoPainel({
   abaInicial,
   avisos,
   orientacoes,
+  repertorio,
   escala,
   diarioFv,
 }: {
@@ -101,6 +103,8 @@ export function GrupoPainel({
   abaInicial?: string;
   avisos?: ReactNode;
   orientacoes?: ReactNode;
+  /** Secretaria de Artes (24/11/2026): repertório das apresentações artísticas. */
+  repertorio?: ReactNode;
   escala?: ReactNode;
   diarioFv?: ReactNode;
 }) {
@@ -121,6 +125,7 @@ export function GrupoPainel({
     ["equipe", grupo.tipo === "SEC" ? "Equipe" : "Pessoas"],
     ["sobre", "Sobre"],
     orientacoes ? ["orientacoes", "Orientações"] : null,
+    repertorio ? ["repertorio", "Repertório"] : null,
   ].filter(Boolean) as [Aba, string][];
   const [aba, setAbaEstado] = useState<Aba>(
     () => abas.find(([a]) => a === abaInicial)?.[0] ?? abas[0][0],
@@ -218,6 +223,7 @@ export function GrupoPainel({
         {aba === "sobre" && <Sobre dados={dados} recarregar={recarregar} />}
       </div>
       {aba === "orientacoes" && orientacoes}
+      {aba === "repertorio" && repertorio}
     </div>
   );
 }
