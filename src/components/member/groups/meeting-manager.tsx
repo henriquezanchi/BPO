@@ -18,7 +18,10 @@ export function MeetingManager({groupId,mostrarTraje=true,verTraje=false}:{group
  function submit(event:React.FormEvent<HTMLFormElement>){
   event.preventDefault();const form=event.currentTarget,data=new FormData(form);setError('');setNotice('');
   const day=String(data.get('day'));
-  const input:MeetingInput={title:String(data.get('title')||'Reunião semanal'),startsLocal:`${day}T${data.get('start')}`,endsLocal:`${day}T${data.get('end')}`,timeZone:editing?.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone,weekly:!point,intervalWeeks:Number(data.get('frequencia')||1),publicDetails:String(data.get('publicDetails')),internalDetails:String(data.get('internalDetails')),fullUniform:mostrarTraje&&data.get('fullUniform')==='on'};
+  // Nome padrão acompanha a frequência (24/11/2026): quinzenal/mensal em vez de "semanal" para séries não semanais.
+  const intervalo=Number(data.get('frequencia')||1);const padrao=intervalo===2?'Reunião quinzenal':intervalo===4?'Reunião mensal':'Reunião semanal';
+  const tituloDigitado=String(data.get('title')||'').trim();
+  const input:MeetingInput={title:(!tituloDigitado||(tituloDigitado==='Reunião semanal'&&intervalo!==1))?padrao:tituloDigitado,startsLocal:`${day}T${data.get('start')}`,endsLocal:`${day}T${data.get('end')}`,timeZone:editing?.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone,weekly:!point,intervalWeeks:Number(data.get('frequencia')||1),publicDetails:String(data.get('publicDetails')),internalDetails:String(data.get('internalDetails')),fullUniform:mostrarTraje&&data.get('fullUniform')==='on'};
   try{validateMeeting(input);}catch(e){setError(readableError(e));return;}
   start(async()=>{try{
    const result=editing?await changeGroupMeeting(editing.id,editing.version,scope,input):await createGroupMeetings(groupId,input);

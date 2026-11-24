@@ -12,7 +12,7 @@ const COR = { fundo: "#086357", destaque: "#FFCA00", branco: "#FFFFFF", claro: "
 const PAD = { topo: 72, lado: 80, base: 64 };
 /** Selo ao lado do título: "ATENÇÃO" na prova; o motivo do cancelamento (ex.: "RECESSO") na reunião cancelada. */
 const seloDe = (i: ItemProgramacao) => (i.tipo === "prova" ? "ATENÇÃO" : i.tipo === "cancelada" ? (i.descricao || "Cancelada").toUpperCase().slice(0, 18) : null);
-const MAX_ITENS = 10;
+const MAX_ITENS = 14;
 
 function carregar(src: string): Promise<HTMLImageElement> {
   return new Promise((ok, falha) => {
@@ -133,38 +133,55 @@ export async function gerarArteProgramacao(d: {
   })();
   const ALTURA_TITULO = 40 + (titulo.linhas.length > 1 ? 72 + (titulo.linhas.length - 1) * titulo.altoLinha : 118) + 32;
   const yLista0 = yTitulo0 + ALTURA_TITULO + 48;
-  let itens = d.itens.slice(0, MAX_ITENS);
   const rodapeY = H - PAD.base - 20;
   const disponivelTotal = rodapeY - 40 - yLista0;
-  // Até 7 no tamanho cheio; mais do que isso, encolhe (dia até 48, título até 26, descrição até 19).
-  const escala = itens.length <= 7 ? 1 : Math.max(0.8, Math.min(1, 7 / itens.length + 0.15));
-  const T = { dia: Math.round(60 * escala), sub: 17, titulo: Math.round(31 * escala), desc: Math.round(22 * escala), padV: Math.round(20 * escala) };
   const colData = 150;
   const xConteudo = PAD.lado + colData + 28;
   const larguraConteudo = W - PAD.lado - xConteudo;
+  const PAD_MIN = 8;
 
-  const medir = (i: ItemProgramacao) => {
+  type Medida = { tit: string[]; linhasDesc: string[]; alto: number };
+  type Tamanhos = { dia: number; sub: number; titulo: number; desc: number; padV: number };
+  const tamanhos = (escala: number): Tamanhos => ({ dia: Math.round(60 * escala), sub: Math.round(17 * Math.max(0.85, escala)), titulo: Math.round(31 * escala), desc: Math.round(22 * escala), padV: Math.round(20 * escala) });
+  // Compacto (24/11/2026): descrição numa linha só e até 3 apresentações, para caber o período inteiro sem espremer.
+  const medir = (i: ItemProgramacao, T: Tamanhos, compacto: boolean): Medida => {
     ctx.font = f(900, T.titulo);
     const selo = seloDe(i);
-    const tit = quebrar(ctx, i.titulo, larguraConteudo - (selo ? (i.tipo === "prova" ? 150 : 230) : 0), 2);
+    const tit = quebrar(ctx, i.titulo, larguraConteudo - (selo ? (i.tipo === "prova" ? 150 : 230) : 0), compacto ? 1 : 2);
     ctx.font = f(400, T.desc);
     // Horário fica junto da data (24/11/2026), não no fim da descrição.
     const desc = i.tipo === "cancelada" ? null : i.descricao;
-    // Apresentações dos pedagogos (24/11/2026): uma por linha, até 4, para o nome e o tema ficarem legíveis.
-    const linhasDesc = !desc ? [] : desc.includes(" — ") ? desc.split("; ").slice(0, 4).map((l) => quebrar(ctx, l, larguraConteudo, 1)[0]) : quebrar(ctx, desc, larguraConteudo, 2);
+    // Apresentações dos pedagogos (24/11/2026): uma por linha, até 4 (3 no compacto), para o nome e o tema ficarem legíveis.
+    const linhasDesc = !desc ? [] : desc.includes(" — ") ? desc.split("; ").slice(0, compacto ? 3 : 4).map((l) => quebrar(ctx, l, larguraConteudo, 1)[0]) : quebrar(ctx, desc, larguraConteudo, compacto ? 1 : 2);
     const altoConteudo = tit.length * T.titulo * 1.12 + (linhasDesc.length ? 6 + linhasDesc.length * T.desc * 1.3 : 0);
     const altoData = T.dia + 6 + T.sub + (i.horario ? T.sub + 6 : 0);
     return { tit, linhasDesc, alto: Math.max(altoConteudo, altoData) };
   };
-  let medidas = itens.map(medir);
-  // O que não couber vira "+ N compromissos no Portal" (nunca passa do rodapé).
-  const PAD_MIN = 8;
+  const cabeTudo = (ms: Medida[]) => ms.reduce((s, m) => s + m.alto + 2 * PAD_MIN, 0) <= disponivelTotal;
+
+  // Quando não cabe tudo (24/11/2026): primeiro saem os compromissos já passados; depois o formato fica compacto
+  // (letra menor, um resumo por item); só por último entra o "+ N compromissos no Portal".
+  const futuros = d.hoje ? d.itens.filter((i) => i.data >= d.hoje!) : d.itens;
+  const tentativas: { lista: ItemProgramacao[]; escala: number; compacto: boolean }[] = [
+    { lista: d.itens, escala: 1, compacto: false },
+    { lista: futuros, escala: 1, compacto: false },
+    { lista: futuros, escala: 0.86, compacto: true },
+    { lista: futuros, escala: 0.74, compacto: true },
+  ];
+  let escolha = tentativas[tentativas.length - 1];
+  for (const t of tentativas) {
+    if (t.lista.length <= MAX_ITENS && cabeTudo(t.lista.slice(0, MAX_ITENS).map((i) => medir(i, tamanhos(t.escala), t.compacto)))) { escolha = t; break; }
+  }
+  const T = tamanhos(escolha.escala);
+  let itens = escolha.lista.slice(0, MAX_ITENS);
+  let medidas = itens.map((i) => medir(i, T, escolha.compacto));
+  // O que ainda não couber vira "+ N compromissos no Portal" (nunca passa do rodapé).
   const somaAte = (k: number) => medidas.slice(0, k).reduce((s, m) => s + m.alto + 2 * PAD_MIN, 0);
   let cabem = medidas.length;
-  while (cabem > 1 && somaAte(cabem) > disponivelTotal - (cabem < d.itens.length ? 34 : 0)) cabem--;
+  while (cabem > 1 && somaAte(cabem) > disponivelTotal - (cabem < escolha.lista.length ? 34 : 0)) cabem--;
   itens = itens.slice(0, cabem);
   medidas = medidas.slice(0, cabem);
-  const sobra = d.itens.length - itens.length;
+  const sobra = escolha.lista.length - itens.length;
   const disponivel = disponivelTotal - (sobra ? 34 : 0);
   const totalConteudo = medidas.reduce((s, m) => s + m.alto, 0);
   const padV = Math.max(8, Math.min(T.padV, (disponivel - totalConteudo) / Math.max(1, itens.length) / 2));
