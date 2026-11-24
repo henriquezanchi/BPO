@@ -80,6 +80,12 @@ Impressora: **térmica USB via WebUSB no navegador** (escolhida; Chrome/Edge, co
 - **Tirar item na contabilidade** (decidido com o usuário): a nota de venda não muda; o Fortuna **cancela a nota e gera outra** só com os itens que ficaram, estornando a diferença e devolvendo o estoque do item tirado. Lotes de fornecedor leem só a nota nova.
 - Sem voluntário: ninguém abre a tela; nada muda para quem compra.
 
+### Painel da TV (chamada de pedidos)
+- Link próprio do aparelho (papel "TV"), para uma televisão da lanchonete. Duas colunas: **Preparando** (pedidos pagos) e **Pronto · pode retirar** (nome de chamada em letras grandes, fundo âmbar). O balcão ganha um botão **"Pronto, chamar <nome>"** por pedido (um toque); pronto some da TV depois de 5 min.
+- **Programação da escola intercalada**: a cada ~25 s o painel de pedidos recolhe para a esquerda (animação) e a programação entra pela direita por ~12 s; volta na hora se um pedido ficar pronto. A programação vem do Portal por uma rota pública de leitura (`GET /api/programacao/<escola>`: eventos publicados e encontros abertos dos próximos 30 dias), com cache de alguns minutos no Fortuna.
+- A cada mudança nos prontos: a tela **pisca** (duas piscadas brancas) e, se ligado nas configurações do aparelho, toca um **bipe** (dois toques; o som só começa depois de um toque na tela, exigência dos navegadores). Relógio no topo.
+- Na demonstração, a TV abre em outra aba pelo link `#tv` e recebe os pedidos da aba do balcão.
+
 ### Impressora
 - WebUSB: na primeira vez, o voluntário autoriza a impressora no navegador; depois o aparelho reconecta sozinho. ESC/POS, 58/80 mm. Se não há impressora conectada, o botão "Imprimir" não aparece e o comprovante fica na tela.
 
