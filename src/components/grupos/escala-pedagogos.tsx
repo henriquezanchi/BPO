@@ -9,6 +9,7 @@ import {
   linkEnvioPlano,
   marcarApresentacaoAvulsa,
   cancelarMinhaApresentacao,
+  corrigirApresentacao,
   marcarApresentacao,
   preverEscala,
   registrarArquivoPlano,
@@ -136,6 +137,8 @@ export function EscalaPedagogos({
 
   const abertas = apresentacoes.filter((a) => a.status === "agendada" && a.data >= hoje);
   const passadas = apresentacoes.filter((a) => !(a.status === "agendada" && a.data >= hoje));
+  // Correção do que aconteceu (24/11/2026): tema diferente, continuação, apresentou/não apresentou.
+  const [corrigindo, setCorrigindo] = useState<string | null>(null);
   const minhas = abertas.filter((a) => a.pedagogoId === euId);
   const atrasados = abertas.filter((a) => a.situacao === "atrasado");
   const aRevisar = abertas.filter((a) => a.situacao === "entregue");
@@ -216,7 +219,7 @@ export function EscalaPedagogos({
                   <span className="min-w-0 text-gray-800 dark:text-gray-200">
                     <b>{a.pedagogo}</b> · {temaComDisciplina(a)} <span className="text-gray-500">· {dataBR(a.data)}</span>
                   </span>
-                  <span className="flex items-center gap-2">
+                  <span className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-gray-500 dark:text-gray-400">
                       {a.status === "apresentada" ? "Apresentou" : a.status === "faltou" ? "Não apresentou" : a.status === "cancelada" ? "Cancelada" : "Sem registro"}
                     </span>
@@ -226,7 +229,13 @@ export function EscalaPedagogos({
                         <button disabled={pendente} onClick={() => rodar(() => marcarApresentacao(a.id, "faltou"))} className="rounded-lg border border-gray-300 px-2 py-1 font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">Não apresentou</button>
                       </>
                     )}
+                    {podeGerir && a.status !== "cancelada" && (
+                      <button disabled={pendente} onClick={() => setCorrigindo(corrigindo === a.id ? null : a.id)} className="flex items-center gap-1 font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
+                        <Pencil size={12} /> {corrigindo === a.id ? "Fechar" : "O que foi apresentado"}
+                      </button>
+                    )}
                   </span>
+                  {corrigindo === a.id && <CorrigirPassada a={a} disciplinas={disciplinas} pendente={pendente} rodar={rodar} fechar={() => setCorrigindo(null)} />}
                 </li>
               ))}
             </ul>
@@ -238,6 +247,57 @@ export function EscalaPedagogos({
 }
 
 type Rodar = (acao: () => Promise<{ ok: boolean; error?: string }>, depois?: () => void) => void;
+
+/**
+ * O que foi apresentado de fato (24/11/2026): a pessoa pode ter apresentado outro tema, ou a continuação do tema
+ * anterior (ex.: Bhagavad Gita em duas semanas), e isso precisa ficar certo para a sequência da formação.
+ */
+function CorrigirPassada({ a, disciplinas, pendente, rodar, fechar }: { a: ApresentacaoView; disciplinas: Disciplina[]; pendente: boolean; rodar: Rodar; fechar: () => void }) {
+  const [status, setStatus] = useState<"apresentada" | "faltou">(a.status === "faltou" ? "faltou" : "apresentada");
+  const [modoTema, setModoTema] = useState<"mesmo" | "outro" | "continuacao">("mesmo");
+  const [ed, setEd] = useState({ materiaSigla: a.materiaSigla, tema: a.tema });
+  const temas = disciplinas.find((d) => d.sigla === ed.materiaSigla)?.temas ?? [];
+  return (
+    <div className="basis-full rounded-xl bg-gray-50 p-3 text-[12px] dark:bg-gray-950/40">
+      <div className="flex flex-wrap gap-3">
+        <label className="flex items-center gap-1.5 font-semibold"><input type="radio" name={`st-${a.id}`} checked={status === "apresentada"} onChange={() => setStatus("apresentada")} /> Apresentou</label>
+        <label className="flex items-center gap-1.5 font-semibold"><input type="radio" name={`st-${a.id}`} checked={status === "faltou"} onChange={() => setStatus("faltou")} /> Não apresentou</label>
+      </div>
+      {status === "apresentada" && (
+        <div className="mt-2 flex flex-wrap gap-3">
+          <label className="flex items-center gap-1.5"><input type="radio" name={`tm-${a.id}`} checked={modoTema === "mesmo"} onChange={() => setModoTema("mesmo")} /> O tema marcado ({a.tema})</label>
+          <label className="flex items-center gap-1.5"><input type="radio" name={`tm-${a.id}`} checked={modoTema === "continuacao"} onChange={() => setModoTema("continuacao")} /> Continuação do tema anterior (2ª parte)</label>
+          <label className="flex items-center gap-1.5"><input type="radio" name={`tm-${a.id}`} checked={modoTema === "outro"} onChange={() => setModoTema("outro")} /> Outro tema</label>
+        </div>
+      )}
+      {status === "apresentada" && modoTema === "outro" && (
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <select aria-label="Disciplina" value={ed.materiaSigla ?? ""} onChange={(e) => { const sigla = e.target.value || null; setEd({ materiaSigla: sigla, tema: disciplinas.find((d) => d.sigla === sigla)?.temas[0]?.titulo ?? ed.tema }); }} className={CAMPO}>
+            {disciplinas.map((d) => <option key={d.sigla} value={d.sigla}>{d.nome}</option>)}
+          </select>
+          {temas.length ? (
+            <select aria-label="Tema" value={ed.tema} onChange={(e) => setEd({ ...ed, tema: e.target.value })} className={CAMPO}>
+              {temas.map((t) => <option key={t.titulo} value={t.titulo}>{t.titulo}</option>)}
+            </select>
+          ) : (
+            <input aria-label="Tema" value={ed.tema} onChange={(e) => setEd({ ...ed, tema: e.target.value })} className={CAMPO} />
+          )}
+        </div>
+      )}
+      <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">A sequência da formação segue a partir do que foi apresentado de fato. A continuação conta como o mesmo tema; a próxima rodada vai para o seguinte.</p>
+      <div className="mt-2 flex gap-2">
+        <button
+          disabled={pendente}
+          onClick={() => rodar(() => corrigirApresentacao(a.id, status === "faltou" ? { status } : modoTema === "continuacao" ? { status, continuacao: true } : modoTema === "outro" ? { status, materiaSigla: ed.materiaSigla, tema: ed.tema } : { status }), fechar)}
+          className="rounded-lg bg-na-green px-3 py-1.5 font-semibold text-white"
+        >
+          Salvar
+        </button>
+        <button onClick={fechar} className="px-2 font-semibold text-gray-500">Cancelar</button>
+      </div>
+    </div>
+  );
+}
 
 /** Temas da formação agrupados por disciplina, na ordem da sequência (Ética, Sociedade, Filosofia da História, Psicologia, ISO). */
 function OpcoesDeTema({ feitos }: { feitos: Set<string> }) {

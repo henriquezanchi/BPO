@@ -394,7 +394,7 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
     return [...contagemPorEmoji.entries()].map(([emoji, count]) => ({ emoji, count, reactedByMe: minhasReacoes.has(emoji) }));
   }
 
-  const apresentacoesDosEncontros = await apresentacoesPorEncontro([...new Set(meetings.filter((m) => m.classGroup.tipo === "PED").map((m) => m.classGroup.id))], hojeNoFuso(fusoDaEscola(member.school.uf)));
+  const apresentacoesDosEncontros = await apresentacoesPorEncontro([...new Set(meetings.filter((m) => m.classGroup.tipo === "PED").map((m) => m.classGroup.id))], hojeNoFuso(fusoDaEscola(member.school.uf)).slice(0, 8) + "01");
   const leiturasDosEncontros = await leiturasDosEncontrosGaf(meetings.filter((m) => m.classGroup.tipo === "GAF").map((m) => m.classGroup.id));
   const agendaItems: AgendaItem[] = [
     ...(await agendaAgora),

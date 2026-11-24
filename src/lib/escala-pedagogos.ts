@@ -237,9 +237,10 @@ export async function minhaTurmaDePedagogos(memberId: string, fuso: string) {
 export async function apresentacoesPorEncontro(grupoIds: string[], hoje: string) {
   if (!grupoIds.length) return new Map<string, string[]>();
   const lista = await db.apresentacaoPedagogo.findMany({
-    where: { classGroupId: { in: grupoIds }, status: "agendada", data: { gte: hoje } },
+    // Passadas entram também (24/11/2026): na arte, ✓ quem apresentou e ✗ quem não apresentou.
+    where: { classGroupId: { in: grupoIds }, status: { in: ["agendada", "apresentada", "faltou"] }, data: { gte: hoje } },
     orderBy: [{ data: "asc" }, { ordem: "asc" }],
-    select: { classGroupId: true, data: true, materiaSigla: true, tema: true, pedagogo: { select: { name: true } } },
+    select: { classGroupId: true, data: true, materiaSigla: true, tema: true, status: true, topicos: true, pedagogo: { select: { name: true } } },
   });
   const saida = new Map<string, string[]>();
   for (const a of lista) {
@@ -247,7 +248,9 @@ export async function apresentacoesPorEncontro(grupoIds: string[], hoje: string)
     const disciplina = programa && programa.disciplinas > 1 ? programa.temas.find((t) => t.sigla === a.materiaSigla)?.disciplina : programa?.nome;
     const nome = a.pedagogo.name.trim().split(/\s+/).slice(0, 2).map((p) => (p.length > 2 ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p.toLowerCase())).join(" ");
     const k = `${a.classGroupId}:${a.data}`;
-    saida.set(k, [...(saida.get(k) ?? []), `${nome} — ${disciplina ? `${disciplina} · ` : ""}${a.tema}`]);
+    const marca = a.status === "apresentada" ? "✓ " : a.status === "faltou" ? "✗ " : "";
+    const parte2 = a.topicos.includes("Continuação do tema (2ª parte)") ? " (2ª parte)" : "";
+    saida.set(k, [...(saida.get(k) ?? []), `${marca}${nome} — ${disciplina ? `${disciplina} · ` : ""}${a.tema}${parte2}`]);
   }
   return saida;
 }

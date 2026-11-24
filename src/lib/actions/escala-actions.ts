@@ -182,6 +182,37 @@ export async function editarApresentacao(id: string, campos: { pedagogoId?: stri
   return { ok: true };
 }
 
+export const MARCA_CONTINUACAO = "Continuação do tema (2ª parte)";
+
+/**
+ * Registrar o que de fato aconteceu (pedido do usuário 24/11/2026): além de "apresentou"/"não apresentou", trocar a
+ * disciplina e o tema apresentados, ou marcar como continuação do tema anterior (ex.: Bhagavad Gita em duas semanas).
+ * Continuação: o tema vira o da apresentação anterior da pessoa, com a marca nos tópicos; para a sequência, conta
+ * como o mesmo tema (a próxima rodada segue para o seguinte).
+ */
+export async function corrigirApresentacao(id: string, c: { status: "apresentada" | "faltou"; materiaSigla?: string | null; tema?: string; continuacao?: boolean }): Promise<Resultado> {
+  const a = await db.apresentacaoPedagogo.findUnique({ where: { id }, select: { classGroupId: true, pedagogoId: true, data: true, materiaSigla: true, tema: true } });
+  if (!a || !(await gestor(a.classGroupId))) return falha("Sem permissão.");
+  if (!["apresentada", "faltou"].includes(c.status)) return falha("Situação inválida.");
+  let materiaSigla = c.materiaSigla === undefined ? a.materiaSigla : c.materiaSigla;
+  let tema = (c.tema ?? a.tema).trim();
+  let topicos: string[] | undefined;
+  if (c.continuacao) {
+    const anterior = await db.apresentacaoPedagogo.findFirst({ where: { pedagogoId: a.pedagogoId, status: "apresentada", data: { lt: a.data }, id: { not: id } }, orderBy: [{ data: "desc" }, { ordem: "desc" }], select: { materiaSigla: true, tema: true, topicos: true } });
+    if (!anterior) return falha("Não há apresentação anterior desta pessoa para continuar.");
+    materiaSigla = anterior.materiaSigla;
+    tema = anterior.tema;
+    topicos = [MARCA_CONTINUACAO, ...anterior.topicos.filter((t) => t !== MARCA_CONTINUACAO)];
+  } else if (c.tema !== undefined || c.materiaSigla !== undefined) {
+    if (materiaSigla && !catalogoDaMateria(materiaSigla)) return falha("Disciplina inválida.");
+    if (!tema) return falha("Informe o tema.");
+    topicos = catalogoDaMateria(materiaSigla)?.temas.find((t) => t.titulo === tema)?.topicos ?? [];
+  }
+  await db.apresentacaoPedagogo.update({ where: { id }, data: { status: c.status, materiaSigla, tema: tema.slice(0, 200), ...(topicos ? { topicos } : {}) } });
+  atualizar(a.classGroupId);
+  return { ok: true };
+}
+
 export async function marcarApresentacao(id: string, status: "agendada" | "apresentada" | "faltou" | "cancelada"): Promise<Resultado> {
   const a = await db.apresentacaoPedagogo.findUnique({ where: { id }, select: { classGroupId: true } });
   if (!a || !(await gestor(a.classGroupId)) || !["agendada", "apresentada", "faltou", "cancelada"].includes(status)) return falha("Sem permissão.");
