@@ -131,7 +131,7 @@ export async function gerarArteProgramacao(d: {
     ctx.font = f(900, 58);
     return { linhas: quebrar(ctx, d.turma, W - 2 * PAD.lado, 2), tam: 58, altoLinha: 66 };
   })();
-  const ALTURA_TITULO = 40 + (titulo.linhas.length > 1 ? 56 + (titulo.linhas.length - 1) * titulo.altoLinha : 118) + 32;
+  const ALTURA_TITULO = 40 + (titulo.linhas.length > 1 ? 72 + (titulo.linhas.length - 1) * titulo.altoLinha : 118) + 32;
   const yLista0 = yTitulo0 + ALTURA_TITULO + 48;
   let itens = d.itens.slice(0, MAX_ITENS);
   const rodapeY = H - PAD.base - 20;
@@ -184,7 +184,7 @@ export async function gerarArteProgramacao(d: {
     ctx.font = f(900, titulo.tam);
     // Linhas para baixo a partir do mês (nunca sobre ele); o bloco do título cresce com as linhas extras.
     titulo.linhas.forEach((l, i) => ctx.fillText(l, PAD.lado, y + i * titulo.altoLinha));
-    y += titulo.linhas.length > 1 ? 56 + (titulo.linhas.length - 1) * titulo.altoLinha : 118;
+    y += titulo.linhas.length > 1 ? 72 + (titulo.linhas.length - 1) * titulo.altoLinha : 118;
     ctx.fillStyle = COR.claro;
     ctx.font = f(400, 32);
     ctx.fillText(`Programação de ${rotuloDoPeriodo(d.ano, d.mes, d.meses ?? 1).curto}`, PAD.lado, y);
