@@ -8,7 +8,7 @@ import { papelNoGrupo } from "@/lib/grupos-portal";
 import { avisarSemEsperar } from "@/lib/push";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { catalogoDaMateria } from "@/lib/temas-curriculo";
-import { chaveTema, programaDaSigla, STATUS_NA_TRILHA } from "@/lib/pedagogos-programa";
+import { chaveTema, MARCA_CONTINUACAO, programaDaSigla, STATUS_NA_TRILHA } from "@/lib/pedagogos-programa";
 import { revalidatePath } from "next/cache";
 
 /** Escala de apresentações e planos de aula da turma de pedagogos (pedido do usuário 2026-10-26). */
@@ -181,8 +181,6 @@ export async function editarApresentacao(id: string, campos: { pedagogoId?: stri
   atualizar(a.classGroupId);
   return { ok: true };
 }
-
-export const MARCA_CONTINUACAO = "Continuação do tema (2ª parte)";
 
 /**
  * Registrar o que de fato aconteceu (pedido do usuário 24/11/2026): além de "apresentou"/"não apresentou", trocar a

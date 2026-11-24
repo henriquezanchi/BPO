@@ -38,6 +38,8 @@ export const chaveTema = (sigla: string | null, tema: string) => `${sigla ?? ""}
 
 /** Contam na trilha as apresentações marcadas ou feitas; quem não apresentou (ou teve a data cancelada) repete o tema. */
 export const STATUS_NA_TRILHA = ["agendada", "apresentada"];
+/** Marca nos tópicos de uma apresentação que foi a continuação (2ª parte) do tema anterior (24/11/2026). */
+export const MARCA_CONTINUACAO = "Continuação do tema (2ª parte)";
 
 /** Próximo tema da trilha da pessoa: o primeiro do programa que ela ainda não apresentou nem tem marcado. */
 export function proximoTema(programa: Programa, feitos: Iterable<string>) {

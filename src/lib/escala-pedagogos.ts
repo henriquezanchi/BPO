@@ -2,7 +2,7 @@ import "server-only";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
 import { localInZone } from "@/lib/group-meetings";
-import { chaveTema, programaDaDisciplina, programasDosPedagogos, proximoNaSequencia, proximoTema, sequenciaDosPedagogos, STATUS_NA_TRILHA, temasFeitos, type Programa, type TemaDoPrograma, type UltimaApresentacao } from "@/lib/pedagogos-programa";
+import { chaveTema, MARCA_CONTINUACAO, programaDaDisciplina, programasDosPedagogos, proximoNaSequencia, proximoTema, sequenciaDosPedagogos, STATUS_NA_TRILHA, temasFeitos, type Programa, type TemaDoPrograma, type UltimaApresentacao } from "@/lib/pedagogos-programa";
 import { PROVAS_CONJUNTAS, TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
 
 /**
@@ -249,7 +249,7 @@ export async function apresentacoesPorEncontro(grupoIds: string[], hoje: string)
     const nome = a.pedagogo.name.trim().split(/\s+/).slice(0, 2).map((p) => (p.length > 2 ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p.toLowerCase())).join(" ");
     const k = `${a.classGroupId}:${a.data}`;
     const marca = a.status === "apresentada" ? "✓ " : a.status === "faltou" ? "✗ " : "";
-    const parte2 = a.topicos.includes("Continuação do tema (2ª parte)") ? " (2ª parte)" : "";
+    const parte2 = a.topicos.includes(MARCA_CONTINUACAO) ? " (2ª parte)" : "";
     saida.set(k, [...(saida.get(k) ?? []), `${marca}${nome} — ${disciplina ? `${disciplina} · ` : ""}${a.tema}${parte2}`]);
   }
   return saida;
