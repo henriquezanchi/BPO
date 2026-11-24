@@ -44,7 +44,8 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
           fuso={fuso}
           escola={member.school?.name ?? ""}
           hoje={hojeNoFuso(fuso)}
-          publicos={["Integrantes", "Voluntários", "Membros", "Alunos"]}
+          publicos={dados.grupo.tipo === "PED" ? ["Pedagogos", "Integrantes"] : ["Integrantes", "Voluntários", "Membros", "Alunos"]}
+          turmaNoTexto={dados.grupo.tipo === "PED" ? "turma de Pedagogos" : undefined}
           descricaoItens="encontros e atividades do grupo"
         />
       </CollapsibleSection>

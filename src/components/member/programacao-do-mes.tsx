@@ -17,7 +17,7 @@ const BOTAO =
   "flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-left text-[13px] font-semibold text-gray-800 transition hover:border-gray-300 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800";
 
 /** `somenteAbertos`: membro sem atribuições ou aluno (17/11/2026) gera só com os eventos abertos ao público. */
-export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: number; fuso: string; publico: string; escola: string; somenteAbertos?: boolean }) {
+export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: number; fuso: string; publico: string; escola: string; somenteAbertos?: boolean; turmaNoTexto?: string }) {
   const [aberto, setAberto] = useState(false);
   const [arte, setArte] = useState<{ arquivo: File; url: string } | null>(null);
   const [erro, setErro] = useState(false);
@@ -32,8 +32,8 @@ export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: num
   const turma = useMemo(() => (p.somenteAbertos ? escolaCurta : turmaDoMes(base)), [base, p.somenteAbertos, escolaCurta]);
   const publico = p.somenteAbertos ? "Eventos abertos" : p.publico;
   const texto = useMemo(
-    () => textoWhatsappProgramacao({ turma, publico, ano: p.ano, mes: p.mes, itens, abertos: p.somenteAbertos, escola: escolaCurta, hoje }),
-    [turma, publico, p.ano, p.mes, itens, p.somenteAbertos, escolaCurta, hoje],
+    () => textoWhatsappProgramacao({ turma: p.turmaNoTexto ?? turma, publico, ano: p.ano, mes: p.mes, itens, abertos: p.somenteAbertos, escola: escolaCurta, hoje }),
+    [turma, p.turmaNoTexto, publico, p.ano, p.mes, itens, p.somenteAbertos, escolaCurta, hoje],
   );
   const nomeArquivo = `programacao-${MESES[p.mes - 1]}-${p.ano}.png`;
   // Hoje no fuso da filial: o que já passou sai riscado na arte e no texto (24/11/2026).

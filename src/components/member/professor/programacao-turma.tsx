@@ -9,7 +9,7 @@ import { useMemo, useState } from "react";
  * Programação da turma (instrutor, 17/11/2026): escolhe o mês e o público e abre a mesma arte + texto da Agenda,
  * para compartilhar no grupo da turma no WhatsApp. Inclui aulas, provas, trabalhos e leituras publicados.
  */
-export function ProgramacaoTurma({ items, fuso, escola, hoje, publicos = ["Alunos", "Membros"], descricaoItens = "aulas, provas, trabalhos e leituras publicados para a turma" }: { items: AgendaItem[]; fuso: string; escola: string; hoje: string; publicos?: string[]; descricaoItens?: string }) {
+export function ProgramacaoTurma({ items, fuso, escola, hoje, publicos = ["Alunos", "Membros"], descricaoItens = "aulas, provas, trabalhos e leituras publicados para a turma", turmaNoTexto }: { items: AgendaItem[]; fuso: string; escola: string; hoje: string; publicos?: string[]; descricaoItens?: string; /** Como chamar o grupo no texto do WhatsApp (ex.: "turma de Pedagogos"), 24/11/2026. */ turmaNoTexto?: string }) {
   const [a0, m0] = hoje.split("-").map(Number);
   const meses = useMemo(() => Array.from({ length: 4 }, (_, i) => ({ ano: a0 + Math.floor((m0 - 1 + i) / 12), mes: ((m0 - 1 + i) % 12) + 1 })), [a0, m0]);
   const [escolhido, setEscolhido] = useState(0);
@@ -42,7 +42,7 @@ export function ProgramacaoTurma({ items, fuso, escola, hoje, publicos = ["Aluno
       <p className="text-xs text-gray-500 dark:text-gray-400">
         {qtd ? `${qtd} ${qtd === 1 ? "compromisso" : "compromissos"} em ${MESES[mes - 1]}: ${descricaoItens}.` : `Nada publicado em ${MESES[mes - 1]} ainda.`}
       </p>
-      <ProgramacaoDoMes items={items} ano={ano} mes={mes} fuso={fuso} publico={publico} escola={escola} />
+      <ProgramacaoDoMes items={items} ano={ano} mes={mes} fuso={fuso} publico={publico} escola={escola} turmaNoTexto={turmaNoTexto} />
     </div>
   );
 }
