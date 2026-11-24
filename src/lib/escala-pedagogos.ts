@@ -245,7 +245,7 @@ export async function apresentacoesPorEncontro(grupoIds: string[], hoje: string)
   for (const a of lista) {
     const programa = programaDaDisciplina(a.materiaSigla);
     const disciplina = programa && programa.disciplinas > 1 ? programa.temas.find((t) => t.sigla === a.materiaSigla)?.disciplina : programa?.nome;
-    const nome = a.pedagogo.name.split(/\s+/).slice(0, 2).join(" ");
+    const nome = a.pedagogo.name.trim().split(/\s+/).slice(0, 2).map((p) => (p.length > 2 ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p.toLowerCase())).join(" ");
     const k = `${a.classGroupId}:${a.data}`;
     saida.set(k, [...(saida.get(k) ?? []), `${nome} — ${disciplina ? `${disciplina} · ` : ""}${a.tema}`]);
   }

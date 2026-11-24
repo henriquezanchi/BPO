@@ -128,8 +128,11 @@ export function textoWhatsappProgramacao(d: { turma: string | null; publico: str
   // Cabe em ~900 caracteres: corta as últimas linhas de compromisso se precisar, avisando que há mais no Portal.
   let corpo = eventos;
   const tamanho = (l: string[]) => [...linhas, ...l, ...fim].join("\n").length;
-  if (tamanho(corpo) > 900) {
-    while (corpo.length > 1 && tamanho([...corpo, "…e mais compromissos no Portal."]) > 900) corpo = corpo.slice(0, -1);
+  // Com apresentações (uma por linha) o texto cresce; o limite sobe para caber o mês inteiro (24/11/2026).
+  const limite = eventos.some((l) => l.includes("
+   • ")) ? 1800 : 900;
+  if (tamanho(corpo) > limite) {
+    while (corpo.length > 1 && tamanho([...corpo, "…e mais compromissos no Portal."]) > limite) corpo = corpo.slice(0, -1);
     corpo = [...corpo, "…e mais compromissos no Portal."];
   }
   return [...linhas, ...corpo, ...fim].join("\n");
