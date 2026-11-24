@@ -252,13 +252,85 @@ export type FortunaVendaResultado = {
   balance: string | null;
 };
 
-export async function fortunaProdutosDoCaixa(cashierId: number) {
-  return integracao<{ cashier: { id: number; title: string; branchId: number }; products: FortunaProduto[] }>(`/cashier/${cashierId}/products`);
+type Catalogo = { cashier: { id: number; title: string; branchId: number }; products: FortunaProduto[] };
+
+// ─────────── Caminho legado (24/11/2026), enquanto o Fortuna não publica as rotas de autoatendimento ───────────
+// Usa o login de colaborador (FORTUNA_INSCRICAO/FORTUNA_SENHA, Gerente) e as rotas antigas do painel do vendedor:
+// GET /products/cashier/:id, POST /invoice e DELETE /invoice/:id. A venda antiga NÃO confere saldo nem estoque no
+// servidor (só debita), então o Portal confere aqui, com os preços do próprio Fortuna, antes de enviar. O colaborador
+// configurado fica registrado como vendedor. Sem Idempotency-Key: quem chama guarda a chave→venda (cafe-actions).
+const rotaNaoPublicada = (e: unknown) => e instanceof FortunaErro && (e.status === 404 || e.status === 403);
+
+type ProdutoLegado = { id: number; title: string; description: string | null; price: string | number; amount: number; active: boolean; cashierId: number; cashier?: { id: number; title: string; branchId: number } };
+
+async function legadoCatalogo(cashierId: number): Promise<Catalogo> {
+  const [produtos, filiais] = await Promise.all([chamarApi<ProdutoLegado[]>(`/products/cashier/${cashierId}`), legadoGetBranches()]);
+  const caixa = produtos[0]?.cashier ?? filiais.flatMap((f) => f.cashiers ?? []).find((c) => c.id === cashierId);
+  if (!caixa) throw new FortunaErro(`Fortuna: caixa ${cashierId} não encontrado.`, 404);
+  return {
+    cashier: { id: caixa.id, title: caixa.title, branchId: caixa.branchId },
+    products: produtos.filter((p) => p.active !== false).map((p) => ({ id: p.id, title: p.title, description: p.description ?? "", price: Number(p.price).toFixed(2), stock: p.amount })),
+  };
 }
 
-/** Venda com o saldo do cliente. `chave` = Idempotency-Key: repetir nunca debita duas vezes. */
+async function legadoVender(clientId: number, cashierId: number, itens: { productId: number; amount: number }[]): Promise<FortunaVendaResultado> {
+  const token = await obterToken();
+  const sellerId = (JSON.parse(Buffer.from(token.split(".")[1], "base64").toString()) as { payload: { id: number } }).payload.id;
+  const [catalogo, cliente] = await Promise.all([legadoCatalogo(cashierId), fortunaGetClient(clientId)]);
+  const porId = new Map(catalogo.products.map((p) => [p.id, p]));
+  const linhas = itens.map((i) => {
+    const p = porId.get(i.productId);
+    if (!p) throw new FortunaErro(`Fortuna: produto ${i.productId} não está neste caixa.`, 409);
+    if (p.stock < i.amount) throw new FortunaErro(`Fortuna: sem estoque - ${p.title}: restam ${p.stock}.`, 409);
+    const value = Math.round(Number(p.price) * i.amount * 100) / 100;
+    return { p, amount: i.amount, value };
+  });
+  const total = Math.round(linhas.reduce((s, l) => s + l.value, 0) * 100) / 100;
+  const saldo = Number(cliente.balance.find((b) => b.branchId === catalogo.cashier.branchId)?.amount ?? 0);
+  if (saldo < total) throw new FortunaErro(`Fortuna: saldo insuficiente (${saldo.toFixed(2)} < ${total.toFixed(2)}).`, 402);
+  const saleDate = new Date().toISOString();
+  const res = await fetchAcropole(`${BASE_URL}/invoice`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": USER_AGENT },
+    body: JSON.stringify({ value: total, saleDate, cashierId, sellerId, clientId, branchId: catalogo.cashier.branchId, discount: 0, products: linhas.map((l) => ({ id: l.p.id, value: l.value, amount: l.amount })) }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) throw new FortunaErro(`Fortuna /invoice -> HTTP ${res.status} - ${(await res.text()).slice(0, 200)}`, res.status);
+  const nota = (await res.json()) as { id: number; saleDate?: string };
+  return {
+    invoiceId: nota.id,
+    saleDate: nota.saleDate ?? saleDate,
+    cashier: catalogo.cashier,
+    items: linhas.map((l) => ({ productId: l.p.id, title: l.p.title, amount: l.amount, unitPrice: l.p.price, value: l.value.toFixed(2) })),
+    total: total.toFixed(2),
+    balance: (Math.round((saldo - total) * 100) / 100).toFixed(2),
+  };
+}
+
+async function legadoCancelarVenda(invoiceId: number) {
+  const token = await obterToken();
+  const res = await fetchAcropole(`${BASE_URL}/invoice/${invoiceId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) throw new FortunaErro(`Fortuna DELETE /invoice -> HTTP ${res.status} - ${(await res.text()).slice(0, 200)}`, res.status);
+  return { invoiceId, canceled: true };
+}
+
+export async function fortunaProdutosDoCaixa(cashierId: number): Promise<Catalogo> {
+  if (!integracaoConfigurada()) return legadoCatalogo(cashierId);
+  try {
+    return await integracao<Catalogo>(`/cashier/${cashierId}/products`);
+  } catch (e) {
+    if (!rotaNaoPublicada(e)) throw e;
+    return legadoCatalogo(cashierId);
+  }
+}
+
+/**
+ * Venda com o saldo do cliente. `chave` = Idempotency-Key: repetir nunca debita duas vezes (na integração). No caminho
+ * legado não há chave: a venda só é enviada uma vez, e timeout vira erro (quem chama guarda a chave→venda).
+ */
 export async function fortunaVender(clientId: number, cashierId: number, itens: { productId: number; amount: number }[], chave: string) {
   if (!/^[\x21-\x7e]{1,128}$/.test(chave)) throw new Error("Chave de idempotência inválida para o Fortuna.");
+  if (!integracaoConfigurada()) return legadoVender(clientId, cashierId, itens);
   const enviar = () =>
     integracao<FortunaVendaResultado>(`/client/${clientId}/sale`, {
       method: "POST",
@@ -268,11 +340,18 @@ export async function fortunaVender(clientId: number, cashierId: number, itens: 
   try {
     return await enviar();
   } catch (e) {
+    if (rotaNaoPublicada(e)) return legadoVender(clientId, cashierId, itens);
     if (e instanceof FortunaErro && e.status < 500) throw e;
     return enviar(); // mesma chave: se já tinha vendido, o Fortuna devolve a mesma venda
   }
 }
 
 export async function fortunaCancelarVenda(invoiceId: number) {
-  return integracao<{ invoiceId: number; canceled: boolean }>(`/sale/${invoiceId}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  if (!integracaoConfigurada()) return legadoCancelarVenda(invoiceId);
+  try {
+    return await integracao<{ invoiceId: number; canceled: boolean }>(`/sale/${invoiceId}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  } catch (e) {
+    if (!rotaNaoPublicada(e)) throw e;
+    return legadoCancelarVenda(invoiceId);
+  }
 }

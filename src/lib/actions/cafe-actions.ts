@@ -14,7 +14,9 @@ import { revalidatePath } from "next/cache";
  * permitir o cancelamento dentro da janela e mostrar o comprovante; nada de cartão ou senha passa por aqui.
  */
 const chaveCompras = (memberId: string) => `cafe:compras:${memberId}`;
-type CompraGuardada = { invoiceId: number; em: string; total: string; caixa: string };
+type CompraGuardada = { invoiceId: number; em: string; total: string; caixa: string; chave?: string; venda?: FortunaVendaResultado };
+/** Janela de cancelamento pela própria pessoa (a do Fortuna na integração; no caminho legado só o Portal confere). */
+const JANELA_CANCELAMENTO_MS = 10 * 60 * 1000;
 
 function mensagem(e: unknown) {
   if (e instanceof FortunaErro) {
@@ -41,10 +43,16 @@ async function vender(eu: { id: string; fortunaClientId: number }, cashierId: nu
   if (!/^[A-Za-z0-9_-]{8,64}$/.test(chave)) return { ok: false, error: "Pedido inválido. Atualize a tela." };
   try {
     // A chave leva a pessoa: duas pessoas nunca colidem, e o mesmo toque repetido não cobra duas vezes.
-    const venda = await fortunaVender(eu.fortunaClientId, cashierId, lista, `portal-cafe-${eu.id}-${chave}`.slice(0, 128));
+    const chaveFortuna = `portal-cafe-${eu.id}-${chave}`.slice(0, 128);
     const linha = await db.resumoNacional.findUnique({ where: { chave: chaveCompras(eu.id) } });
-    const anteriores = ((linha?.dados as { compras?: CompraGuardada[] } | null)?.compras ?? []).filter((c) => c.invoiceId !== venda.invoiceId);
-    const compras = [{ invoiceId: venda.invoiceId, em: venda.saleDate, total: venda.total, caixa: venda.cashier.title }, ...anteriores].slice(0, 20);
+    const guardadas = (linha?.dados as { compras?: CompraGuardada[] } | null)?.compras ?? [];
+    // Repetição da mesma chave (toque duplo, rede instável): devolve a venda já feita, sem chamar o Fortuna de novo.
+    // Necessário no caminho legado (sem Idempotency-Key) e inofensivo na integração.
+    const repetida = guardadas.find((c) => c.chave === chaveFortuna && c.venda);
+    if (repetida?.venda) return { ok: true, venda: repetida.venda };
+    const venda = await fortunaVender(eu.fortunaClientId, cashierId, lista, chaveFortuna);
+    const anteriores = guardadas.filter((c) => c.invoiceId !== venda.invoiceId);
+    const compras = [{ invoiceId: venda.invoiceId, em: venda.saleDate, total: venda.total, caixa: venda.cashier.title, chave: chaveFortuna, venda }, ...anteriores].slice(0, 20);
     await db.resumoNacional.upsert({ where: { chave: chaveCompras(eu.id) }, update: { dados: { compras }, geradoEm: new Date() }, create: { chave: chaveCompras(eu.id), dados: { compras } } });
     return { ok: true, venda };
   } catch (e) {
@@ -63,8 +71,9 @@ export async function cancelarCompraCafe(invoiceId: number): Promise<{ ok: boole
 async function cancelar(memberId: string, invoiceId: number): Promise<{ ok: boolean; error?: string }> {
   const eu = { id: memberId };
   const linha = await db.resumoNacional.findUnique({ where: { chave: chaveCompras(eu.id) } });
-  const minha = ((linha?.dados as { compras?: CompraGuardada[] } | null)?.compras ?? []).some((c) => c.invoiceId === invoiceId);
+  const minha = ((linha?.dados as { compras?: CompraGuardada[] } | null)?.compras ?? []).find((c) => c.invoiceId === invoiceId);
   if (!minha) return { ok: false, error: "Compra não encontrada." };
+  if (Date.now() - new Date(minha.em).getTime() > JANELA_CANCELAMENTO_MS) return { ok: false, error: "O prazo para cancelar acabou. Fale com o responsável pela lanchonete." };
   try {
     await fortunaCancelarVenda(invoiceId);
     return { ok: true };
