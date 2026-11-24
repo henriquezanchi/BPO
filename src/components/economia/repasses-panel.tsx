@@ -1,6 +1,8 @@
 "use client";
 
-import { abrirPainelFinanceiro, criarPinFinanceiro, fecharPainelFinanceiro, solicitarRepasse } from "@/lib/actions/cobranca-online-actions";
+import { abrirPainelFinanceiro, criarPinFinanceiro, fecharPainelFinanceiro, reciboDoRepasse, solicitarRepasse } from "@/lib/actions/cobranca-online-actions";
+import { gerarReciboDeRepasse } from "@/lib/recibo-repasse-pdf";
+import { FileText } from "lucide-react";
 import type { ResumoRepasse } from "@/lib/repasses";
 import { Lock, ShieldCheck } from "lucide-react";
 import { useState, useTransition } from "react";
@@ -26,6 +28,14 @@ export function RepassesPanel(p: { schoolId: string; temPin: boolean; resumo: Re
       const r = await fn();
       setMsg(r.ok ? (ok ? { ok: true, texto: ok } : null) : { ok: false, texto: r.error ?? "Não deu certo." });
       if (r.ok) depois?.();
+    });
+  // Recibo de doação do repasse (24/11/2026): dados do servidor, PDF no navegador.
+  const rodarRecibo = (id: string) =>
+    iniciar(async () => {
+      const r = await reciboDoRepasse(id);
+      if (!r.ok) return setMsg({ ok: false, texto: r.error });
+      gerarReciboDeRepasse(r.dados).save(`recibo-doacao-${r.dados.numero}.pdf`);
+      setMsg({ ok: true, texto: "Recibo gerado. Imprima e assine (ou assine no gov.br) e envie à escola titular da conta." });
     });
 
   if (!p.temPin)
@@ -119,6 +129,17 @@ export function RepassesPanel(p: { schoolId: string; temPin: boolean; resumo: Re
               <li key={x.id} className="flex flex-wrap justify-between gap-x-3 border-t border-gray-100 pt-1 tabular-nums dark:border-gray-800">
                 <span>{new Date(x.data).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · <b>{brl(x.valor)}</b>{x.tarifa ? ` (tarifa ${brl(x.tarifa)})` : ""}{x.automatico ? " · automático" : ""}</span>
                 <span className={x.status === "concluido" ? "text-emerald-700 dark:text-emerald-400" : x.status === "falhou" ? "text-red-700 dark:text-red-400" : "text-gray-600"}>{STATUS_REP[x.status] ?? x.status}{x.erro ? ` — ${x.erro}` : ""}</span>
+                {/* Recibo de doação (24/11/2026): o diretor imprime e assina (ou assina no gov.br) e manda à escola titular. */}
+                {x.status !== "falhou" && x.status !== "cancelado" && (
+                  <button
+                    type="button"
+                    disabled={pendente}
+                    onClick={() => rodarRecibo(x.id)}
+                    className="flex items-center gap-1 text-[12px] font-semibold text-na-green-dark underline-offset-2 hover:underline dark:text-emerald-400"
+                  >
+                    <FileText size={12} /> Recibo de doação (PDF)
+                  </button>
+                )}
               </li>
             ))}
           </ul>

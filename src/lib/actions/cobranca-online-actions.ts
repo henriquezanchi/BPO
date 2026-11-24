@@ -7,7 +7,7 @@ import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
 import { TIPOS_CHAVE, type TipoChave, chaveDaPropriaEscola, pedirSaque, saldoDaConta, validarChave } from "@/lib/asaas/saque";
 import { chavePixDaEscola, definirRepasseCartao, gravarChavePix } from "@/lib/spread";
 import { marcarContatoAtendido } from "@/lib/whatsapp/conversa";
-import { abrirFinanceiro, definirPin, devidoAOutras, fecharFinanceiro, pedirRepasse } from "@/lib/repasses";
+import { abrirFinanceiro, dadosDoRecibo, definirPin, devidoAOutras, fecharFinanceiro, pedirRepasse } from "@/lib/repasses";
 import { revalidatePath } from "next/cache";
 
 /** Economia → Cobrança on-line (12/11/2026): a filial escolhe se repassa a taxa do cartão ao aluno. */
@@ -146,6 +146,17 @@ export async function solicitarRepasse(schoolId: string) {
     return { ok: true as const, ...r };
   } catch (e) {
     revalidatePath("/economia");
+    return { ok: false as const, error: (e as Error).message };
+  }
+}
+
+/** Recibo de doação do repasse (24/11/2026): dados para o PDF gerado no navegador. */
+export async function reciboDoRepasse(repasseId: string) {
+  const eu = await getAuthenticatedMember();
+  if (!eu) return { ok: false as const, error: "Entre no Portal de novo." };
+  try {
+    return { ok: true as const, dados: await dadosDoRecibo(eu, repasseId) };
+  } catch (e) {
     return { ok: false as const, error: (e as Error).message };
   }
 }

@@ -263,3 +263,32 @@ export async function repasseDoPortal(valor: number, transferId: string | undefi
   });
   return !!r;
 }
+
+// ───────────── Recibo de doação do repasse (24/11/2026) ─────────────
+/** Dados do recibo (lib/recibo-repasse-pdf.ts gera o PDF no navegador). Só a direção da filial, com o painel aberto. */
+export async function dadosDoRecibo(m: Pessoa, repasseId: string) {
+  const r = await db.repasseFilial.findUnique({ where: { id: repasseId } });
+  if (!r) throw new Error("Repasse não encontrado.");
+  if (!(await podeVerFinanceiro(m, r.schoolId))) throw new Error("Só a direção da filial vê o recibo.");
+  if (!(await financeiroAberto(m.id))) throw new Error("Digite o PIN de novo.");
+  const escola = async (id: string) => {
+    const s = await db.school.findUniqueOrThrow({ where: { id }, select: { name: true, cnpj: true, enderecoCompleto: true, city: true, uf: true } });
+    const diretor = await db.member.findFirst({ where: { schoolId: id, isDiretor: true, mercurioAtivo: true }, select: { name: true }, orderBy: { name: "asc" } });
+    return { nome: s.name, cnpj: s.cnpj, endereco: s.enderecoCompleto, cidade: s.city, uf: s.uf, diretor: diretor?.name ?? null };
+  };
+  const cobrancas = await db.cobrancaProvisoria.findMany({ where: { repasseId, status: "pago", origem: { in: ORIGENS.filter((o) => !o.startsWith("ajuste")) } }, select: { pagoEm: true, createdAt: true, valorBruto: true } });
+  const datas = cobrancas.map((c) => (c.pagoEm ?? c.createdAt).getTime()).sort((a, b) => a - b);
+  return {
+    numero: `${r.createdAt.toISOString().slice(0, 10).replace(/-/g, "")}-${r.id.slice(-6).toUpperCase()}`,
+    data: (r.concluidoEm ?? r.createdAt).toISOString(),
+    valor: Number(r.valor),
+    tarifa: Number(r.tarifa),
+    chavePix: r.chavePix,
+    tipoChave: r.tipoChave,
+    transferId: r.transferId,
+    status: r.status,
+    cobrancas: { quantidade: cobrancas.length, de: datas.length ? new Date(datas[0]).toISOString() : null, ate: datas.length ? new Date(datas[datas.length - 1]).toISOString() : null, bruto: Math.round(cobrancas.reduce((s, c) => s + Number(c.valorBruto), 0) * 100) / 100 },
+    titular: await escola(r.titularSchoolId),
+    escola: await escola(r.schoolId),
+  };
+}
