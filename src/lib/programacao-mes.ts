@@ -56,6 +56,27 @@ function encurtar(titulo: string, descricao: string | null): { titulo: string; d
   return { titulo: m[1], descricao: descricao ? `${m[2]} · ${descricao}` : m[2] };
 }
 
+/** Vários meses seguidos (pedido do usuário 24/11/2026: GAF quinzenal e secretarias mensais): `meses` a partir de ano/mes. */
+export function itensDoPeriodo(items: AgendaItem[], ano: number, mes: number, meses: number, fuso: string): ItemProgramacao[] {
+  const saida: ItemProgramacao[] = [];
+  for (let k = 0; k < Math.max(1, meses); k++) {
+    const m0 = mes - 1 + k;
+    saida.push(...itensDoMes(items, ano + Math.floor(m0 / 12), (m0 % 12) + 1, fuso));
+  }
+  return saida;
+}
+
+/** "novembro", "novembro e dezembro", "novembro a janeiro" (com o ano quando vira). */
+export function rotuloDoPeriodo(ano: number, mes: number, meses = 1): { curto: string; cabecalho: string } {
+  const fim = mes - 1 + Math.max(1, meses) - 1;
+  const anoFim = ano + Math.floor(fim / 12);
+  const mesFim = (fim % 12) + 1;
+  if (meses <= 1) return { curto: MESES[mes - 1], cabecalho: `${MESES[mes - 1]} ${ano}` };
+  const de = MESES[mes - 1], ate = MESES[mesFim - 1];
+  const curto = meses === 2 ? `${de} e ${ate}` : `${de} a ${ate}`;
+  return { curto: anoFim !== ano ? `${curto} de ${anoFim}` : curto, cabecalho: anoFim !== ano ? `${de} ${ano} – ${ate} ${anoFim}` : `${de} – ${ate} ${ano}` };
+}
+
 export function itensDoMes(items: AgendaItem[], ano: number, mes: number, fuso: string): ItemProgramacao[] {
   const saida: ItemProgramacao[] = [];
   for (const it of items) {
@@ -105,13 +126,13 @@ const dd = (n: number) => String(n).padStart(2, "0");
 export const descricaoComHorario = (i: ItemProgramacao) => [i.descricao, i.horario].filter(Boolean).join(" · ") || null;
 
 /** Texto do WhatsApp que acompanha a arte (formatação do WhatsApp, até 3 emojis, ~900 caracteres). */
-export function textoWhatsappProgramacao(d: { turma: string | null; publico: string; ano: number; mes: number; itens: ItemProgramacao[]; abertos?: boolean; escola?: string; hoje?: string }) {
+export function textoWhatsappProgramacao(d: { turma: string | null; publico: string; ano: number; mes: number; meses?: number; itens: ItemProgramacao[]; abertos?: boolean; escola?: string; hoje?: string; onde?: string | null }) {
   let emojis = 1; // 🏛️ do título
-  const mesNome = MESES[d.mes - 1];
+  const mesNome = rotuloDoPeriodo(d.ano, d.mes, d.meses ?? 1).curto;
   // Só eventos abertos (membro sem atribuições ou aluno, 17/11/2026): convite para qualquer pessoa.
   const linhas = d.abertos
     ? [`*Programação aberta da Nova Acrópole${d.escola ? ` ${d.escola}` : ""} em ${mesNome}* 🏛️`, `Segue a nossa programação aberta ao público em ${mesNome}. Venha participar e traga quem você quiser!`, ""]
-    : [`*Programação ${d.turma ? `da ${d.turma}` : "do mês"} em ${mesNome}* 🏛️`, `Queridos ${d.publico.toLowerCase()}, segue a nossa agenda de ${mesNome}. Já anotem!`, ""];
+    : [`*Programação ${d.turma ? `da ${d.turma}` : "do mês"} em ${mesNome}* 🏛️`, `Queridos ${d.publico.toLowerCase()}, segue a nossa agenda de ${mesNome}. Já anotem!`, ...(d.onde ? [d.onde] : []), ""];
   const eventos: string[] = [];
   // Texto do WhatsApp (24/11/2026): só o que ainda vai acontecer; a arte mostra o mês inteiro.
   for (const i of d.itens) {

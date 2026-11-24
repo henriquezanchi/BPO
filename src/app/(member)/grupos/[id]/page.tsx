@@ -46,6 +46,7 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
           hoje={hojeNoFuso(fuso)}
           publicos={dados.grupo.tipo === "PED" ? ["Pedagogos", "Integrantes"] : ["Integrantes", "Voluntários", "Membros", "Alunos"]}
           turmaNoTexto={dados.grupo.tipo === "PED" ? "turma de Pedagogos" : undefined}
+          onde={ondeDoGrupo(dados.grupo)}
           descricaoItens="encontros e atividades do grupo"
         />
       </CollapsibleSection>
@@ -82,4 +83,11 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
       {programacao}
     </ShellTrabalho>
   );
+}
+
+/** "Presencial · Sala Platão", "Online · https://meet…" ou "Presencial e online · Sala X · link" (24/11/2026). */
+function ondeDoGrupo(g: { modalidade: string | null; local: string | null; linkOnline: string | null }) {
+  const modo = g.modalidade === "online" ? "Online" : g.modalidade === "misto" ? "Presencial e online" : "Presencial";
+  const partes = [modo, g.modalidade !== "online" ? g.local?.trim() : null, g.modalidade !== "presencial" ? g.linkOnline?.trim() : null].filter(Boolean);
+  return partes.join(" · ");
 }

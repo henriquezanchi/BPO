@@ -1,4 +1,4 @@
-import { MENSAGEM_CHAVE, MESES, MESES_ABREV, SEMANA_ABREV, type ItemProgramacao } from "@/lib/programacao-mes";
+import { MENSAGEM_CHAVE, MESES_ABREV, SEMANA_ABREV, rotuloDoPeriodo, type ItemProgramacao } from "@/lib/programacao-mes";
 
 /**
  * Arte "Programação" do mês, 1080×1350 (4:5), no guia da marca (17/11/2026; modelo da Turma Hilárion):
@@ -73,6 +73,10 @@ export async function gerarArteProgramacao(d: {
   rodapeDireita: string;
   /** AAAA-MM-DD no fuso da filial: dias anteriores saem riscados e semiapagados (24/11/2026). */
   hoje?: string;
+  /** Quantos meses a partir de ano/mes (24/11/2026); padrão 1. */
+  meses?: number;
+  /** Presencial/online e sala ou link (24/11/2026), no cabeçalho à direita. */
+  onde?: string | null;
 }): Promise<Blob> {
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -108,7 +112,7 @@ export async function gerarArteProgramacao(d: {
   ctx.font = f(700, 18);
   espacar(ctx, 0.18, 18);
   // Com turma, o nome dela vira o título grande (pedido do usuário 24/11/2026) e sai do cabeçalho.
-  const cab = [d.publico].filter(Boolean).map((s) => s!.toUpperCase());
+  const cab = [d.publico, d.onde].filter(Boolean).map((s) => s!.toUpperCase());
   cab.forEach((l, i) => ctx.fillText(l, W - PAD.lado, PAD.topo + 8 + i * 28));
   espacar(ctx, 0, 1);
   ctx.textAlign = "left";
@@ -172,7 +176,7 @@ export async function gerarArteProgramacao(d: {
   ctx.fillStyle = COR.destaque;
   ctx.font = f(700, 22);
   espacar(ctx, 0.22, 22);
-  ctx.fillText(`${MESES[d.mes - 1]} ${d.ano}`.toUpperCase(), PAD.lado, y);
+  ctx.fillText(rotuloDoPeriodo(d.ano, d.mes, d.meses ?? 1).cabecalho.toUpperCase(), PAD.lado, y);
   espacar(ctx, 0, 1);
   y += 40;
   ctx.fillStyle = COR.branco;
@@ -183,14 +187,14 @@ export async function gerarArteProgramacao(d: {
     y += titulo.linhas.length > 1 ? 56 + (titulo.linhas.length - 1) * titulo.altoLinha : 118;
     ctx.fillStyle = COR.claro;
     ctx.font = f(400, 32);
-    ctx.fillText(`Programação de ${MESES[d.mes - 1]}`, PAD.lado, y);
+    ctx.fillText(`Programação de ${rotuloDoPeriodo(d.ano, d.mes, d.meses ?? 1).curto}`, PAD.lado, y);
   } else {
     ctx.font = f(900, 104);
     ctx.fillText("Programação", PAD.lado, y);
     y += 118;
     ctx.fillStyle = COR.claro;
     ctx.font = f(400, 32);
-    ctx.fillText(`da nossa escola em ${MESES[d.mes - 1]}`, PAD.lado, y);
+    ctx.fillText(`da nossa escola em ${rotuloDoPeriodo(d.ano, d.mes, d.meses ?? 1).curto}`, PAD.lado, y);
   }
   y = yLista0 + 2 * extra;
 

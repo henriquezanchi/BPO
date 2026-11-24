@@ -4,7 +4,7 @@ import { IconeWhatsApp } from "@/components/member/compartilhar-evento";
 import { gerarArteProgramacao } from "@/lib/arte-programacao";
 import { eventoCompartilhavel } from "@/lib/compartilhar-evento";
 import type { AgendaItem } from "@/lib/member-data";
-import { MESES, itensDoMes, textoWhatsappProgramacao, turmaDoMes } from "@/lib/programacao-mes";
+import { MESES, itensDoPeriodo, textoWhatsappProgramacao, turmaDoMes } from "@/lib/programacao-mes";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Check, Copy, Download, Loader2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -17,7 +17,7 @@ const BOTAO =
   "flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-left text-[13px] font-semibold text-gray-800 transition hover:border-gray-300 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800";
 
 /** `somenteAbertos`: membro sem atribuições ou aluno (17/11/2026) gera só com os eventos abertos ao público. */
-export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: number; fuso: string; publico: string; escola: string; somenteAbertos?: boolean; turmaNoTexto?: string }) {
+export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: number; meses?: number; fuso: string; publico: string; escola: string; somenteAbertos?: boolean; turmaNoTexto?: string; onde?: string | null }) {
   const [aberto, setAberto] = useState(false);
   const [arte, setArte] = useState<{ arquivo: File; url: string } | null>(null);
   const [erro, setErro] = useState(false);
@@ -28,12 +28,12 @@ export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: num
   // Hoje no fuso da filial: o que já passou sai riscado na arte e no texto (24/11/2026).
   const hoje = useMemo(() => new Date().toLocaleDateString("en-CA", { timeZone: p.fuso }), [p.fuso]);
   const base = useMemo(() => (p.somenteAbertos ? p.items.filter((i) => i.kind === "evento" && eventoCompartilhavel(i)) : p.items), [p.items, p.somenteAbertos]);
-  const itens = useMemo(() => itensDoMes(base, p.ano, p.mes, p.fuso), [base, p.ano, p.mes, p.fuso]);
+  const itens = useMemo(() => itensDoPeriodo(base, p.ano, p.mes, p.meses ?? 1, p.fuso), [base, p.ano, p.mes, p.meses, p.fuso]);
   const turma = useMemo(() => (p.somenteAbertos ? escolaCurta : turmaDoMes(base)), [base, p.somenteAbertos, escolaCurta]);
   const publico = p.somenteAbertos ? "Eventos abertos" : p.publico;
   const texto = useMemo(
-    () => textoWhatsappProgramacao({ turma: p.turmaNoTexto ?? turma, publico, ano: p.ano, mes: p.mes, itens, abertos: p.somenteAbertos, escola: escolaCurta, hoje }),
-    [turma, p.turmaNoTexto, publico, p.ano, p.mes, itens, p.somenteAbertos, escolaCurta, hoje],
+    () => textoWhatsappProgramacao({ turma: p.turmaNoTexto ?? turma, publico, ano: p.ano, mes: p.mes, meses: p.meses, itens, abertos: p.somenteAbertos, escola: escolaCurta, hoje, onde: p.onde }),
+    [turma, p.turmaNoTexto, publico, p.ano, p.mes, p.meses, itens, p.somenteAbertos, escolaCurta, hoje, p.onde],
   );
   const nomeArquivo = `programacao-${MESES[p.mes - 1]}-${p.ano}.png`;
   // Hoje no fuso da filial: o que já passou sai riscado na arte e no texto (24/11/2026).
@@ -42,7 +42,7 @@ export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: num
     if (!aberto || !itens.length) return;
     let cancelado = false;
     let url: string | undefined;
-    gerarArteProgramacao({ turma, publico, ano: p.ano, mes: p.mes, itens, rodapeDireita: `Nova Acrópole ${escolaCurta}`, hoje })
+    gerarArteProgramacao({ turma, publico, ano: p.ano, mes: p.mes, meses: p.meses, itens, rodapeDireita: `Nova Acrópole ${escolaCurta}`, hoje, onde: p.onde })
       .then((blob) => {
         if (cancelado) return;
         const arquivo = new File([blob], nomeArquivo, { type: "image/png" });
@@ -54,7 +54,7 @@ export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: num
       cancelado = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [aberto, itens, turma, publico, p.ano, p.mes, escolaCurta, nomeArquivo, hoje]);
+  }, [aberto, itens, turma, publico, p.ano, p.mes, p.meses, p.onde, escolaCurta, nomeArquivo, hoje]);
 
   function copiar() {
     if (!navigator.clipboard?.writeText) return setAviso("Selecione e copie o texto abaixo.");
