@@ -102,7 +102,7 @@ export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: num
     >
       <Dialog.Trigger asChild>
         <button type="button" className={`${BOTAO} w-full justify-center`}>
-          <IconeWhatsApp /> {p.somenteAbertos ? "Eventos abertos" : "Programação"} de {MESES[p.mes - 1]} para compartilhar
+          <IconeWhatsApp /> <span className="sm:hidden">Compartilhar</span><span className="hidden sm:inline">{p.somenteAbertos ? "Eventos abertos" : "Programação"} de {MESES[p.mes - 1]} para compartilhar</span>
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -126,7 +126,7 @@ export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: num
                   {/* eslint-disable-next-line @next/next/no-img-element -- PNG gerado no próprio navegador */}
                   <img src={arte.url} alt={`Programação de ${MESES[p.mes - 1]}`} className="mx-auto max-h-[45dvh] rounded-lg object-contain" />
                   <button type="button" onClick={compartilhar} className={`${BOTAO} mt-3 w-full justify-center`}>
-                    <IconeWhatsApp /> Compartilhar arte e texto
+                    <IconeWhatsApp /> <span className="sm:hidden">Compartilhar</span><span className="hidden sm:inline">Compartilhar arte e texto</span>
                   </button>
                   <button type="button" onClick={baixar} className={`${BOTAO} mt-2 w-full justify-center`}>
                     <Download size={16} /> Baixar arte

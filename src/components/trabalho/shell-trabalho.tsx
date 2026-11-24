@@ -14,7 +14,7 @@ export async function ShellTrabalho({ children, largura = "larga", ativo }: { ch
   const destinos = await destinosDaPessoa(member);
   if (!destinos.length) redirect("/portal");
   return (
-    <div className="min-h-screen bg-na-bg dark:bg-gray-950">
+    <div className="min-h-screen overflow-x-hidden bg-na-bg dark:bg-gray-950">
       <div className="mx-auto lg:grid lg:max-w-[1440px] lg:grid-cols-[256px_minmax(0,1fr)]">
         <NavTrabalho destinos={destinos} nome={member.name} filial={member.school.name.replace(/^Nova Acrópole\s*-\s*/i, "")} forcado={ativo} />
         <main className={`mx-auto flex w-full flex-col gap-6 p-4 lg:p-8 ${largura === "estreita" ? "max-w-2xl" : "max-w-6xl"}`}>{children}</main>

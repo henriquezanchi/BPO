@@ -1,5 +1,6 @@
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { db } from "@/lib/db";
+import { nomeExibicao } from "@/lib/nome-exibicao";
 import { leiturasEmSequencia } from "@/lib/gaf-leituras";
 import { ehFV, ehTipoGrupo, gruposDaAgenda, papelNoGrupo, TIPOS_DO_PORTAL, TIPOS_GRUPO, type Papel, type TipoGrupo } from "@/lib/grupos-portal";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
@@ -110,7 +111,7 @@ export async function detalheDoGrupo(m: Pessoa, grupoId: string) {
       slackChannelId: true,
       slackTeamId: true,
       school: { select: { name: true } },
-      memberships: { select: { role: true, member: { select: { id: true, name: true, isMembroPrograma: true } } }, orderBy: { member: { name: "asc" } } },
+      memberships: { select: { role: true, member: { select: { id: true, name: true, apelido: true, isMembroPrograma: true } } }, orderBy: { member: { name: "asc" } } },
       atividades: { orderBy: [{ status: "asc" }, { criadoEm: "asc" }] },
       meetingSeries: { select: { intervaloSemanas: true, untilSlot: true } },
     },
@@ -132,7 +133,8 @@ export async function detalheDoGrupo(m: Pessoa, grupoId: string) {
   });
   // Leituras do GAF (2026-10-26): texto de cada encontro, escolhido ou na sequência do cronograma.
   const leiturasGaf = g.tipo === "GAF" ? await leiturasDoGaf(grupoId) : null;
-  const nomes = new Map(g.memberships.map((x) => [x.member.id, x.member.name]));
+  // Nome de exibição (24/11/2026): apelido ou primeiro e último nome; o completo fica em `nomeCompleto`.
+  const nomes = new Map(g.memberships.map((x) => [x.member.id, nomeExibicao(x.member)]));
   // Pedidos feitos pelo Portal do Aluno para este GAF (só a coordenação vê).
   const pedidos =
     g.tipo === "GAF" && papel.podeGerir
@@ -156,8 +158,8 @@ export async function detalheDoGrupo(m: Pessoa, grupoId: string) {
       tipo: g.tipo as TipoGrupo,
       frequencia: g.meetingSeries.find((s) => !s.untilSlot)?.intervaloSemanas ?? null,
       slack: linkDoCanal(g.slackTeamId, g.slackChannelId),
-      responsaveis: g.memberships.filter((x) => x.role === "professor").map((x) => x.member),
-      integrantes: g.memberships.filter((x) => x.role === "aluno").map((x) => x.member),
+      responsaveis: g.memberships.filter((x) => x.role === "professor").map((x) => ({ ...x.member, nomeCompleto: x.member.name, name: nomeExibicao(x.member) })),
+      integrantes: g.memberships.filter((x) => x.role === "aluno").map((x) => ({ ...x.member, nomeCompleto: x.member.name, name: nomeExibicao(x.member) })),
       atividades: g.atividades.map((a) => ({ ...a, nomesResponsaveis: a.responsaveis.map((r) => nomes.get(r) ?? "—") })),
     },
     encontros: encontros.map((e) => ({

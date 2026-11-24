@@ -1,6 +1,7 @@
 import { EscalaPedagogos, type ApresentacaoView } from "@/components/grupos/escala-pedagogos";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
+import { nomeExibicao } from "@/lib/nome-exibicao";
 import { disciplinasDisponiveis, hojeNoFuso, prazoDoPlano, progressoNoPrograma, proximosDosPedagogos, situacaoDoPlano, trilhasDosPedagogos } from "@/lib/escala-pedagogos";
 import { chaveTema } from "@/lib/pedagogos-programa";
 import { programasDosPedagogos } from "@/lib/pedagogos-programa";
@@ -14,10 +15,10 @@ export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: str
   const [apresentacoes, integrantes] = await Promise.all([
     db.apresentacaoPedagogo.findMany({
       where: { classGroupId: grupoId, data: { gte: new Date(Date.parse(`${hoje}T12:00:00Z`) - 120 * 864e5).toISOString().slice(0, 10) } },
-      include: { pedagogo: { select: { name: true } }, plano: true },
+      include: { pedagogo: { select: { name: true, apelido: true } }, plano: true },
       orderBy: [{ data: "asc" }, { ordem: "asc" }],
     }),
-    db.classMembership.findMany({ where: { classGroupId: grupoId, role: "aluno", member: { mercurioAtivo: true } }, select: { member: { select: { id: true, name: true } } }, orderBy: { member: { name: "asc" } } }),
+    db.classMembership.findMany({ where: { classGroupId: grupoId, role: "aluno", member: { mercurioAtivo: true } }, select: { member: { select: { id: true, name: true, apelido: true } } }, orderBy: { member: { name: "asc" } } }),
   ]);
   // Progresso na formação: todos os programas (N1, ISO e Psicologia liberados para os pedagogos em 23/11/2026). Quem gere vê todos;
   // o pedagogo, só o próprio.
@@ -35,7 +36,7 @@ export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: str
       data: a.data,
       ordem: a.ordem,
       pedagogoId: a.pedagogoId,
-      pedagogo: a.pedagogo.name,
+      pedagogo: nomeExibicao(a.pedagogo),
       materiaSigla: a.materiaSigla,
       tema: a.tema,
       topicos: a.topicos,
@@ -65,7 +66,7 @@ export async function EscalaDoGrupo({ grupoId, euId, podeGerir }: { grupoId: str
       podeAjustar={podeGerir || integrantes.some((i) => i.member.id === euId)}
       proximos={Object.fromEntries([...(await proximosDosPedagogos(integrantes.map((i) => i.member.id)))].map(([id, t]) => [id, t ? chaveTema(t.sigla, t.titulo) : null]))}
       trilhas={Object.fromEntries(await trilhasDosPedagogos(integrantes.map((i) => i.member.id)))}
-      pedagogos={integrantes.map((i) => ({ id: i.member.id, nome: i.member.name }))}
+      pedagogos={integrantes.map((i) => ({ id: i.member.id, nome: nomeExibicao(i.member) }))}
       disciplinas={disciplinasDisponiveis().map((d) => ({ ...d, temas: (catalogoDaMateria(d.sigla)?.temas ?? []).map((t) => ({ titulo: t.titulo, topicos: t.topicos ?? [] })) }))}
       programas={programas}
       progresso={progresso}

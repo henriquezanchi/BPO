@@ -700,7 +700,7 @@ function LinhaEscala({ a, hoje, minha, podeGerir, podeAjustar, pedagogos, discip
         <Etiqueta a={a} />
       </div>
       {podeAjustar && (
-        <div className="flex flex-wrap gap-3 text-[12px] font-semibold">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] font-semibold [&>button]:min-h-10 [&>button]:items-center">
           {podeGerir && a.plano && a.plano.status !== "rascunho" && (
             <button onClick={() => setModo(modo === "plano" ? "nada" : "plano")} className="flex items-center gap-1 text-na-green-dark hover:underline dark:text-emerald-400">
               <FileText size={13} /> {modo === "plano" ? "Fechar plano" : "Ver plano"}

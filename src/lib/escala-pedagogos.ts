@@ -1,6 +1,7 @@
 import "server-only";
 import { fusoDaEscola } from "@/lib/atendimentos";
 import { db } from "@/lib/db";
+import { nomeExibicao } from "@/lib/nome-exibicao";
 import { localInZone } from "@/lib/group-meetings";
 import { chaveTema, MARCA_CONTINUACAO, programaDaDisciplina, programasDosPedagogos, proximoNaSequencia, proximoTema, sequenciaDosPedagogos, STATUS_NA_TRILHA, temasFeitos, type Programa, type TemaDoPrograma, type UltimaApresentacao } from "@/lib/pedagogos-programa";
 import { PROVAS_CONJUNTAS, TEMAS_POR_MATERIA } from "@/lib/temas-curriculo";
@@ -240,13 +241,13 @@ export async function apresentacoesPorEncontro(grupoIds: string[], hoje: string)
     // Passadas entram também (24/11/2026): na arte, ✓ quem apresentou e ✗ quem não apresentou.
     where: { classGroupId: { in: grupoIds }, status: { in: ["agendada", "apresentada", "faltou"] }, data: { gte: hoje } },
     orderBy: [{ data: "asc" }, { ordem: "asc" }],
-    select: { classGroupId: true, data: true, materiaSigla: true, tema: true, status: true, topicos: true, pedagogo: { select: { name: true } } },
+    select: { classGroupId: true, data: true, materiaSigla: true, tema: true, status: true, topicos: true, pedagogo: { select: { name: true, apelido: true } } },
   });
   const saida = new Map<string, string[]>();
   for (const a of lista) {
     const programa = programaDaDisciplina(a.materiaSigla);
     const disciplina = programa && programa.disciplinas > 1 ? programa.temas.find((t) => t.sigla === a.materiaSigla)?.disciplina : programa?.nome;
-    const nome = a.pedagogo.name.trim().split(/\s+/).slice(0, 2).map((p) => (p.length > 2 ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p.toLowerCase())).join(" ");
+    const nome = nomeExibicao(a.pedagogo);
     const k = `${a.classGroupId}:${a.data}`;
     const marca = a.status === "apresentada" ? "✓ " : a.status === "faltou" ? "✗ " : "";
     const parte2 = a.topicos.includes(MARCA_CONTINUACAO) ? " (2ª parte)" : "";

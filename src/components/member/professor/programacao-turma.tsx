@@ -39,8 +39,9 @@ export function ProgramacaoTurma({ items, fuso, escola, hoje, publicos = ["Aluno
           </select>
         </label>
       </div>
+      {/* No celular, só o número (pedido do usuário 24/11/2026: menos texto). */}
       <p className="text-xs text-gray-500 dark:text-gray-400">
-        {qtd ? `${qtd} ${qtd === 1 ? "compromisso" : "compromissos"} em ${MESES[mes - 1]}: ${descricaoItens}.` : `Nada publicado em ${MESES[mes - 1]} ainda.`}
+        {qtd ? <><span>{qtd} {qtd === 1 ? "compromisso" : "compromissos"} em {MESES[mes - 1]}</span><span className="hidden sm:inline">: {descricaoItens}</span>.</> : `Nada publicado em ${MESES[mes - 1]} ainda.`}
       </p>
       <ProgramacaoDoMes items={items} ano={ano} mes={mes} fuso={fuso} publico={publico} escola={escola} turmaNoTexto={turmaNoTexto} />
     </div>

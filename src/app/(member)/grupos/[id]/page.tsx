@@ -38,7 +38,7 @@ export default async function GrupoPage(props: { params: Promise<{ id: string }>
   const fuso = fusoDaEscola(member.school?.uf);
   const programacao = dados.papel.podeGerir ? (
     <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-      <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Programação do grupo para o WhatsApp</h2>}>
+      <CollapsibleSection title={<h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200"><span className="sm:hidden">Programação no WhatsApp</span><span className="hidden sm:inline">Programação do grupo para o WhatsApp</span></h2>}>
         <ProgramacaoTurma
           items={await agendaDaTurma(dados.grupo.id)}
           fuso={fuso}
