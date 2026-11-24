@@ -1670,6 +1670,8 @@ model GroupMeeting {
   presencaPerguntadaEm DateTime?
   // Leitura do GAF (2026-10-26): código do texto escolhido pela coordenação ("teseu-05") ou "nenhuma"; nulo = automático.
   leituraGaf           String?
+  // O que foi feito de fato (24/11/2026): texto livre da coordenação; vale na divulgação do mês.
+  realizado            String?
   createdAt            DateTime               @default(now())
   responses            GroupMeetingResponse[]
   auditLog             GroupMeetingAudit[]

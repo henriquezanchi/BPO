@@ -20,7 +20,7 @@ export async function agendaDaTurma(classGroupId: string): Promise<AgendaItem[]>
     db.groupMeeting.findMany({
       where: { classGroupId, startsAt: { gte: inicio, lt: fim } },
       orderBy: { startsAt: "asc" },
-      select: { id: true, title: true, startsAt: true, endsAt: true, publicDetails: true, status: true, cancellationReason: true, version: true, classGroup: { select: { name: true, tipo: true } }, timeZone: true },
+      select: { id: true, title: true, startsAt: true, endsAt: true, publicDetails: true, realizado: true, status: true, cancellationReason: true, version: true, classGroup: { select: { name: true, tipo: true } }, timeZone: true },
     }),
     db.activity.findMany({ where: { classGroupId, dueDate: { gte: inicio, lt: fim } }, include: { classGroup: { select: { name: true } } }, orderBy: { dueDate: "asc" } }),
   ]);
@@ -30,7 +30,7 @@ export async function agendaDaTurma(classGroupId: string): Promise<AgendaItem[]>
   const apresentacoes = tipo === "PED" ? await apresentacoesPorEncontro([classGroupId], inicio.toISOString().slice(0, 10)) : new Map<string, string[]>();
   const leituras = tipo === "GAF" ? await leiturasDosEncontrosGaf([classGroupId]) : new Map<string, string>();
   return [
-    ...reunioes.map((m): AgendaItem => ({ kind: "reuniao", id: m.id, title: m.title, date: m.startsAt, endsAt: m.endsAt, className: portalLabel(m.classGroup.name), description: m.publicDetails, fullUniform: false, status: m.status, cancellationReason: m.cancellationReason, version: m.version, myResponse: null, apresentacoes: apresentacoes.get(`${classGroupId}:${localInZone(m.startsAt, m.timeZone || "America/Sao_Paulo").slice(0, 10)}`), leitura: leituras.get(m.id) })),
+    ...reunioes.map((m): AgendaItem => ({ kind: "reuniao", id: m.id, title: m.title, date: m.startsAt, endsAt: m.endsAt, className: portalLabel(m.classGroup.name), description: m.publicDetails, fullUniform: false, status: m.status, cancellationReason: m.cancellationReason, version: m.version, myResponse: null, realizado: m.realizado, apresentacoes: apresentacoes.get(`${classGroupId}:${localInZone(m.startsAt, m.timeZone || "America/Sao_Paulo").slice(0, 10)}`), leitura: leituras.get(m.id) })),
     ...atividades.map((a): AgendaItem => ({
       kind: "atividade",
       id: a.id,

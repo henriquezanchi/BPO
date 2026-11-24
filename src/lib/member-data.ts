@@ -74,7 +74,7 @@ export interface PollOptionView {
 }
 
 export type AgendaItem =
-  | {kind:"reuniao";id:string;title:string;date:Date;endsAt:Date;className:string;description:string;fullUniform:boolean;status:string;cancellationReason:string|null;version:number;myResponse:string|null;/** Turma de pedagogos: quem apresenta neste encontro e o tema (24/11/2026). */apresentacoes?:string[];/** GAF: leitura do encontro (24/11/2026). */leitura?:string}
+  | {kind:"reuniao";id:string;title:string;date:Date;endsAt:Date;className:string;description:string;fullUniform:boolean;status:string;cancellationReason:string|null;version:number;myResponse:string|null;/** Turma de pedagogos: quem apresenta neste encontro e o tema (24/11/2026). */apresentacoes?:string[];/** GAF: leitura do encontro (24/11/2026). */leitura?:string;/** O que foi feito de fato (24/11/2026). */realizado?:string|null}
   | {
       kind: "evento";
       id: string;
@@ -315,7 +315,7 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
           db.groupMeeting.findMany({
             where: { classGroupId: { in: groupIds }, endsAt: { gte: new Date() } },
             orderBy: { startsAt: "asc" },
-            select: { id: true, title: true, startsAt: true, endsAt: true, publicDetails: true, fullUniform: true, status: true, cancellationReason: true, version: true, classGroup: { select: { id: true, name: true, tipo: true } }, responses: { where: { memberId }, select: { response: true } } },
+            select: { id: true, title: true, startsAt: true, endsAt: true, publicDetails: true, realizado: true, fullUniform: true, status: true, cancellationReason: true, version: true, classGroup: { select: { id: true, name: true, tipo: true } }, responses: { where: { memberId }, select: { response: true } } },
           }),
         )
       : Promise.resolve([]),
@@ -398,7 +398,7 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
   const leiturasDosEncontros = await leiturasDosEncontrosGaf(meetings.filter((m) => m.classGroup.tipo === "GAF").map((m) => m.classGroup.id));
   const agendaItems: AgendaItem[] = [
     ...(await agendaAgora),
-    ...meetings.map((m):AgendaItem=>({kind:'reuniao',leitura:leiturasDosEncontros.get(m.id),apresentacoes:apresentacoesDosEncontros.get(`${m.classGroup.id}:${localInZone(m.startsAt,fusoDaEscola(member.school.uf)).slice(0,10)}`),id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:souFV&&m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
+    ...meetings.map((m):AgendaItem=>({kind:'reuniao',realizado:m.realizado,leitura:leiturasDosEncontros.get(m.id),apresentacoes:apresentacoesDosEncontros.get(`${m.classGroup.id}:${localInZone(m.startsAt,fusoDaEscola(member.school.uf)).slice(0,10)}`),id:m.id,title:m.title,date:m.startsAt,endsAt:m.endsAt,className:portalLabel(m.classGroup.name),description:m.publicDetails,fullUniform:souFV&&m.fullUniform,status:m.status,cancellationReason:m.cancellationReason,version:m.version,myResponse:m.responses[0]?.response??null})),
     ...schoolEvents.map(
       (e): AgendaItem => ({
         kind: "evento",

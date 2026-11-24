@@ -68,7 +68,8 @@ export function itensDoMes(items: AgendaItem[], ano: number, mes: number, fuso: 
       if (/cancel/i.test(it.status)) continue;
       const revisao = /revis/i.test(it.title);
       // Turma de pedagogos (24/11/2026): a descrição passa a ser quem apresenta e o tema.
-      const descricao = it.apresentacoes?.length ? it.apresentacoes.join("; ") : it.leitura ?? primeiraLinha(it.description);
+      // O que foi feito de fato (24/11/2026) vale sobre o programado.
+      const descricao = it.realizado ? `Feito: ${limpa(it.realizado)}` : it.apresentacoes?.length ? it.apresentacoes.join("; ") : it.leitura ?? primeiraLinha(it.description);
       base = { titulo: it.title || "Aula", descricao, horario: hora(it.date, fuso), tipo: revisao ? "revisao" : "aula" };
     } else if (it.kind === "atividade") {
       const assunto = [it.materiaNome, it.temas?.length ? it.temas.join(", ") : null].filter(Boolean).join(" · ") || primeiraLinha(it.description);

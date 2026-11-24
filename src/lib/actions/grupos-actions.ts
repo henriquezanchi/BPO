@@ -297,6 +297,20 @@ export async function registrarPresenca(meetingId: string, participou: boolean, 
 // --- Presença marcada pela coordenação e relatório (pedido do usuário 2026-10-29, GAF) ---------------
 
 /** A coordenação marca quem participou de um encontro que já começou (grava na mesma GrupoPresenca da resposta do integrante). */
+/** O que foi feito no encontro (24/11/2026): texto livre de quem gere, só para encontros já ocorridos; vazio apaga. */
+export async function registrarRealizado(meetingId: string, texto: string) {
+  return executar(async () => {
+    const r = await db.groupMeeting.findUnique({ where: { id: meetingId }, select: { classGroupId: true, startsAt: true, status: true } });
+    if (!r || r.status === "cancelada") throw new GrupoErro("Encontro não encontrado ou cancelado.");
+    await exigirGestor(r.classGroupId);
+    if (r.startsAt > new Date()) throw new GrupoErro("O encontro ainda não começou.");
+    const limpo = String(texto ?? "").replace(/\s+/g, " ").trim().slice(0, 300);
+    await db.groupMeeting.update({ where: { id: meetingId }, data: { realizado: limpo || null } });
+    revalidatePath(`/grupos/${r.classGroupId}`);
+    return {};
+  });
+}
+
 export async function marcarPresencasDoEncontro(meetingId: string, marcas: { memberId: string; participou: boolean }[]) {
   return executar(async () => {
     const r = await db.groupMeeting.findUnique({ where: { id: meetingId }, select: { classGroupId: true, startsAt: true, status: true } });

@@ -1,11 +1,11 @@
 "use client";
 
-import { marcarPresencasDoEncontro, relatorioPresencas } from "@/lib/actions/grupos-actions";
+import { marcarPresencasDoEncontro, registrarRealizado, relatorioPresencas } from "@/lib/actions/grupos-actions";
 import { Download, Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
 
 type Pessoa = { id: string; name: string };
-type Encontro = { id: string; startsAt: string; status: string; presencas: { memberId: string; participou: boolean; motivo: string | null }[] };
+type Encontro = { id: string; startsAt: string; status: string; realizado?: string | null; presencas: { memberId: string; participou: boolean; motivo: string | null }[] };
 type Relatorio = Extract<Awaited<ReturnType<typeof relatorioPresencas>>, { ok: true }>;
 
 const quando = (iso: string) => new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -31,7 +31,7 @@ export function PresencasGrupo({ grupoId, pessoas, passados, recarregar }: { gru
   return (
     <div className="mt-4 flex flex-col gap-4 border-t border-gray-100 pt-4 dark:border-gray-800">
       <div>
-        <h3 className="mb-2 text-[12px] font-bold text-gray-500 uppercase dark:text-gray-400">Marcar presença</h3>
+        <h3 className="mb-2 text-[12px] font-bold text-gray-500 uppercase dark:text-gray-400">Presença e o que foi feito</h3>
         {passados.filter((e) => e.status !== "cancelada").length ? (
           <ul className="flex flex-col gap-2">
             {passados
@@ -49,6 +49,42 @@ export function PresencasGrupo({ grupoId, pessoas, passados, recarregar }: { gru
   );
 }
 
+/**
+ * O que foi feito no encontro (24/11/2026): quando aconteceu diferente do programado (outro texto, outra atividade),
+ * quem gere registra aqui; entra na divulgação do mês no lugar da descrição.
+ */
+function Realizado({ encontro, recarregar }: { encontro: Encontro; recarregar: () => void }) {
+  const [texto, setTexto] = useState(encontro.realizado ?? "");
+  const [pendente, iniciar] = useTransition();
+  const [aviso, setAviso] = useState("");
+  const salvar = () =>
+    iniciar(async () => {
+      const r = await registrarRealizado(encontro.id, texto);
+      setAviso(r.ok ? (texto.trim() ? "Registrado." : "Apagado.") : (r.error ?? "Não deu certo."));
+      if (r.ok) recarregar();
+    });
+  return (
+    <div className="mb-2 flex flex-col gap-1 rounded-lg bg-gray-50 p-2 dark:bg-gray-800/50">
+      <label htmlFor={`feito-${encontro.id}`} className="text-[11px] font-bold text-gray-500 uppercase dark:text-gray-400">O que foi feito neste encontro</label>
+      <div className="flex gap-2">
+        <input
+          id={`feito-${encontro.id}`}
+          value={texto}
+          maxLength={300}
+          placeholder="Se foi diferente do programado: outro texto, outra atividade…"
+          onChange={(e) => setTexto(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); salvar(); } }}
+          className="min-h-9 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-2 text-[13px] dark:border-gray-600 dark:bg-gray-950"
+        />
+        <button type="button" disabled={pendente || texto.trim() === (encontro.realizado ?? "")} onClick={salvar} className="rounded-lg bg-na-green px-3 text-[12px] font-semibold text-white disabled:opacity-50">
+          {pendente ? <Loader2 size={12} className="animate-spin" /> : "Salvar"}
+        </button>
+      </div>
+      {aviso && <span className="text-[11px] text-gray-500">{aviso}</span>}
+    </div>
+  );
+}
+
 function MarcarEncontro({ encontro, pessoas, recarregar }: { encontro: Encontro; pessoas: Pessoa[]; recarregar: () => void }) {
   const [marcados, setMarcados] = useState(() => new Set(encontro.presencas.filter((p) => p.participou).map((p) => p.memberId)));
   const [aviso, setAviso] = useState("");
@@ -60,8 +96,10 @@ function MarcarEncontro({ encontro, pessoas, recarregar }: { encontro: Encontro;
         <summary className="cursor-pointer p-3 text-[13px]">
           <span className="font-semibold capitalize">{quando(encontro.startsAt)}</span>
           <span className="text-gray-500 dark:text-gray-400"> · {presentes} de {pessoas.length} presentes</span>
+          {encontro.realizado && <span className="block truncate text-[12px] text-na-green-dark dark:text-emerald-400">Feito: {encontro.realizado}</span>}
         </summary>
         <div className="flex flex-col gap-1 border-t border-gray-100 p-3 dark:border-gray-800">
+          <Realizado encontro={encontro} recarregar={recarregar} />
           {pessoas.map((p) => {
             const justificou = encontro.presencas.find((x) => x.memberId === p.id && !x.participou && x.motivo);
             return (

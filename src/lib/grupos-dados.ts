@@ -126,6 +126,7 @@ export async function detalheDoGrupo(m: Pessoa, grupoId: string) {
       status: true,
       cancellationReason: true,
       publicDetails: true,
+      realizado: true,
       presencas: papel.podeGerir ? { select: { memberId: true, participou: true, motivo: true, naoInformou: true } } : { where: { memberId: m.id }, select: { memberId: true, participou: true, motivo: true, naoInformou: true } },
     },
   });
