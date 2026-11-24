@@ -124,6 +124,25 @@ const normalizar = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g,
  * Com a escola da pessoa e as unidades do Mercúrio: esconde eventos de outra escola e classifica a origem (29/10/2026,
  * cores coerentes): sede na própria escola = evento da escola; centro da rede (Fazenda, Ítaca) = regional; nacional.
  */
+/**
+ * Valor para a divulgação (pedido do usuário 24/11/2026): o "Valor" das ações do Ágora é o maior (ex.: R$ 520 no Ano
+ * Novo), e a maioria não paga isso. Quando o texto do evento tem vários valores, mostra "a partir de" com o preço do
+ * adulto no primeiro lote e na menor quantidade de dias (o primeiro valor da seção de adultos; sem seção, o menor).
+ */
+export function valorDeEntrada(texto: string | null, valorInfo: string | null): string | null {
+  const t = (texto ?? "").replace(/<br\s*\/?>/gi, "\n");
+  const numero = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
+  const todos = [...t.matchAll(/R\$\s*([\d.]+,\d{2}|[\d.]+)/g)].map((m) => numero(m[1]));
+  const distintos = [...new Set(todos.filter((n) => n > 0))];
+  if (distintos.length <= 1) return valorInfo;
+  const inicio = t.search(/valores/i);
+  const secao = t.slice(inicio >= 0 ? inicio : 0);
+  const adulto = secao.match(/adult[oa][^\n]*\n([\s\S]*?)(?=\n\s*(?:\d\.\d\.[a-z]\)|#{1,3}\s|crian[çc]a)|$)/i)?.[1] ?? "";
+  const primeiroAdulto = adulto.match(/R\$\s*([\d.]+,\d{2}|[\d.]+)/)?.[1];
+  const base = primeiroAdulto ? numero(primeiroAdulto) : Math.min(...distintos);
+  return `a partir de ${base.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`;
+}
+
 export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[], contexto: { minhaUnidade: string | null; unidades: UnidadeRede[] } = { minhaUnidade: null, unidades: [] }): AgendaItem[] {
   const porSlug = new Map(periodo.filter((e) => e.slug).map((e) => [e.slug!, e]));
   const porNome = new Map(periodo.filter((e) => e.nome).map((e) => [normalizar(e.nome!), e]));
@@ -143,7 +162,7 @@ export function agendaDasAcoes(acoes: AcaoAgora[], periodo: EventoAgora[], conte
     const data = base?.date ?? (m ? dataDoAgora(`${m[4]}-${m[3]}-${m[2]}`) : null);
     if (!data) return [];
     const slug = !inscrito && typeof a.contextoId === "string" ? a.contextoId : evento?.slug;
-    const valor = (a.info ?? "").match(/Valor:\s*(R\$\s*[\d.,]+)/)?.[1] ?? null;
+    const valor = valorDeEntrada(evento?.texto ?? null, (a.info ?? "").match(/Valor:\s*(R\$\s*[\d.,]+)/)?.[1] ?? null);
     const prazo = [a.aviso, (a.info ?? "").replace(/Valor:\s*R\$\s*[\d.,]+/, "")].map((t) => (t ?? "").trim()).filter(Boolean).join(" · ") || null;
     const item: AgendaItem = {
       ...(base && base.kind === "evento"
