@@ -111,6 +111,8 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
 
 export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { dashboard: MemberDashboard; eventoId?: string; abrir?: "voluntariado" | "pagar"; boletim?: EdicaoAurora | null }) {
   const { member, availableToAdd } = dashboard;
+  // "Como gosta de ser chamado" (24/11/2026): apelido ou primeiro nome, nas saudações.
+  const chamado = member.apelido?.trim() || member.name.trim().split(/s+/)[0];
   // Eventos públicos do Ulisses lidos pelo navegador (ver lib/ulisses/navegador.ts).
   const agendaItems = useAgendaComUlisses(dashboard.agendaItems, member.school.ulissesFilialId, member.schoolId);
   const [modal, setModal] = useState<ModalKey | null>(eventoId ? "agenda" : abrir === "pagar" ? "situacao" : abrir === "voluntariado" && dashboard.voluntariadoVisivel ? "voluntariado" : null);
@@ -182,10 +184,10 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
         </div>
         <p className="mt-0.5 text-[15px] leading-snug font-bold text-gray-900 dark:text-gray-100">
           {semDesconto
-            ? t.home.mensagemSemDesconto(member.name.split(" ")[0])
+            ? t.home.mensagemSemDesconto(chamado)
             : situacao === "a_vencer"
-              ? t.home.mensagemAVencer(member.name.split(" ")[0])
-              : `${t.home.ola(member.name.split(" ")[0])} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
+              ? t.home.mensagemAVencer(chamado)
+              : `${t.home.ola(chamado)} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
         </p>
         <p className="mt-1 text-[12px] text-gray-600 dark:text-gray-400">
           {proximoVencimento.diasRestantes < 0
@@ -309,7 +311,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
             tom="claro"
             icone={<Cake size={20} />}
             rotulo="Nova Acrópole"
-            titulo={`Feliz aniversário, ${member.name.trim().split(/\s+/)[0]}!`}
+            titulo={`Feliz aniversário, ${chamado}!`}
             texto="A Nova Acrópole celebra com você o seu dia. Que este novo ciclo traga ainda mais sabedoria, coragem e ideais vividos."
             acao="Ver minha jornada"
             onClick={() => setModal("jornada")}
@@ -450,7 +452,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   return (
     <div className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
       {tourVisivel && <OnboardingTour memberId={member.id} onFechar={() => setTourVisivel(false)} />}
-      {!tourVisivel && dashboard.boasVindasVoluntario && <BoasVindasVoluntario memberId={member.id} nome={member.name.split(" ")[0]} dados={dashboard.boasVindasVoluntario} />}
+      {!tourVisivel && dashboard.boasVindasVoluntario && <BoasVindasVoluntario memberId={member.id} nome={chamado} dados={dashboard.boasVindasVoluntario} />}
       <header className="relative border-b border-gray-100 bg-white px-5 pt-3 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
         {/* Controles numa linha própria (10/11/2026): em posição absoluta, com o "A+", cobriam o logotipo no celular. */}
         <div className="-mr-2 flex items-center justify-end gap-1">
@@ -679,6 +681,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               addressState={member.addressState}
               addressZip={member.addressZip}
               avatarUrl={member.avatarUrl}
+              apelido={member.apelido}
             />
           )}
           {/* Declaração de matrícula pedida pelo próprio aluno (06/11/2026); só nas filiais do Brasil. */}

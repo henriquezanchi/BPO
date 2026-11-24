@@ -390,6 +390,8 @@ model Member {
   // profile-actions.ts) — pedido do usuário 2026-09-30: deixa o Portal
   // mais pessoal e ajuda a diretoria a reconhecer quem é quem.
   avatarPath        String?
+  // "Como gosta de ser chamado" (24/11/2026): apelido ou nome de preferência, definido pela pessoa (lib/apelido.ts).
+  apelido           String?
 
   contributions           Contribution[]
   compositionItems        ContributionCompositionItem[]

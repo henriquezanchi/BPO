@@ -1404,3 +1404,11 @@ Pedido do usuário: trocar a disciplina programada para um pedagogo (ajustes na 
 - **Arte** (`arte-programacao.ts`): com turma, o nome do grupo é o título grande (encolhe de 104 px até 56 px; depois quebra em 2 linhas) e a linha de baixo vira "Programação de <mês>"; o cabeçalho à direita fica só com o público. Sem turma, igual a antes. Vale para todos os grupos. Não vista no navegador.
 - **Cancelamento pelo pedagogo** (`cancelarMinhaApresentacao` em `escala-actions.ts`; botão "Não vou poder apresentar" com confirmação na aba Escala, só na própria apresentação e com ≥ 4 dias): status `cancelada` (fica fora da sequência, o tema volta na próxima rodada); push ao instrutor (ciência) e aos pedagogos do encontro seguinte perguntando se antecipam. Quem gere continua com "Remover".
 - Já existia: qualquer pedagogo da turma ajusta data, disciplina e tema (23/11).
+
+## 24/11/2026 — "Como gosta de ser chamado" (apelido) (Claude)
+
+- Pedido do usuário: o aluno escolhe apelido/nome de preferência no Portal; o autoatendimento do Fortuna usa esse nome na chamada ("Zanchi", não "Luiz Henrique").
+- **Migração `20261124150000_apelido`** (aplicada com `db execute` + `migrate resolve`, autorizada pelo usuário): `Member.apelido TEXT` opcional.
+- `lib/apelido.ts`: `regrasDoApelido` (formato, ≤3 palavras, lista de palavrões/ofensas/títulos/personagens, não pode ser o nome completo) + `revisarApelidoPorIA` (claude-haiku-5-5, saída estruturada; contexto: dito em voz alta na lanchonete; na falha da API, não bloqueia) + `validarApelido`; `nomeDeChamada`.
+- `actions/apelido-actions.ts` `definirApelido`; campo `ApelidoCampo` em Meus dados (profile-edit-panel); saudações do Portal (`chamado` em member-portal-client) usam o apelido.
+- Fortuna: no desenho (`docs/superpowers/specs/2026-11-24-fortuna-autoatendimento-design.md`): a ponte da carteirinha devolve `apelido` e há rota de apelidos por `fortunaClientId`. Ainda não escrita.

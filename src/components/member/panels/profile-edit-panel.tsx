@@ -1,5 +1,6 @@
 "use client";
 
+import { definirApelido } from "@/lib/actions/apelido-actions";
 import { removerAvatar, uploadAvatar } from "@/lib/actions/avatar-actions";
 import { getSolicitacaoContatoPendente, meusPedidosDeCorrecao, solicitarAlteracaoContato, updateMemberAddress } from "@/lib/actions/member-actions";
 import { ROTULO_SITUACAO_PEDIDO, type SituacaoPedido } from "@/lib/pedidos-correcao";
@@ -21,6 +22,8 @@ interface ProfileEditPanelProps {
   addressState: string | null;
   addressZip: string | null;
   avatarUrl: string | null;
+  /** "Como gosta de ser chamado" (24/11/2026). */
+  apelido?: string | null;
 }
 
 // Classe repetida nos inputs de texto do formulário.
@@ -136,6 +139,52 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
  * Escolástica aprova ou rejeita (ver escolastica-panel.tsx) antes de
  * qualquer coisa ser gravada de verdade.
  */
+/**
+ * "Como gosta de ser chamado" (pedido do usuário 24/11/2026): apelido ou nome de preferência. Vale nas saudações do
+ * Portal e na chamada do autoatendimento da lanchonete. Validação em lib/apelido.ts (regras + revisão por IA).
+ */
+function ApelidoCampo({ memberId, nome, inicial }: { memberId: string; nome: string; inicial: string | null }) {
+  const [valor, setValor] = useState(inicial ?? "");
+  const [salvo, setSalvo] = useState(inicial ?? "");
+  const [isPending, startTransition] = useTransition();
+  const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const primeiro = nome.trim().split(/\s+/)[0];
+  function salvar() {
+    setMsg(null);
+    startTransition(async () => {
+      const r = await definirApelido(memberId, valor);
+      if (r.ok) {
+        setSalvo(r.apelido ?? "");
+        setValor(r.apelido ?? "");
+        setMsg({ tipo: "ok", texto: r.apelido ? `Pronto: vamos te chamar de ${r.apelido}.` : `Pronto: voltamos a te chamar de ${primeiro}.` });
+      } else setMsg({ tipo: "erro", texto: r.error });
+    });
+  }
+  return (
+    <div className="mt-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+      <label htmlFor="apelido" className={LABEL_CLASS}>Como gosta de ser chamado</label>
+      <div className="mt-1 flex flex-wrap gap-2">
+        <input
+          id="apelido"
+          name="apelido"
+          value={valor}
+          maxLength={30}
+          autoComplete="nickname"
+          placeholder={primeiro}
+          onChange={(e) => setValor(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); salvar(); } }}
+          className={`${INPUT_CLASS} min-w-0 flex-1`}
+        />
+        <button type="button" onClick={salvar} disabled={isPending || valor.trim() === salvo} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-na-green px-3 text-[13px] font-semibold text-white disabled:opacity-50">
+          {isPending ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Salvar
+        </button>
+      </div>
+      <p className="mt-1 text-[12px] text-gray-500 dark:text-gray-400">Apelido ou nome pelo qual te conhecem na escola (ex.: Zanchi, Dudu, Bia). Aparece nas saudações e na chamada da lanchonete. Deixe vazio para usar {primeiro}.</p>
+      {msg && <p className={`mt-1 text-[12px] font-semibold ${msg.tipo === "ok" ? "text-na-green-dark dark:text-emerald-400" : "text-na-danger dark:text-red-400"}`}>{msg.texto}</p>}
+    </div>
+  );
+}
+
 function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; whatsapp: string; email: string | null }) {
   const [editando, setEditando] = useState(false);
   const [pendente, setPendente] = useState<Awaited<ReturnType<typeof getSolicitacaoContatoPendente>>>(null);
@@ -298,6 +347,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         <p className={SECAO_CLASS}>Nome</p>
         <p className="text-[14px] text-gray-900 dark:text-gray-100">{name}</p>
         <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">Para corrigir o nome, fale com a secretaria levando um documento.</p>
+        <ApelidoCampo memberId={memberId} nome={name} inicial={props.apelido ?? null} />
       </div>
 
       <p className={SECAO_CLASS}>Contato</p>
