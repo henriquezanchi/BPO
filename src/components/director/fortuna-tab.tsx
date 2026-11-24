@@ -147,8 +147,8 @@ export function FortunaTab({
           <ul className="flex flex-col gap-2">
             {data.fortunaNaoVinculados.map((m) => (
               <li key={m.id} className="rounded-lg border border-gray-100 p-3 text-sm dark:border-gray-800">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{m.name}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 break-words font-medium text-gray-900 dark:text-gray-100">{m.name}</span>
                   <button
                     onClick={() => {
                       setMembroEmBusca(membroEmBusca === m.id ? null : m.id);
@@ -176,8 +176,8 @@ export function FortunaTab({
                     {resultados.length > 0 && (
                       <ul className="mt-2 flex flex-col gap-1">
                         {resultados.map((c) => (
-                          <li key={c.id} className="flex items-center justify-between rounded bg-gray-50 p-2 text-[11px] dark:bg-gray-800">
-                            <span className="text-gray-700 dark:text-gray-300">
+                          <li key={c.id} className="flex items-center justify-between gap-2 rounded bg-gray-50 p-2 text-[11px] dark:bg-gray-800">
+                            <span className="min-w-0 break-words text-gray-700 dark:text-gray-300">
                               {c.name} — {c.cellPhone} — {c.email}
                             </span>
                             <button

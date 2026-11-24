@@ -48,7 +48,7 @@ async function resumir(where: Prisma.ClassGroupWhereInput): Promise<ResumoGrupo[
       tipo: true,
       modalidade: true,
       // Só os nomes dos responsáveis e a contagem de integrantes (antes vinham todas as linhas de vínculo).
-      memberships: { where: { role: "professor" }, select: { member: { select: { name: true } } } },
+      memberships: { where: { role: "professor" }, select: { member: { select: { name: true, apelido: true } } } },
       _count: { select: { atividades: { where: { status: "ativa" } }, memberships: { where: { role: "aluno" } } } },
     },
     orderBy: { name: "asc" },
@@ -61,7 +61,7 @@ async function resumir(where: Prisma.ClassGroupWhereInput): Promise<ResumoGrupo[
       nome: g.name,
       tipo: g.tipo as TipoGrupo,
       modalidade: g.modalidade,
-      responsaveis: g.memberships.map((m) => m.member.name),
+      responsaveis: g.memberships.map((m) => nomeExibicao(m.member)),
       integrantes: g._count.memberships,
       atividades: g._count.atividades,
       proximoEncontro: prox.get(g.id)?.toISOString() ?? null,

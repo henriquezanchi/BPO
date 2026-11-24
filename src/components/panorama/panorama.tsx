@@ -32,10 +32,19 @@ function Etiqueta({ fonte }: { fonte: Fonte }) {
   return <span className={`ml-1.5 inline-block rounded border px-1 align-middle text-[9px] font-bold tracking-wide uppercase ${cor}`}>{rotulo}</span>;
 }
 
+/** Data do Mercúrio ("AAAA-MM-DD HH:MM", "DD/MM/AAAA"…) legível; nunca "Invalid Date" (24/11/2026). */
+function dataLegivel(v: string | null | undefined) {
+  if (!v) return "—";
+  const br = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (br) return `${br[1]}/${br[2]}/${br[3]}`;
+  const d = new Date(v.replace(" ", "T") + (/[zZ]|[+-]\d{2}:\d{2}$/.test(v) ? "" : "-03:00"));
+  return Number.isFinite(d.getTime()) ? d.toLocaleDateString("pt-BR") : v;
+}
+
 function Numero({ valor, rotulo, destaque, fonte }: { valor: string | number; rotulo: string; destaque?: "alerta"; fonte: Fonte }) {
   return (
     <div className="min-w-0">
-      <p className={`text-2xl font-black tabular-nums ${destaque === "alerta" ? "text-na-danger-dark dark:text-red-300" : "text-gray-900 dark:text-gray-100"}`}>
+      <p className={`break-words text-xl font-black tabular-nums sm:text-2xl ${destaque === "alerta" ? "text-na-danger-dark dark:text-red-300" : "text-gray-900 dark:text-gray-100"}`}>
         {valor}
         <Etiqueta fonte={fonte} />
       </p>
@@ -104,7 +113,7 @@ export function PanoramaAreas({ p, alcance, base, minhaFilial, financeiro }: { p
         </span>
         <span className="text-[11px] text-gray-500 dark:text-gray-400">
           Pessoas e recibos lidos do Mercúrio nessa hora; ficha de contribuição do Mercúrio de{" "}
-          {m.atualizacaoMercurio ? new Date(m.atualizacaoMercurio.replace(" ", "T") + "-03:00").toLocaleDateString("pt-BR") : "—"}. Filiais inteiras no Mercúrio, não só quem usa o Portal
+          {dataLegivel(m.atualizacaoMercurio)}. Filiais inteiras no Mercúrio, não só quem usa o Portal
           {p.foraDoPortal ? ` · ${p.foraDoPortal} unidade${p.foraDoPortal === 1 ? "" : "s"} ainda fora do Portal (sem números do Portal)` : ""}
           {p.faltamResumos.length ? ` · ainda sem resumo: ${p.faltamResumos.length > 5 ? `${p.faltamResumos.length} unidades` : p.faltamResumos.join(", ")}` : ""}.
         </span>

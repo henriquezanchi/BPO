@@ -488,7 +488,7 @@ export function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string
                         <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">{m.name.charAt(0)}</span>
                       )}
                     </div>
-                    <div className="whitespace-nowrap">
+                    <div className="min-w-0">
                       <div className="font-semibold text-gray-900 dark:text-gray-100">{m.name}</div>
                       <div className="text-[10px] text-gray-500 dark:text-gray-400">Matrícula: #{m.registrationNo ?? "—"}</div>
                     </div>
