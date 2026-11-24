@@ -112,7 +112,18 @@ export async function gerarArteProgramacao(d: {
   // Medidas da lista primeiro, para distribuir os blocos na altura (como no modelo: espaço igual entre cabeçalho,
   // título, lista e rodapé quando sobra lugar).
   const yTitulo0 = PAD.topo + Math.max(alturaLogo, 60) + 64;
-  const ALTURA_TITULO = 40 + 118 + 32;
+  // Título grande = nome da turma (24/11/2026): encolhe até caber em uma linha; abaixo de 64 px, vai para duas linhas
+  // menores e o bloco do título cresce, para não invadir o mês acima nem a lista abaixo.
+  const titulo = (() => {
+    if (!d.turma) return { linhas: ["Programação"], tam: 104, altoLinha: 118 };
+    let tam = 104;
+    ctx.font = f(900, tam);
+    while (tam > 64 && ctx.measureText(d.turma).width > W - 2 * PAD.lado) ctx.font = f(900, (tam -= 4));
+    if (ctx.measureText(d.turma).width <= W - 2 * PAD.lado) return { linhas: [d.turma], tam, altoLinha: 118 };
+    ctx.font = f(900, 58);
+    return { linhas: quebrar(ctx, d.turma, W - 2 * PAD.lado, 2), tam: 58, altoLinha: 66 };
+  })();
+  const ALTURA_TITULO = 40 + 118 + 32 + (titulo.linhas.length - 1) * titulo.altoLinha;
   const yLista0 = yTitulo0 + ALTURA_TITULO + 48;
   let itens = d.itens.slice(0, MAX_ITENS);
   const rodapeY = H - PAD.base - 20;
@@ -129,7 +140,8 @@ export async function gerarArteProgramacao(d: {
     const tit = quebrar(ctx, i.titulo, larguraConteudo - (i.tipo === "prova" ? 150 : 0), 2);
     ctx.font = f(400, T.desc);
     const desc = descricaoComHorario(i);
-    const linhasDesc = desc ? quebrar(ctx, desc, larguraConteudo, 2) : [];
+    // Apresentações dos pedagogos (24/11/2026): uma por linha, até 4, para o nome e o tema ficarem legíveis.
+    const linhasDesc = !desc ? [] : desc.includes(" — ") ? desc.split("; ").slice(0, 4).map((l) => quebrar(ctx, l, larguraConteudo, 1)[0]) : quebrar(ctx, desc, larguraConteudo, 2);
     const altoConteudo = tit.length * T.titulo * 1.12 + (linhasDesc.length ? 6 + linhasDesc.length * T.desc * 1.3 : 0);
     const altoData = T.dia + 6 + T.sub;
     return { tit, linhasDesc, alto: Math.max(altoConteudo, altoData) };
@@ -159,15 +171,11 @@ export async function gerarArteProgramacao(d: {
   y += 40;
   ctx.fillStyle = COR.branco;
   if (d.turma) {
-    // Nome do grupo em destaque, encolhendo até caber em uma linha (mínimo 56 px; aí quebra em duas).
-    let tam = 104;
-    ctx.font = f(900, tam);
-    while (tam > 56 && ctx.measureText(d.turma).width > W - 2 * PAD.lado) ctx.font = f(900, (tam -= 4));
-    const linhas = quebrar(ctx, d.turma, W - 2 * PAD.lado, 2);
-    const altoLinha = Math.round(tam * 1.05);
-    const desloca = Math.round(((linhas.length - 1) * altoLinha) / 2);
-    linhas.forEach((l, i) => ctx.fillText(l, PAD.lado, y - desloca + i * altoLinha));
-    y += 118 + desloca;
+    ctx.font = f(900, titulo.tam);
+    // Duas linhas menores: a primeira sobe um pouco, para o bloco não descer sobre a lista.
+    const base = titulo.linhas.length > 1 ? y - Math.round((118 - titulo.altoLinha) * 0.6) : y;
+    titulo.linhas.forEach((l, i) => ctx.fillText(l, PAD.lado, base + i * titulo.altoLinha));
+    y += 118 + (titulo.linhas.length - 1) * titulo.altoLinha;
     ctx.fillStyle = COR.claro;
     ctx.font = f(400, 32);
     ctx.fillText(`Programação de ${MESES[d.mes - 1]}`, PAD.lado, y);
