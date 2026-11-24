@@ -111,7 +111,9 @@ export function textoWhatsappProgramacao(d: { turma: string | null; publico: str
     ? [`*Programação aberta da Nova Acrópole${d.escola ? ` ${d.escola}` : ""} em ${mesNome}* 🏛️`, `Segue a nossa programação aberta ao público em ${mesNome}. Venha participar e traga quem você quiser!`, ""]
     : [`*Programação ${d.turma ? `da ${d.turma}` : "do mês"} em ${mesNome}* 🏛️`, `Queridos ${d.publico.toLowerCase()}, segue a nossa agenda de ${mesNome}. Já anotem!`, ""];
   const eventos: string[] = [];
+  // Texto do WhatsApp (24/11/2026): só o que ainda vai acontecer; a arte mostra o mês inteiro.
   for (const i of d.itens) {
+    if (d.hoje && i.data < d.hoje) continue;
     const quando = `*${dd(i.dia)}/${dd(i.mes)} (${SEMANA_ABREV[i.semana].toLowerCase()})${i.horario ? `, ${i.horario}` : ""}*`;
     const titulo = i.tipo === "prova" ? "*Prova*" : i.titulo;
     const apresentacoes = i.descricao?.includes(" — ") ? i.descricao.split("; ").filter((x) => x.includes(" — ")) : [];
@@ -123,19 +125,18 @@ export function textoWhatsappProgramacao(d: { turma: string | null; publico: str
       linha = `${linha} 🎉`;
       emojis++;
     }
-    // Dia já passado (24/11/2026): ✓ no fim da primeira linha, no WhatsApp.
-    if (d.hoje && i.data < d.hoje) linha = linha.replace(/^(.*?)(\n|$)/, "$1 ✓$2");
     eventos.push(linha);
   }
   const fim = ["", d.abertos ? "Contamos com a sua presença! Qualquer dúvida, é só chamar." : "Contamos com a presença de todos! Qualquer dúvida, é só chamar.", "", `_${MENSAGEM_CHAVE}_`];
   // Cabe em ~900 caracteres: corta as últimas linhas de compromisso se precisar, avisando que há mais no Portal.
   let corpo = eventos;
-  const tamanho = (l: string[]) => [...linhas, ...l, ...fim].join("\n").length;
+  const tamanho = (l: string[]) => [...linhas, l.join("\n\n"), ...fim].join("\n").length;
   // Com apresentações (uma por linha) o texto cresce; o limite sobe para caber o mês inteiro (24/11/2026).
   const limite = eventos.some((l) => l.includes("\n   • ")) ? 1800 : 900;
   if (tamanho(corpo) > limite) {
     while (corpo.length > 1 && tamanho([...corpo, "…e mais compromissos no Portal."]) > limite) corpo = corpo.slice(0, -1);
     corpo = [...corpo, "…e mais compromissos no Portal."];
   }
-  return [...linhas, ...corpo, ...fim].join("\n");
+  // Uma linha em branco entre os dias (24/11/2026), para ler melhor no celular.
+  return [...linhas, corpo.join("\n\n"), ...fim].join("\n");
 }
