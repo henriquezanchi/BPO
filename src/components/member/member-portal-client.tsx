@@ -41,7 +41,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { situacaoGeral } from "@/lib/situacao-contribuicao";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
 import { InstallPrompt } from "./install-prompt";
@@ -503,15 +502,17 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               </a>
             )}
             {/* Área do Voluntário na mesma grade e no mesmo estilo, em largura total (pedido do usuário 10/11/2026). */}
+            {/* Navegação completa (<a>), como a Carteirinha: no app Android (TWA) o usuário relatou que o toque não abria
+                a Área do Voluntário (24/11/2026); a troca de página pelo roteador do cliente é a única diferença entre os dois botões. */}
             {dashboard.areaVoluntario && (
-              <Link href="/voluntario" className={`${BOTAO_CARTAO} ${member.school.language !== "en" ? "col-span-2" : ""}`}>
+              <a href="/voluntario" className={`${BOTAO_CARTAO} ${member.school.language !== "en" ? "col-span-2" : ""}`}>
                 <HandHeart size={14} /> {t.home.portalDoVoluntario}
                 {dashboard.pendenciasVoluntario > 0 && (
                   <span className="ml-0.5 rounded-full bg-na-danger px-1.5 text-[11px] font-bold text-white" aria-label={`${dashboard.pendenciasVoluntario} pedidos aguardando`}>
                     {dashboard.pendenciasVoluntario}
                   </span>
                 )}
-              </Link>
+              </a>
             )}
           </div>
         </div>
