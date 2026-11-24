@@ -19,3 +19,13 @@ torta.webp — Small slice of molasses shoofly pie 2022.png — autor: WhatamIdo
 brownie.webp — Chocolate brownies without table.jpg — autor: não informado — licença: CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Chocolate_brownies_without_table.jpg
 pao.webp — French bread (5821638701).jpg — autor: jeffreyw — licença: CC BY 2.0 — https://commons.wikimedia.org/wiki/File:French_bread_(5821638701).jpg
 fruta.webp — Fruit Salad Or Fruit Bowl.jpg — autor: Manjeshwari poet mysore — licença: CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Fruit_Salad_Or_Fruit_Bowl.jpg
+
+# Fotos de produtos específicos (demo do autoatendimento do Fortuna, 24/11/2026)
+produto-pizza-pedaco.webp — Fellini's Pizza, Roswell Rd, Atlanta, 2 slices Hawaiian.JPG — licença: CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Fellini%27s_Pizza,_Roswell_Rd,_Atlanta,_2_slices_Hawaiian.JPG
+produto-refrigerante-zero.webp — Comparison between the old and new design for the Coca Cola Zero Sugar cans.jpg — licença: CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Comparison_between_the_old_and_new_design_for_the_Coca_Cola_Zero_Sugar_cans.jpg
+produto-cerveja-heineken.webp — Green bottle of Heineken 2.JPG — licença: CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Green_bottle_of_Heineken_2.JPG
+produto-bolo-pedaco.webp — 2020-08-27 23 58 46 A slice of carrot cake in the Dulles section of Sterling, Loudoun County, Virginia.jpg — licença: CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2020-08-27_23_58_46_A_slice_of_carrot_cake_in_the_Dulles_section_of_Sterling,_Loudoun_County,_Virginia.jpg
+produto-biscoito-de-queijo.webp — Biscoito de Polvilho.jpg — licença: CC0 — https://commons.wikimedia.org/wiki/File:Biscoito_de_Polvilho.jpg
+produto-suco-laranja.webp — Orange juice 1 edit1.jpg — USDA — domínio público — https://commons.wikimedia.org/wiki/File:Orange_juice_1_edit1.jpg
+produto-pamonha.webp — Pamonha (unwrapped).jpg — autor: Jorgepeixoto — licença: CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Pamonha_(unwrapped).jpg
+produto-pao-de-queijo.webp — mesma foto de pao-de-queijo.webp (acima)
