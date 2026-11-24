@@ -1,4 +1,4 @@
-import { MENSAGEM_CHAVE, MESES, MESES_ABREV, SEMANA_ABREV, descricaoComHorario, type ItemProgramacao } from "@/lib/programacao-mes";
+import { MENSAGEM_CHAVE, MESES, MESES_ABREV, SEMANA_ABREV, type ItemProgramacao } from "@/lib/programacao-mes";
 
 /**
  * Arte "Programação" do mês, 1080×1350 (4:5), no guia da marca (17/11/2026; modelo da Turma Hilárion):
@@ -69,6 +69,8 @@ export async function gerarArteProgramacao(d: {
   mes: number;
   itens: ItemProgramacao[];
   rodapeDireita: string;
+  /** AAAA-MM-DD no fuso da filial: dias anteriores saem riscados e semiapagados (24/11/2026). */
+  hoje?: string;
 }): Promise<Blob> {
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -123,7 +125,7 @@ export async function gerarArteProgramacao(d: {
     ctx.font = f(900, 58);
     return { linhas: quebrar(ctx, d.turma, W - 2 * PAD.lado, 2), tam: 58, altoLinha: 66 };
   })();
-  const ALTURA_TITULO = 40 + 118 + 32 + (titulo.linhas.length - 1) * titulo.altoLinha;
+  const ALTURA_TITULO = 40 + (titulo.linhas.length > 1 ? 56 + (titulo.linhas.length - 1) * titulo.altoLinha : 118) + 32;
   const yLista0 = yTitulo0 + ALTURA_TITULO + 48;
   let itens = d.itens.slice(0, MAX_ITENS);
   const rodapeY = H - PAD.base - 20;
@@ -139,11 +141,12 @@ export async function gerarArteProgramacao(d: {
     ctx.font = f(900, T.titulo);
     const tit = quebrar(ctx, i.titulo, larguraConteudo - (i.tipo === "prova" ? 150 : 0), 2);
     ctx.font = f(400, T.desc);
-    const desc = descricaoComHorario(i);
+    // Horário fica junto da data (24/11/2026), não no fim da descrição.
+    const desc = i.descricao;
     // Apresentações dos pedagogos (24/11/2026): uma por linha, até 4, para o nome e o tema ficarem legíveis.
     const linhasDesc = !desc ? [] : desc.includes(" — ") ? desc.split("; ").slice(0, 4).map((l) => quebrar(ctx, l, larguraConteudo, 1)[0]) : quebrar(ctx, desc, larguraConteudo, 2);
     const altoConteudo = tit.length * T.titulo * 1.12 + (linhasDesc.length ? 6 + linhasDesc.length * T.desc * 1.3 : 0);
-    const altoData = T.dia + 6 + T.sub;
+    const altoData = T.dia + 6 + T.sub + (i.horario ? T.sub + 6 : 0);
     return { tit, linhasDesc, alto: Math.max(altoConteudo, altoData) };
   };
   let medidas = itens.map(medir);
@@ -172,10 +175,9 @@ export async function gerarArteProgramacao(d: {
   ctx.fillStyle = COR.branco;
   if (d.turma) {
     ctx.font = f(900, titulo.tam);
-    // Duas linhas menores: a primeira sobe um pouco, para o bloco não descer sobre a lista.
-    const base = titulo.linhas.length > 1 ? y - Math.round((118 - titulo.altoLinha) * 0.6) : y;
-    titulo.linhas.forEach((l, i) => ctx.fillText(l, PAD.lado, base + i * titulo.altoLinha));
-    y += 118 + (titulo.linhas.length - 1) * titulo.altoLinha;
+    // Linhas para baixo a partir do mês (nunca sobre ele); o bloco do título cresce com as linhas extras.
+    titulo.linhas.forEach((l, i) => ctx.fillText(l, PAD.lado, y + i * titulo.altoLinha));
+    y += titulo.linhas.length > 1 ? 56 + (titulo.linhas.length - 1) * titulo.altoLinha : 118;
     ctx.fillStyle = COR.claro;
     ctx.font = f(400, 32);
     ctx.fillText(`Programação de ${MESES[d.mes - 1]}`, PAD.lado, y);
@@ -201,6 +203,10 @@ export async function gerarArteProgramacao(d: {
   itens.forEach((i, k) => {
     const m = medidas[k];
     const topo = y + padV;
+    // Dia já passado (24/11/2026): semiapagado e riscado; só a agenda futura fica "aberta".
+    const passado = !!d.hoje && i.data < d.hoje;
+    ctx.save();
+    if (passado) ctx.globalAlpha = 0.42;
     // Data.
     ctx.fillStyle = COR.destaque;
     ctx.font = f(900, T.dia);
@@ -210,12 +216,21 @@ export async function gerarArteProgramacao(d: {
     espacar(ctx, 0.12, T.sub);
     ctx.fillText(`${MESES_ABREV[i.mes - 1]} · ${SEMANA_ABREV[i.semana]}`, PAD.lado, topo + T.dia + 4);
     espacar(ctx, 0, 1);
+    if (i.horario) {
+      ctx.fillStyle = COR.destaque;
+      ctx.font = f(700, T.sub + 2);
+      ctx.fillText(i.horario, PAD.lado, topo + T.dia + 4 + T.sub + 6);
+    }
     // Conteúdo.
     let yy = topo;
     ctx.fillStyle = COR.branco;
     ctx.font = f(900, T.titulo);
     m.tit.forEach((l, n) => {
       ctx.fillText(l, xConteudo, yy);
+      if (passado) {
+        // Risco sobre o título.
+        ctx.fillRect(xConteudo, yy + T.titulo * 0.42, ctx.measureText(l).width, 3);
+      }
       if (n === 0 && i.tipo === "prova") {
         // Selo "ATENÇÃO" ao lado do título.
         const largTit = ctx.measureText(l).width;
@@ -245,6 +260,7 @@ export async function gerarArteProgramacao(d: {
         yy += T.desc * 1.3;
       });
     }
+    ctx.restore();
     y = topo + m.alto + padV;
     linhaDivisoria(y);
   });

@@ -102,7 +102,7 @@ const dd = (n: number) => String(n).padStart(2, "0");
 export const descricaoComHorario = (i: ItemProgramacao) => [i.descricao, i.horario].filter(Boolean).join(" · ") || null;
 
 /** Texto do WhatsApp que acompanha a arte (formatação do WhatsApp, até 3 emojis, ~900 caracteres). */
-export function textoWhatsappProgramacao(d: { turma: string | null; publico: string; ano: number; mes: number; itens: ItemProgramacao[]; abertos?: boolean; escola?: string }) {
+export function textoWhatsappProgramacao(d: { turma: string | null; publico: string; ano: number; mes: number; itens: ItemProgramacao[]; abertos?: boolean; escola?: string; hoje?: string }) {
   let emojis = 1; // 🏛️ do título
   const mesNome = MESES[d.mes - 1];
   // Só eventos abertos (membro sem atribuições ou aluno, 17/11/2026): convite para qualquer pessoa.
@@ -122,6 +122,8 @@ export function textoWhatsappProgramacao(d: { turma: string | null; publico: str
       linha = `${linha} 🎉`;
       emojis++;
     }
+    // Dia já passado (24/11/2026): riscado no WhatsApp.
+    if (d.hoje && i.data < d.hoje) linha = linha.split("\n").map((l) => `~${l.trim()}~`).join("\n");
     eventos.push(linha);
   }
   const fim = ["", d.abertos ? "Contamos com a sua presença! Qualquer dúvida, é só chamar." : "Contamos com a presença de todos! Qualquer dúvida, é só chamar.", "", `_${MENSAGEM_CHAVE}_`];

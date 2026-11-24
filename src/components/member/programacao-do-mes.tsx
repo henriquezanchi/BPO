@@ -25,21 +25,24 @@ export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: num
   const [copiado, setCopiado] = useState(false);
 
   const escolaCurta = p.escola.replace(/^Nova Acr[oó]pole\s*-\s*/i, "");
+  // Hoje no fuso da filial: o que já passou sai riscado na arte e no texto (24/11/2026).
+  const hoje = useMemo(() => new Date().toLocaleDateString("en-CA", { timeZone: p.fuso }), [p.fuso]);
   const base = useMemo(() => (p.somenteAbertos ? p.items.filter((i) => i.kind === "evento" && eventoCompartilhavel(i)) : p.items), [p.items, p.somenteAbertos]);
   const itens = useMemo(() => itensDoMes(base, p.ano, p.mes, p.fuso), [base, p.ano, p.mes, p.fuso]);
   const turma = useMemo(() => (p.somenteAbertos ? escolaCurta : turmaDoMes(base)), [base, p.somenteAbertos, escolaCurta]);
   const publico = p.somenteAbertos ? "Eventos abertos" : p.publico;
   const texto = useMemo(
-    () => textoWhatsappProgramacao({ turma, publico, ano: p.ano, mes: p.mes, itens, abertos: p.somenteAbertos, escola: escolaCurta }),
-    [turma, publico, p.ano, p.mes, itens, p.somenteAbertos, escolaCurta],
+    () => textoWhatsappProgramacao({ turma, publico, ano: p.ano, mes: p.mes, itens, abertos: p.somenteAbertos, escola: escolaCurta, hoje }),
+    [turma, publico, p.ano, p.mes, itens, p.somenteAbertos, escolaCurta, hoje],
   );
   const nomeArquivo = `programacao-${MESES[p.mes - 1]}-${p.ano}.png`;
+  // Hoje no fuso da filial: o que já passou sai riscado na arte e no texto (24/11/2026).
 
   useEffect(() => {
     if (!aberto || !itens.length) return;
     let cancelado = false;
     let url: string | undefined;
-    gerarArteProgramacao({ turma, publico, ano: p.ano, mes: p.mes, itens, rodapeDireita: `Nova Acrópole ${escolaCurta}` })
+    gerarArteProgramacao({ turma, publico, ano: p.ano, mes: p.mes, itens, rodapeDireita: `Nova Acrópole ${escolaCurta}`, hoje })
       .then((blob) => {
         if (cancelado) return;
         const arquivo = new File([blob], nomeArquivo, { type: "image/png" });
@@ -51,7 +54,7 @@ export function ProgramacaoDoMes(p: { items: AgendaItem[]; ano: number; mes: num
       cancelado = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [aberto, itens, turma, publico, p.ano, p.mes, escolaCurta, nomeArquivo]);
+  }, [aberto, itens, turma, publico, p.ano, p.mes, escolaCurta, nomeArquivo, hoje]);
 
   function copiar() {
     if (!navigator.clipboard?.writeText) return setAviso("Selecione e copie o texto abaixo.");
