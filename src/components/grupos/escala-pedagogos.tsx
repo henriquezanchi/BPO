@@ -319,6 +319,8 @@ function GerarRodada({ grupoId, hoje, pedagogos, pendente, rodar }: { grupoId: s
   const [trilhas, setTrilhas] = useState<Record<string, string[]>>({});
   const [proximos, setProximos] = useState<Record<string, string | null>>({});
   const [concluiram, setConcluiram] = useState<string[]>([]);
+  /** Pedagogos deixados fora desta rodada (24/11/2026). */
+  const [fora, setFora] = useState<Set<string>>(new Set());
 
   if (!aberto)
     return (
@@ -341,7 +343,38 @@ function GerarRodada({ grupoId, hoje, pedagogos, pendente, rodar }: { grupoId: s
           </select>
         </label>
       </div>
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="text-[12px] font-semibold text-gray-700 dark:text-gray-200">Quem entra nesta rodada ({pedagogos.length - fora.size} de {pedagogos.length})</legend>
+        <div className="flex flex-wrap gap-1.5">
+          {pedagogos.map((p) => {
+            const entra = !fora.has(p.id);
+            return (
+              <label
+                key={p.id}
+                className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] ${entra ? "border-na-green/60 bg-na-success-light text-na-success-dark dark:bg-emerald-950/30 dark:text-emerald-300" : "border-gray-300 text-gray-500 line-through dark:border-gray-700"}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={entra}
+                  onChange={() => {
+                    setFora((atual) => {
+                      const novo = new Set(atual);
+                      if (novo.has(p.id)) novo.delete(p.id);
+                      else novo.add(p.id);
+                      return novo;
+                    });
+                    setLinhas(null);
+                  }}
+                  className="accent-na-green"
+                />
+                {p.nome.split(" ").slice(0, 2).join(" ")}
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
       <p className="text-[11px] text-gray-500 dark:text-gray-400">
+        Desmarque quem não deve apresentar nesta rodada; as datas se reorganizam sem a pessoa, e na próxima ela continua de onde parou.
         A formação segue esta ordem: Ética, Sociedade, Filosofia da História, Psicologia e ISO. Cada pedagogo continua de onde parou, sem ligação com os colegas; quem não apresentou repete o tema; quem mudou de tema à mão continua dali. As datas seguem os encontros da aba Encontros (ou semanais, no dia da data de início). Quem apresentou há mais tempo vem primeiro.
       </p>
       <div className="flex flex-wrap gap-2">
@@ -349,7 +382,7 @@ function GerarRodada({ grupoId, hoje, pedagogos, pendente, rodar }: { grupoId: s
           disabled={pendente}
           onClick={() =>
             rodar(async () => {
-              const r = await preverEscala(grupoId, { inicio, porEncontro });
+              const r = await preverEscala(grupoId, { inicio, porEncontro, excluir: [...fora] });
               if (r.ok) {
                 setLinhas(r.linhas);
                 setTrilhas(r.trilhas);
@@ -377,7 +410,7 @@ function GerarRodada({ grupoId, hoje, pedagogos, pendente, rodar }: { grupoId: s
             const mudar = (parte: Partial<Linha>) => setLinhas((atual) => atual!.map((x, k) => (k === i ? { ...x, ...parte } : x)));
             const temaDe = (t: TemaDoPrograma) => ({ materiaSigla: t.sigla, tema: t.titulo, topicos: t.topicos });
             return (
-              <div key={i} className="grid gap-2 rounded-xl border border-gray-200 p-2 sm:grid-cols-[1fr_9rem_1.4fr] dark:border-gray-800">
+              <div key={i} className="grid gap-2 rounded-xl border border-gray-200 p-2 sm:grid-cols-[1fr_9rem_1.4fr_auto] dark:border-gray-800">
                 <select
                   aria-label="Pedagogo"
                   value={l.pedagogoId}
@@ -401,12 +434,21 @@ function GerarRodada({ grupoId, hoje, pedagogos, pendente, rodar }: { grupoId: s
                 >
                   <OpcoesDeTema feitos={new Set(trilhas[l.pedagogoId] ?? [])} />
                 </select>
+                <button
+                  type="button"
+                  aria-label={`Tirar ${l.pedagogo} desta rodada`}
+                  title="Tirar desta rodada"
+                  onClick={() => setLinhas((atual) => atual!.filter((_, k) => k !== i))}
+                  className="flex items-center gap-1 justify-self-end self-center rounded-lg p-1.5 text-[12px] text-gray-400 hover:bg-gray-100 hover:text-na-danger-dark dark:hover:bg-gray-800"
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             );
           })}
           <button
-            disabled={pendente}
-            onClick={() => rodar(() => gravarEscala(grupoId, linhas), () => { setLinhas(null); setAberto(false); })}
+            disabled={pendente || linhas.length === 0}
+            onClick={() => rodar(() => gravarEscala(grupoId, linhas), () => { setLinhas(null); setAberto(false); setFora(new Set()); })}
             className="flex w-fit items-center gap-1.5 rounded-xl bg-na-green px-4 py-2 text-[13px] font-bold text-white hover:bg-na-green-dark"
           >
             {pendente && <Loader2 size={14} className="animate-spin" />} Gravar a escala e avisar os pedagogos

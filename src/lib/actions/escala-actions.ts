@@ -90,10 +90,11 @@ export async function definirProgramaDoPedagogo(grupoId: string, pedagogoId: str
   return { ok: true };
 }
 
-export async function preverEscala(grupoId: string, opcoes: { inicio: string; porEncontro: number; diaSemana?: number }) {
+export async function preverEscala(grupoId: string, opcoes: { inicio: string; porEncontro: number; diaSemana?: number; excluir?: string[] }) {
   if (!(await gestor(grupoId))) return falha("Sem permissão.");
   if (!dataValida(opcoes.inicio)) return falha("Escolha a data de início.");
   const p = await previaDaEscala(grupoId, opcoes);
+  if (!p.linhas.length && opcoes.excluir?.length) return falha("Todos os pedagogos ficaram fora desta rodada. Marque ao menos um.");
   if (!p.linhas.length)
     return falha(p.concluiram.length ? "Todos os pedagogos da turma já chegaram ao fim da formação (Ética, Sociedade, Filosofia da História, Psicologia e ISO)." : "A turma ainda não tem pedagogos. Inclua os instrutores na aba Pessoas.");
   return { ok: true as const, linhas: p.linhas, concluiram: p.concluiram, trilhas: p.trilhas, proximos: p.proximos };
