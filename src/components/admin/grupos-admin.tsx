@@ -11,7 +11,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-const quando = (iso: string) => new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+// Fuso fixo: o servidor (Vercel) roda em UTC e o cartão é renderizado no servidor e hidratado no cliente. Sem o fuso, o
+// texto diverge, o React refaz a árvore inteira no cliente e a classe "dark" da <html> se perde (tela clara no app).
+const quando = (iso: string) =>
+  new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
 export function CartaoGrupo({ g, de, etiqueta }: { g: ResumoGrupo; de: "admin" | "voluntario" | "portal"; etiqueta?: string }) {
   return (
@@ -243,7 +246,7 @@ function PedidoGafLinha({ p, grupos }: { p: PedidoGaf; grupos: ResumoGrupo[] }) 
           <span className="font-semibold text-gray-900 dark:text-gray-100">{p.nome}</span> {!p.nivelMembro && <span className="text-[10px] text-gray-400">aluno</span>}
           <span className="block text-[10px] text-gray-500 dark:text-gray-400">{p.gaf ? `Pediu o GAF ${p.gaf}` : "Sem GAF escolhido"}</span>
         </span>
-        <span className="shrink-0 text-[11px] text-gray-400">{new Date(p.em).toLocaleDateString("pt-BR")}</span>
+        <span className="shrink-0 text-[11px] text-gray-400">{new Date(p.em).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
       </div>
       {!p.gafId && (
         <select aria-label={`GAF para ${p.nome}`} value={escolhido} onChange={(e) => setEscolhido(e.target.value)} className="rounded-lg border border-gray-300 bg-white p-1.5 text-[12px] text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">

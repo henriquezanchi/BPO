@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { APK_CAMINHO, APK_VERSAO } from "@/lib/app-android";
 
 /**
  * Página pública de download do app (23/11/2026). Android: APK (Trusted Web Activity, projeto em android/, gerado por
@@ -8,7 +9,7 @@ import type { Metadata } from "next";
  */
 export const metadata: Metadata = { title: "Baixar o app · Portal Nova Acrópole" };
 
-const APK = "/app/portal-nova-acropole.apk";
+const APK = APK_CAMINHO;
 
 export default function BaixarApp() {
   const passo = "grid grid-cols-[1.75rem_1fr] gap-3 text-sm text-gray-700 dark:text-gray-300";
@@ -23,7 +24,7 @@ export default function BaixarApp() {
           <a href={APK} download className="mt-1 flex min-h-12 w-full items-center justify-center rounded-2xl bg-na-green px-5 text-base font-bold text-white shadow-sm">
             Baixar para Android
           </a>
-          <p className="text-xs text-gray-500">Arquivo de 0,5 MB · Android 5 ou mais novo</p>
+          <p className="text-xs text-gray-500">Versão {APK_VERSAO} · arquivo de 0,5 MB · Android 5 ou mais novo. Já tem o app? Instale por cima: nada se perde.</p>
         </div>
 
         <section className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900" aria-labelledby="android-h">

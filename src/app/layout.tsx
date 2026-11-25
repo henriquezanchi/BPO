@@ -53,6 +53,17 @@ const THEME_INIT_SCRIPT = `
     sistema.addEventListener('change', function (e) {
       if (!localStorage.getItem('na-theme')) document.documentElement.classList.toggle('dark', e.matches);
     });
+    // Se alguma página tiver erro de hidratação, o React refaz a árvore inteira no cliente e reescreve a classe da
+    // <html> sem o "dark" (tela clara do nada, visto na Área do Voluntário em 25/11/2026). Este observador devolve
+    // o tema e o tamanho de texto escolhidos sempre que a classe for reescrita sem eles.
+    new MutationObserver(function () {
+      var cl = document.documentElement.classList;
+      var esc = localStorage.getItem('na-theme');
+      var querEscuro = esc ? esc === 'dark' : sistema.matches;
+      if (cl.contains('dark') !== querEscuro) cl.toggle('dark', querEscuro);
+      var querGrande = localStorage.getItem('na-texto') === 'grande';
+      if (cl.contains('texto-grande') !== querGrande) cl.toggle('texto-grande', querGrande);
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
   } catch (e) {}
 `;
 

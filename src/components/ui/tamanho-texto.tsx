@@ -14,13 +14,14 @@ const ler = () => document.documentElement.classList.contains("texto-grande");
 export function TamanhoTexto({ className }: { className?: string }) {
   const grande = useSyncExternalStore(assinar, ler, () => false);
   function alternar() {
-    document.documentElement.classList.toggle("texto-grande", !grande);
+    // Grava antes de trocar a classe: o observador em layout.tsx reaplica a escolha a partir do localStorage.
     try {
       if (grande) localStorage.removeItem(CHAVE);
       else localStorage.setItem(CHAVE, "grande");
     } catch {
       /* sem localStorage: vale só nesta visita */
     }
+    document.documentElement.classList.toggle("texto-grande", !grande);
     ouvintes.forEach((f) => f());
   }
   return (

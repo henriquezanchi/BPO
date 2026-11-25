@@ -45,6 +45,7 @@ import { situacaoGeral } from "@/lib/situacao-contribuicao";
 import { useEffect, useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
 import { InstallPrompt } from "./install-prompt";
+import { AvisoAtualizacaoApp } from "./aviso-atualizacao-app";
 import { NudgeCard } from "./nudge-card";
 import { OnboardingTour } from "./onboarding-tour";
 import { AtivarNotificacoes } from "@/components/pwa/ativar-notificacoes";
@@ -520,6 +521,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       </header>
 
       <InstallPrompt />
+      <AvisoAtualizacaoApp />
 
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
         {member.school.language !== "en" && <BuscaPortal destinos={Object.fromEntries(Object.entries(destinosBusca).filter(([, d]) => d)) as Record<string, DestinoBusca>} />}

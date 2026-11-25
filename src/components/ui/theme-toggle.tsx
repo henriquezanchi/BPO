@@ -33,12 +33,13 @@ function getServerSnapshot() {
 }
 
 function setDark(next: boolean) {
-  document.documentElement.classList.toggle("dark", next);
+  // Grava antes de trocar a classe: o observador em layout.tsx reaplica o tema a partir do localStorage.
   try {
     localStorage.setItem(STORAGE_KEY, next ? "dark" : "light");
   } catch {
     /* localStorage indisponível (modo privado etc.) — tema simplesmente não persiste */
   }
+  document.documentElement.classList.toggle("dark", next);
   listeners.forEach((l) => l());
 }
 
