@@ -1,9 +1,9 @@
+import { CabecalhoAluno } from "@/components/member/cabecalho-aluno";
 import { DiarioCliente } from "@/components/diario/diario-cliente";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { carregarDiario, temDiario } from "@/lib/diario-dados";
 import { temDiarioFv } from "@/lib/fv/dados";
-import { ArrowLeft, History, Mountain } from "lucide-react";
+import { BookHeart, History, Mountain } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -22,28 +22,14 @@ export default async function DiarioPage(props: { searchParams: Promise<{ dia?: 
     <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
       {/* Continua a abertura das portas (entrada-diario.tsx): a luz dourada se desfaz ao chegar. */}
       <div aria-hidden className="diario-animado pointer-events-none fixed inset-0 z-50 bg-[radial-gradient(circle_at_50%_45%,rgb(255_202_0/0.35),#020d0b_70%)] [animation:diario-chegada_700ms_ease-out_forwards]" />
-      <div className="flex items-center justify-between">
-        <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-          <ArrowLeft size={14} /> Portal do Aluno
-        </Link>
-        <ThemeToggle />
-      </div>
-      <header className="flex items-end justify-between gap-3">
-        <span>
-          <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Meu diário</h1>
-          <p className="text-[12px] text-gray-500 dark:text-gray-400">Um lugar onde só a sua consciência entra.</p>
-        </span>
-        <span className="flex shrink-0 gap-2">
-          {fv && (
-            <Link href="/diario/fv" className="flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+      <CabecalhoAluno icone={<BookHeart />} titulo="Meu diário" descricao="Um lugar onde só a sua consciência entra." acoes={<>{fv && (
+            <Link href="/diario/fv" className="flex min-h-10 items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
               <Mountain size={14} /> FV
             </Link>
           )}
-          <Link href="/diario/historico" className="flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+          <Link href="/diario/historico" className="flex min-h-10 items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
             <History size={14} /> Histórico
-          </Link>
-        </span>
-      </header>
+          </Link></>} />
       <DiarioCliente d={dados} />
     </main>
   );

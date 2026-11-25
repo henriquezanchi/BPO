@@ -1,6 +1,6 @@
-import { ArrowLeft, CalendarPlus } from "lucide-react";
+import { CabecalhoAluno } from "@/components/member/cabecalho-aluno";
+import { CalendarPlus } from "lucide-react";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopiarLink } from "@/components/member/copiar-link";
 import { codigoDaAgenda } from "@/lib/agenda-ics";
@@ -24,23 +24,8 @@ export default async function AgendaGooglePage() {
     "flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold";
 
   return (
-    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-md flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
-      <Link
-        href="/portal"
-        className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-      >
-        <ArrowLeft size={14} /> Portal do Aluno
-      </Link>
-      <header>
-        <h1 className="flex items-center gap-2 text-xl font-black text-na-green-dark dark:text-emerald-400">
-          <CalendarPlus size={22} /> Eventos na sua agenda
-        </h1>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          Os eventos da Nova Acrópole aparecem na agenda do seu celular. Os que
-          você se inscreveu entram confirmados; os demais entram como “A
-          confirmar”, com o link para se inscrever.
-        </p>
-      </header>
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
+      <CabecalhoAluno icone={<CalendarPlus />} titulo="Eventos na sua agenda" descricao="Os eventos da Nova Acrópole aparecem na agenda do seu celular. Os que você se inscreveu entram confirmados; os demais entram como “A confirmar”, com o link para se inscrever." />
 
       <section className="flex flex-col gap-2">
         <a

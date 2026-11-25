@@ -1,4 +1,5 @@
-import { ArrowLeft, Coffee } from "lucide-react";
+import { CabecalhoAluno } from "@/components/member/cabecalho-aluno";
+import { Coffee } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuthenticatedMember } from "@/lib/auth";
@@ -62,13 +63,8 @@ export default async function ExtratoFortunaPage(props: { searchParams: Promise<
 
   return (
     <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
-      <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-        <ArrowLeft size={14} /> Portal do Aluno
-      </Link>
+      <CabecalhoAluno icone={<Coffee />} titulo="Extrato do Café" descricao="Consumo e créditos da sua carteira Fortuna." />
       <header className="flex flex-col gap-2">
-        <h1 className="flex items-center gap-2 text-xl font-black text-na-green-dark dark:text-emerald-400">
-          <Coffee size={22} /> Extrato do Café
-        </h1>
         <nav className="flex gap-1.5" aria-label="Período">
           {PERIODOS.map((d) => (
             <Link

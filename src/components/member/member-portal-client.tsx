@@ -450,7 +450,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
 
 
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white sm:my-5 sm:rounded-[28px] sm:border sm:border-gray-200 sm:shadow-xl dark:bg-gray-900 dark:sm:border-gray-800">
+    <div className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white sm:my-5 sm:rounded-[28px] sm:border sm:border-gray-200 sm:shadow-xl md:max-w-[560px] dark:bg-gray-900 dark:sm:border-gray-800">
       {tourVisivel && <OnboardingTour memberId={member.id} onFechar={() => setTourVisivel(false)} />}
       {!tourVisivel && dashboard.boasVindasVoluntario && <BoasVindasVoluntario memberId={member.id} nome={chamado} dados={dashboard.boasVindasVoluntario} />}
       <header className="relative border-b border-gray-100 bg-white px-5 pt-3 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">

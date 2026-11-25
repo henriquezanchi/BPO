@@ -1,9 +1,8 @@
+import { CabecalhoAluno } from "@/components/member/cabecalho-aluno";
 import { LivrosCliente } from "@/components/estudos/livros-cliente";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { BookOpen } from "lucide-react";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -15,13 +14,7 @@ export default async function LivrosPage() {
   const livros = await db.livroLeitura.findMany({ where: { memberId: member.id }, orderBy: { updatedAt: "desc" }, select: { id: true, titulo: true, autor: true, situacao: true } });
   return (
     <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
-      <div className="flex items-center justify-between">
-        <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-          <ArrowLeft size={14} /> Portal do Aluno
-        </Link>
-        <ThemeToggle />
-      </div>
-      <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Meus livros</h1>
+      <CabecalhoAluno icone={<BookOpen />} titulo="Meus livros" descricao="Lendo, quero ler, tenho e lidos. Só você vê esta lista." />
       <LivrosCliente livros={livros} />
     </main>
   );

@@ -1,11 +1,9 @@
+import { CabecalhoAluno } from "@/components/member/cabecalho-aluno";
 import { AvaliacaoForm } from "@/components/avaliacao/avaliacao-form";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { avaliacaoPendente, instrutoresDoAluno } from "@/lib/avaliacao";
 import { lerPerguntas } from "@/lib/avaliacao-comum";
 import { db } from "@/lib/db";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -27,13 +25,8 @@ export default async function AvaliacaoPage(props: { searchParams: Promise<{ rod
   const instrutores = (await instrutoresDoAluno(member, campanha)).filter((i) => !feitos.has(i.alvo));
 
   return (
-    <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-          <ArrowLeft size={14} /> Portal do Aluno
-        </Link>
-        <ThemeToggle />
-      </div>
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
+      <CabecalhoAluno titulo="Avaliação dos instrutores" descricao="Suas respostas são anônimas." />
       <AvaliacaoForm
         campanhaId={campanha.id}
         titulo={campanha.titulo}

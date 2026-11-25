@@ -1,9 +1,9 @@
+import { CabecalhoAluno } from "@/components/member/cabecalho-aluno";
 import { DiarioFvDoGrupo } from "@/components/fv/diario-fv-servidor";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { temDiario } from "@/lib/diario-dados";
 import { temDiarioFv } from "@/lib/fv/dados";
-import { ArrowLeft, BookHeart } from "lucide-react";
+import { BookHeart, Mountain } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -21,23 +21,11 @@ export default async function DiarioFvPage(props: { searchParams: Promise<{ dia?
   const { dia } = await props.searchParams;
   return (
     <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-2xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
-      <div className="flex items-center justify-between">
-        <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-          <ArrowLeft size={14} /> Portal do Aluno
-        </Link>
-        <ThemeToggle />
-      </div>
-      <header className="flex items-end justify-between gap-3">
-        <span>
-          <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Meu diário de FV</h1>
-          <p className="text-[12px] text-gray-500 dark:text-gray-400">Só você vê o que está aqui.</p>
-        </span>
-        {comum && (
-          <Link href="/diario" className="flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+      <CabecalhoAluno icone={<Mountain />} titulo="Meu diário de FV" descricao="Só você vê o que está aqui." acoes={comum ? (
+          <Link href="/diario" className="flex min-h-10 items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 text-[12px] font-semibold text-gray-700 hover:border-na-green dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
             <BookHeart size={14} /> Meu diário
           </Link>
-        )}
-      </header>
+        ) : undefined} />
       <DiarioFvDoGrupo member={member} dia={dia} />
     </main>
   );

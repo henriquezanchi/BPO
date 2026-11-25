@@ -1,6 +1,6 @@
-import { ArrowLeft, HeartHandshake } from "lucide-react";
+import { CabecalhoAluno } from "@/components/member/cabecalho-aluno";
+import { HeartHandshake } from "lucide-react";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CompartilharConvite } from "@/components/member/compartilhar-convite";
 import { getAuthenticatedMember } from "@/lib/auth";
@@ -30,19 +30,8 @@ export default async function IndicarPage() {
     : "Estudo filosofia na Nova Acrópole e queria te convidar para conhecer. Veja as próximas turmas:";
 
   return (
-    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-md flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
-      <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-        <ArrowLeft size={14} /> Portal do Aluno
-      </Link>
-      <header>
-        <h1 className="flex items-center gap-2 text-xl font-black text-na-green-dark dark:text-emerald-400">
-          <HeartHandshake size={22} /> Indicar um amigo
-        </h1>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          Quem chega por um amigo costuma ficar mais na escola. Mande o seu convite: ele mostra as próximas turmas e, se a pessoa se matricular pelo site, a escola
-          sabe que foi você.
-        </p>
-      </header>
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
+      <CabecalhoAluno icone={<HeartHandshake />} titulo="Indicar um amigo" descricao="Quem chega por um amigo costuma ficar mais na escola. Mande o seu convite: ele mostra as próximas turmas e, se a pessoa se matricular pelo site, a escola sabe que foi você." />
 
       {link ? (
         <section className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">

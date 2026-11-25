@@ -1,3 +1,4 @@
+import { CabecalhoAluno } from "@/components/member/cabecalho-aluno";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import {
   CartaoEvento,
@@ -9,7 +10,6 @@ import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canceladoAindaNoCalendario } from "@/lib/evento-cancelado";
 import {
-  ArrowLeft,
   CalendarDays,
   ChevronRight,
   ExternalLink,
@@ -64,23 +64,9 @@ export default async function Page() {
   );
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col gap-5 bg-na-bg p-5 pb-16 dark:bg-gray-950">
-      <Link
-        href="/portal"
-        className="flex w-fit items-center gap-1.5 text-[13px] font-semibold text-na-green dark:text-emerald-400"
-      >
-        <ArrowLeft size={15} /> Portal do Aluno
-      </Link>
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
 
-      <header className="rounded-2xl bg-gradient-to-br from-na-green-dark to-na-green p-4 text-white">
-        <p className="text-[10px] font-semibold tracking-wide text-na-gold uppercase">
-          Agenda & Eventos
-        </p>
-        <h1 className="mt-1 text-xl font-black">Meus eventos</h1>
-        <p className="mt-1 text-[12px] text-white/85">
-          Suas inscrições, a participação nos eventos e as equipes de recepção.
-        </p>
-      </header>
+      <CabecalhoAluno icone={<CalendarDays />} titulo="Meus eventos" descricao="Suas inscrições, a participação nos eventos e as equipes de recepção." />
 
       {recepcaoProxima.length > 0 && (
         <section className="flex flex-col gap-2">

@@ -5,6 +5,7 @@ import {
   BOTAO_CONTORNO as BOTAO_LEVE,
 } from "@/components/ui/botoes";
 import { PraticaTratak } from "@/components/diario/tratak";
+import { FaixaRolavel } from "@/components/ui/faixa-rolavel";
 import {
   PraticaGuiada,
   type PraticaGuiadaChave,
@@ -73,7 +74,7 @@ import {
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type ReactNode } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 
 /**
  * Meu diário de FV, aba do GDVE (pedido do usuário 2026-10-31): o diário de FV antigo (Forja, Degrau, Balanço, Módulo
@@ -103,11 +104,37 @@ const rotuloDia = (d: string, hoje: string) => {
       : `${DIAS_CURTOS[new Date(`${d}T12:00:00Z`).getUTCDay()]} ${d.slice(8)}/${d.slice(5, 7)}`;
 };
 
+const SECOES_DIARIO = [
+  ["praticas", "Práticas"],
+  ["escalada", "Escalada"],
+  ["balanco", "Balanço"],
+  ["gdve", "GDVE"],
+  ["carta", "Mestre e Carta"],
+  ["relatorio", "Relatório"],
+  ["historico", "Histórico"],
+] as const;
+type SecaoDiario = (typeof SECOES_DIARIO)[number][0];
+const CHAVE_SECAO = "na-diario-fv-secao";
+
 export function DiarioFv({ d }: { d: DiarioFvDaPessoa }) {
   const router = useRouter();
   const [pendente, startTransition] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  // A seção aberta fica guardada no aparelho: quem volta ao diário cai onde parou.
+  const [secao, setSecaoEstado] = useState<SecaoDiario>("praticas");
+  useEffect(() => {
+    try {
+      const v = sessionStorage.getItem(CHAVE_SECAO);
+      if (SECOES_DIARIO.some(([id]) => id === v)) setSecaoEstado(v as SecaoDiario);
+    } catch {}
+  }, []);
+  const setSecao = (s: SecaoDiario) => {
+    setSecaoEstado(s);
+    try {
+      sessionStorage.setItem(CHAVE_SECAO, s);
+    } catch {}
+  };
 
   const rodar: Rodar = (fn, depois) => {
     setErro(null);
@@ -142,11 +169,8 @@ export function DiarioFv({ d }: { d: DiarioFvDaPessoa }) {
       <header className="flex flex-col gap-3 rounded-2xl border border-na-gold/40 bg-gradient-to-br from-[#0b1f1c] to-na-green-dark p-4 text-white">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold tracking-wide text-na-gold uppercase">
-              Planejamento do Discipulado
-            </p>
-            <h2 className="text-[18px] font-black">Meu diário de FV</h2>
-            <p className="text-[12px] text-white/80">Só você vê este diário.</p>
+            <h2 className="text-[15px] font-black text-na-gold">Planejamento do Discipulado</h2>
+            <p className="text-[12px] text-white/80">Sua ficha e o ritmo das práticas.</p>
           </div>
           <div
             className="flex shrink-0 flex-col items-end text-right"
@@ -230,36 +254,31 @@ export function DiarioFv({ d }: { d: DiarioFvDaPessoa }) {
         </p>
       )}
 
-      <Forja key={`forja-${d.data}`} d={d} rodar={rodar} pendente={pendente} />
-      <Degrau
-        key={`degrau-${d.data}`}
-        d={d}
-        rodar={rodar}
-        pendente={pendente}
-        avisar={setAviso}
-      />
-      <Balanco
-        key={`balanco-${d.data}`}
-        d={d}
-        rodar={rodar}
-        pendente={pendente}
-        avisar={setAviso}
-      />
-      <ModuloGdve
-        key={`gdve-${d.data}`}
-        d={d}
-        rodar={rodar}
-        pendente={pendente}
-      />
-      <MestreECarta
-        d={d}
-        rodar={rodar}
-        pendente={pendente}
-        avisar={setAviso}
-        atrasada={cartaAtrasada}
-      />
-      <RelatorioMensal d={d} stats={stats} />
-      <HistoricoDeFv />
+      {/* Seções em abas (revisão de design 25/11/2026): tudo junto dava uma página de 14 mil px no celular. */}
+      <FaixaRolavel role="tablist" aria-label="Seções do diário" externo="sticky top-0 z-20 -mx-4 bg-na-bg/95 px-4 backdrop-blur dark:bg-gray-950/95" className="flex gap-1 border-b border-gray-200 dark:border-gray-800">
+        {SECOES_DIARIO.map(([id, rotulo]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={secao === id}
+            onClick={() => setSecao(id)}
+            className={`-mb-px min-h-11 shrink-0 border-b-2 px-3 text-[13px] font-semibold whitespace-nowrap transition ${
+              secao === id ? "border-na-green text-na-green-dark dark:text-emerald-400" : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+            }`}
+          >
+            {rotulo}
+            {id === "carta" && cartaAtrasada && <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-na-danger align-middle" aria-label="Entrega atrasada" />}
+          </button>
+        ))}
+      </FaixaRolavel>
+      {secao === "praticas" && <Forja key={`forja-${d.data}`} d={d} rodar={rodar} pendente={pendente} />}
+      {secao === "escalada" && <Degrau key={`degrau-${d.data}`} d={d} rodar={rodar} pendente={pendente} avisar={setAviso} />}
+      {secao === "balanco" && <Balanco key={`balanco-${d.data}`} d={d} rodar={rodar} pendente={pendente} avisar={setAviso} />}
+      {secao === "gdve" && <ModuloGdve key={`gdve-${d.data}`} d={d} rodar={rodar} pendente={pendente} />}
+      {secao === "carta" && <MestreECarta d={d} rodar={rodar} pendente={pendente} avisar={setAviso} atrasada={cartaAtrasada} />}
+      {secao === "relatorio" && <RelatorioMensal d={d} stats={stats} />}
+      {secao === "historico" && <HistoricoDeFv />}
     </div>
   );
 }

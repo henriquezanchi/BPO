@@ -1,5 +1,5 @@
-import { ArrowLeft, MessageSquareText } from "lucide-react";
-import Link from "next/link";
+import { CabecalhoAluno } from "@/components/member/cabecalho-aluno";
+import { MessageSquareText } from "lucide-react";
 import { redirect } from "next/navigation";
 import { CaixaSugestoes } from "@/components/member/caixa-sugestoes";
 import { getAuthenticatedMember } from "@/lib/auth";
@@ -17,19 +17,8 @@ export default async function SugestoesPage(props: { searchParams: Promise<Recor
   const [minhas, opcoes] = await Promise.all([minhasSugestoes(member.id), opcoesDeContexto(member)]);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-md flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
-      <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-        <ArrowLeft size={14} /> Portal do Aluno
-      </Link>
-      <header>
-        <h1 className="flex items-center gap-2 text-xl font-black text-na-green-dark dark:text-emerald-400">
-          <MessageSquareText size={22} /> Sugestões
-        </h1>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          Uma ideia, um elogio ou algo que não está funcionando. O que for sobre o Portal vai para a equipe que cuida do sistema; o que for sobre a escola, para a
-          direção da sua filial.
-        </p>
-      </header>
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
+      <CabecalhoAluno icone={<MessageSquareText />} titulo="Sugestões" descricao="Uma ideia, um elogio ou algo que não está funcionando. O que for sobre o Portal vai para a equipe que cuida do sistema; o que for sobre a escola, para a direção da sua filial." />
       <CaixaSugestoes inicial={inicial} minhas={minhas} opcoes={opcoes} />
     </main>
   );
