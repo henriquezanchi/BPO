@@ -124,8 +124,10 @@ export function DiarioFv({ d }: { d: DiarioFvDaPessoa }) {
   // A seção aberta fica guardada no aparelho: quem volta ao diário cai onde parou.
   const [secao, setSecaoEstado] = useState<SecaoDiario>("praticas");
   useEffect(() => {
+    // Lido depois da hidratação de propósito: o servidor não conhece o sessionStorage e renderizaria outra aba.
     try {
       const v = sessionStorage.getItem(CHAVE_SECAO);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- ver comentário acima
       if (SECOES_DIARIO.some(([id]) => id === v)) setSecaoEstado(v as SecaoDiario);
     } catch {}
   }, []);
