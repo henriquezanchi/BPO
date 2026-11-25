@@ -24,7 +24,7 @@ export default async function AgendaGooglePage() {
     "flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold";
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-md flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
       <Link
         href="/portal"
         className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"

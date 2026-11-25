@@ -22,7 +22,7 @@ export default async function MinhaDeclaracaoPage(props: { params: Promise<{ id:
   const d = entrega.declaracao;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 bg-na-bg p-4 print:bg-white print:p-0 dark:bg-gray-950">
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-3xl flex-col gap-4 bg-na-bg p-4 print:bg-white print:p-0 dark:bg-gray-950">
       <style>{`@media print {
         @page { size: A4; margin: 22mm 20mm; }
         #folha-declaracao { border: 0 !important; box-shadow: none !important; padding: 0 !important; }

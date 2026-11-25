@@ -46,7 +46,7 @@ export function LivrosCliente({ livros }: { livros: Livro[] }) {
               setAutor("");
             })
           }
-          className="flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-50"
         >
           {pendente ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Adicionar livro
         </button>
@@ -72,7 +72,7 @@ export function LivrosCliente({ livros }: { livros: Livro[] }) {
                     value={situacaoDoLivro(l.situacao)}
                     disabled={pendente}
                     onChange={(e) => rodar(() => mudarSituacaoLivro(l.id, e.target.value))}
-                    className="rounded-lg border border-gray-300 bg-white px-1.5 py-1 text-[11px] dark:border-gray-700 dark:bg-gray-800"
+                    className="min-h-9 w-[7.5rem] shrink-0 rounded-lg border border-gray-300 bg-white px-1.5 py-1 text-[12px] text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                   >
                     {ORDEM_LIVROS.map((x) => (
                       <option key={x} value={x}>
@@ -80,7 +80,7 @@ export function LivrosCliente({ livros }: { livros: Livro[] }) {
                       </option>
                     ))}
                   </select>
-                  <button aria-label={`Remover ${l.titulo}`} disabled={pendente} onClick={() => confirm(`Remover "${l.titulo}"?`) && rodar(() => removerLivro(l.id))} className="text-gray-400 hover:text-na-danger-dark">
+                  <button aria-label={`Remover ${l.titulo}`} disabled={pendente} onClick={() => confirm(`Remover "${l.titulo}"?`) && rodar(() => removerLivro(l.id))} className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-na-danger-light hover:text-na-danger-dark">
                     <Trash2 size={14} />
                   </button>
                 </li>

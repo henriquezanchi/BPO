@@ -40,6 +40,7 @@ import {
   HeartHandshake,
 } from "lucide-react";
 import Image from "next/image";
+import { nomeProprio } from "@/lib/nome-proprio";
 import { situacaoGeral } from "@/lib/situacao-contribuicao";
 import { useEffect, useState } from "react";
 import { FortunaWalletCard } from "./fortuna-wallet-card";
@@ -111,7 +112,7 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
 export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { dashboard: MemberDashboard; eventoId?: string; abrir?: "voluntariado" | "pagar"; boletim?: EdicaoAurora | null }) {
   const { member, availableToAdd } = dashboard;
   // "Como gosta de ser chamado" (24/11/2026): apelido ou primeiro nome, nas saudações.
-  const chamado = member.apelido?.trim() || member.name.trim().split(/s+/)[0];
+  const chamado = member.apelido?.trim() || nomeProprio(member.name).split(/\s+/)[0];
   // Eventos públicos do Ulisses lidos pelo navegador (ver lib/ulisses/navegador.ts).
   const agendaItems = useAgendaComUlisses(dashboard.agendaItems, member.school.ulissesFilialId, member.schoolId);
   const [modal, setModal] = useState<ModalKey | null>(eventoId ? "agenda" : abrir === "pagar" ? "situacao" : abrir === "voluntariado" && dashboard.voluntariadoVisivel ? "voluntariado" : null);
@@ -449,7 +450,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
 
 
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white shadow-xl sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
+    <div className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white sm:my-5 sm:rounded-[28px] sm:border sm:border-gray-200 sm:shadow-xl dark:bg-gray-900 dark:sm:border-gray-800">
       {tourVisivel && <OnboardingTour memberId={member.id} onFechar={() => setTourVisivel(false)} />}
       {!tourVisivel && dashboard.boasVindasVoluntario && <BoasVindasVoluntario memberId={member.id} nome={chamado} dados={dashboard.boasVindasVoluntario} />}
       <header className="relative border-b border-gray-100 bg-white px-5 pt-3 pb-4 text-center dark:border-gray-800 dark:bg-gray-900">
@@ -483,7 +484,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
                 <span className="text-sm font-bold">{member.name.charAt(0)}</span>
               )}
             </div>
-            <span className="min-w-0 text-base font-bold">{member.name}</span>
+            <span className="min-w-0 text-base font-bold">{nomeProprio(member.name)}</span>
           </div>
           <div className="mt-3 flex justify-between border-t border-white/15 pt-2.5 text-[12px] text-white/85">
             <span>{member.school.city ?? member.school.name}</span>

@@ -47,7 +47,7 @@ export function MaisDadosClient(props: MaisDadosClientProps) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col border border-gray-200 bg-white sm:my-5 sm:rounded-[28px] dark:border-gray-800 dark:bg-gray-900">
+    <div className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col bg-white sm:my-5 sm:rounded-[28px] sm:border sm:border-gray-200 dark:bg-gray-900 dark:sm:border-gray-800">
       <header className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
         <div className="flex items-center gap-3">
           <Link

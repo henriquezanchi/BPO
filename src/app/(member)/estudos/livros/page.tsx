@@ -14,7 +14,7 @@ export default async function LivrosPage() {
   if (!member) redirect("/login?next=/estudos/livros");
   const livros = await db.livroLeitura.findMany({ where: { memberId: member.id }, orderBy: { updatedAt: "desc" }, select: { id: true, titulo: true, autor: true, situacao: true } });
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-xl flex-col gap-4 bg-na-bg p-4 dark:bg-gray-950">
       <div className="flex items-center justify-between">
         <Link href="/portal" className="-my-2 flex min-h-11 w-fit items-center gap-1.5 text-[13px] font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
           <ArrowLeft size={14} /> Portal do Aluno

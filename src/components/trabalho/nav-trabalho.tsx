@@ -6,10 +6,8 @@ import { ArrowLeft, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { nomeProprio } from "@/lib/nome-proprio";
 import { ICONES_DESTINOS as ICONES, SECOES_DESTINOS as SECOES } from "./icones-destinos";
-
-/** "LUIZ HENRIQUE ZANCHI" → "Luiz Henrique Zanchi" (o Mercúrio guarda em caixa alta). */
-const nomeProprio = (n: string) => n.toLowerCase().replace(/(^|\s)(\S)/g, (_, e, c) => e + c.toUpperCase()).replace(/\b(D[aeo]s?)\b/g, (m) => m.toLowerCase());
 
 /** Destino ativo: o mais específico cujo endereço começa a página atual (/escolastica/avaliacao vence /escolastica). */
 function ativo(destinos: Destino[], caminho: string, forcado?: string) {

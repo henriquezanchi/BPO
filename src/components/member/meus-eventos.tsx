@@ -183,7 +183,7 @@ export function CartaoEvento({
           </p>
         )}
         {passado && valeParticipacao && podeResponder && !r.checkedIn && (
-          <EventAttendanceReply memberId={memberId} registrationId={r.id} />
+          <EventAttendanceReply memberId={memberId} registrationId={r.id} atual={r.selfReportedAttendance as "sim" | "nao" | null} />
         )}
       </div>
     </article>

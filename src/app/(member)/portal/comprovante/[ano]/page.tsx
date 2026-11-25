@@ -29,7 +29,7 @@ export default async function ComprovanteAnualPage(props: { params: Promise<{ an
   const emitidoEm = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 bg-na-bg p-4 print:bg-white print:p-0 dark:bg-gray-950">
+    <main className="mx-auto flex min-h-screen w-full min-w-0 max-w-3xl flex-col gap-4 bg-na-bg p-4 print:bg-white print:p-0 dark:bg-gray-950">
       <style>{`@media print {
         @page { size: A4; margin: 18mm 16mm; }
         #folha-comprovante { border: 0 !important; box-shadow: none !important; padding: 0 !important; }
