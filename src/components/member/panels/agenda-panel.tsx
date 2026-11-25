@@ -2,22 +2,63 @@
 import { dataCivilDoCompromisso, fusoDoCompromisso } from "@/lib/data-evento";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
-import {REFUND_LABELS} from "@/lib/event-refund-policy";
+import { REFUND_LABELS } from "@/lib/event-refund-policy";
 
-import {usePaymentPolling} from "@/hooks/use-payment-polling";
-import { CompartilharEvento, CompartilharWhatsApp } from "@/components/member/compartilhar-evento";
+import { usePaymentPolling } from "@/hooks/use-payment-polling";
+import {
+  CompartilharEvento,
+  CompartilharWhatsApp,
+} from "@/components/member/compartilhar-evento";
 import { ProgramacaoDoMes } from "@/components/member/programacao-do-mes";
 import Link from "next/link";
 import { MeetingResponse } from "@/components/member/groups/meeting-response";
-import { eventoCompartilhavel, linkWhatsAppDoEvento, urlDoEventoNoPortal } from "@/lib/compartilhar-evento";
-import { checkStatusInscricaoEvento, inscreverEmEvento } from "@/lib/actions/event-actions";
-import { cancelarMinhaInscricao, entrarNaListaDeEspera, sairDaListaDeEspera } from "@/lib/actions/event-self-actions";
+import {
+  eventoCompartilhavel,
+  linkWhatsAppDoEvento,
+  urlDoEventoNoPortal,
+} from "@/lib/compartilhar-evento";
+import {
+  checkStatusInscricaoEvento,
+  inscreverEmEvento,
+} from "@/lib/actions/event-actions";
+import {
+  cancelarMinhaInscricao,
+  entrarNaListaDeEspera,
+  sairDaListaDeEspera,
+} from "@/lib/actions/event-self-actions";
 import { votePoll } from "@/lib/actions/poll-actions";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import { formatBRL, formatDateBR } from "@/lib/format";
 import type { AgendaItem } from "@/lib/member-data";
-import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, GraduationCap, ListChecks, Loader2, MapPin, MessagesSquare, PartyPopper, RefreshCw, Ticket, Users, UtensilsCrossed, Video, CalendarPlus } from "lucide-react";
-import { createContext, useContext, useMemo, useRef, useState, useTransition } from "react";
+import {
+  CalendarClock,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Globe,
+  GraduationCap,
+  ListChecks,
+  Loader2,
+  MapPin,
+  MessagesSquare,
+  PartyPopper,
+  RefreshCw,
+  Ticket,
+  Users,
+  UtensilsCrossed,
+  Video,
+  CalendarPlus,
+} from "lucide-react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -29,8 +70,18 @@ const ACTIVITY_LABEL: Record<string, string> = {
 };
 
 const MESES_NOME = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
 const DIAS_SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
 
@@ -47,8 +98,16 @@ const FusoDaAgenda = createContext("America/Sao_Paulo");
 
 /** Ano, mês (0 a 11), dia e dia da semana de um instante no fuso da filial. */
 function partesNoFuso(date: Date, fuso: string) {
-  const [a, m, d] = date.toLocaleDateString("en-CA", { timeZone: fuso }).split("-").map(Number);
-  return { ano: a, mes: m - 1, dia: d, semana: new Date(Date.UTC(a, m - 1, d)).getUTCDay() };
+  const [a, m, d] = date
+    .toLocaleDateString("en-CA", { timeZone: fuso })
+    .split("-")
+    .map(Number);
+  return {
+    ano: a,
+    mes: m - 1,
+    dia: d,
+    semana: new Date(Date.UTC(a, m - 1, d)).getUTCDay(),
+  };
 }
 
 /**
@@ -56,16 +115,30 @@ function partesNoFuso(date: Date, fuso: string) {
  * é uma data, não um instante: vale a data em UTC, a mesma que o cartão mostra (formatDateBR). Pelo fuso, o do Ágora
  * (00h de Brasília) caía no dia anterior nas filiais a oeste de Brasília, e o toque abria um dia vazio.
  */
-function partesDoItem(item: { date: Date; allDay?: boolean | null; fusoLocal?: string | null }, fuso: string) {
+function partesDoItem(
+  item: { date: Date; allDay?: boolean | null; fusoLocal?: string | null },
+  fuso: string,
+) {
   return partesNoFuso(item.date, fusoDoCompromisso(item, fuso));
 }
-const chaveDoCompromisso = (item: { date: Date; allDay?: boolean | null }, fuso: string) => {
+const chaveDoCompromisso = (
+  item: { date: Date; allDay?: boolean | null },
+  fuso: string,
+) => {
   const p = partesDoItem(item, fuso);
   return `${p.ano}-${p.mes}-${p.dia}`;
 };
-const dataCivilDoItem = (item: { date: Date; allDay?: boolean | null; fusoLocal?: string | null }, fuso: string) => dataCivilDoCompromisso(item, fuso);
+const dataCivilDoItem = (
+  item: { date: Date; allDay?: boolean | null; fusoLocal?: string | null },
+  fuso: string,
+) => dataCivilDoCompromisso(item, fuso);
 
-const horaNoFuso = (date: Date, fuso: string) => date.toLocaleTimeString("pt-BR", { timeZone: fuso, hour: "2-digit", minute: "2-digit" });
+const horaNoFuso = (date: Date, fuso: string) =>
+  date.toLocaleTimeString("pt-BR", {
+    timeZone: fuso,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 const COR_PONTO: Record<AgendaItem["kind"], string> = {
   reuniao: "bg-na-green",
@@ -80,7 +153,13 @@ const COR_PONTO: Record<AgendaItem["kind"], string> = {
  * só aparece depois que o próprio aluno vota, pra não influenciar quem
  * ainda não respondeu.
  */
-function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaItem, { kind: "enquete" }> }) {
+function PollCard({
+  memberId,
+  item,
+}: {
+  memberId: string;
+  item: Extract<AgendaItem, { kind: "enquete" }>;
+}) {
   const [options, setOptions] = useState(item.options);
   const [myVote, setMyVote] = useState(item.myVote);
   const [erro, setErro] = useState<string | null>(null);
@@ -92,7 +171,9 @@ function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaIt
       try {
         const res = await votePoll(memberId, item.id, optionId);
         setMyVote(res.myOptionId);
-        setOptions((prev) => prev.map((o) => ({ ...o, votes: res.counts[o.id] ?? 0 })));
+        setOptions((prev) =>
+          prev.map((o) => ({ ...o, votes: res.counts[o.id] ?? 0 })),
+        );
       } catch (e) {
         setErro(mensagemErroAmigavel(e));
       }
@@ -106,7 +187,9 @@ function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaIt
       <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
         <ListChecks size={14} /> ENQUETE · {item.className}
       </div>
-      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.question}</div>
+      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        {item.question}
+      </div>
       <div className="mt-2 flex flex-col gap-1.5">
         {options.map((o) => {
           const pct = total > 0 ? Math.round((o.votes / total) * 100) : 0;
@@ -117,14 +200,25 @@ function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaIt
               onClick={() => handleVote(o.id)}
               disabled={isPending}
               className={`relative overflow-hidden rounded-lg border px-2.5 py-1.5 text-left text-[12px] transition disabled:opacity-60 ${
-                selecionada ? "border-na-green" : "border-gray-200 dark:border-gray-700"
+                selecionada
+                  ? "border-na-green"
+                  : "border-gray-200 dark:border-gray-700"
               }`}
             >
               {myVote && (
-                <div className="absolute inset-y-0 left-0 bg-na-green-light dark:bg-emerald-950/40" style={{ width: `${pct}%` }} />
+                <div
+                  className="absolute inset-y-0 left-0 bg-na-green-light dark:bg-emerald-950/40"
+                  style={{ width: `${pct}%` }}
+                />
               )}
               <div className="relative flex items-center justify-between">
-                <span className={selecionada ? "font-semibold text-na-green-dark dark:text-emerald-400" : "text-gray-700 dark:text-gray-300"}>
+                <span
+                  className={
+                    selecionada
+                      ? "font-semibold text-na-green-dark dark:text-emerald-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }
+                >
                   {o.label}
                 </span>
                 {myVote && (
@@ -137,7 +231,14 @@ function PollCard({ memberId, item }: { memberId: string; item: Extract<AgendaIt
           );
         })}
       </div>
-      {erro && <p role="alert" className="mt-2 text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
+      {erro && (
+        <p
+          role="alert"
+          className="mt-2 text-[11px] text-na-danger-dark dark:text-red-300"
+        >
+          {erro}
+        </p>
+      )}
     </div>
   );
 }
@@ -172,21 +273,42 @@ function InscricaoEvento({
   const [aviso, setAviso] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const polling = usePaymentPolling(inscricao&&!inscricao.pago?inscricao.registrationId:null,
-    ()=>checkStatusInscricaoEvento(memberId,inscricao!.registrationId),
-    result=>{if(result.status!=="pago")return false;setInscricao(previous=>previous?{...previous,pago:true}:previous);return true;});
+  const polling = usePaymentPolling(
+    inscricao && !inscricao.pago ? inscricao.registrationId : null,
+    () => checkStatusInscricaoEvento(memberId, inscricao!.registrationId),
+    (result) => {
+      if (result.status !== "pago") return false;
+      setInscricao((previous) =>
+        previous ? { ...previous, pago: true } : previous,
+      );
+      return true;
+    },
+  );
 
   function handleInscrever(cpfLimpo?: string) {
     setErro(null);
     startTransition(async () => {
       try {
         const res = await inscreverEmEvento(memberId, eventId, cpfLimpo);
-        if(!res.ok){setErro(res.error);return;}
+        if (!res.ok) {
+          setErro(res.error);
+          return;
+        }
         pedirNotificacoes("Inscrição feita. Quer ser lembrado do evento?");
         setInscricao(
           res.pago
-            ? { registrationId: res.registrationId ?? "", pago: true, pixPayload: null, pixQrCodeBase64: null }
-            : { registrationId: res.registrationId, pago: false, pixPayload: res.pixPayload, pixQrCodeBase64: res.pixQrCodeBase64 },
+            ? {
+                registrationId: res.registrationId ?? "",
+                pago: true,
+                pixPayload: null,
+                pixQrCodeBase64: null,
+              }
+            : {
+                registrationId: res.registrationId,
+                pago: false,
+                pixPayload: res.pixPayload,
+                pixQrCodeBase64: res.pixQrCodeBase64,
+              },
         );
       } catch (e) {
         setErro(mensagemErroAmigavel(e));
@@ -222,7 +344,10 @@ function InscricaoEvento({
 
   function aoCancelar(mensagem: string, desistenciaPaga?: boolean) {
     // Desistência paga fica registrada (histórico da devolução); a gratuita some.
-    if (desistenciaPaga) setInscricao((atual) => (atual ? { ...atual, desistiu: true, refundState: "pendente" } : atual));
+    if (desistenciaPaga)
+      setInscricao((atual) =>
+        atual ? { ...atual, desistiu: true, refundState: "pendente" } : atual,
+      );
     else setInscricao(null);
     setMostrarCpf(false);
     setAviso(mensagem);
@@ -231,9 +356,23 @@ function InscricaoEvento({
   if (inscricao?.desistiu) {
     return (
       <div className="mt-2 flex flex-col gap-1">
-        <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Você desistiu desta inscrição.</p>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">Devolução: {REFUND_LABELS[inscricao.refundState ?? "pendente"] ?? "em acompanhamento"}.</p>
-        {aviso && <p role="status" className="text-[11px] text-gray-600 dark:text-gray-300">{aviso}</p>}
+        <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
+          Você desistiu desta inscrição.
+        </p>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          Devolução:{" "}
+          {REFUND_LABELS[inscricao.refundState ?? "pendente"] ??
+            "em acompanhamento"}
+          .
+        </p>
+        {aviso && (
+          <p
+            role="status"
+            className="text-[11px] text-gray-600 dark:text-gray-300"
+          >
+            {aviso}
+          </p>
+        )}
       </div>
     );
   }
@@ -241,11 +380,23 @@ function InscricaoEvento({
   if (inscricao?.pago) {
     return (
       <div className="mt-2 flex flex-col gap-1.5">
-        <p className="text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">✓ Você está inscrito</p>
+        <p className="text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">
+          ✓ Você está inscrito
+        </p>
         {price > 0 ? (
-          <DesistenciaPaga memberId={memberId} registrationId={inscricao.registrationId} inicio={inicio} prazoDias={prazoDesistenciaDias ?? null} onCancelada={aoCancelar} />
+          <DesistenciaPaga
+            memberId={memberId}
+            registrationId={inscricao.registrationId}
+            inicio={inicio}
+            prazoDias={prazoDesistenciaDias ?? null}
+            onCancelada={aoCancelar}
+          />
         ) : (
-          <CancelarInscricao memberId={memberId} registrationId={inscricao.registrationId} onCancelada={aoCancelar} />
+          <CancelarInscricao
+            memberId={memberId}
+            registrationId={inscricao.registrationId}
+            onCancelada={aoCancelar}
+          />
         )}
       </div>
     );
@@ -255,27 +406,59 @@ function InscricaoEvento({
     return (
       <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
         {/* eslint-disable-next-line @next/next/no-img-element -- base64 dinâmico do Asaas */}
-        <img src={`data:image/png;base64,${inscricao.pixQrCodeBase64}`} alt="QR Code PIX" className="h-40 w-40 rounded-lg border border-gray-200" />
+        <img
+          src={`data:image/png;base64,${inscricao.pixQrCodeBase64}`}
+          alt="QR Code PIX"
+          className="h-40 w-40 rounded-lg border border-gray-200"
+        />
         <button
           onClick={handleCopiar}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 min-h-10 text-[13px] font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
         >
-          {copiado ? <Check size={12} /> : <Copy size={12} />} {copiado ? "Copiado!" : "Copiar código PIX"}
+          {copiado ? <Check size={12} /> : <Copy size={12} />}{" "}
+          {copiado ? "Copiado!" : "Copiar código PIX"}
         </button>
-        {(polling.state==="error"||polling.state==="paused")&&<div className="text-xs"><p>A consulta foi pausada. Sua inscrição continua salva.</p><button onClick={polling.retry} className="mt-2 rounded-lg border px-3 py-2">Consultar pagamento novamente</button></div>}
+        {(polling.state === "error" || polling.state === "paused") && (
+          <div className="text-xs">
+            <p>A consulta foi pausada. Sua inscrição continua salva.</p>
+            <button
+              onClick={polling.retry}
+              className="mt-2 rounded-lg border px-3 py-2"
+            >
+              Consultar pagamento novamente
+            </button>
+          </div>
+        )}
         <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-          <Loader2 size={12} className="animate-spin" /> Aguardando confirmação...
+          <Loader2 size={12} className="animate-spin" /> Aguardando
+          confirmação...
         </p>
-        <CancelarInscricao memberId={memberId} registrationId={inscricao.registrationId} onCancelada={aoCancelar} rotulo="Desistir e cancelar o PIX" />
+        <CancelarInscricao
+          memberId={memberId}
+          registrationId={inscricao.registrationId}
+          onCancelada={aoCancelar}
+          rotulo="Desistir e cancelar o PIX"
+        />
       </div>
     );
   }
 
-  if(unavailableReason)return <p role="status" className="mt-2 text-xs text-na-warning-dark dark:text-amber-300">{unavailableReason}</p>;
+  if (unavailableReason)
+    return (
+      <p
+        role="status"
+        className="mt-2 text-xs text-na-warning-dark dark:text-amber-300"
+      >
+        {unavailableReason}
+      </p>
+    );
 
   if (mostrarCpf) {
     return (
-      <form onSubmit={handleConfirmarCpf} className="mt-2 flex flex-col gap-1.5">
+      <form
+        onSubmit={handleConfirmarCpf}
+        className="mt-2 flex flex-col gap-1.5"
+      >
         <input
           value={cpf}
           onChange={(e) => setCpf(e.target.value)}
@@ -283,7 +466,11 @@ function InscricaoEvento({
           inputMode="numeric"
           className="rounded-lg border border-gray-300 p-2 text-[12px] text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
         />
-        {erro && <span className="text-[11px] text-na-danger-dark dark:text-red-400">{erro}</span>}
+        {erro && (
+          <span className="text-[11px] text-na-danger-dark dark:text-red-400">
+            {erro}
+          </span>
+        )}
         <button
           type="submit"
           disabled={isPending}
@@ -302,15 +489,37 @@ function InscricaoEvento({
         disabled={isPending}
         className="rounded-lg bg-na-green px-3 min-h-10 text-[13px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
       >
-        {isPending ? <Loader2 size={12} className="animate-spin" /> : "Inscreva-se"}
+        {isPending ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : (
+          "Inscreva-se"
+        )}
       </button>
-      {erro && <p className="mt-1 text-[11px] text-na-danger-dark dark:text-red-400">{erro}</p>}
-      {aviso && <p role="status" className="mt-1 text-[11px] text-gray-600 dark:text-gray-300">{aviso}</p>}
+      {erro && (
+        <p className="mt-1 text-[11px] text-na-danger-dark dark:text-red-400">
+          {erro}
+        </p>
+      )}
+      {aviso && (
+        <p
+          role="status"
+          className="mt-1 text-[11px] text-gray-600 dark:text-gray-300"
+        >
+          {aviso}
+        </p>
+      )}
     </div>
   );
 }
 
-const dataCurta = (d: Date, fuso: string) => d.toLocaleString("pt-BR", { timeZone: fuso, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+const dataCurta = (d: Date, fuso: string) =>
+  d.toLocaleString("pt-BR", {
+    timeZone: fuso,
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 /** Inscrição paga: desistir com devolução até o prazo do evento (padrão 3 dias antes). */
 function DesistenciaPaga({
@@ -327,11 +536,24 @@ function DesistenciaPaga({
   onCancelada: (mensagem: string, desistenciaPaga?: boolean) => void;
 }) {
   const fuso = useContext(FusoDaAgenda);
-  const limite = prazoDias === null ? null : new Date(inicio.getTime() - prazoDias * 86_400_000);
+  const limite =
+    prazoDias === null
+      ? null
+      : new Date(inicio.getTime() - prazoDias * 86_400_000);
   const [agora] = useState(() => Date.now());
-  if (!limite) return <p className="text-[11px] text-gray-500 dark:text-gray-400">Este evento não prevê devolução em caso de desistência.</p>;
+  if (!limite)
+    return (
+      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+        Este evento não prevê devolução em caso de desistência.
+      </p>
+    );
   if (agora > limite.getTime())
-    return <p className="text-[11px] text-gray-500 dark:text-gray-400">O prazo para desistir com devolução terminou em {dataCurta(limite, fuso)}. Fale com a Economia.</p>;
+    return (
+      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+        O prazo para desistir com devolução terminou em{" "}
+        {dataCurta(limite, fuso)}. Fale com a Economia.
+      </p>
+    );
   return (
     <CancelarInscricao
       memberId={memberId}
@@ -374,28 +596,56 @@ function CancelarInscricao({
   }
   if (!confirmando)
     return (
-      <button type="button" onClick={() => setConfirmando(true)} className="w-fit text-[11px] font-semibold text-gray-500 underline underline-offset-2 hover:text-gray-700 dark:text-gray-400">
+      <button
+        type="button"
+        onClick={() => setConfirmando(true)}
+        className="w-fit text-[11px] font-semibold text-gray-500 underline underline-offset-2 hover:text-gray-700 dark:text-gray-400"
+      >
         {rotulo}
       </button>
     );
   return (
     <div className="flex flex-col gap-1.5 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
-      <p className="text-[11px] text-gray-700 dark:text-gray-300">{confirmacao}</p>
+      <p className="text-[11px] text-gray-700 dark:text-gray-300">
+        {confirmacao}
+      </p>
       <div className="flex gap-2">
-        <button type="button" onClick={confirmar} disabled={pendente} className="rounded-lg bg-na-danger px-3 min-h-10 text-[13px] font-semibold text-white disabled:opacity-60">
+        <button
+          type="button"
+          onClick={confirmar}
+          disabled={pendente}
+          className="rounded-lg bg-na-danger px-3 min-h-10 text-[13px] font-semibold text-white disabled:opacity-60"
+        >
           {pendente ? "Cancelando..." : "Sim, desistir"}
         </button>
-        <button type="button" onClick={() => setConfirmando(false)} disabled={pendente} className="rounded-lg px-3 min-h-10 text-[13px] font-semibold text-gray-600 dark:text-gray-300">
+        <button
+          type="button"
+          onClick={() => setConfirmando(false)}
+          disabled={pendente}
+          className="rounded-lg px-3 min-h-10 text-[13px] font-semibold text-gray-600 dark:text-gray-300"
+        >
           Manter inscrição
         </button>
       </div>
-      {erro && <p className="text-[11px] text-na-danger-dark dark:text-red-400">{erro}</p>}
+      {erro && (
+        <p className="text-[11px] text-na-danger-dark dark:text-red-400">
+          {erro}
+        </p>
+      )}
     </div>
   );
 }
 
 /** Evento lotado: entrar ou sair da lista de espera (pedido do usuário 2026-10-22). */
-function ListaDeEspera({ memberId, eventId, espera }: { memberId: string; eventId: string; espera: { posicao: number; vagaReservada: boolean } | null | undefined }) {
+function ListaDeEspera({
+  memberId,
+  eventId,
+  espera,
+}: {
+  memberId: string;
+  eventId: string;
+  espera: { posicao: number; vagaReservada: boolean } | null | undefined;
+}) {
   const [naFila, setNaFila] = useState(!!espera);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [pendente, iniciar] = useTransition();
@@ -403,7 +653,9 @@ function ListaDeEspera({ memberId, eventId, espera }: { memberId: string; eventI
     setMensagem(null);
     iniciar(async () => {
       try {
-        const r = naFila ? await sairDaListaDeEspera(memberId, eventId) : await entrarNaListaDeEspera(memberId, eventId);
+        const r = naFila
+          ? await sairDaListaDeEspera(memberId, eventId)
+          : await entrarNaListaDeEspera(memberId, eventId);
         if (r.ok) setNaFila(!naFila);
         setMensagem(r.ok ? r.mensagem : r.erro);
       } catch (e) {
@@ -414,112 +666,315 @@ function ListaDeEspera({ memberId, eventId, espera }: { memberId: string; eventI
   return (
     <div className="mt-2 flex flex-col gap-1.5">
       <p className="text-xs font-semibold">Vagas esgotadas</p>
-      {naFila && espera && !mensagem && <p className="text-[11px] text-gray-600 dark:text-gray-300">Você está na lista de espera ({espera.posicao}º da fila). Avisaremos no celular se abrir uma vaga.</p>}
+      {naFila && espera && !mensagem && (
+        <p className="text-[11px] text-gray-600 dark:text-gray-300">
+          Você está na lista de espera ({espera.posicao}º da fila). Avisaremos
+          no celular se abrir uma vaga.
+        </p>
+      )}
       <button
         type="button"
         onClick={alternar}
         disabled={pendente}
         className={`w-fit rounded-lg px-3 min-h-10 text-[13px] font-semibold disabled:opacity-60 ${naFila ? "text-gray-600 underline underline-offset-2 dark:text-gray-300" : "border border-na-green text-na-green-dark dark:border-emerald-700 dark:text-emerald-400"}`}
       >
-        {pendente ? <Loader2 size={12} className="animate-spin" /> : naFila ? "Sair da lista de espera" : "Entrar na lista de espera"}
+        {pendente ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : naFila ? (
+          "Sair da lista de espera"
+        ) : (
+          "Entrar na lista de espera"
+        )}
       </button>
-      {mensagem && <p role="status" className="text-[11px] text-gray-600 dark:text-gray-300">{mensagem}</p>}
+      {mensagem && (
+        <p
+          role="status"
+          className="text-[11px] text-gray-600 dark:text-gray-300"
+        >
+          {mensagem}
+        </p>
+      )}
     </div>
   );
 }
 
-function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { memberId: string; item: AgendaItem; somenteConsulta?: boolean; emBreve?: boolean; aberto?: boolean }) {
+function ItemCard({
+  memberId,
+  item,
+  somenteConsulta,
+  emBreve,
+  aberto,
+}: {
+  memberId: string;
+  item: AgendaItem;
+  somenteConsulta?: boolean;
+  emBreve?: boolean;
+  aberto?: boolean;
+}) {
   const fuso = useContext(FusoDaAgenda);
-  if (item.kind === 'reuniao') return <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm"><CollapsibleSection defaultOpen={aberto} title={<h3 className="font-bold">{item.title}</h3>}>
-    <p className="font-semibold text-na-green-dark dark:text-na-green-light">{item.className} · Convocação</p><p>{item.date.toLocaleString('pt-BR',{timeZone:fuso,dateStyle:'short',timeStyle:'short'})} — {item.endsAt.toLocaleString('pt-BR',{timeZone:fuso,dateStyle:'short',timeStyle:'short'})}</p>
-    {item.status==='cancelada'?<p>Reunião cancelada: {item.cancellationReason}</p>:<><p>Comparecimento obrigatório. Se não puder participar, registre uma justificativa.</p>{item.fullUniform&&<p className="font-semibold">CRM com traje completo</p>}{item.description&&<p>{item.description}</p>}<MeetingResponse key={`${item.id}:${item.version}`} memberId={memberId} id={item.id} version={item.version} initial={item.myResponse}/></>}
-  </CollapsibleSection></section>;
-  if (item.kind === "enquete") return <PollCard memberId={memberId} item={item} />;
+  if (item.kind === "reuniao")
+    return (
+      <section className="space-y-2 rounded-xl border border-na-green/30 p-4 text-sm">
+        <CollapsibleSection
+          defaultOpen={aberto}
+          title={<h3 className="font-bold">{item.title}</h3>}
+        >
+          <p className="font-semibold text-na-green-dark dark:text-na-green-light">
+            {item.className} · Convocação
+          </p>
+          <p>
+            {item.date.toLocaleString("pt-BR", {
+              timeZone: fuso,
+              dateStyle: "short",
+              timeStyle: "short",
+            })}{" "}
+            —{" "}
+            {item.endsAt.toLocaleString("pt-BR", {
+              timeZone: fuso,
+              dateStyle: "short",
+              timeStyle: "short",
+            })}
+          </p>
+          {item.status === "cancelada" ? (
+            <p>Reunião cancelada: {item.cancellationReason}</p>
+          ) : (
+            <>
+              <p>
+                Comparecimento obrigatório. Se não puder participar, registre
+                uma justificativa.
+              </p>
+              {item.fullUniform && (
+                <p className="font-semibold">CRM com traje completo</p>
+              )}
+              {item.description && <p>{item.description}</p>}
+              <MeetingResponse
+                key={`${item.id}:${item.version}`}
+                memberId={memberId}
+                id={item.id}
+                version={item.version}
+                initial={item.myResponse}
+              />
+            </>
+          )}
+        </CollapsibleSection>
+      </section>
+    );
+  if (item.kind === "enquete")
+    return <PollCard memberId={memberId} item={item} />;
   if (item.kind === "atendimento") return <CartaoAtendimento item={item} />;
 
   if (item.kind === "evento") {
     return (
       <div className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
         <div className="mb-1 flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
-          {item.scope === "filial" ? (
-            <>
-              <PartyPopper size={14} /> {item.filialOrigem ? `EVENTO DE ${item.filialOrigem.replace(/^Nova Acrópole\s*-\s*/i, "").toUpperCase()}` : "EVENTO DA ESCOLA"}
-            </>
-          ) : (
-            <>
-              <Globe size={14} /> EVENTO {item.scope === "nacional" ? "NACIONAL" : "REGIONAL"}
-            </>
+          <div className="flex items-center gap-2 text-[11px] font-semibold text-na-gold-dark">
+            {item.scope === "filial" ? (
+              <>
+                <PartyPopper size={14} />{" "}
+                {item.filialOrigem
+                  ? `EVENTO DE ${item.filialOrigem.replace(/^Nova Acrópole\s*-\s*/i, "").toUpperCase()}`
+                  : "EVENTO DA ESCOLA"}
+              </>
+            ) : (
+              <>
+                <Globe size={14} /> EVENTO{" "}
+                {item.scope === "nacional" ? "NACIONAL" : "REGIONAL"}
+              </>
+            )}
+          </div>
+          {item.status !== "cancelado" && (
+            <CompartilharWhatsApp
+              compacto
+              linkTexto={linkWhatsAppDoEvento(item, URL_PORTAL)}
+              evento={{
+                ...item,
+                title: item.title.replace(/\*/g, "").trim(),
+                ...(eventoCompartilhavel(item) ?? {}),
+                registrationUrl:
+                  eventoCompartilhavel(item)?.registrationUrl ??
+                  urlDoEventoNoPortal(item.id, URL_PORTAL),
+                imagem: item.posterUrl,
+                interno: item.source !== "ulisses" && item.source !== "agora",
+              }}
+            />
           )}
-        </div>
-        {item.status !== "cancelado" && (
-          <CompartilharWhatsApp compacto linkTexto={linkWhatsAppDoEvento(item, URL_PORTAL)} evento={{
-            ...item,
-            title: item.title.replace(/\*/g, "").trim(),
-            ...(eventoCompartilhavel(item) ?? {}),
-            registrationUrl: eventoCompartilhavel(item)?.registrationUrl ?? urlDoEventoNoPortal(item.id, URL_PORTAL),
-            imagem: item.posterUrl,
-            interno: item.source !== "ulisses" && item.source !== "agora",
-          }} />
-        )}
         </div>
         {/* Fechado por padrão (pedido do usuário 2026-10-25): descrição e detalhes só ao tocar. */}
         <details open={aberto} className="group">
-        <summary className="flex cursor-pointer list-none items-start justify-between gap-2 [&::-webkit-details-marker]:hidden">
-        <span className="min-w-0">
-        <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</span>
-        <span className="mt-1 block text-[11px] capitalize text-gray-500 dark:text-gray-400">
-          {item.allDay ? (item.endsAt && formatDateBR(item.endsAt) !== formatDateBR(item.date) ? `${formatDateBR(item.date)} a ${formatDateBR(item.endsAt)}` : formatDateBR(item.date)) : item.date.toLocaleString("pt-BR",{timeZone:fusoDoCompromisso(item,fuso),dateStyle:"short",timeStyle:"short"})}
-        </span>
-        {item.location && (
-          <span className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-            <MapPin size={11} className="shrink-0" /> {item.location}
-          </span>
-        )}
-        {item.status === "cancelado" && <span className="mt-1 block text-[11px] font-semibold text-na-danger-dark dark:text-red-300">Cancelado</span>}
-        </span>
-        <ChevronDown size={16} className="mt-0.5 shrink-0 text-gray-400 transition group-open:rotate-180" aria-hidden />
-        </summary>
-        <div className="mt-2">
-        {item.posterUrl&&<a href={item.posterUrl} target="_blank" rel="noopener noreferrer" className="mb-3 block">
-          {/* eslint-disable-next-line @next/next/no-img-element -- cartaz privado com URL assinada */}
-          <img src={item.posterUrl} alt={`Cartaz de ${item.title}`} loading="lazy" className="max-h-96 w-full rounded-lg object-contain"/>
-        </a>}
-        {/* Evento do Ágora (túnel, 2026-10-27): valor, prazo/lote e se a pessoa já se inscreveu lá. */}
-        {item.agora && (item.agora.inscrito || item.agora.valor || item.agora.prazo) && (
-          <p className="mt-1 text-[12px] text-gray-600 dark:text-gray-300">
-            {item.agora.inscrito && <span className="mr-2 font-semibold text-na-green-dark dark:text-emerald-400">Você já está inscrito(a)</span>}
-            {[item.agora.valor, item.agora.prazo].filter(Boolean).join(" · ")}
-          </p>
-        )}
-        {item.registrationUrl && <a href={item.registrationUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center rounded-lg bg-na-green px-3 min-h-10 text-[13px] font-semibold text-white hover:bg-na-green-dark">{item.source === "agora" ? (item.agora?.inscrito ? "Ver no Ágora" : "Inscrever-se no Ágora") : "Inscreva-se"}</a>}
-        {(() => { const publico = eventoCompartilhavel(item); return publico && <CompartilharEvento evento={publico} />; })()}
-        {item.description && <p className="mt-1.5 whitespace-pre-line break-words text-[12px] text-gray-600 dark:text-gray-300">{item.description}</p>}
-        {item.capacity!==null&&item.capacity!==undefined&&<p className="mt-2 text-xs font-semibold">{(item.availableSpots??0)===1?'1 vaga disponível':`${item.availableSpots??0} vagas disponíveis`} de {item.capacity}</p>}
-        {item.participantInstructions&&<p className="mt-2 whitespace-pre-wrap text-xs"><strong>Orientações: </strong>{item.participantInstructions}</p>}
-        {item.contactInfo&&<p className="mt-2 break-words text-xs"><strong>Dúvidas: </strong>{item.contactInfo}</p>}
-        {item.status === "cancelado" && <p className="mt-2 text-sm font-semibold text-na-danger-dark dark:text-red-300">Evento cancelado. {item.minhaInscricao?.refundState&&item.minhaInscricao.refundState!=="nao_solicitado"?`Reembolso: ${REFUND_LABELS[item.minhaInscricao.refundState]??"em acompanhamento"}${item.minhaInscricao.refundedAmount?` · ${formatBRL(item.minhaInscricao.refundedAmount)}`:""}.`:"Consulte a Economia se houver pagamento."}</p>}
-        {item.status !== "cancelado" && item.source === "manual" && item.scope === "filial" && (
-          <>
-            <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
-              {item.price > 0 ? formatBRL(item.price) : "Entrada Gratuita"}
-            </div>
-            {item.lancheCompartilhado && (
-              <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-na-gold/15 px-2.5 py-1.5 text-xs font-bold text-na-gold-dark dark:bg-amber-950/40 dark:text-amber-300">
-                <UtensilsCrossed size={13} className="shrink-0" /> Lanche compartilhado: leve algo para partilhar
-              </div>
+          <summary className="flex cursor-pointer list-none items-start justify-between gap-2 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {item.title}
+              </span>
+              <span className="mt-1 block text-[11px] capitalize text-gray-500 dark:text-gray-400">
+                {item.allDay
+                  ? item.endsAt &&
+                    formatDateBR(item.endsAt) !== formatDateBR(item.date)
+                    ? `${formatDateBR(item.date)} a ${formatDateBR(item.endsAt)}`
+                    : formatDateBR(item.date)
+                  : item.date.toLocaleString("pt-BR", {
+                      timeZone: fusoDoCompromisso(item, fuso),
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+              </span>
+              {item.location && (
+                <span className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  <MapPin size={11} className="shrink-0" /> {item.location}
+                </span>
+              )}
+              {item.status === "cancelado" && (
+                <span className="mt-1 block text-[11px] font-semibold text-na-danger-dark dark:text-red-300">
+                  Cancelado
+                </span>
+              )}
+            </span>
+            <ChevronDown
+              size={16}
+              className="mt-0.5 shrink-0 text-gray-400 transition group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="mt-2">
+            {item.posterUrl && (
+              <a
+                href={item.posterUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-3 block"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- cartaz privado com URL assinada */}
+                <img
+                  src={item.posterUrl}
+                  alt={`Cartaz de ${item.title}`}
+                  loading="lazy"
+                  className="max-h-96 w-full rounded-lg object-contain"
+                />
+              </a>
             )}
-            {item.minhaEspera?.vagaReservada && !item.minhaInscricao && (
-              <p className="mt-2 rounded-lg bg-na-success-light px-2.5 py-1.5 text-xs font-semibold text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300">Abriu uma vaga e ela está reservada para você por 12 horas. Inscreva-se abaixo.</p>
+            {/* Evento do Ágora (túnel, 2026-10-27): valor, prazo/lote e se a pessoa já se inscreveu lá. */}
+            {item.agora &&
+              (item.agora.inscrito || item.agora.valor || item.agora.prazo) && (
+                <p className="mt-1 text-[12px] text-gray-600 dark:text-gray-300">
+                  {item.agora.inscrito && (
+                    <span className="mr-2 font-semibold text-na-green-dark dark:text-emerald-400">
+                      Você já está inscrito(a)
+                    </span>
+                  )}
+                  {[item.agora.valor, item.agora.prazo]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
+            {item.registrationUrl && (
+              <a
+                href={item.registrationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center rounded-lg bg-na-green px-3 min-h-10 text-[13px] font-semibold text-white hover:bg-na-green-dark"
+              >
+                {item.source === "agora"
+                  ? item.agora?.inscrito
+                    ? "Ver no Ágora"
+                    : "Inscrever-se no Ágora"
+                  : "Inscreva-se"}
+              </a>
             )}
-            {!item.minhaInscricao&&item.registrationClosed?<p className="mt-2 text-xs font-semibold">Inscrições encerradas</p>:!item.minhaInscricao&&item.availableSpots===0?(somenteConsulta?<p className="mt-2 text-xs font-semibold">Vagas esgotadas</p>:<ListaDeEspera memberId={memberId} eventId={item.id} espera={item.minhaEspera} />):somenteConsulta ? (
-              <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">{emBreve ? "Inscrição paga pelo Portal: em breve na sua filial. Fale com a secretaria." : "Online payment isn't available for your branch yet — please contact your branch."}</p>
-            ) : (
-              <InscricaoEvento memberId={memberId} eventId={item.id} price={item.price} inscricaoInicial={item.minhaInscricao} unavailableReason={item.paymentUnavailableReason} inicio={item.date} prazoDesistenciaDias={item.prazoDesistenciaDias} />
+            {(() => {
+              const publico = eventoCompartilhavel(item);
+              return publico && <CompartilharEvento evento={publico} />;
+            })()}
+            {item.description && (
+              <p className="mt-1.5 whitespace-pre-line break-words text-[12px] text-gray-600 dark:text-gray-300">
+                {item.description}
+              </p>
             )}
-          </>
-        )}
-        </div>
+            {item.capacity !== null && item.capacity !== undefined && (
+              <p className="mt-2 text-xs font-semibold">
+                {(item.availableSpots ?? 0) === 1
+                  ? "1 vaga disponível"
+                  : `${item.availableSpots ?? 0} vagas disponíveis`}{" "}
+                de {item.capacity}
+              </p>
+            )}
+            {item.participantInstructions && (
+              <p className="mt-2 whitespace-pre-wrap text-xs">
+                <strong>Orientações: </strong>
+                {item.participantInstructions}
+              </p>
+            )}
+            {item.contactInfo && (
+              <p className="mt-2 break-words text-xs">
+                <strong>Dúvidas: </strong>
+                {item.contactInfo}
+              </p>
+            )}
+            {item.status === "cancelado" && (
+              <p className="mt-2 text-sm font-semibold text-na-danger-dark dark:text-red-300">
+                Evento cancelado.{" "}
+                {item.minhaInscricao?.refundState &&
+                item.minhaInscricao.refundState !== "nao_solicitado"
+                  ? `Reembolso: ${REFUND_LABELS[item.minhaInscricao.refundState] ?? "em acompanhamento"}${item.minhaInscricao.refundedAmount ? ` · ${formatBRL(item.minhaInscricao.refundedAmount)}` : ""}.`
+                  : "Consulte a Economia se houver pagamento."}
+              </p>
+            )}
+            {item.status !== "cancelado" &&
+              item.source === "manual" &&
+              item.scope === "filial" && (
+                <>
+                  <div className="mt-2 text-xs font-bold text-na-green dark:text-emerald-400">
+                    {item.price > 0
+                      ? formatBRL(item.price)
+                      : "Entrada Gratuita"}
+                  </div>
+                  {item.lancheCompartilhado && (
+                    <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-na-gold/15 px-2.5 py-1.5 text-xs font-bold text-na-gold-dark dark:bg-amber-950/40 dark:text-amber-300">
+                      <UtensilsCrossed size={13} className="shrink-0" /> Lanche
+                      compartilhado: leve algo para partilhar
+                    </div>
+                  )}
+                  {item.minhaEspera?.vagaReservada && !item.minhaInscricao && (
+                    <p className="mt-2 rounded-lg bg-na-success-light px-2.5 py-1.5 text-xs font-semibold text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-300">
+                      Abriu uma vaga e ela está reservada para você por 12
+                      horas. Inscreva-se abaixo.
+                    </p>
+                  )}
+                  {!item.minhaInscricao && item.registrationClosed ? (
+                    <p className="mt-2 text-xs font-semibold">
+                      Inscrições encerradas
+                    </p>
+                  ) : !item.minhaInscricao && item.availableSpots === 0 ? (
+                    somenteConsulta ? (
+                      <p className="mt-2 text-xs font-semibold">
+                        Vagas esgotadas
+                      </p>
+                    ) : (
+                      <ListaDeEspera
+                        memberId={memberId}
+                        eventId={item.id}
+                        espera={item.minhaEspera}
+                      />
+                    )
+                  ) : somenteConsulta ? (
+                    <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                      {emBreve
+                        ? "Inscrição paga pelo Portal: em breve na sua filial. Fale com a secretaria."
+                        : "Online payment isn't available for your branch yet — please contact your branch."}
+                    </p>
+                  ) : (
+                    <InscricaoEvento
+                      memberId={memberId}
+                      eventId={item.id}
+                      price={item.price}
+                      inscricaoInicial={item.minhaInscricao}
+                      unavailableReason={item.paymentUnavailableReason}
+                      inicio={item.date}
+                      prazoDesistenciaDias={item.prazoDesistenciaDias}
+                    />
+                  )}
+                </>
+              )}
+          </div>
         </details>
       </div>
     );
@@ -528,11 +983,26 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
   return (
     <div className="rounded-xl border border-na-green/30 bg-na-green-light/40 p-3 dark:bg-emerald-950/20">
       <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">
-        <GraduationCap size={14} /> {ACTIVITY_LABEL[item.type] ?? item.type} · {item.className}
+        <GraduationCap size={14} /> {ACTIVITY_LABEL[item.type] ?? item.type} ·{" "}
+        {item.className}
       </div>
-      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</div>
-      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Data: {item.date.toLocaleDateString("pt-BR", { timeZone: fuso, weekday: "long", day: "2-digit", month: "long" })}</div>
-      {item.materiaNome && <div className="mt-1 text-[11px] font-semibold text-gray-700 dark:text-gray-300">Matéria: {item.materiaNome}</div>}
+      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        {item.title}
+      </div>
+      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+        Data:{" "}
+        {item.date.toLocaleDateString("pt-BR", {
+          timeZone: fuso,
+          weekday: "long",
+          day: "2-digit",
+          month: "long",
+        })}
+      </div>
+      {item.materiaNome && (
+        <div className="mt-1 text-[11px] font-semibold text-gray-700 dark:text-gray-300">
+          Matéria: {item.materiaNome}
+        </div>
+      )}
       {!!item.temas?.length && (
         <div className="mt-2 rounded-lg bg-white p-2 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">
           <span className="font-semibold">Temas:</span>
@@ -549,20 +1019,36 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
           {item.studyItems}
         </div>
       )}
-      {item.description && <p className="mt-2 whitespace-pre-line break-words text-[11px] text-gray-600 dark:text-gray-400">{item.description}</p>}
+      {item.description && (
+        <p className="mt-2 whitespace-pre-line break-words text-[11px] text-gray-600 dark:text-gray-400">
+          {item.description}
+        </p>
+      )}
       {/* Resumos das anotações para os temas da prova: o do aluno e os dos colegas conferidos pelo professor (2026-10-29). */}
       {!!item.resumos?.length && (
         <div className="mt-2 flex flex-col gap-1.5">
-          {[...item.resumos].sort((a, b) => Number(b.meu) - Number(a.meu)).map((r) => (
-            <details key={r.id} className="rounded-lg bg-na-gold/10 p-2 text-[11px] text-gray-700 dark:bg-amber-950/20 dark:text-gray-300">
-              <summary className="cursor-pointer font-semibold">{r.meu ? "Seu resumo" : "Resumo de um colega"}: {r.tema}</summary>
-              <p className="mt-1 whitespace-pre-line">{r.resumo}</p>
-            </details>
-          ))}
+          {[...item.resumos]
+            .sort((a, b) => Number(b.meu) - Number(a.meu))
+            .map((r) => (
+              <details
+                key={r.id}
+                className="rounded-lg bg-na-gold/10 p-2 text-[11px] text-gray-700 dark:bg-amber-950/20 dark:text-gray-300"
+              >
+                <summary className="cursor-pointer font-semibold">
+                  {r.meu ? "Seu resumo" : "Resumo de um colega"}: {r.tema}
+                </summary>
+                <p className="mt-1 whitespace-pre-line">{r.resumo}</p>
+              </details>
+            ))}
         </div>
       )}
-      {item.temas?.length && item.type === "prova" && !item.resumos?.some((r) => r.meu) ? (
-        <Link href="/estudos/anotacoes" className="mt-2 inline-block text-[11px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
+      {item.temas?.length &&
+      item.type === "prova" &&
+      !item.resumos?.some((r) => r.meu) ? (
+        <Link
+          href="/estudos/anotacoes"
+          className="mt-2 inline-block text-[11px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400"
+        >
           Fazer anotações e resumo destes temas →
         </Link>
       ) : null}
@@ -577,31 +1063,60 @@ function ItemCard({ memberId, item, somenteConsulta, emBreve, aberto }: { member
 }
 
 /** Conversa individual marcada (aluno ou instrutor); cancelar e detalhes ficam na página de atendimentos. */
-function CartaoAtendimento({ item }: { item: Extract<AgendaItem, { kind: "atendimento" }> }) {
+function CartaoAtendimento({
+  item,
+}: {
+  item: Extract<AgendaItem, { kind: "atendimento" }>;
+}) {
   const fuso = useContext(FusoDaAgenda);
-  const MODALIDADE: Record<string, string> = { presencial: "Presencial", online: "Online" };
+  const MODALIDADE: Record<string, string> = {
+    presencial: "Presencial",
+    online: "Online",
+  };
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-na-green/40 bg-white p-3 dark:bg-gray-900">
       <p className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
         <MessagesSquare size={11} /> Conversa individual
       </p>
-      <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">{item.papel === "aluno" ? `Com ${item.comQuem}` : `Com ${item.comQuem} (aluno)`}</p>
+      <p className="text-[14px] font-bold text-gray-900 dark:text-gray-100">
+        {item.papel === "aluno"
+          ? `Com ${item.comQuem}`
+          : `Com ${item.comQuem} (aluno)`}
+      </p>
       <p className="text-[12px] text-gray-600 dark:text-gray-300">
         {horaNoFuso(item.date, fuso)}–{horaNoFuso(item.endsAt, fuso)}
       </p>
       <p className="flex items-center gap-1 text-[12px] text-gray-500 dark:text-gray-400">
-        {item.modalidade === "online" ? <Video size={12} /> : <MapPin size={12} />}
+        {item.modalidade === "online" ? (
+          <Video size={12} />
+        ) : (
+          <MapPin size={12} />
+        )}
         {MODALIDADE[item.modalidade] ?? item.modalidade}
         {item.local ? ` · ${item.local}` : ""}
       </p>
-      {item.assunto && <p className="text-[12px] text-gray-600 italic dark:text-gray-300">“{item.assunto}”</p>}
+      {item.assunto && (
+        <p className="text-[12px] text-gray-600 italic dark:text-gray-300">
+          “{item.assunto}”
+        </p>
+      )}
       <div className="flex flex-wrap gap-3 text-[12px] font-semibold">
         {item.linkOnline && (
-          <a href={item.linkOnline} target="_blank" rel="noopener noreferrer" className="text-na-green-dark underline dark:text-emerald-400">
+          <a
+            href={item.linkOnline}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-na-green-dark underline dark:text-emerald-400"
+          >
             Entrar na chamada
           </a>
         )}
-        <Link href={item.papel === "aluno" ? "/atendimentos" : "/professor/atendimentos"} className="text-gray-500 hover:underline dark:text-gray-400">
+        <Link
+          href={
+            item.papel === "aluno" ? "/atendimentos" : "/professor/atendimentos"
+          }
+          className="text-gray-500 hover:underline dark:text-gray-400"
+        >
           Ver ou cancelar
         </Link>
       </div>
@@ -620,8 +1135,12 @@ function LinkAtendimento() {
         <MessagesSquare size={16} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">Conversar com meu instrutor</span>
-        <span className="block text-[11px] text-gray-600 dark:text-gray-400">Marque um horário individual</span>
+        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">
+          Conversar com meu instrutor
+        </span>
+        <span className="block text-[11px] text-gray-600 dark:text-gray-400">
+          Marque um horário individual
+        </span>
       </span>
       <ChevronRight size={16} className="shrink-0 text-gray-400" />
     </Link>
@@ -632,7 +1151,20 @@ function itemKey(item: AgendaItem) {
   return `${item.kind}-${item.id}`;
 }
 
-const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const MESES_CURTOS = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+];
 const DIAS_CURTOS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const POR_PAGINA = 6;
 const OUTROS_A_VISTA = 4;
@@ -650,8 +1182,13 @@ function ReconectarAgora() {
         <RefreshCw size={16} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">Mostrar os eventos do Ágora</span>
-        <span className="block text-[11px] text-gray-600 dark:text-gray-400">A conexão com o Ágora venceu. Toque para entrar de novo com a conta Nova Acrópole.</span>
+        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">
+          Mostrar os eventos do Ágora
+        </span>
+        <span className="block text-[11px] text-gray-600 dark:text-gray-400">
+          A conexão com o Ágora venceu. Toque para entrar de novo com a conta
+          Nova Acrópole.
+        </span>
       </span>
       <ChevronRight size={16} className="shrink-0 text-gray-400" />
     </a>
@@ -668,8 +1205,12 @@ function LinkMeusEventos() {
         <Ticket size={16} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">Meus eventos</span>
-        <span className="block text-[11px] text-gray-600 dark:text-gray-400">Inscrições, participação e recepção</span>
+        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">
+          Meus eventos
+        </span>
+        <span className="block text-[11px] text-gray-600 dark:text-gray-400">
+          Inscrições, participação e recepção
+        </span>
       </span>
       <ChevronRight size={16} className="shrink-0 text-gray-400" />
     </Link>
@@ -687,8 +1228,12 @@ function LinkAgendaGoogle() {
         <CalendarPlus size={16} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">Levar para o Google Agenda</span>
-        <span className="block text-[11px] text-gray-600 dark:text-gray-400">Inscrições confirmadas e eventos a confirmar na agenda do celular</span>
+        <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100">
+          Levar para o Google Agenda
+        </span>
+        <span className="block text-[11px] text-gray-600 dark:text-gray-400">
+          Inscrições confirmadas e eventos a confirmar na agenda do celular
+        </span>
       </span>
       <ChevronRight size={16} className="shrink-0 text-gray-400" />
     </Link>
@@ -697,16 +1242,40 @@ function LinkAgendaGoogle() {
 
 /** "FAZENDA NOVA ACRÓPOLE" -> "Fazenda Nova Acrópole" (sedes do Ágora vêm em maiúsculas). */
 const nomeDaSede = (t: string) =>
-  t === t.toUpperCase() ? t.toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, e: string, l: string) => e + l.toUpperCase()).replace(/\s(De|Da|Do|Dos|Das|E)(?=\s)/g, (m) => m.toLowerCase()) : t;
+  t === t.toUpperCase()
+    ? t
+        .toLowerCase()
+        .replace(
+          /(^|\s)(\p{L})/gu,
+          (m, e: string, l: string) => e + l.toUpperCase(),
+        )
+        .replace(/\s(De|Da|Do|Dos|Das|E)(?=\s)/g, (m) => m.toLowerCase())
+    : t;
 
 /**
  * Cartão da lista "Próximos eventos" (grade de 2 por linha, pedido do usuário 2026-10-29: cabem mais eventos sem
  * apertar): data e tipo no alto, título em até 2 linhas, horário; tocar abre o dia.
  */
-function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "enquete" }>; onAbrir: () => void }) {
+function LinhaProximo({
+  item,
+  onAbrir,
+}: {
+  item: Exclude<AgendaItem, { kind: "enquete" }>;
+  onAbrir: () => void;
+}) {
   const fuso = useContext(FusoDaAgenda);
-  const partes = partesDoItem(item as { date: Date; allDay?: boolean | null }, fuso);
-  const Icone = item.kind === "evento" ? PartyPopper : item.kind === "reuniao" ? Users : item.kind === "atendimento" ? MessagesSquare : GraduationCap;
+  const partes = partesDoItem(
+    item as { date: Date; allDay?: boolean | null },
+    fuso,
+  );
+  const Icone =
+    item.kind === "evento"
+      ? PartyPopper
+      : item.kind === "reuniao"
+        ? Users
+        : item.kind === "atendimento"
+          ? MessagesSquare
+          : GraduationCap;
   const tipo =
     item.kind === "evento"
       ? item.filialOrigem
@@ -720,89 +1289,149 @@ function LinhaProximo({ item, onAbrir }: { item: Exclude<AgendaItem, { kind: "en
           ? "Conversa individual"
           : `${ACTIVITY_LABEL[item.type] ?? item.type} · ${item.className}`;
   const semHora = item.kind === "evento" && item.allDay;
-  const cancelado = (item.kind === "evento" && item.status === "cancelado") || (item.kind === "reuniao" && item.status === "cancelada");
+  const cancelado =
+    (item.kind === "evento" && item.status === "cancelado") ||
+    (item.kind === "reuniao" && item.status === "cancelada");
   // Cor por categoria (pedido do usuário 2026-10-25: "eventos futuros um pouco sem graça").
-  const cor = cancelado ? COR_PROXIMO.cancelado : COR_PROXIMO[categoriaProximo(item)];
+  const cor = cancelado
+    ? COR_PROXIMO.cancelado
+    : COR_PROXIMO[categoriaProximo(item)];
   return (
     <li>
-      <button onClick={onAbrir} className={`flex h-full w-full flex-col gap-1.5 rounded-2xl border p-2.5 text-left transition ${cor.cartao}`}>
+      <button
+        onClick={onAbrir}
+        className={`flex h-full w-full flex-col gap-1.5 rounded-2xl border p-2.5 text-left transition ${cor.cartao}`}
+      >
         <span className="flex items-center gap-2">
-          <span className={`flex w-10 shrink-0 flex-col items-center rounded-lg py-1 leading-none shadow-sm ${cor.data}`}>
-            <span className="text-[8px] font-bold uppercase opacity-85">{DIAS_CURTOS[partes.semana]}</span>
+          <span
+            className={`flex w-10 shrink-0 flex-col items-center rounded-lg py-1 leading-none shadow-sm ${cor.data}`}
+          >
+            <span className="text-[8px] font-bold uppercase opacity-85">
+              {DIAS_CURTOS[partes.semana]}
+            </span>
             <span className="my-0.5 text-base font-black">{partes.dia}</span>
-            <span className="text-[8px] font-bold uppercase opacity-85">{MESES_CURTOS[partes.mes]}</span>
+            <span className="text-[8px] font-bold uppercase opacity-85">
+              {MESES_CURTOS[partes.mes]}
+            </span>
           </span>
-          <span className={`line-clamp-2 min-w-0 flex-1 text-[11px] leading-tight font-bold tracking-wide uppercase ${cor.rotulo}`}>
+          <span
+            className={`line-clamp-2 min-w-0 flex-1 text-[11px] leading-tight font-bold tracking-wide uppercase ${cor.rotulo}`}
+          >
             <Icone size={10} className="mr-0.5 inline align-[-1px]" />
             {tipo}
           </span>
         </span>
-        <span className={`line-clamp-2 text-[12.5px] leading-snug font-semibold ${cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</span>
+        <span
+          className={`line-clamp-2 text-[12.5px] leading-snug font-semibold ${cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}
+        >
+          {item.title}
+        </span>
         <span className="mt-auto flex flex-wrap items-center gap-x-1 text-[11px] text-gray-500 dark:text-gray-400">
           {!semHora && (
             <span className="flex items-center gap-1">
               <CalendarClock size={10} className="shrink-0" />
-              {horaNoFuso(item.date, fusoDoCompromisso(item as { allDay?: boolean | null; fusoLocal?: string | null }, fuso))}
+              {horaNoFuso(
+                item.date,
+                fusoDoCompromisso(
+                  item as {
+                    allDay?: boolean | null;
+                    fusoLocal?: string | null;
+                  },
+                  fuso,
+                ),
+              )}
             </span>
           )}
-          {cancelado && <span className="font-semibold text-na-danger-dark dark:text-red-300">Cancelado</span>}
-          {!cancelado && item.kind === "evento" && item.lancheCompartilhado && <span className="font-semibold text-na-gold-dark dark:text-amber-300">Lanche compartilhado</span>}
+          {cancelado && (
+            <span className="font-semibold text-na-danger-dark dark:text-red-300">
+              Cancelado
+            </span>
+          )}
+          {!cancelado && item.kind === "evento" && item.lancheCompartilhado && (
+            <span className="font-semibold text-na-gold-dark dark:text-amber-300">
+              Lanche compartilhado
+            </span>
+          )}
         </span>
       </button>
     </li>
   );
 }
 
-type CategoriaProximo = "escola" | "rede" | "outraFilial" | "grupo" | "turma" | "atendimento" | "cancelado";
+type CategoriaProximo =
+  | "escola"
+  | "rede"
+  | "outraFilial"
+  | "grupo"
+  | "turma"
+  | "atendimento"
+  | "cancelado";
 
-function categoriaProximo(item: Exclude<AgendaItem, { kind: "enquete" }>): Exclude<CategoriaProximo, "cancelado"> {
-  if (item.kind === "evento") return item.filialOrigem ? "outraFilial" : item.scope === "filial" ? "escola" : "rede";
+function categoriaProximo(
+  item: Exclude<AgendaItem, { kind: "enquete" }>,
+): Exclude<CategoriaProximo, "cancelado"> {
+  if (item.kind === "evento")
+    return item.filialOrigem
+      ? "outraFilial"
+      : item.scope === "filial"
+        ? "escola"
+        : "rede";
   if (item.kind === "reuniao") return "grupo";
   if (item.kind === "atendimento") return "atendimento";
   return "turma";
 }
 
 /** Cores dos próximos compromissos: verde suave (escola), turquesa (nacional/regional), laranja (outra filial), verdes (grupos, turma, conversa). */
-const COR_PROXIMO: Record<CategoriaProximo, { cartao: string; data: string; rotulo: string; seta: string }> = {
+const COR_PROXIMO: Record<
+  CategoriaProximo,
+  { cartao: string; data: string; rotulo: string; seta: string }
+> = {
   // Evento da escola em verde suave (pedido do usuário 2026-10-26: o dourado/laranja chamava atenção demais).
   escola: {
-    cartao: "border-na-green/20 bg-na-green-light/25 hover:border-na-green/50 dark:border-emerald-900/50 dark:bg-emerald-950/15 dark:hover:border-emerald-700/70",
+    cartao:
+      "border-na-green/20 bg-na-green-light/25 hover:border-na-green/50 dark:border-emerald-900/50 dark:bg-emerald-950/15 dark:hover:border-emerald-700/70",
     data: "bg-na-green-light text-na-green-dark dark:bg-emerald-900/50 dark:text-emerald-200",
     rotulo: "text-na-green-dark/80 dark:text-emerald-300/80",
     seta: "text-na-green/70 dark:text-emerald-500/70",
   },
   rede: {
-    cartao: "border-na-turquesa/40 bg-na-turquesa/10 hover:border-na-turquesa dark:border-cyan-800/60 dark:bg-cyan-950/25 dark:hover:border-cyan-600",
+    cartao:
+      "border-na-turquesa/40 bg-na-turquesa/10 hover:border-na-turquesa dark:border-cyan-800/60 dark:bg-cyan-950/25 dark:hover:border-cyan-600",
     data: "bg-na-turquesa text-white",
     rotulo: "text-cyan-800 dark:text-cyan-300",
     seta: "text-cyan-700 dark:text-cyan-400",
   },
   outraFilial: {
-    cartao: "border-na-laranja/40 bg-na-laranja/10 hover:border-na-laranja dark:border-orange-800/60 dark:bg-orange-950/25 dark:hover:border-orange-600",
+    cartao:
+      "border-na-laranja/40 bg-na-laranja/10 hover:border-na-laranja dark:border-orange-800/60 dark:bg-orange-950/25 dark:hover:border-orange-600",
     data: "bg-na-laranja text-white",
     rotulo: "text-orange-800 dark:text-orange-300",
     seta: "text-orange-700 dark:text-orange-400",
   },
   grupo: {
-    cartao: "border-na-green/40 bg-na-green-light/40 hover:border-na-green dark:border-emerald-800/60 dark:bg-emerald-950/25 dark:hover:border-emerald-600",
+    cartao:
+      "border-na-green/40 bg-na-green-light/40 hover:border-na-green dark:border-emerald-800/60 dark:bg-emerald-950/25 dark:hover:border-emerald-600",
     data: "bg-na-green text-white",
     rotulo: "text-na-green-dark dark:text-emerald-300",
     seta: "text-na-green-dark dark:text-emerald-400",
   },
   turma: {
-    cartao: "border-na-green-dark/30 bg-na-green-light/30 hover:border-na-green-dark dark:border-teal-800/60 dark:bg-teal-950/25 dark:hover:border-teal-600",
+    cartao:
+      "border-na-green-dark/30 bg-na-green-light/30 hover:border-na-green-dark dark:border-teal-800/60 dark:bg-teal-950/25 dark:hover:border-teal-600",
     data: "bg-na-green-dark text-white",
     rotulo: "text-na-green-dark dark:text-teal-300",
     seta: "text-na-green-dark dark:text-teal-400",
   },
   atendimento: {
-    cartao: "border-na-green/40 bg-na-green-light/40 hover:border-na-green dark:border-emerald-800/60 dark:bg-emerald-950/25 dark:hover:border-emerald-600",
+    cartao:
+      "border-na-green/40 bg-na-green-light/40 hover:border-na-green dark:border-emerald-800/60 dark:bg-emerald-950/25 dark:hover:border-emerald-600",
     data: "bg-gradient-to-b from-na-green to-na-green-dark text-white",
     rotulo: "text-na-green-dark dark:text-emerald-300",
     seta: "text-na-green-dark dark:text-emerald-400",
   },
   cancelado: {
-    cartao: "border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900/60",
+    cartao:
+      "border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900/60",
     data: "bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
     rotulo: "text-gray-500 dark:text-gray-400",
     seta: "text-gray-400",
@@ -817,15 +1446,50 @@ export function AgendaPanel(props: Parameters<typeof AgendaConteudo>[0]) {
   );
 }
 
-function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, podeMarcarAtendimento, agoraReconectar, fuso, hoje: hojeCivil, publico = "Membros", escola = "", comAtribuicoes = false }: { memberId: string; items: AgendaItem[]; somenteConsulta?: boolean; emBreve?: boolean; eventoId?: string; podeMarcarAtendimento?: boolean; agoraReconectar?: boolean; fuso: string; hoje: string; publico?: string; escola?: string; comAtribuicoes?: boolean }) {
-  const eventoCompartilhado = items.find((item) => item.kind === "evento" && item.id === eventoId);
-  const avisoEvento = eventoId && !eventoCompartilhado
-    ? <p role="status" className="text-sm text-gray-600 dark:text-gray-300">Este evento não está disponível na sua agenda. Ele pode ter encerrado ou ser destinado a outra escola.</p>
-    : null;
+function AgendaConteudo({
+  memberId,
+  items,
+  somenteConsulta,
+  emBreve,
+  eventoId,
+  podeMarcarAtendimento,
+  agoraReconectar,
+  fuso,
+  hoje: hojeCivil,
+  publico = "Membros",
+  escola = "",
+  comAtribuicoes = false,
+}: {
+  memberId: string;
+  items: AgendaItem[];
+  somenteConsulta?: boolean;
+  emBreve?: boolean;
+  eventoId?: string;
+  podeMarcarAtendimento?: boolean;
+  agoraReconectar?: boolean;
+  fuso: string;
+  hoje: string;
+  publico?: string;
+  escola?: string;
+  comAtribuicoes?: boolean;
+}) {
+  const eventoCompartilhado = items.find(
+    (item) => item.kind === "evento" && item.id === eventoId,
+  );
+  const avisoEvento =
+    eventoId && !eventoCompartilhado ? (
+      <p role="status" className="text-sm text-gray-600 dark:text-gray-300">
+        Este evento não está disponível na sua agenda. Ele pode ter encerrado ou
+        ser destinado a outra escola.
+      </p>
+    ) : null;
   const porDia = useMemo(() => {
     const mapa = new Map<string, AgendaItem[]>();
     for (const item of items) {
-      const chave = chaveDoCompromisso(item as { date: Date; allDay?: boolean | null }, fuso);
+      const chave = chaveDoCompromisso(
+        item as { date: Date; allDay?: boolean | null },
+        fuso,
+      );
       const lista = mapa.get(chave);
       if (lista) lista.push(item);
       else mapa.set(chave, [item]);
@@ -841,7 +1505,9 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
 
   // Abre sempre em hoje (pedido do usuário 2026-10-25); os próximos de outras datas ficam na lista abaixo.
   const [diaSelecionado, setDiaSelecionado] = useState(() => hoje);
-  const [mesExibido, setMesExibido] = useState(() => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1));
+  const [mesExibido, setMesExibido] = useState(
+    () => new Date(diaSelecionado.getFullYear(), diaSelecionado.getMonth(), 1),
+  );
   // Outros eventos (rede e outras filiais): 4 à vista (2 linhas da grade), o resto em "Carregar mais eventos" (pedido do usuário 2026-10-29).
   const [limiteOutros, setLimiteOutros] = useState(OUTROS_A_VISTA);
   // Próximo evento tocado: abre o detalhe dele já expandido e rola até ele (pedido do usuário 2026-10-26).
@@ -857,7 +1523,9 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
         {agoraReconectar && <ReconectarAgora />}
         {podeMarcarAtendimento && <LinkAtendimento />}
         {avisoEvento}
-        <p className="py-8 text-center text-[13px] text-gray-500 dark:text-gray-400">Nenhum evento ou atividade agendada no momento.</p>
+        <p className="py-8 text-center text-[13px] text-gray-500 dark:text-gray-400">
+          Nenhum evento ou atividade agendada no momento.
+        </p>
       </div>
     );
   }
@@ -873,13 +1541,30 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
 
   const itensDoDiaSelecionado = porDia.get(chaveDia(diaSelecionado)) ?? [];
   // Próximos compromissos de OUTRAS datas (pedido do usuário 2026-10-21), de hoje em diante.
-  const inicioDeHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const inicioDeHoje = new Date(
+    hoje.getFullYear(),
+    hoje.getMonth(),
+    hoje.getDate(),
+  );
   const proximos = items
-    .filter((i): i is Exclude<AgendaItem, { kind: "enquete" }> => i.kind !== "enquete" && dataCivilDoItem(i as { date: Date; allDay?: boolean | null }, fuso) >= hojeCivil && chaveDoCompromisso(i as { date: Date; allDay?: boolean | null }, fuso) !== chaveDia(diaSelecionado))
+    .filter(
+      (i): i is Exclude<AgendaItem, { kind: "enquete" }> =>
+        i.kind !== "enquete" &&
+        dataCivilDoItem(i as { date: Date; allDay?: boolean | null }, fuso) >=
+          hojeCivil &&
+        chaveDoCompromisso(
+          i as { date: Date; allDay?: boolean | null },
+          fuso,
+        ) !== chaveDia(diaSelecionado),
+    )
     .sort((a, b) => a.date.getTime() - b.date.getTime());
   // Primeiro o que é da escola no próximo mês (eventos da escola, grupos, turma, conversas); depois os demais.
   const fimDoMes = new Date(inicioDeHoje.getTime() + 30 * 864e5);
-  const daEscola = proximos.filter((i) => !["rede", "outraFilial"].includes(categoriaProximo(i)) && i.date < fimDoMes);
+  const daEscola = proximos.filter(
+    (i) =>
+      !["rede", "outraFilial"].includes(categoriaProximo(i)) &&
+      i.date < fimDoMes,
+  );
   const outros = proximos.filter((i) => !daEscola.includes(i));
 
   function mudarMes(delta: number) {
@@ -888,30 +1573,62 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
 
   function selecionarDia(dia: Date) {
     setDiaSelecionado(dia);
-    if (dia.getMonth() !== mes || dia.getFullYear() !== ano) setMesExibido(new Date(dia.getFullYear(), dia.getMonth(), 1));
+    if (dia.getMonth() !== mes || dia.getFullYear() !== ano)
+      setMesExibido(new Date(dia.getFullYear(), dia.getMonth(), 1));
   }
 
   return (
     <div ref={topo} className="flex flex-col gap-4">
       {avisoEvento}
-      {eventoCompartilhado && <section aria-label="Evento compartilhado" className="space-y-2">
-        <CollapsibleSection defaultOpen title={<h3 className="text-xs font-semibold text-na-green-dark dark:text-emerald-400">Evento compartilhado</h3>}>
-        <ItemCard key={itemKey(eventoCompartilhado)} memberId={memberId} item={eventoCompartilhado} somenteConsulta={somenteConsulta} emBreve={emBreve} aberto />
-      </CollapsibleSection></section>}
+      {eventoCompartilhado && (
+        <section aria-label="Evento compartilhado" className="space-y-2">
+          <CollapsibleSection
+            defaultOpen
+            title={
+              <h3 className="text-xs font-semibold text-na-green-dark dark:text-emerald-400">
+                Evento compartilhado
+              </h3>
+            }
+          >
+            <ItemCard
+              key={itemKey(eventoCompartilhado)}
+              memberId={memberId}
+              item={eventoCompartilhado}
+              somenteConsulta={somenteConsulta}
+              emBreve={emBreve}
+              aberto
+            />
+          </CollapsibleSection>
+        </section>
+      )}
       {/* Próximos eventos sempre abertos e no topo (pedido do usuário 2026-10-25); depois Meus eventos e o calendário. */}
       {proximos.length > 0 && (
-        <section aria-labelledby="proximos-eventos" className="flex flex-col gap-2">
-          <h3 id="proximos-eventos" className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300">
+        <section
+          aria-labelledby="proximos-eventos"
+          className="flex flex-col gap-2"
+        >
+          <h3
+            id="proximos-eventos"
+            className="text-[11px] font-bold tracking-wide text-gray-600 uppercase dark:text-gray-300"
+          >
             Próximos eventos
           </h3>
           {[
             { chave: "escola", titulo: "Na sua escola", lista: daEscola },
-            { chave: "outros", titulo: "Outros eventos", lista: outros.slice(0, limiteOutros) },
+            {
+              chave: "outros",
+              titulo: "Outros eventos",
+              lista: outros.slice(0, limiteOutros),
+            },
           ]
             .filter((g) => g.lista.length)
             .map((g) => (
               <div key={g.chave} className="flex flex-col gap-1.5">
-                {daEscola.length > 0 && outros.length > 0 && <h4 className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">{g.titulo}</h4>}
+                {daEscola.length > 0 && outros.length > 0 && (
+                  <h4 className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                    {g.titulo}
+                  </h4>
+                )}
                 <ul className="grid grid-cols-2 gap-2">
                   {g.lista.map((item) => (
                     <LinhaProximo
@@ -920,9 +1637,21 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
                       onAbrir={() => {
                         const chave = itemKey(item);
                         setItemAberto(chave);
-                        const p = partesDoItem(item as { date: Date; allDay?: boolean | null }, fuso);
+                        const p = partesDoItem(
+                          item as { date: Date; allDay?: boolean | null },
+                          fuso,
+                        );
                         selecionarDia(new Date(p.ano, p.mes, p.dia));
-                        setTimeout(() => document.getElementById(`agenda-item-${chave}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+                        setTimeout(
+                          () =>
+                            document
+                              .getElementById(`agenda-item-${chave}`)
+                              ?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              }),
+                          80,
+                        );
                       }}
                     />
                   ))}
@@ -943,7 +1672,10 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
       <LinkAgendaGoogle />
       {agoraReconectar && <ReconectarAgora />}
       {podeMarcarAtendimento && <LinkAtendimento />}
-      <div ref={calendario} className="scroll-mt-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+      <div
+        ref={calendario}
+        className="scroll-mt-4 rounded-xl border border-gray-200 p-3 dark:border-gray-700"
+      >
         <div className="mb-2 flex items-center justify-between">
           <button
             onClick={() => mudarMes(-1)}
@@ -975,7 +1707,9 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
             const itensDoDia = porDia.get(chaveDia(dia)) ?? [];
             const ehHoje = chaveDia(dia) === chaveDia(hoje);
             const ehSelecionado = chaveDia(dia) === chaveDia(diaSelecionado);
-            const tiposPresentes = [...new Set(itensDoDia.map((it) => it.kind))];
+            const tiposPresentes = [
+              ...new Set(itensDoDia.map((it) => it.kind)),
+            ];
             return (
               <button
                 key={chaveDia(dia)}
@@ -1002,22 +1736,46 @@ function AgendaConteudo({ memberId, items, somenteConsulta, emBreve, eventoId, p
           })}
         </div>
       </div>
-      <ProgramacaoDoMes items={items} ano={ano} mes={mes + 1} fuso={fuso} publico={publico} escola={escola} somenteAbertos={!comAtribuicoes} />
+      <ProgramacaoDoMes
+        items={items}
+        ano={ano}
+        mes={mes + 1}
+        fuso={fuso}
+        publico={publico}
+        escola={escola}
+        somenteAbertos={!comAtribuicoes}
+      />
 
       <div className="flex flex-col gap-3">
         {itensDoDiaSelecionado.length === 0 ? (
           <p className="py-4 text-center text-[12px] text-gray-500 dark:text-gray-400">
-            Nada agendado para {diaSelecionado.toLocaleDateString("pt-BR")}.
+            Nada agendado para{" "}
+            {diaSelecionado.toLocaleDateString("pt-BR", {
+              timeZone: "America/Sao_Paulo",
+            })}
+            .
           </p>
         ) : (
-          itensDoDiaSelecionado.filter((item) => item !== eventoCompartilhado).map((item) => (
-            <div key={itemKey(item)} id={`agenda-item-${itemKey(item)}`} className="scroll-mt-4">
-              <ItemCard key={`${itemKey(item)}:${itemAberto === itemKey(item)}`} memberId={memberId} item={item} somenteConsulta={somenteConsulta} emBreve={emBreve} aberto={itemAberto === itemKey(item)} />
-            </div>
-          ))
+          itensDoDiaSelecionado
+            .filter((item) => item !== eventoCompartilhado)
+            .map((item) => (
+              <div
+                key={itemKey(item)}
+                id={`agenda-item-${itemKey(item)}`}
+                className="scroll-mt-4"
+              >
+                <ItemCard
+                  key={`${itemKey(item)}:${itemAberto === itemKey(item)}`}
+                  memberId={memberId}
+                  item={item}
+                  somenteConsulta={somenteConsulta}
+                  emBreve={emBreve}
+                  aberto={itemAberto === itemKey(item)}
+                />
+              </div>
+            ))
         )}
       </div>
-
     </div>
   );
 }
