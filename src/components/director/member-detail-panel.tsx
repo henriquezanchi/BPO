@@ -1,45 +1,21 @@
 "use client";
 
-import {
-  getMemberDetail,
-  updateMemberDataEntrada,
-  updateMemberEconomicNotes,
-} from "@/lib/actions/director-actions";
+import { getMemberDetail, updateMemberDataEntrada, updateMemberEconomicNotes } from "@/lib/actions/director-actions";
 import { formatBRL, formatDateBR, whatsappHref } from "@/lib/format";
 import { CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
-const MESES = [
-  "Jan",
-  "Fev",
-  "Mar",
-  "Abr",
-  "Mai",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Set",
-  "Out",
-  "Nov",
-  "Dez",
-];
+const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const ESTILO_MES: Record<string, string> = {
   paga: "bg-na-success-light text-na-success-dark dark:bg-emerald-950/40 dark:text-emerald-400",
-  atrasado:
-    "bg-na-danger-light text-na-danger-dark dark:bg-red-950/40 dark:text-red-400",
+  atrasado: "bg-na-danger-light text-na-danger-dark dark:bg-red-950/40 dark:text-red-400",
   isento: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   em_branco: "bg-gray-50 text-gray-400 dark:bg-gray-800/50 dark:text-gray-500",
 };
 
 type MemberDetail = Awaited<ReturnType<typeof getMemberDetail>>;
 
-export function MemberDetailPanel({
-  schoolId,
-  memberId,
-}: {
-  schoolId: string;
-  memberId: string;
-}) {
+export function MemberDetailPanel({ schoolId, memberId }: { schoolId: string; memberId: string }) {
   const [detail, setDetail] = useState<MemberDetail | null>(null);
   const [notas, setNotas] = useState("");
   const [salvo, setSalvo] = useState(false);
@@ -51,11 +27,7 @@ export function MemberDetailPanel({
     getMemberDetail(schoolId, memberId).then((d) => {
       setDetail(d);
       setNotas(d.economicNotes ?? "");
-      setDataEntrada(
-        d.dataEntradaEscola
-          ? new Date(d.dataEntradaEscola).toISOString().slice(0, 10)
-          : "",
-      );
+      setDataEntrada(d.dataEntradaEscola ? new Date(d.dataEntradaEscola).toISOString().slice(0, 10) : "");
     });
   }, [schoolId, memberId]);
 
@@ -68,10 +40,7 @@ export function MemberDetailPanel({
   }
 
   const porMes = new Map(detail.monthlyStatus.map((s) => [s.month, s.status]));
-  const compositionTotal = detail.compositionItems.reduce(
-    (soma, i) => soma + i.amount,
-    0,
-  );
+  const compositionTotal = detail.compositionItems.reduce((soma, i) => soma + i.amount, 0);
 
   function handleSalvarNotas() {
     startTransition(async () => {
@@ -94,24 +63,15 @@ export function MemberDetailPanel({
           <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
             {detail.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- vem do Supabase Storage, não é um asset local
-              <img
-                src={detail.avatarUrl}
-                alt={detail.name}
-                className="h-full w-full object-cover"
-              />
+              <img src={detail.avatarUrl} alt={detail.name} className="h-full w-full object-cover" />
             ) : (
-              <span className="text-sm font-bold text-gray-400 dark:text-gray-500">
-                {detail.name.charAt(0)}
-              </span>
+              <span className="text-sm font-bold text-gray-400 dark:text-gray-500">{detail.name.charAt(0)}</span>
             )}
           </div>
           <div>
-            <p className="font-semibold text-gray-900 dark:text-gray-100">
-              {detail.name}
-            </p>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{detail.name}</p>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              Matrícula: #{detail.registrationNo ?? "—"}{" "}
-              {detail.email && `· ${detail.email}`}
+              Matrícula: #{detail.registrationNo ?? "—"} {detail.email && `· ${detail.email}`}
             </p>
           </div>
         </div>
@@ -128,47 +88,32 @@ export function MemberDetailPanel({
       {detail.negociacaoAberta && (
         <div className="rounded-lg bg-na-warning-light p-3 text-[11px] text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300">
           <strong>Em negociação:</strong> {detail.negociacaoAberta.notes}
-          {detail.negociacaoAberta.promisedPaymentDate &&
-            ` — promessa: ${new Date(detail.negociacaoAberta.promisedPaymentDate).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}`}
+          {detail.negociacaoAberta.promisedPaymentDate && ` — promessa: ${new Date(detail.negociacaoAberta.promisedPaymentDate).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}`}
         </div>
       )}
 
       {detail.gafSolicitadoEm && (
         <div className="rounded-lg bg-purple-50 p-3 text-[11px] text-purple-800 dark:bg-purple-950/30 dark:text-purple-300">
-          <strong>Interesse no GAF</strong> — solicitado em{" "}
-          {formatDateBR(detail.gafSolicitadoEm)}
+          <strong>Interesse no GAF</strong> — solicitado em {formatDateBR(detail.gafSolicitadoEm)}
         </div>
       )}
 
       {detail.voluntariadoOferecido && (
         <div className="rounded-lg bg-na-turquesa/10 p-3 text-[11px] text-na-green-dark dark:bg-blue-950/30 dark:text-blue-300">
-          <strong>Ofereceu apoio voluntário</strong> em{" "}
-          {formatDateBR(detail.voluntariadoOferecido.createdAt)}:{" "}
-          {detail.voluntariadoOferecido.secretarias.join(", ")}
+          <strong>Ofereceu apoio voluntário</strong> em {formatDateBR(detail.voluntariadoOferecido.createdAt)}: {detail.voluntariadoOferecido.secretarias.join(", ")}
         </div>
       )}
 
       <div>
-        <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-          Composição — {formatBRL(compositionTotal)}/mês
-        </p>
+        <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">Composição — {formatBRL(compositionTotal)}/mês</p>
         {detail.compositionItems.length === 0 ? (
-          <p className="text-[11px] text-gray-400">
-            Nenhum item de composição.
-          </p>
+          <p className="text-[11px] text-gray-400">Nenhum item de composição.</p>
         ) : (
           <ul className="flex flex-col gap-1">
             {detail.compositionItems.map((i) => (
-              <li
-                key={i.id}
-                className="flex justify-between rounded bg-gray-50 px-2 py-1 text-[11px] dark:bg-gray-800"
-              >
-                <span className="text-gray-700 dark:text-gray-300">
-                  {i.label}
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {formatBRL(i.amount)}
-                </span>
+              <li key={i.id} className="flex justify-between rounded bg-gray-50 px-2 py-1 text-[11px] dark:bg-gray-800">
+                <span className="text-gray-700 dark:text-gray-300">{i.label}</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{formatBRL(i.amount)}</span>
               </li>
             ))}
           </ul>
@@ -176,18 +121,13 @@ export function MemberDetailPanel({
       </div>
 
       <div>
-        <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-          Situação mês a mês ({new Date().getFullYear()})
-        </p>
+        <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">Situação mês a mês ({new Date().getFullYear()})</p>
         <div className="grid grid-cols-4 gap-1.5">
           {MESES.map((label, i) => {
             const mes = i + 1;
             const status = porMes.get(mes) ?? "em_branco";
             return (
-              <div
-                key={mes}
-                className={`rounded-lg px-2 py-2 text-center text-[10px] font-semibold ${ESTILO_MES[status] ?? ESTILO_MES.em_branco}`}
-              >
+              <div key={mes} className={`rounded-lg px-2 py-2 text-center text-[10px] font-semibold ${ESTILO_MES[status] ?? ESTILO_MES.em_branco}`}>
                 {label}
               </div>
             );
@@ -197,10 +137,7 @@ export function MemberDetailPanel({
 
       <div>
         <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-          Data de Entrada na Escola{" "}
-          <span className="font-normal text-gray-400">
-            (pra Jornada Filosófica do aluno)
-          </span>
+          Data de Entrada na Escola <span className="font-normal text-gray-400">(pra Jornada Filosófica do aluno)</span>
         </p>
         <div className="flex items-center gap-2">
           <input
@@ -217,25 +154,14 @@ export function MemberDetailPanel({
             disabled={isPending}
             className="inline-flex items-center gap-1 rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
           >
-            {isPending ? (
-              <Loader2 size={12} className="animate-spin" />
-            ) : (
-              <CheckCircle2 size={12} />
-            )}{" "}
-            Salvar
+            {isPending ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Salvar
           </button>
         </div>
-        {dataEntradaSalva && (
-          <p className="mt-1 text-[11px] text-na-green-dark dark:text-emerald-400">
-            Salvo.
-          </p>
-        )}
+        {dataEntradaSalva && <p className="mt-1 text-[11px] text-na-green-dark dark:text-emerald-400">Salvo.</p>}
       </div>
 
       <div>
-        <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-          Anotações Econômicas sobre o Aluno
-        </p>
+        <p className="mb-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400">Anotações Econômicas sobre o Aluno</p>
         <textarea
           value={notas}
           onChange={(e) => {
@@ -253,19 +179,10 @@ export function MemberDetailPanel({
             disabled={isPending}
             className="inline-flex items-center gap-1 rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-na-green-dark disabled:opacity-60"
           >
-            {isPending ? (
-              <Loader2 size={12} className="animate-spin" />
-            ) : (
-              <CheckCircle2 size={12} />
-            )}{" "}
-            Salvar
+            {isPending ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Salvar
           </button>
         </div>
-        {salvo && (
-          <p className="mt-1 text-[11px] text-na-green-dark dark:text-emerald-400">
-            Salvo — pode levar até 24h para ser confirmado no Mercúrio.
-          </p>
-        )}
+        {salvo && <p className="mt-1 text-[11px] text-na-green-dark dark:text-emerald-400">Salvo — pode levar até 24h para ser confirmado no Mercúrio.</p>}
       </div>
     </div>
   );

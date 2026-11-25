@@ -4,28 +4,12 @@ import { usePaymentPolling } from "@/hooks/use-payment-polling";
 import { PaymentStatus } from "@/components/ui/payment-status";
 
 import { contributionPosition } from "@/lib/contribution-position";
-import {
-  oldestOpenContribution,
-  periodNumber,
-  type ChargeLedger,
-} from "@/lib/contribution-order";
+import { oldestOpenContribution, periodNumber, type ChargeLedger } from "@/lib/contribution-order";
 import { CopyButton } from "@/components/ui/copy-button";
 
-import {
-  getFortunaRecorrenteNudge,
-  responderNudge,
-} from "@/lib/actions/nudge-actions";
-import {
-  ativarPixAutomatico,
-  checkPixAutomaticoStatus,
-  desativarPixAutomatico,
-} from "@/lib/actions/pix-automatico-actions";
-import {
-  cancelarCobrancaContribuicaoPendente,
-  checkChargeStatus,
-  createContributionCharge,
-  getPendingContributionCharge,
-} from "@/lib/actions/payment-actions";
+import { getFortunaRecorrenteNudge, responderNudge } from "@/lib/actions/nudge-actions";
+import { ativarPixAutomatico, checkPixAutomaticoStatus, desativarPixAutomatico } from "@/lib/actions/pix-automatico-actions";
+import { cancelarCobrancaContribuicaoPendente, checkChargeStatus, createContributionCharge, getPendingContributionCharge } from "@/lib/actions/payment-actions";
 import { viewReceiptByMercurioRecId } from "@/lib/actions/receipt-actions";
 import { formatBRL } from "@/lib/format";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
@@ -33,46 +17,18 @@ import type { FortunaBalanceView } from "@/lib/member-data";
 import type { ContributionMonthlyStatus } from "@prisma/client";
 import { gerarPdfRecibo } from "@/lib/recibo-pdf";
 import { situacaoDoMes } from "@/lib/situacao-contribuicao";
-import {
-  AlertTriangle,
-  Coffee,
-  CreditCard,
-  Download,
-  ExternalLink,
-  HeartHandshake,
-  Loader2,
-  QrCode,
-  RefreshCw,
-  Zap,
-} from "lucide-react";
+import { AlertTriangle, Coffee, CreditCard, Download, ExternalLink, HeartHandshake, Loader2, QrCode, RefreshCw, Zap } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
-const MESES = [
-  "Jan",
-  "Fev",
-  "Mar",
-  "Abr",
-  "Mai",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Set",
-  "Out",
-  "Nov",
-  "Dez",
-];
+const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 const ESTILO_POR_STATUS: Record<string, string> = {
   paga: "border-na-success/40 bg-na-success-light text-na-success-dark dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400",
-  atrasado:
-    "border-na-danger/40 bg-na-danger-light text-na-danger-dark dark:border-red-800 dark:bg-red-950/30 dark:text-red-400",
-  isento:
-    "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400",
-  em_branco:
-    "border-gray-200 bg-white text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-500",
+  atrasado: "border-na-danger/40 bg-na-danger-light text-na-danger-dark dark:border-red-800 dark:bg-red-950/30 dark:text-red-400",
+  isento: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400",
+  em_branco: "border-gray-200 bg-white text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-500",
   // Mês atual sem pagamento depois do dia 10: perdeu o desconto, mas não está em atraso (amarelo).
-  sem_desconto:
-    "border-na-warning/40 bg-na-warning-light text-na-warning-dark dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300",
+  sem_desconto: "border-na-warning/40 bg-na-warning-light text-na-warning-dark dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300",
 };
 
 const LABEL_POR_STATUS: Record<string, string> = {
@@ -122,84 +78,42 @@ export function ContributionStatusPanel({
   /** "Pagar agora" na página inicial (10/11/2026): abre direto o pagamento do mês mais antigo em aberto. */
   abrirEmAberto?: boolean;
 }) {
-  const [recibo, setRecibo] = useState<{ recId: string; texto: string } | null>(
-    null,
-  );
-  const emAbertoInicial =
-    abrirEmAberto && !somenteConsulta
-      ? oldestOpenContribution(monthlyStatus, confirmedCharges)
-      : null;
-  const [mesPagamento, setMesPagamento] = useState<number | null>(
-    emAbertoInicial?.month ?? null,
-  );
+  const [recibo, setRecibo] = useState<{ recId: string; texto: string } | null>(null);
+  const emAbertoInicial = abrirEmAberto && !somenteConsulta ? oldestOpenContribution(monthlyStatus, confirmedCharges) : null;
+  const [mesPagamento, setMesPagamento] = useState<number | null>(emAbertoInicial?.month ?? null);
   const [carregandoMes, setCarregandoMes] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const [selectedYear, setSelectedYear] = useState(
-    emAbertoInicial?.year ?? new Date().getFullYear(),
-  );
+  const [selectedYear, setSelectedYear] = useState(emAbertoInicial?.year ?? new Date().getFullYear());
   const [confirmedLocally, setConfirmedLocally] = useState<ChargeLedger[]>([]);
   const payments = [...confirmedCharges, ...confirmedLocally];
   const firstOpen = oldestOpenContribution(monthlyStatus, payments);
   const position = contributionPosition(monthlyStatus, payments);
-  const overdue = position.filter((row) => row.overdue);
-  const received = position.filter((row) => row.received);
-  const latestSync = monthlyStatus.reduce<Date | null>(
-    (latest, row) =>
-      !latest || new Date(row.syncedAt) > latest
-        ? new Date(row.syncedAt)
-        : latest,
-    null,
-  );
-  const years = [
-    ...new Set([
-      new Date().getFullYear(),
-      ...monthlyStatus.map((item) => item.year),
-      ...payments.map((item) => item.referenceYear),
-    ]),
-  ].sort((a, b) => a - b);
-  const porMes = new Map(
-    monthlyStatus
-      .filter((m) => m.year === selectedYear)
-      .map((m) => [m.month, m]),
-  );
-  const mesesAtrasados = monthlyStatus.filter(
-    (m) => m.year === selectedYear && m.status === "atrasado",
-  );
+  const overdue = position.filter(row=>row.overdue);
+  const received = position.filter(row=>row.received);
+  const latestSync = monthlyStatus.reduce<Date | null>((latest,row)=>!latest || new Date(row.syncedAt)>latest ? new Date(row.syncedAt) : latest, null);
+  const years = [...new Set([new Date().getFullYear(), ...monthlyStatus.map(item=>item.year), ...payments.map(item=>item.referenceYear)])].sort((a,b)=>a-b);
+  const porMes = new Map(monthlyStatus.filter(m=>m.year===selectedYear).map((m) => [m.month, m]));
+  const mesesAtrasados = monthlyStatus.filter((m) => m.year===selectedYear && m.status === "atrasado");
 
   function handleClickMes(mes: number) {
     const registro = porMes.get(mes);
-    const paid = payments.some(
-      (item) =>
-        item.referenceYear === selectedYear &&
-        item.referenceMonth === mes &&
-        item.status === "pago",
-    );
-    const status = paid ? "paga" : (registro?.status ?? "em_branco");
+    const paid = payments.some(item=>item.referenceYear===selectedYear&&item.referenceMonth===mes&&item.status==="pago");
+    const status = paid ? "paga" : registro?.status ?? "em_branco";
     setErro(null);
 
     if (status === "paga") {
-      if (!registro?.mercurioRecId) {
-        setErro(
-          paid
-            ? "Recebimento confirmado pelo Portal. O comprovante da escola ainda não está disponível; não é necessário pagar novamente."
-            : "Pagamento registrado. O comprovante ainda não está disponível; peça a conferência à escola.",
-        );
-        return;
-      }
+      if (!registro?.mercurioRecId) { setErro(paid ? "Recebimento confirmado pelo Portal. O comprovante da escola ainda não está disponível; não é necessário pagar novamente." : "Pagamento registrado. O comprovante ainda não está disponível; peça a conferência à escola."); return; }
       setCarregandoMes(mes);
       startTransition(async () => {
-        const res = await viewReceiptByMercurioRecId(
-          memberId,
-          registro.mercurioRecId!,
-        );
+        const res = await viewReceiptByMercurioRecId(memberId, registro.mercurioRecId!);
         setCarregandoMes(null);
         if (!res.ok) {
           setErro(res.error ?? "Falha ao buscar o comprovante.");
           return;
         }
-        setRecibo({ recId: registro.mercurioRecId!, texto: res.rawText });
+        setRecibo({recId:registro.mercurioRecId!,texto:res.rawText});
       });
       return;
     }
@@ -213,24 +127,15 @@ export function ContributionStatusPanel({
     return (
       <div className="text-left">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Comprovante
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Comprovante</p>
           <div className="flex items-center gap-3">
             <button
-              onClick={() =>
-                gerarPdfRecibo(recibo.texto).save(
-                  `comprovante-${recibo.recId}.pdf`,
-                )
-              }
+              onClick={() => gerarPdfRecibo(recibo.texto).save(`comprovante-${recibo.recId}.pdf`)}
               className="flex items-center gap-1 text-[11px] font-semibold text-na-green dark:text-emerald-400"
             >
               <Download size={12} /> Baixar PDF
             </button>
-            <button
-              onClick={() => setRecibo(null)}
-              className="text-[11px] font-semibold text-gray-500 dark:text-gray-400"
-            >
+            <button onClick={() => setRecibo(null)} className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
               Voltar
             </button>
           </div>
@@ -251,16 +156,7 @@ export function ContributionStatusPanel({
         amount={compositionTotal}
         podeRecarregarFortuna={fortunaBalances.length > 0}
         cartaoComTaxa={cartaoComTaxa}
-        onConfirmed={() =>
-          setConfirmedLocally((items) => [
-            ...items,
-            {
-              referenceYear: selectedYear,
-              referenceMonth: mesPagamento,
-              status: "pago",
-            },
-          ])
-        }
+        onConfirmed={() => setConfirmedLocally(items=>[...items,{referenceYear:selectedYear,referenceMonth:mesPagamento,status:"pago"}])}
         onVoltar={() => setMesPagamento(null)}
       />
     );
@@ -268,158 +164,56 @@ export function ContributionStatusPanel({
 
   return (
     <div className="text-left">
-      {!somenteConsulta && (pixAutomaticoDisponivel || pixAutomaticStatus) && (
-        <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />
-      )}
+      {!somenteConsulta && (pixAutomaticoDisponivel || pixAutomaticStatus) && <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />}
 
-      <section
-        aria-label="Resumo das contribuições"
-        className="my-4 space-y-2 border-y border-gray-200 py-4 text-sm dark:border-gray-700"
-      >
+      <section aria-label="Resumo das contribuições" className="my-4 space-y-2 border-y border-gray-200 py-4 text-sm dark:border-gray-700">
         {/* Mais enxuto (pedido do usuário 2026-10-25): sem repetir "nenhum atraso" nem "sem juros"; a data fica à direita do título. */}
         <div className="flex items-baseline justify-between gap-3">
-          <h3 className="font-bold text-na-green-dark dark:text-na-green-light">
-            Suas contribuições
-          </h3>
-          {latestSync && (
-            <span className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400">
-              Atualizado em{" "}
-              {latestSync.toLocaleString("pt-BR", {
-                dateStyle: "short",
-                timeStyle: "short",
-                timeZone: "America/Sao_Paulo",
-              })}
-            </span>
-          )}
+          <h3 className="font-bold text-na-green-dark dark:text-na-green-light">Suas contribuições</h3>
+          {latestSync && <span className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400">Atualizado em {latestSync.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" })}</span>}
         </div>
-        {overdue.length > 0 && (
-          <p>{`${overdue.length} ${overdue.length > 1 ? "meses" : "mês"} em atraso.`}</p>
-        )}
+        {overdue.length > 0 && <p>{`${overdue.length} ${overdue.length > 1 ? "meses" : "mês"} em atraso.`}</p>}
         {!monthlyStatus.length && <p>Ainda não temos a situação da escola.</p>}
-        {!!received.length && (
-          <p>
-            {received.length} pagamento(s) feito(s) pelo Portal, ainda sendo
-            registrado(s) na escola.
-          </p>
-        )}
-        <p className="text-xs text-gray-600 dark:text-gray-300">
-          Já pagou na escola e não aparece? Peça a conferência antes de pagar de
-          novo.
-        </p>
+        {!!received.length && <p>{received.length} pagamento(s) feito(s) pelo Portal, ainda sendo registrado(s) na escola.</p>}
+        <p className="text-xs text-gray-600 dark:text-gray-300">Já pagou na escola e não aparece? Peça a conferência antes de pagar de novo.</p>
         {comprovanteAnual && (
           <p className="text-xs">
-            <a
-              href={`/portal/comprovante/${new Date().getFullYear()}`}
-              className="font-semibold text-na-green-dark underline-offset-2 hover:underline dark:text-na-green-light"
-            >
+            <a href={`/portal/comprovante/${new Date().getFullYear()}`} className="font-semibold text-na-green-dark underline-offset-2 hover:underline dark:text-na-green-light">
               Comprovante anual de contribuições
             </a>
-            <span className="text-gray-600 dark:text-gray-300">
-              {" "}
-              · todos os recibos do ano, para imprimir ou salvar em PDF
-            </span>
+            <span className="text-gray-600 dark:text-gray-300"> · todos os recibos do ano, para imprimir ou salvar em PDF</span>
           </p>
         )}
       </section>
 
       {/* A importação do Mercúrio traz só o ano corrente: o seletor aparece apenas se houver mais de um ano. */}
-      {years.length > 1 && (
-        <label className="mb-3 flex items-center gap-2 text-sm">
-          Ano
-          <select
-            aria-label="Ano das contribuições"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="min-h-11 rounded-lg border border-gray-300 p-2 dark:bg-gray-800"
-          >
-            {years.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {firstOpen && firstOpen.year !== selectedYear && (
-        <button
-          type="button"
-          onClick={() => setSelectedYear(firstOpen.year)}
-          className="mb-2 min-h-11 text-sm font-semibold text-na-green-dark dark:text-na-green-light"
-        >
-          Ir para a contribuição mais antiga em aberto
-        </button>
-      )}
-      {firstOpen &&
-        periodNumber(firstOpen) <
-          periodNumber({
-            year: new Date().getFullYear(),
-            month: new Date().getMonth() + 1,
-          }) && (
-          <p className="mb-3 text-xs text-na-warning-dark dark:text-na-warning-light">
-            Regularize primeiro {String(firstOpen.month).padStart(2, "0")}/
-            {firstOpen.year}; os meses seguintes liberam depois.
-          </p>
-        )}
+      {years.length > 1 && <label className="mb-3 flex items-center gap-2 text-sm">Ano<select aria-label="Ano das contribuições" value={selectedYear} onChange={e=>setSelectedYear(Number(e.target.value))} className="min-h-11 rounded-lg border border-gray-300 p-2 dark:bg-gray-800">{years.map(year=><option key={year} value={year}>{year}</option>)}</select></label>}
+      {firstOpen && firstOpen.year !== selectedYear && <button type="button" onClick={()=>setSelectedYear(firstOpen.year)} className="mb-2 min-h-11 text-sm font-semibold text-na-green-dark dark:text-na-green-light">Ir para a contribuição mais antiga em aberto</button>}
+      {firstOpen && periodNumber(firstOpen) < periodNumber({year:new Date().getFullYear(),month:new Date().getMonth()+1}) && <p className="mb-3 text-xs text-na-warning-dark dark:text-na-warning-light">Regularize primeiro {String(firstOpen.month).padStart(2,"0")}/{firstOpen.year}; os meses seguintes liberam depois.</p>}
       <div className="mb-4 grid grid-cols-4 gap-2">
         {MESES.map((nome, i) => {
           const mes = i + 1;
           const registro = porMes.get(mes);
-          const paid = payments.some(
-            (item) =>
-              item.referenceYear === selectedYear &&
-              item.referenceMonth === mes &&
-              item.status === "pago",
-          );
-          const statusBase = paid ? "paga" : (registro?.status ?? "em_branco");
+          const paid = payments.some(item=>item.referenceYear===selectedYear&&item.referenceMonth===mes&&item.status==="pago");
+          const statusBase = paid ? "paga" : registro?.status ?? "em_branco";
           // Regra do desconto até o dia 10 (situacao-contribuicao.ts): mês atual em aberto vira amarelo; mês encerrado sem pagamento, vermelho.
-          const situacaoMes = registro
-            ? situacaoDoMes(statusBase, registro.year, mes)
-            : null;
-          const status =
-            statusBase === "em_branco" && situacaoMes === "sem_desconto"
-              ? "sem_desconto"
-              : statusBase === "em_branco" && situacaoMes === "em_atraso"
-                ? "atrasado"
-                : statusBase;
-          const blocked =
-            !!firstOpen &&
-            periodNumber({ year: registro?.year ?? selectedYear, month: mes }) >
-              periodNumber(firstOpen);
-          const clicavel =
-            status === "paga" ||
-            (!somenteConsulta &&
-              !blocked &&
-              !!registro &&
-              (status === "atrasado" ||
-                status === "em_branco" ||
-                status === "sem_desconto"));
+          const situacaoMes = registro ? situacaoDoMes(statusBase, registro.year, mes) : null;
+          const status = statusBase === "em_branco" && situacaoMes === "sem_desconto" ? "sem_desconto" : statusBase === "em_branco" && situacaoMes === "em_atraso" ? "atrasado" : statusBase;
+          const blocked = !!firstOpen && periodNumber({year:registro?.year??selectedYear,month:mes}) > periodNumber(firstOpen);
+          const clicavel = status === "paga" || (!somenteConsulta && !blocked && !!registro && (status === "atrasado" || status === "em_branco" || status === "sem_desconto"));
           return (
             <button
               key={mes}
               onClick={() => clicavel && handleClickMes(mes)}
-              title={
-                blocked && status !== "paga"
-                  ? `Regularize primeiro ${firstOpen?.month}/${firstOpen?.year}`
-                  : undefined
-              }
+              title={blocked && status!=="paga" ? `Regularize primeiro ${firstOpen?.month}/${firstOpen?.year}` : undefined}
               disabled={!clicavel || (isPending && carregandoMes === mes)}
               className={`rounded-lg border p-2 text-center text-[11px] transition ${ESTILO_POR_STATUS[status]} ${
-                clicavel
-                  ? "cursor-pointer hover:brightness-95"
-                  : "cursor-default"
+                clicavel ? "cursor-pointer hover:brightness-95" : "cursor-default"
               }`}
             >
               <div className="font-semibold">{nome}</div>
               <div className="mt-0.5 flex items-center justify-center gap-1">
-                {isPending && carregandoMes === mes ? (
-                  <Loader2 size={10} className="animate-spin" />
-                ) : paid ? (
-                  "Recebido"
-                ) : registro ? (
-                  LABEL_POR_STATUS[status]
-                ) : (
-                  "Sem dados"
-                )}
+                {isPending && carregandoMes === mes ? <Loader2 size={10} className="animate-spin" /> : paid ? "Recebido" : registro ? LABEL_POR_STATUS[status] : "Sem dados"}
               </div>
             </button>
           );
@@ -435,19 +229,14 @@ export function ContributionStatusPanel({
 
       {somenteConsulta ? (
         <p className="text-[11px] text-gray-400 dark:text-gray-500">
-          {emBreve
-            ? "Pagamento pelo Portal: em breve na sua filial. Por enquanto, pague como de costume na secretaria."
-            : "Online payment isn't available for your branch yet — please contact your branch."}
+          {emBreve ? "Pagamento pelo Portal: em breve na sua filial. Por enquanto, pague como de costume na secretaria." : "Online payment isn't available for your branch yet — please contact your branch."}
         </p>
       ) : mesesAtrasados.length > 0 ? (
         <p className="text-[11px] text-gray-400 dark:text-gray-500">
           Clique num mês em atraso pra pagar. Meses pagos mostram o comprovante.
         </p>
       ) : (
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">
-          Nenhum mês em atraso este ano. Toque num mês pago para ver o
-          comprovante.
-        </p>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500">Nenhum mês em atraso este ano. Toque num mês pago para ver o comprovante.</p>
       )}
     </div>
   );
@@ -502,8 +291,7 @@ function RealPaymentScreen({
   const [pago, setPago] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [fortunaNudge, setFortunaNudge] =
-    useState<Awaited<ReturnType<typeof getFortunaRecorrenteNudge>>>(null);
+  const [fortunaNudge, setFortunaNudge] = useState<Awaited<ReturnType<typeof getFortunaRecorrenteNudge>>>(null);
   const [respondendoNudge, setRespondendoNudge] = useState(false);
 
   // Bug real relatado pelo usuário 2026-09-22: sair da tela no meio do
@@ -514,48 +302,26 @@ function RealPaymentScreen({
   useEffect(() => {
     let active = true;
     getPendingContributionCharge(memberId, year, mes)
-      .then((res) => {
-        if (active) {
-          if (res) setCharge(res);
-          setFalhaPendente(false);
-        }
-      })
-      .catch((error) => {
-        if (active) {
-          setFalhaPendente(true);
-          setErro(mensagemErroAmigavel(error));
-        }
-      })
-      .finally(() => {
-        if (active) setVerificandoPendente(false);
-      });
-    return () => {
-      active = false;
-    };
+      .then((res) => { if (active) { if (res) setCharge(res); setFalhaPendente(false); } })
+      .catch((error) => { if (active) { setFalhaPendente(true); setErro(mensagemErroAmigavel(error)); } })
+      .finally(() => { if (active) setVerificandoPendente(false); });
+    return () => { active = false; };
   }, [memberId, year, mes, tentativaPendente]);
 
   // Pop-up do crédito recorrente Fortuna na hora de pagar — pedido do
   // usuário 2026-10-09: não fica mais fixo na Home, só aparece aqui pra
   // quem ainda não tem o item registrado (ver getFortunaRecorrenteNudge).
   useEffect(() => {
-    if (podeRecarregarFortuna)
-      getFortunaRecorrenteNudge(memberId)
-        .then(setFortunaNudge)
-        .catch(() => {});
+    if (podeRecarregarFortuna) getFortunaRecorrenteNudge(memberId).then(setFortunaNudge).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function responderFortunaNudge(
-    resposta: "sim" | "depois" | "nao",
-    valor?: number,
-  ) {
+  function responderFortunaNudge(resposta: "sim" | "depois" | "nao", valor?: number) {
     if (!fortunaNudge) return;
     setRespondendoNudge(true);
     startTransition(async () => {
       // A sugestão é secundária: se a resposta falhar, ela só some, sem atrapalhar o pagamento (31/10/2026).
-      await responderNudge(memberId, fortunaNudge.id, resposta, valor).catch(
-        () => {},
-      );
+      await responderNudge(memberId, fortunaNudge.id, resposta, valor).catch(() => {});
       setRespondendoNudge(false);
       setFortunaNudge(null);
     });
@@ -563,12 +329,7 @@ function RealPaymentScreen({
 
   function handleCancelarEGerarNova() {
     if (!charge) return;
-    if (
-      !confirm(
-        "Cancelar essa cobrança e gerar uma nova? A cobrança antiga deixa de valer.",
-      )
-    )
-      return;
+    if (!confirm("Cancelar essa cobrança e gerar uma nova? A cobrança antiga deixa de valer.")) return;
     setErro(null);
     startTransition(async () => {
       // Antes, uma falha aqui não mostrava nada (31/10/2026).
@@ -592,13 +353,7 @@ function RealPaymentScreen({
     setErro(null);
     startTransition(async () => {
       try {
-        const res = await createContributionCharge(
-          memberId,
-          year,
-          mes,
-          cpfLimpo,
-          { metodo, fortunaTopUpAmount: recargaFortuna },
-        );
+        const res = await createContributionCharge(memberId, year, mes, cpfLimpo, { metodo, fortunaTopUpAmount: recargaFortuna });
         setCharge(res);
       } catch (e) {
         setErro(mensagemErroAmigavel(e));
@@ -606,116 +361,62 @@ function RealPaymentScreen({
     });
   }
 
-  const polling = usePaymentPolling(
-    charge && !pago ? `${memberId}:${charge.chargeId}` : null,
-    () => checkChargeStatus(memberId, charge!.chargeId),
-    (res) => {
-      if (res.status !== "pago") return false;
-      setPago(true);
-      onConfirmed();
-      return true;
-    },
-  );
+  const polling = usePaymentPolling(charge && !pago ? `${memberId}:${charge.chargeId}` : null, () => checkChargeStatus(memberId, charge!.chargeId), (res) => { if (res.status !== "pago") return false; setPago(true); onConfirmed(); return true; });
+
+
 
   const recargaEfetiva = charge?.fortunaTopUpAmount ?? recargaFortuna;
   const totalCobrado = charge?.totalCobrado ?? amount + recargaFortuna;
 
   return (
     <div className="text-left">
-      <button
-        onClick={onVoltar}
-        className="mb-2 -ml-2 flex min-h-11 items-center px-2 text-[13px] font-semibold text-gray-600 dark:text-gray-300"
-      >
+      <button onClick={onVoltar} className="mb-2 -ml-2 flex min-h-11 items-center px-2 text-[13px] font-semibold text-gray-600 dark:text-gray-300">
         ← Voltar
       </button>
 
       <div className="mb-4 rounded-xl border border-gray-200 p-4 text-center dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Contribuição de {MESES[mes - 1]}/{year}
-        </p>
-        <p className="mt-1 text-2xl font-bold text-na-green-dark dark:text-emerald-400">
-          {formatBRL(totalCobrado)}
-        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">Contribuição de {MESES[mes - 1]}/{year}</p>
+        <p className="mt-1 text-2xl font-bold text-na-green-dark dark:text-emerald-400">{formatBRL(totalCobrado)}</p>
         {!pago && (
           <p className="mt-2 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
-            Pelo Portal, sua contribuição é atualizada assim que o pagamento é
-            confirmado.
+            Pelo Portal, sua contribuição é atualizada assim que o pagamento é confirmado.
           </p>
         )}
         {totalCobrado !== amount && (
           <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
             {formatBRL(amount)} de contribuição
-            {recargaEfetiva > 0 &&
-              ` + ${formatBRL(recargaEfetiva)} de recarga Fortuna`}
-            {charge?.metodo === "CREDIT_CARD" &&
-              charge.totalCobrado > amount + recargaEfetiva &&
-              " + taxa do cartão"}
+            {recargaEfetiva > 0 && ` + ${formatBRL(recargaEfetiva)} de recarga Fortuna`}
+            {charge?.metodo === "CREDIT_CARD" && charge.totalCobrado > amount + recargaEfetiva && " + taxa do cartão"}
           </p>
         )}
       </div>
 
       {verificandoPendente ? (
         <p className="flex items-center justify-center gap-1.5 py-10 text-center text-[11px] text-gray-400 dark:text-gray-500">
-          <Loader2 size={12} className="animate-spin" /> Verificando se já
-          existe uma cobrança pendente...
+          <Loader2 size={12} className="animate-spin" /> Verificando se já existe uma cobrança pendente...
         </p>
       ) : falhaPendente ? (
-        <div
-          role="alert"
-          className="rounded-xl bg-na-warning-light p-4 text-sm text-na-warning-dark dark:bg-na-warning-dark/30 dark:text-na-warning-light"
-        >
+        <div role="alert" className="rounded-xl bg-na-warning-light p-4 text-sm text-na-warning-dark dark:bg-na-warning-dark/30 dark:text-na-warning-light">
           <p>{erro}</p>
-          <p>
-            Não foi possível verificar se já existe uma cobrança. Para evitar um
-            pagamento duplicado, consulte novamente antes de gerar outro código.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setVerificandoPendente(true);
-              setFalhaPendente(false);
-              setTentativaPendente((value) => value + 1);
-            }}
-            className="mt-3 min-h-11 rounded-lg border border-current px-3 font-semibold"
-          >
-            Verificar cobrança existente
-          </button>
+          <p>Não foi possível verificar se já existe uma cobrança. Para evitar um pagamento duplicado, consulte novamente antes de gerar outro código.</p>
+          <button type="button" onClick={() => { setVerificandoPendente(true); setFalhaPendente(false); setTentativaPendente((value) => value + 1); }} className="mt-3 min-h-11 rounded-lg border border-current px-3 font-semibold">Verificar cobrança existente</button>
         </div>
       ) : pago ? (
         <div className="rounded-xl border border-na-success/40 bg-na-success-light p-4 text-center text-sm text-na-success-dark dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
-          <strong className="block text-[15px]">
-            Pagamento confirmado. Obrigado!
-          </strong>
+          <strong className="block text-[15px]">Pagamento confirmado. Obrigado!</strong>
           Sua contribuição de {MESES[mes - 1]}/{year} está registrada
-          {recargaEfetiva > 0
-            ? ` e os ${formatBRL(recargaEfetiva)} de recarga entram no seu Fortuna.`
-            : "."}
+          {recargaEfetiva > 0 ? ` e os ${formatBRL(recargaEfetiva)} de recarga entram no seu Fortuna.` : "."}
         </div>
       ) : charge?.metodo === "PIX" ? (
         <div className="flex flex-col items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- base64 dinâmico do Asaas, não é um asset local */}
-          <img
-            src={`data:image/png;base64,${charge.pixQrCodeBase64}`}
-            alt="QR Code PIX"
-            className="h-56 w-56 rounded-lg border border-gray-200"
-          />
+          <img src={`data:image/png;base64,${charge.pixQrCodeBase64}`} alt="QR Code PIX" className="h-56 w-56 rounded-lg border border-gray-200" />
           <CopyButton key={charge.pixPayload} value={charge.pixPayload} />
           <PaymentStatus state={polling.state} onRetry={polling.retry} />
-          <button
-            onClick={handleCancelarEGerarNova}
-            disabled={isPending}
-            className="min-h-11 px-2 text-[12px] font-semibold text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          >
+          <button onClick={handleCancelarEGerarNova} disabled={isPending} className="min-h-11 px-2 text-[12px] font-semibold text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             Cancelar essa cobrança e gerar outra
           </button>
-          {erro && (
-            <p
-              role="alert"
-              className="text-[11px] text-na-danger-dark dark:text-red-300"
-            >
-              {erro}
-            </p>
-          )}
+          {erro && <p role="alert" className="text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
         </div>
       ) : charge?.metodo === "CREDIT_CARD" ? (
         <div className="flex flex-col items-center gap-3">
@@ -728,25 +429,13 @@ function RealPaymentScreen({
             <ExternalLink size={14} /> Ir para pagamento seguro (Asaas)
           </a>
           <p className="text-center text-[11px] text-gray-400 dark:text-gray-500">
-            Seus dados de cartão são digitados direto no ambiente seguro do
-            Asaas — nunca passam pelo Portal.
+            Seus dados de cartão são digitados direto no ambiente seguro do Asaas — nunca passam pelo Portal.
           </p>
           <PaymentStatus state={polling.state} onRetry={polling.retry} />
-          <button
-            onClick={handleCancelarEGerarNova}
-            disabled={isPending}
-            className="min-h-11 px-2 text-[12px] font-semibold text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          >
+          <button onClick={handleCancelarEGerarNova} disabled={isPending} className="min-h-11 px-2 text-[12px] font-semibold text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             Cancelar essa cobrança e gerar outra
           </button>
-          {erro && (
-            <p
-              role="alert"
-              className="text-[11px] text-na-danger-dark dark:text-red-300"
-            >
-              {erro}
-            </p>
-          )}
+          {erro && <p role="alert" className="text-[11px] text-na-danger-dark dark:text-red-300">{erro}</p>}
         </div>
       ) : (
         <form onSubmit={handleGerarCobranca} className="flex flex-col gap-3">
@@ -778,16 +467,14 @@ function RealPaymentScreen({
           </div>
           {metodo === "CREDIT_CARD" && cartaoComTaxa && (
             <p className="text-[11px] text-gray-400 dark:text-gray-500">
-              No cartão, o valor sai um pouco maior — cobre a taxa do Asaas (o
-              PIX não tem essa taxa extra).
+              No cartão, o valor sai um pouco maior — cobre a taxa do Asaas (o PIX não tem essa taxa extra).
             </p>
           )}
 
           {podeRecarregarFortuna && (
             <div className="rounded-lg border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
               <p className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-na-warning-dark dark:text-amber-300">
-                <Coffee size={13} /> Recarregar o Fortuna neste mesmo pagamento?
-                (evita fila no café)
+                <Coffee size={13} /> Recarregar o Fortuna neste mesmo pagamento? (evita fila no café)
               </p>
               <div className="flex gap-1.5">
                 {RECARGA_SUGERIDA.map((v) => (
@@ -814,10 +501,7 @@ function RealPaymentScreen({
           {fortunaNudge && (
             <div className="flex flex-col gap-2 rounded-lg border border-na-gold/40 bg-na-gold/10 p-3 dark:border-amber-900 dark:bg-amber-950/20">
               <p className="flex items-start gap-1.5 text-[12px] text-gray-800 dark:text-gray-200">
-                <HeartHandshake
-                  size={14}
-                  className="mt-0.5 shrink-0 text-na-gold-dark dark:text-amber-300"
-                />
+                <HeartHandshake size={14} className="mt-0.5 shrink-0 text-na-gold-dark dark:text-amber-300" />
                 <span>
                   <strong className="block">{fortunaNudge.titulo}</strong>
                   {fortunaNudge.descricao}
@@ -832,29 +516,13 @@ function RealPaymentScreen({
                     disabled={respondendoNudge}
                     className="min-h-10 rounded-lg bg-na-green px-3 text-[12px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
                   >
-                    {respondendoNudge ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : fortunaNudge.opcoes.length === 1 ? (
-                      "Sim, incluir"
-                    ) : (
-                      opcao.label
-                    )}
+                    {respondendoNudge ? <Loader2 size={13} className="animate-spin" /> : fortunaNudge.opcoes.length === 1 ? "Sim, incluir" : opcao.label}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => responderFortunaNudge("depois")}
-                  disabled={respondendoNudge}
-                  className="min-h-10 rounded-lg border border-gray-300 px-3 text-[12px] font-semibold text-gray-700 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300"
-                >
+                <button type="button" onClick={() => responderFortunaNudge("depois")} disabled={respondendoNudge} className="min-h-10 rounded-lg border border-gray-300 px-3 text-[12px] font-semibold text-gray-700 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300">
                   Mês que vem
                 </button>
-                <button
-                  type="button"
-                  onClick={() => responderFortunaNudge("nao")}
-                  disabled={respondendoNudge}
-                  className="min-h-10 rounded-lg px-3 text-[12px] font-semibold text-gray-600 disabled:opacity-60 dark:text-gray-400"
-                >
+                <button type="button" onClick={() => responderFortunaNudge("nao")} disabled={respondendoNudge} className="min-h-10 rounded-lg px-3 text-[12px] font-semibold text-gray-600 disabled:opacity-60 dark:text-gray-400">
                   Não
                 </button>
               </div>
@@ -862,12 +530,7 @@ function RealPaymentScreen({
           )}
 
           <div className="flex flex-col gap-1">
-            <label
-              htmlFor="cpf-pagador"
-              className="text-[12px] font-semibold text-gray-700 dark:text-gray-300"
-            >
-              CPF de quem vai pagar
-            </label>
+            <label htmlFor="cpf-pagador" className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">CPF de quem vai pagar</label>
             <input
               id="cpf-pagador"
               autoComplete="off"
@@ -889,9 +552,7 @@ function RealPaymentScreen({
             disabled={isPending}
             className="w-full rounded-xl bg-na-green px-4 py-3 text-[13px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
           >
-            {isPending
-              ? "Gerando cobrança..."
-              : `Pagar ${formatBRL(amount + recargaFortuna)}${metodo === "CREDIT_CARD" ? " + taxa" : ""}`}
+            {isPending ? "Gerando cobrança..." : `Pagar ${formatBRL(amount + recargaFortuna)}${metodo === "CREDIT_CARD" ? " + taxa" : ""}`}
           </button>
         </form>
       )}
@@ -906,33 +567,19 @@ function RealPaymentScreen({
  * vez ativo, a cobrança de cada mês é criada sozinha pelo worker (ver
  * scripts/process-pix-automatico.ts) — nenhuma ação do aluno depois disso.
  */
-function PixAutomaticoBanner({
-  memberId,
-  status,
-}: {
-  memberId: string;
-  status: string | null;
-}) {
+function PixAutomaticoBanner({ memberId, status }: { memberId: string; status: string | null }) {
   const [statusAtual, setStatusAtual] = useState(status);
   const [ativando, setAtivando] = useState(false);
   const [cpf, setCpf] = useState("");
-  const [autorizacao, setAutorizacao] = useState<{
-    payload?: string;
-    encodedImage?: string;
-  } | null>(null);
+  const [autorizacao, setAutorizacao] = useState<{ payload?: string; encodedImage?: string } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const polling = usePaymentPolling(
-    autorizacao && statusAtual !== "ACTIVE" ? memberId : null,
-    () => checkPixAutomaticoStatus(memberId),
-    (res) => {
+  const polling = usePaymentPolling(autorizacao && statusAtual !== "ACTIVE" ? memberId : null,
+    () => checkPixAutomaticoStatus(memberId), (res) => {
       if (res.status !== "ACTIVE") return false;
-      setStatusAtual("ACTIVE");
-      setAutorizacao(null);
-      return true;
-    },
-  );
+      setStatusAtual("ACTIVE"); setAutorizacao(null); return true;
+    });
 
   function handleAtivar(e: React.FormEvent) {
     e.preventDefault();
@@ -953,12 +600,7 @@ function PixAutomaticoBanner({
   }
 
   function handleDesativar() {
-    if (
-      !confirm(
-        "Desativar o débito automático? Você volta a precisar pagar manualmente todo mês.",
-      )
-    )
-      return;
+    if (!confirm("Desativar o débito automático? Você volta a precisar pagar manualmente todo mês.")) return;
     setErro(null);
     startTransition(async () => {
       // Sem o try, uma falha deixava a pessoa sem saber se o débito automático continuava ativo (31/10/2026).
@@ -975,24 +617,12 @@ function PixAutomaticoBanner({
     return (
       <div className="mb-4 flex flex-wrap items-center justify-between gap-y-1 rounded-lg border border-na-success/30 bg-na-success-light p-3 text-[11px] dark:border-emerald-900 dark:bg-emerald-950/30">
         <span className="flex items-center gap-1.5 font-semibold text-na-success-dark dark:text-emerald-300">
-          <Zap size={13} /> Débito automático ativo — sua contribuição é cobrada
-          sozinha todo mês.
+          <Zap size={13} /> Débito automático ativo — sua contribuição é cobrada sozinha todo mês.
         </span>
-        <button
-          onClick={handleDesativar}
-          disabled={isPending}
-          className="shrink-0 font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300"
-        >
+        <button onClick={handleDesativar} disabled={isPending} className="shrink-0 font-semibold text-gray-400 underline hover:text-gray-600 dark:hover:text-gray-300">
           Desativar
         </button>
-        {erro && (
-          <span
-            role="alert"
-            className="basis-full text-[11px] text-na-danger-dark dark:text-red-300"
-          >
-            {erro}
-          </span>
-        )}
+        {erro && <span role="alert" className="basis-full text-[11px] text-na-danger-dark dark:text-red-300">{erro}</span>}
       </div>
     );
   }
@@ -1000,16 +630,9 @@ function PixAutomaticoBanner({
   if (autorizacao?.encodedImage) {
     return (
       <div className="mb-4 flex flex-col items-center gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 text-center dark:border-amber-900 dark:bg-amber-950/30">
-        <p className="text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">
-          Escaneie pra confirmar — esse pagamento também autoriza os próximos
-          meses
-        </p>
+        <p className="text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">Escaneie pra confirmar — esse pagamento também autoriza os próximos meses</p>
         {/* eslint-disable-next-line @next/next/no-img-element -- base64 dinâmico do Asaas */}
-        <img
-          src={`data:image/png;base64,${autorizacao.encodedImage}`}
-          alt="QR Code Pix Automático"
-          className="h-40 w-40 rounded-lg border border-gray-200"
-        />
+        <img src={`data:image/png;base64,${autorizacao.encodedImage}`} alt="QR Code Pix Automático" className="h-40 w-40 rounded-lg border border-gray-200" />
         <PaymentStatus state={polling.state} onRetry={polling.retry} />
       </div>
     );
@@ -1017,13 +640,8 @@ function PixAutomaticoBanner({
 
   if (ativando) {
     return (
-      <form
-        onSubmit={handleAtivar}
-        className="mb-4 flex flex-col gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30"
-      >
-        <label className="text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">
-          CPF de quem vai pagar
-        </label>
+      <form onSubmit={handleAtivar} className="mb-4 flex flex-col gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 dark:border-amber-900 dark:bg-amber-950/30">
+        <label className="text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">CPF de quem vai pagar</label>
         <input
           value={cpf}
           onChange={(e) => setCpf(e.target.value)}
@@ -1031,11 +649,7 @@ function PixAutomaticoBanner({
           inputMode="numeric"
           className="rounded-lg border border-na-warning/50 bg-white p-2 text-sm dark:border-amber-800 dark:bg-gray-900"
         />
-        {erro && (
-          <span className="text-[11px] text-na-danger-dark dark:text-red-400">
-            {erro}
-          </span>
-        )}
+        {erro && <span className="text-[11px] text-na-danger-dark dark:text-red-400">{erro}</span>}
         <div className="flex gap-2">
           <button
             type="submit"
@@ -1044,11 +658,7 @@ function PixAutomaticoBanner({
           >
             {isPending ? "Gerando..." : "Gerar autorização"}
           </button>
-          <button
-            type="button"
-            onClick={() => setAtivando(false)}
-            className="rounded-lg border border-na-warning/50 px-3 py-2 text-[11px] font-semibold text-na-warning-dark dark:text-amber-300"
-          >
+          <button type="button" onClick={() => setAtivando(false)} className="rounded-lg border border-na-warning/50 px-3 py-2 text-[11px] font-semibold text-na-warning-dark dark:text-amber-300">
             Cancelar
           </button>
         </div>
@@ -1061,13 +671,9 @@ function PixAutomaticoBanner({
       onClick={() => setAtivando(true)}
       className="mb-4 flex w-full items-center gap-2 rounded-lg border border-na-warning/30 bg-na-warning-light p-3 text-left text-[11px] transition hover:brightness-95 dark:border-amber-900 dark:bg-amber-950/30"
     >
-      <RefreshCw
-        size={14}
-        className="shrink-0 text-na-warning-dark dark:text-amber-400"
-      />
+      <RefreshCw size={14} className="shrink-0 text-na-warning-dark dark:text-amber-400" />
       <span className="text-na-warning-dark dark:text-amber-300">
-        <span className="font-semibold">Ative o débito automático</span> — nunca
-        mais esqueça de pagar. Autoriza uma vez, cobramos sozinhos todo mês.
+        <span className="font-semibold">Ative o débito automático</span> — nunca mais esqueça de pagar. Autoriza uma vez, cobramos sozinhos todo mês.
       </span>
     </button>
   );

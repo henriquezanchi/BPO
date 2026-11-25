@@ -65,9 +65,7 @@ const quando = (iso: string) =>
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "America/Sao_Paulo",
-  });
+    minute: "2-digit", timeZone: "America/Sao_Paulo" });
 const STATUS: Record<string, string> = {
   ativa: "Ativa",
   pausada: "Pausada",
@@ -183,27 +181,25 @@ export function GrupoPainel({
       )}
 
       {/* Mesmo visual das abas das áreas (AbasArea). */}
-      <nav aria-label="Seções do grupo">
-        <FaixaRolavel
-          externo="-mx-4 border-b border-gray-200 lg:mx-0 dark:border-gray-800"
-          className="flex gap-1 px-4 lg:px-0"
-        >
-          {abas.map(([a, r]) => (
-            <button
-              key={a}
-              onClick={() => setAba(a)}
-              aria-current={aba === a ? "page" : undefined}
-              className={`shrink-0 border-b-2 px-3 py-2 text-[13px] font-semibold ${
-                aba === a
-                  ? "border-na-green text-na-green-dark dark:text-emerald-400"
-                  : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
-        </FaixaRolavel>
-      </nav>
+      <nav
+    
+    aria-label="Seções do grupo"
+  ><FaixaRolavel externo="-mx-4 border-b border-gray-200 lg:mx-0 dark:border-gray-800" className="flex gap-1 px-4 lg:px-0">
+        {abas.map(([a, r]) => (
+          <button
+            key={a}
+            onClick={() => setAba(a)}
+            aria-current={aba === a ? "page" : undefined}
+            className={`shrink-0 border-b-2 px-3 py-2 text-[13px] font-semibold ${
+              aba === a
+                ? "border-na-green text-na-green-dark dark:text-emerald-400"
+                : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
+            }`}
+          >
+            {r}
+          </button>
+        ))}
+      </FaixaRolavel></nav>
 
       <div className="flex max-w-3xl flex-col gap-4">
         {aba === "escala" && escala}
@@ -538,10 +534,7 @@ function PedidosGaf({
                 <span className="text-[11px] text-gray-500">· aluno</span>
               )}
               <span className="block text-[11px] text-gray-500 dark:text-gray-400">
-                Pediu em{" "}
-                {new Date(p.em).toLocaleDateString("pt-BR", {
-                  timeZone: "America/Sao_Paulo",
-                })}
+                Pediu em {new Date(p.em).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}
               </span>
             </span>
             <span className="flex gap-1.5">

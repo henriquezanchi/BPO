@@ -20,14 +20,10 @@ export default async function MinhasAvaliacoesPage() {
   return (
     <ShellTrabalho largura="estreita">
       <div>
-        <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">
-          Minhas avaliações
-        </h1>
+        <h1 className="text-xl font-black text-na-green-dark dark:text-emerald-400">Minhas avaliações</h1>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          O que os alunos responderam sobre as suas aulas, somando todas as suas
-          turmas. As respostas são anônimas: os resultados aparecem quando a
-          rodada é encerrada e quando há pelo menos {MINIMO_RESPOSTAS}{" "}
-          respostas.
+          O que os alunos responderam sobre as suas aulas, somando todas as suas turmas. As respostas são anônimas: os resultados aparecem quando a rodada é
+          encerrada e quando há pelo menos {MINIMO_RESPOSTAS} respostas.
         </p>
       </div>
 
@@ -37,45 +33,26 @@ export default async function MinhasAvaliacoesPage() {
         </p>
       ) : (
         rodadas.map((r) => (
-          <section
-            key={r.campanha.id}
-            className="flex flex-col gap-3 rounded-2xl border border-gray-200 p-4 dark:border-gray-800"
-          >
+          <section key={r.campanha.id} className="flex flex-col gap-3 rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
             <div>
-              <h2 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">
-                {r.campanha.titulo}
-              </h2>
+              <h2 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">{r.campanha.titulo}</h2>
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
                 {r.total} {r.total === 1 ? "resposta" : "respostas"}
                 {r.turmas.length ? ` · ${r.turmas.join(", ")}` : ""}
-                {r.campanha.encerradaEm
-                  ? ` · encerrada em ${r.campanha.encerradaEm.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
-                  : ""}
+                {r.campanha.encerradaEm ? ` · encerrada em ${r.campanha.encerradaEm.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}
               </p>
             </div>
             {r.suficiente ? (
               <>
                 <ListaDeAchados achados={r.achados} vazio="" />
                 {r.perguntas.map((x) => (
-                  <ResumoPergunta
-                    key={x.pergunta.id}
-                    p={x.pergunta}
-                    r={x.resumo}
-                  />
+                  <ResumoPergunta key={x.pergunta.id} p={x.pergunta} r={x.resumo} />
                 ))}
-                {member.mercurioId && (
-                  <SugestoesDaIA
-                    campanhaId={r.campanha.id}
-                    instrutorMatr={member.mercurioId}
-                    rotulo="Sugestões da IA para as minhas aulas"
-                  />
-                )}
+                {member.mercurioId && <SugestoesDaIA campanhaId={r.campanha.id} instrutorMatr={member.mercurioId} rotulo="Sugestões da IA para as minhas aulas" />}
               </>
             ) : (
               <p className="flex items-start gap-1.5 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                <Lock size={13} className="mt-0.5 shrink-0" /> Menos de{" "}
-                {MINIMO_RESPOSTAS} respostas nesta rodada: o resultado fica
-                oculto para ninguém ser identificado.
+                <Lock size={13} className="mt-0.5 shrink-0" /> Menos de {MINIMO_RESPOSTAS} respostas nesta rodada: o resultado fica oculto para ninguém ser identificado.
               </p>
             )}
           </section>

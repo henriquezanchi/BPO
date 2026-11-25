@@ -17,9 +17,7 @@ export function formatDateTimeBR(date: Date) {
   return date.toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "2-digit",
-    month: "long",
-    timeZone: "America/Sao_Paulo",
-  });
+    month: "long", timeZone: "America/Sao_Paulo" });
 }
 
 /**
@@ -31,10 +29,7 @@ export function formatDateTimeBR(date: Date) {
  */
 export function whatsappHref(numero: string, texto?: string) {
   const digitos = numero.replace(/\D/g, "");
-  const comPais =
-    digitos.length === 13 && digitos.startsWith("55")
-      ? digitos
-      : `55${digitos}`;
+  const comPais = digitos.length === 13 && digitos.startsWith("55") ? digitos : `55${digitos}`;
   const query = texto ? `?text=${encodeURIComponent(texto)}` : "";
   return `https://wa.me/${comPais}${query}`;
 }

@@ -2,27 +2,9 @@
 
 import { definirApelido } from "@/lib/actions/apelido-actions";
 import { removerAvatar, uploadAvatar } from "@/lib/actions/avatar-actions";
-import {
-  getSolicitacaoContatoPendente,
-  meusPedidosDeCorrecao,
-  solicitarAlteracaoContato,
-  updateMemberAddress,
-} from "@/lib/actions/member-actions";
-import {
-  ROTULO_SITUACAO_PEDIDO,
-  type SituacaoPedido,
-} from "@/lib/pedidos-correcao";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  Loader2,
-  Pencil,
-  Trash2,
-  Upload,
-  UserRound,
-} from "lucide-react";
+import { getSolicitacaoContatoPendente, meusPedidosDeCorrecao, solicitarAlteracaoContato, updateMemberAddress } from "@/lib/actions/member-actions";
+import { ROTULO_SITUACAO_PEDIDO, type SituacaoPedido } from "@/lib/pedidos-correcao";
+import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Loader2, Pencil, Trash2, Upload, UserRound } from "lucide-react";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
@@ -47,82 +29,51 @@ interface ProfileEditPanelProps {
 // Classe repetida nos inputs de texto do formulário.
 const INPUT_CLASS =
   "w-full rounded-lg border border-gray-200 p-2.5 text-[13px] text-gray-900 outline-none focus:border-na-green focus:ring-2 focus:ring-na-green-light dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100";
-const LABEL_CLASS =
-  "text-[12px] font-semibold text-gray-800 dark:text-gray-300";
-const SECAO_CLASS =
-  "mb-1.5 text-[12px] font-bold text-gray-900 dark:text-gray-100";
+const LABEL_CLASS = "text-[12px] font-semibold text-gray-800 dark:text-gray-300";
+const SECAO_CLASS = "mb-1.5 text-[12px] font-bold text-gray-900 dark:text-gray-100";
 
 const COR_PEDIDO: Record<SituacaoPedido, string> = {
-  em_analise:
-    "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/40 dark:text-amber-300",
-  aprovado:
-    "bg-na-success-light text-na-success-dark dark:bg-green-950/40 dark:text-green-300",
+  em_analise: "bg-na-warning-light text-na-warning-dark dark:bg-amber-950/40 dark:text-amber-300",
+  aprovado: "bg-na-success-light text-na-success-dark dark:bg-green-950/40 dark:text-green-300",
   recusado: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
 };
 
 /** Situação dos pedidos de correção (10/11/2026): o aluno vê o que pediu e se já foi conferido. */
 function MeusPedidos({ memberId }: { memberId: string }) {
-  const [pedidos, setPedidos] = useState<
-    Awaited<ReturnType<typeof meusPedidosDeCorrecao>>
-  >([]);
+  const [pedidos, setPedidos] = useState<Awaited<ReturnType<typeof meusPedidosDeCorrecao>>>([]);
   useEffect(() => {
     meusPedidosDeCorrecao(memberId)
       .then(setPedidos)
       .catch(() => {});
   }, [memberId]);
   if (!pedidos.length) return null;
-  const data = (iso: string) =>
-    new Date(iso).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "short",
-      timeZone: "America/Sao_Paulo",
-    });
+  const data = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "America/Sao_Paulo" });
   return (
     <section aria-label="Meus pedidos de correção" className="mb-5">
-      <p className="mb-1.5 text-[12px] font-bold text-gray-900 dark:text-gray-100">
-        Meus pedidos de correção
-      </p>
+      <p className="mb-1.5 text-[12px] font-bold text-gray-900 dark:text-gray-100">Meus pedidos de correção</p>
       <ul className="flex flex-col gap-1.5">
         {pedidos.map((p) => (
-          <li
-            key={p.id}
-            className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700"
-          >
+          <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
             <span className="min-w-0">
-              <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">
-                {p.campos.join(", ")}
-              </span>
+              <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{p.campos.join(", ")}</span>
               <span className="block text-[12px] text-gray-500 dark:text-gray-400">
                 Pedido em {data(p.criadoEm)}
                 {p.revisadoEm ? ` · conferido em ${data(p.revisadoEm)}` : ""}
               </span>
             </span>
-            <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${COR_PEDIDO[p.situacao]}`}
-            >
-              {ROTULO_SITUACAO_PEDIDO[p.situacao]}
-            </span>
+            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${COR_PEDIDO[p.situacao]}`}>{ROTULO_SITUACAO_PEDIDO[p.situacao]}</span>
           </li>
         ))}
       </ul>
       {pedidos.some((p) => p.situacao === "recusado") && (
-        <p className="mt-1.5 text-[12px] text-gray-500 dark:text-gray-400">
-          Se um pedido não foi aprovado, fale com a secretaria para saber o
-          motivo.
-        </p>
+        <p className="mt-1.5 text-[12px] text-gray-500 dark:text-gray-400">Se um pedido não foi aprovado, fale com a secretaria para saber o motivo.</p>
       )}
     </section>
   );
 }
 
 /** Foto de perfil — pedido do usuário 2026-09-30: deixa o Portal mais pessoal e ajuda a diretoria a reconhecer quem é quem. */
-function AvatarUploader({
-  memberId,
-  avatarUrl: inicial,
-}: {
-  memberId: string;
-  avatarUrl: string | null;
-}) {
+function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; avatarUrl: string | null }) {
   const [avatarUrl, setAvatarUrl] = useState(inicial);
   const [isPending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
@@ -160,46 +111,22 @@ function AvatarUploader({
       <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- vem do Supabase Storage, não é um asset local
-          <img
-            src={avatarUrl}
-            alt="Foto de perfil"
-            className="h-full w-full object-cover"
-          />
+          <img src={avatarUrl} alt="Foto de perfil" className="h-full w-full object-cover" />
         ) : (
           <UserRound size={28} className="text-gray-300 dark:text-gray-600" />
         )}
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 min-h-10 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-          {isPending ? (
-            <Loader2 size={12} className="animate-spin" />
-          ) : (
-            <Upload size={12} />
-          )}{" "}
-          {avatarUrl ? "Trocar foto" : "Adicionar foto"}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleUpload}
-            disabled={isPending}
-          />
+          {isPending ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} {avatarUrl ? "Trocar foto" : "Adicionar foto"}
+          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={isPending} />
         </label>
         {avatarUrl && (
-          <button
-            type="button"
-            onClick={handleRemover}
-            disabled={isPending}
-            className="inline-flex w-fit items-center gap-1 text-[11px] text-gray-400 hover:text-na-danger"
-          >
+          <button type="button" onClick={handleRemover} disabled={isPending} className="inline-flex w-fit items-center gap-1 text-[11px] text-gray-400 hover:text-na-danger">
             <Trash2 size={11} /> Remover foto
           </button>
         )}
-        {erro && (
-          <span className="text-[11px] text-na-danger dark:text-red-400">
-            {erro}
-          </span>
-        )}
+        {erro && <span className="text-[11px] text-na-danger dark:text-red-400">{erro}</span>}
       </div>
     </div>
   );
@@ -216,21 +143,11 @@ function AvatarUploader({
  * "Como gosta de ser chamado" (pedido do usuário 24/11/2026): apelido ou nome de preferência. Vale nas saudações do
  * Portal e na chamada do autoatendimento da lanchonete. Validação em lib/apelido.ts (regras + revisão por IA).
  */
-function ApelidoCampo({
-  memberId,
-  nome,
-  inicial,
-}: {
-  memberId: string;
-  nome: string;
-  inicial: string | null;
-}) {
+function ApelidoCampo({ memberId, nome, inicial }: { memberId: string; nome: string; inicial: string | null }) {
   const [valor, setValor] = useState(inicial ?? "");
   const [salvo, setSalvo] = useState(inicial ?? "");
   const [isPending, startTransition] = useTransition();
-  const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(
-    null,
-  );
+  const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const primeiro = nome.trim().split(/\s+/)[0];
   function salvar() {
     setMsg(null);
@@ -239,20 +156,13 @@ function ApelidoCampo({
       if (r.ok) {
         setSalvo(r.apelido ?? "");
         setValor(r.apelido ?? "");
-        setMsg({
-          tipo: "ok",
-          texto: r.apelido
-            ? `Pronto: vamos te chamar de ${r.apelido}.`
-            : `Pronto: voltamos a te chamar de ${primeiro}.`,
-        });
+        setMsg({ tipo: "ok", texto: r.apelido ? `Pronto: vamos te chamar de ${r.apelido}.` : `Pronto: voltamos a te chamar de ${primeiro}.` });
       } else setMsg({ tipo: "erro", texto: r.error });
     });
   }
   return (
     <div className="mt-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-      <label htmlFor="apelido" className={LABEL_CLASS}>
-        Como gosta de ser chamado
-      </label>
+      <label htmlFor="apelido" className={LABEL_CLASS}>Como gosta de ser chamado</label>
       <div className="mt-1 flex flex-wrap gap-2">
         <input
           id="apelido"
@@ -262,61 +172,25 @@ function ApelidoCampo({
           autoComplete="nickname"
           placeholder={primeiro}
           onChange={(e) => setValor(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              salvar();
-            }
-          }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); salvar(); } }}
           className={`${INPUT_CLASS} min-w-0 flex-1`}
         />
-        <button
-          type="button"
-          onClick={salvar}
-          disabled={isPending || valor.trim() === salvo}
-          className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-na-green px-3 text-[13px] font-semibold text-white disabled:opacity-50"
-        >
-          {isPending ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <CheckCircle2 size={13} />
-          )}{" "}
-          Salvar
+        <button type="button" onClick={salvar} disabled={isPending || valor.trim() === salvo} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-na-green px-3 text-[13px] font-semibold text-white disabled:opacity-50">
+          {isPending ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Salvar
         </button>
       </div>
-      <p className="mt-1 text-[12px] text-gray-500 dark:text-gray-400">
-        Apelido ou nome pelo qual te conhecem na escola (ex.: Zanchi, Dudu,
-        Bia). Aparece nas saudações e na chamada da lanchonete. Deixe vazio para
-        usar {primeiro}.
-      </p>
-      {msg && (
-        <p
-          className={`mt-1 text-[12px] font-semibold ${msg.tipo === "ok" ? "text-na-green-dark dark:text-emerald-400" : "text-na-danger dark:text-red-400"}`}
-        >
-          {msg.texto}
-        </p>
-      )}
+      <p className="mt-1 text-[12px] text-gray-500 dark:text-gray-400">Apelido ou nome pelo qual te conhecem na escola (ex.: Zanchi, Dudu, Bia). Aparece nas saudações e na chamada da lanchonete. Deixe vazio para usar {primeiro}.</p>
+      {msg && <p className={`mt-1 text-[12px] font-semibold ${msg.tipo === "ok" ? "text-na-green-dark dark:text-emerald-400" : "text-na-danger dark:text-red-400"}`}>{msg.texto}</p>}
     </div>
   );
 }
 
-function ContatoSensivelCard({
-  memberId,
-  whatsapp,
-  email,
-}: {
-  memberId: string;
-  whatsapp: string;
-  email: string | null;
-}) {
+function ContatoSensivelCard({ memberId, whatsapp, email }: { memberId: string; whatsapp: string; email: string | null }) {
   const [editando, setEditando] = useState(false);
-  const [pendente, setPendente] =
-    useState<Awaited<ReturnType<typeof getSolicitacaoContatoPendente>>>(null);
+  const [pendente, setPendente] = useState<Awaited<ReturnType<typeof getSolicitacaoContatoPendente>>>(null);
   const [novoWhatsapp, setNovoWhatsapp] = useState(whatsapp);
   const [novoEmail, setNovoEmail] = useState(email ?? "");
-  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(
-    null,
-  );
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -330,31 +204,20 @@ function ContatoSensivelCard({
     setAviso(null);
     startTransition(async () => {
       try {
-        const res = await solicitarAlteracaoContato(memberId, {
-          whatsapp: novoWhatsapp.trim(),
-          email: novoEmail.trim(),
-        });
+        const res = await solicitarAlteracaoContato(memberId, { whatsapp: novoWhatsapp.trim(), email: novoEmail.trim() });
         if (res.erro) {
           setAviso({ ok: false, texto: res.erro });
           return;
         }
         if (!res.solicitado) {
-          setAviso({
-            ok: false,
-            texto: "Nada mudou: altere o WhatsApp ou o e-mail antes de salvar.",
-          });
+          setAviso({ ok: false, texto: "Nada mudou: altere o WhatsApp ou o e-mail antes de salvar." });
           return;
         }
         setEditando(false);
         setAviso({ ok: true, texto: "Contato atualizado no seu cadastro." });
         getSolicitacaoContatoPendente(memberId).then(setPendente);
       } catch (e) {
-        setAviso({
-          ok: false,
-          texto:
-            (e as Error).message ||
-            "Não foi possível enviar agora. Tente de novo.",
-        });
+        setAviso({ ok: false, texto: (e as Error).message || "Não foi possível enviar agora. Tente de novo." });
       }
     });
   }
@@ -364,50 +227,21 @@ function ContatoSensivelCard({
       {pendente ? (
         <div className="flex items-start gap-2 rounded-lg bg-na-warning-light p-3 text-[11px] text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300">
           <Clock size={14} className="mt-0.5 shrink-0" />
-          <span>
-            Você já tem uma solicitação de correção em análise com a secretaria
-            — aguarde a aprovação antes de enviar outra.
-          </span>
+          <span>Você já tem uma solicitação de correção em análise com a secretaria — aguarde a aprovação antes de enviar outra.</span>
         </div>
       ) : editando ? (
         <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
           <div className="flex flex-col gap-1">
-            <label htmlFor="contato-whatsapp" className={LABEL_CLASS}>
-              WhatsApp correto
-            </label>
-            <input
-              id="contato-whatsapp"
-              type="tel"
-              inputMode="tel"
-              value={novoWhatsapp}
-              onChange={(e) => setNovoWhatsapp(e.target.value)}
-              className={INPUT_CLASS}
-            />
+            <label htmlFor="contato-whatsapp" className={LABEL_CLASS}>WhatsApp correto</label>
+            <input id="contato-whatsapp" type="tel" inputMode="tel" value={novoWhatsapp} onChange={(e) => setNovoWhatsapp(e.target.value)} className={INPUT_CLASS} />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="contato-email" className={LABEL_CLASS}>
-              E-mail correto
-            </label>
-            <input
-              id="contato-email"
-              type="email"
-              value={novoEmail}
-              onChange={(e) => setNovoEmail(e.target.value)}
-              className={INPUT_CLASS}
-            />
+            <label htmlFor="contato-email" className={LABEL_CLASS}>E-mail correto</label>
+            <input id="contato-email" type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} className={INPUT_CLASS} />
           </div>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleSolicitar}
-              disabled={isPending}
-              className="rounded-lg bg-na-green transition hover:bg-na-green-dark px-3 min-h-10 text-[13px] font-semibold text-white disabled:opacity-60"
-            >
-              {isPending ? (
-                <Loader2 size={12} className="animate-spin" />
-              ) : (
-                "Salvar"
-              )}
+            <button type="button" onClick={handleSolicitar} disabled={isPending} className="rounded-lg bg-na-green transition hover:bg-na-green-dark px-3 min-h-10 text-[13px] font-semibold text-white disabled:opacity-60">
+              {isPending ? <Loader2 size={12} className="animate-spin" /> : "Salvar"}
             </button>
             <button
               type="button"
@@ -425,9 +259,7 @@ function ContatoSensivelCard({
         <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
           <div className="text-[13px]">
             <p className="text-gray-900 dark:text-gray-100">{whatsapp}</p>
-            <p className="text-gray-500 dark:text-gray-400">
-              {email || "Sem e-mail cadastrado"}
-            </p>
+            <p className="text-gray-500 dark:text-gray-400">{email || "Sem e-mail cadastrado"}</p>
           </div>
           <button
             type="button"
@@ -453,11 +285,7 @@ function ContatoSensivelCard({
 export function ProfileEditPanel(props: ProfileEditPanelProps) {
   const { memberId, name, avatarUrl } = props;
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{
-    changed: boolean;
-    alerted: boolean;
-    erro?: string | null;
-  } | null>(null);
+  const [result, setResult] = useState<{ changed: boolean; alerted: boolean; erro?: string | null } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   // "Meus dados" em modo leitura (avaliação de design e relato de aluno, 10/11/2026): o endereço só vira formulário
   // depois de "Pedir correção", para não parecer editável na hora.
@@ -477,21 +305,21 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
     setResult(null);
     startTransition(async () => {
       try {
-        const campo = (k: string) => {
-          const v = String(formData.get(k) ?? "").trim();
-          return v === "" ? "" : v;
-        };
-        const res = await updateMemberAddress(memberId, {
-          addressStreet: campo("addressStreet"),
-          addressNumber: campo("addressNumber"),
-          addressComplement: campo("addressComplement"),
-          addressNeighborhood: campo("addressNeighborhood"),
-          addressCity: campo("addressCity"),
-          addressState: campo("addressState").toUpperCase(),
-          addressZip: campo("addressZip"),
-        });
-        setResult(res);
-        if (res.changed) setCorrigindoEndereco(false);
+      const campo = (k: string) => {
+        const v = String(formData.get(k) ?? "").trim();
+        return v === "" ? "" : v;
+      };
+      const res = await updateMemberAddress(memberId, {
+        addressStreet: campo("addressStreet"),
+        addressNumber: campo("addressNumber"),
+        addressComplement: campo("addressComplement"),
+        addressNeighborhood: campo("addressNeighborhood"),
+        addressCity: campo("addressCity"),
+        addressState: campo("addressState").toUpperCase(),
+        addressZip: campo("addressZip"),
+      });
+      setResult(res);
+      if (res.changed) setCorrigindoEndereco(false);
       } catch (e) {
         setErro(mensagemErroAmigavel(e));
       }
@@ -503,54 +331,32 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
     // Field Names) em cada input — é isso que faz o teclado do celular
     // (iOS/Android) e o Chrome oferecerem autopreenchimento do endereço
     // salvo no Google/no sistema, em vez de 1 campo de texto livre.
-    <form
-      action={handleSubmit}
-      autoComplete="on"
-      className="flex flex-col text-left"
-    >
+    <form action={handleSubmit} autoComplete="on" className="flex flex-col text-left">
       <AvatarUploader memberId={memberId} avatarUrl={avatarUrl} />
 
       {/* Pedido do usuário 2026-10-19: deixar claro que TODO dado do cadastro muda só por solicitação, não só o contato. */}
       <div className="mb-4 flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
         <Clock size={14} className="mt-0.5 shrink-0 text-gray-400" />
         <span>
-          Estes são os dados do seu cadastro na escola. Para corrigir algo,
-          toque em{" "}
-          <strong className="text-gray-800 dark:text-gray-100">Corrigir</strong>
-          : a alteração vale na hora e atualiza o cadastro.
+          Estes são os dados do seu cadastro na escola. Para corrigir algo, toque em <strong className="text-gray-800 dark:text-gray-100">Corrigir</strong>: a alteração vale na hora e
+          atualiza o cadastro.
         </span>
       </div>
 
       <div className="mb-4">
         <p className={SECAO_CLASS}>Nome</p>
         <p className="text-[14px] text-gray-900 dark:text-gray-100">{name}</p>
-        <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">
-          Para corrigir o nome, fale com a secretaria levando um documento.
-        </p>
-        <ApelidoCampo
-          memberId={memberId}
-          nome={name}
-          inicial={props.apelido ?? null}
-        />
+        <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">Para corrigir o nome, fale com a secretaria levando um documento.</p>
+        <ApelidoCampo memberId={memberId} nome={name} inicial={props.apelido ?? null} />
       </div>
 
       <p className={SECAO_CLASS}>Contato</p>
-      <ContatoSensivelCard
-        memberId={memberId}
-        whatsapp={props.whatsapp}
-        email={props.email}
-      />
+      <ContatoSensivelCard memberId={memberId} whatsapp={props.whatsapp} email={props.email} />
 
       <p className={SECAO_CLASS}>Endereço</p>
       {!corrigindoEndereco ? (
         <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-          <p className="min-w-0 text-[14px] text-gray-900 dark:text-gray-100">
-            {enderecoTexto || (
-              <span className="text-gray-500 dark:text-gray-400">
-                Sem endereço cadastrado
-              </span>
-            )}
-          </p>
+          <p className="min-w-0 text-[14px] text-gray-900 dark:text-gray-100">{enderecoTexto || <span className="text-gray-500 dark:text-gray-400">Sem endereço cadastrado</span>}</p>
           <button
             type="button"
             onClick={() => setCorrigindoEndereco(true)}
@@ -560,127 +366,106 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
           </button>
         </div>
       ) : (
-        <div className="mb-5 flex flex-col rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-          <p className="mb-3 text-[12px] text-gray-600 dark:text-gray-400">
-            Corrija o que estiver errado e salve. O endereço muda no seu
-            cadastro na hora.
-          </p>
+      <div className="mb-5 flex flex-col rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+      <p className="mb-3 text-[12px] text-gray-600 dark:text-gray-400">Corrija o que estiver errado e salve. O endereço muda no seu cadastro na hora.</p>
 
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            <div className="col-span-2 flex flex-col gap-1">
-              <label htmlFor="end-addressStreet" className={LABEL_CLASS}>
-                Rua
-              </label>
-              <input
-                id="end-addressStreet"
-                name="addressStreet"
-                autoComplete="address-line1"
-                defaultValue={props.addressStreet ?? ""}
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="end-addressNumber" className={LABEL_CLASS}>
-                Número
-              </label>
-              <input
-                id="end-addressNumber"
-                name="addressNumber"
-                inputMode="numeric"
-                defaultValue={props.addressNumber ?? ""}
-                className={INPUT_CLASS}
-              />
-            </div>
-          </div>
-
-          <div className="mb-3 flex flex-col gap-1">
-            <label htmlFor="end-addressComplement" className={LABEL_CLASS}>
-              Complemento
-            </label>
-            <input
-              id="end-addressComplement"
-              name="addressComplement"
-              autoComplete="address-line2"
-              placeholder="Apto, bloco, ponto de referência..."
-              defaultValue={props.addressComplement ?? ""}
-              className={INPUT_CLASS}
-            />
-          </div>
-
-          <div className="mb-3 grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="end-addressNeighborhood" className={LABEL_CLASS}>
-                Bairro
-              </label>
-              <input
-                id="end-addressNeighborhood"
-                name="addressNeighborhood"
-                autoComplete="address-level3"
-                defaultValue={props.addressNeighborhood ?? ""}
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="end-addressZip" className={LABEL_CLASS}>
-                CEP
-              </label>
-              <input
-                id="end-addressZip"
-                name="addressZip"
-                inputMode="numeric"
-                autoComplete="postal-code"
-                defaultValue={props.addressZip ?? ""}
-                className={INPUT_CLASS}
-              />
-            </div>
-          </div>
-
-          <div className="mb-5 grid grid-cols-3 gap-2">
-            <div className="col-span-2 flex flex-col gap-1">
-              <label htmlFor="end-addressCity" className={LABEL_CLASS}>
-                Cidade
-              </label>
-              <input
-                id="end-addressCity"
-                name="addressCity"
-                autoComplete="address-level2"
-                defaultValue={props.addressCity ?? ""}
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="end-addressState" className={LABEL_CLASS}>
-                UF
-              </label>
-              <input
-                id="end-addressState"
-                name="addressState"
-                maxLength={2}
-                autoComplete="address-level1"
-                defaultValue={props.addressState ?? ""}
-                className={`${INPUT_CLASS} uppercase`}
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
-            >
-              {isPending && <Loader2 size={14} className="animate-spin" />}
-              {isPending ? "Enviando..." : "Enviar correção do endereço"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setCorrigindoEndereco(false)}
-              className="min-h-11 rounded-xl px-3 text-[13px] font-semibold text-gray-600 dark:text-gray-300"
-            >
-              Cancelar
-            </button>
-          </div>
+      <div className="mb-3 grid grid-cols-3 gap-2">
+        <div className="col-span-2 flex flex-col gap-1">
+          <label htmlFor="end-addressStreet" className={LABEL_CLASS}>Rua</label>
+          <input
+            id="end-addressStreet"
+            name="addressStreet"
+            autoComplete="address-line1"
+            defaultValue={props.addressStreet ?? ""}
+            className={INPUT_CLASS}
+          />
         </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="end-addressNumber" className={LABEL_CLASS}>Número</label>
+          <input
+            id="end-addressNumber"
+            name="addressNumber"
+            inputMode="numeric"
+            defaultValue={props.addressNumber ?? ""}
+            className={INPUT_CLASS}
+          />
+        </div>
+      </div>
+
+      <div className="mb-3 flex flex-col gap-1">
+        <label htmlFor="end-addressComplement" className={LABEL_CLASS}>Complemento</label>
+        <input
+          id="end-addressComplement"
+          name="addressComplement"
+          autoComplete="address-line2"
+          placeholder="Apto, bloco, ponto de referência..."
+          defaultValue={props.addressComplement ?? ""}
+          className={INPUT_CLASS}
+        />
+      </div>
+
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="end-addressNeighborhood" className={LABEL_CLASS}>Bairro</label>
+          <input
+            id="end-addressNeighborhood"
+            name="addressNeighborhood"
+            autoComplete="address-level3"
+            defaultValue={props.addressNeighborhood ?? ""}
+            className={INPUT_CLASS}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="end-addressZip" className={LABEL_CLASS}>CEP</label>
+          <input
+            id="end-addressZip"
+            name="addressZip"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            defaultValue={props.addressZip ?? ""}
+            className={INPUT_CLASS}
+          />
+        </div>
+      </div>
+
+      <div className="mb-5 grid grid-cols-3 gap-2">
+        <div className="col-span-2 flex flex-col gap-1">
+          <label htmlFor="end-addressCity" className={LABEL_CLASS}>Cidade</label>
+          <input
+            id="end-addressCity"
+            name="addressCity"
+            autoComplete="address-level2"
+            defaultValue={props.addressCity ?? ""}
+            className={INPUT_CLASS}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="end-addressState" className={LABEL_CLASS}>UF</label>
+          <input
+            id="end-addressState"
+            name="addressState"
+            maxLength={2}
+            autoComplete="address-level1"
+            defaultValue={props.addressState ?? ""}
+            className={`${INPUT_CLASS} uppercase`}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
+        >
+          {isPending && <Loader2 size={14} className="animate-spin" />}
+          {isPending ? "Enviando..." : "Enviar correção do endereço"}
+        </button>
+        <button type="button" onClick={() => setCorrigindoEndereco(false)} className="min-h-11 rounded-xl px-3 text-[13px] font-semibold text-gray-600 dark:text-gray-300">
+          Cancelar
+        </button>
+      </div>
+      </div>
       )}
 
       <MeusPedidos memberId={memberId} />
@@ -691,9 +476,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
       >
         <span>
           Mais dados
-          <span className="block text-[12px] font-normal text-gray-500 dark:text-gray-400">
-            Nascimento, documentos, profissão
-          </span>
+          <span className="block text-[12px] font-normal text-gray-500 dark:text-gray-400">Nascimento, documentos, profissão</span>
         </span>
         <ChevronRight size={16} className="text-gray-400 dark:text-gray-500" />
       </Link>
@@ -707,18 +490,10 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
 
       {/* Antes, sem mudança nenhuma o botão só voltava ao normal, sem resposta (31/10/2026). */}
       {result && !result.changed && (
-        <p
-          role={result.erro ? "alert" : "status"}
-          className={`mt-3 text-[11px] ${result.erro ? "text-na-danger-dark dark:text-red-300" : "text-gray-600 dark:text-gray-400"}`}
-        >
-          {result.erro ?? "Nada foi alterado no endereço."}
-        </p>
+        <p role={result.erro ? "alert" : "status"} className={`mt-3 text-[11px] ${result.erro ? "text-na-danger-dark dark:text-red-300" : "text-gray-600 dark:text-gray-400"}`}>{result.erro ?? "Nada foi alterado no endereço."}</p>
       )}
       {erro && (
-        <p
-          role="alert"
-          className="mt-3 text-[11px] text-na-danger-dark dark:text-red-300"
-        >
+        <p role="alert" className="mt-3 text-[11px] text-na-danger-dark dark:text-red-300">
           {erro}
         </p>
       )}
@@ -727,8 +502,7 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
         <div className="mt-2 flex items-start gap-2 rounded-lg bg-na-warning-light p-3 text-[11px] text-na-warning-dark dark:bg-amber-950/30 dark:text-amber-300">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
           <span>
-            Como sua contribuição está em atraso, a secretaria de economia
-            também foi avisada desta alteração.
+            Como sua contribuição está em atraso, a secretaria de economia também foi avisada desta alteração.
           </span>
         </div>
       )}

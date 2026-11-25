@@ -34,9 +34,7 @@ const quando = (iso: string) =>
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "America/Sao_Paulo",
-  });
+    minute: "2-digit", timeZone: "America/Sao_Paulo" });
 const ORIGEM: Record<Item["origem"], string> = {
   escolhida: "escolhido",
   automatica: "na sequência",

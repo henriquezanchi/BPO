@@ -1,30 +1,14 @@
 "use client";
 
-import {
-  AtivarNotificacoes,
-  pedirNotificacoes,
-} from "@/components/pwa/ativar-notificacoes";
+import { AtivarNotificacoes, pedirNotificacoes } from "@/components/pwa/ativar-notificacoes";
 import { meusGafsNoPortal } from "@/lib/actions/gaf-portal-actions";
-import {
-  getMinhasSolicitacoes,
-  oferecerApoioVoluntario,
-  solicitarAdesaoGaf,
-} from "@/lib/actions/misc-request-actions";
+import { getMinhasSolicitacoes, oferecerApoioVoluntario, solicitarAdesaoGaf } from "@/lib/actions/misc-request-actions";
 import { carregarOportunidades } from "@/lib/actions/oportunidades-actions";
 import { OportunidadesMembro } from "@/components/member/volunteer/oportunidades-membro";
 import type { OportunidadeDoMembro } from "@/lib/oportunidades";
 import { formatDateBR, whatsappHref } from "@/lib/format";
 import type { GafNoPortal, ResumoGrupo } from "@/lib/grupos-dados";
-import {
-  BookOpenText,
-  CalendarClock,
-  ChevronRight,
-  HandHeart,
-  Loader2,
-  Settings,
-  Users,
-  Video,
-} from "lucide-react";
+import { BookOpenText, CalendarClock, ChevronRight, HandHeart, Loader2, Settings, Users, Video } from "lucide-react";
 import { EntradaDiario } from "@/components/diario/entrada-diario";
 import { BotaoTratak } from "@/components/diario/tratak";
 import { FREQUENCIAS, MODALIDADES } from "@/lib/grupos-comum";
@@ -41,31 +25,14 @@ const SECRETARIAS = SECRETARIAS_OFERTA;
  * verdade (ver misc-request-actions.ts) e aparece no detalhe do membro no
  * Painel do Diretor.
  */
-export type GafDisponivel = {
-  id: string;
-  nome: string;
-  descricao: string | null;
-  modalidade: string | null;
-  local: string | null;
-  pedidoEm: string | null;
-};
+export type GafDisponivel = { id: string; nome: string; descricao: string | null; modalidade: string | null; local: string | null; pedidoEm: string | null };
 
 /**
  * GAF no Portal do Aluno. Desde 2026-10-25 (pedido do usuário) o aluno vê os GAFs da filial que o aceitam,
  * escolhe um e envia o pedido, que cai na página daquele GAF para a coordenação aceitar. Sem GAF disponível,
  * continua o pedido geral (a administração encaminha).
  */
-export function GafPanel({
-  memberId,
-  gafs = [],
-  disponiveis = [],
-  temDiario = false,
-}: {
-  memberId: string;
-  gafs?: ResumoGrupo[];
-  disponiveis?: GafDisponivel[];
-  temDiario?: boolean;
-}) {
+export function GafPanel({ memberId, gafs = [], disponiveis = [], temDiario = false }: { memberId: string; gafs?: ResumoGrupo[]; disponiveis?: GafDisponivel[]; temDiario?: boolean }) {
   // Já está num GAF (pedido do usuário 2026-10-29): mostra o grupo em si, não o convite para conhecer.
   if (gafs.length > 0) return <MeusGafs gafs={gafs} />;
   // Saiu do GAF depois de escrever no diário (2026-10-31): o diário e o Tratak continuam aqui.
@@ -82,25 +49,13 @@ export function GafPanel({
 
 const quando = (inicio: string, fim: string) => {
   const i = new Date(inicio);
-  const dia = i.toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "America/Sao_Paulo",
-  });
-  const hora = (d: Date) =>
-    d.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "America/Sao_Paulo",
-    });
+  const dia = i.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
+  const hora = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
   return `${dia.charAt(0).toUpperCase()}${dia.slice(1)}, ${hora(i)} às ${hora(new Date(fim))}`;
 };
 
 function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
-  const [detalhes, setDetalhes] = useState<GafNoPortal[] | null | undefined>(
-    undefined,
-  );
+  const [detalhes, setDetalhes] = useState<GafNoPortal[] | null | undefined>(undefined);
   useEffect(() => {
     meusGafsNoPortal().then(setDetalhes, () => setDetalhes(null));
   }, []);
@@ -116,27 +71,12 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
     return (
       <div className="flex flex-col gap-2 text-left">
         {gafs.map((g) => (
-          <Link
-            key={g.id}
-            href={`/grupos/${g.id}?de=portal`}
-            className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 p-3 dark:border-gray-700"
-          >
+          <Link key={g.id} href={`/grupos/${g.id}?de=portal`} className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
             <span className="min-w-0">
-              <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {g.nome}
-              </span>
+              <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{g.nome}</span>
               <span className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
                 <CalendarClock size={11} />
-                {g.proximoEncontro
-                  ? new Date(g.proximoEncontro).toLocaleString("pt-BR", {
-                      weekday: "short",
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      timeZone: "America/Sao_Paulo",
-                    })
-                  : "sem encontro marcado"}
+                {g.proximoEncontro ? new Date(g.proximoEncontro).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }) : "sem encontro marcado"}
               </span>
             </span>
             <ChevronRight size={16} className="shrink-0 text-gray-300" />
@@ -153,153 +93,86 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
       <BotaoTratak />
       {detalhes.map((g) => (
         <section key={g.id} className="flex flex-col gap-3">
-          {detalhes.length > 1 && (
-            <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">
-              {g.nome}
-            </h3>
-          )}
+          {detalhes.length > 1 && <h3 className="text-[15px] font-bold text-gray-900 dark:text-gray-100">{g.nome}</h3>}
           {(g.modalidade || g.frequencia) && (
             <p className="-mt-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-              {[
-                g.modalidade && MODALIDADES[g.modalidade],
-                g.frequencia && FREQUENCIAS[g.frequencia],
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+              {[g.modalidade && MODALIDADES[g.modalidade], g.frequencia && FREQUENCIAS[g.frequencia]].filter(Boolean).join(" · ")}
             </p>
           )}
 
           <div className="flex flex-col gap-2 rounded-2xl border border-na-green/30 bg-na-green-light/30 p-3.5 dark:border-emerald-900/60 dark:bg-emerald-950/20">
-            <p className="text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
-              Próximo encontro
-            </p>
+            <p className="text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Próximo encontro</p>
             {g.proximo ? (
               <>
-                <p
-                  className={`flex items-center gap-1.5 text-[14px] font-semibold ${g.proximo.cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}
-                >
-                  <CalendarClock size={15} className="shrink-0" />{" "}
-                  {quando(g.proximo.inicio, g.proximo.fim)}
+                <p className={`flex items-center gap-1.5 text-[14px] font-semibold ${g.proximo.cancelado ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"}`}>
+                  <CalendarClock size={15} className="shrink-0" /> {quando(g.proximo.inicio, g.proximo.fim)}
                 </p>
-                {g.proximo.cancelado && (
-                  <p className="text-[12px] font-semibold text-na-danger-dark dark:text-red-300">
-                    Cancelado{g.proximo.motivo ? `: ${g.proximo.motivo}` : ""}
-                  </p>
-                )}
+                {g.proximo.cancelado && <p className="text-[12px] font-semibold text-na-danger-dark dark:text-red-300">Cancelado{g.proximo.motivo ? `: ${g.proximo.motivo}` : ""}</p>}
                 {g.proximo.cancelado && (
                   <div className="mt-1 flex flex-col gap-1 border-t border-na-green/20 pt-2 dark:border-emerald-900/50">
-                    <p className="text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">
-                      Encontro seguinte
-                    </p>
+                    <p className="text-[11px] font-bold tracking-wide text-na-green-dark uppercase dark:text-emerald-400">Encontro seguinte</p>
                     {g.seguinte ? (
                       <>
                         <p className="flex items-center gap-1.5 text-[14px] font-semibold text-gray-900 dark:text-gray-100">
-                          <CalendarClock size={15} className="shrink-0" />{" "}
-                          {quando(g.seguinte.inicio, g.seguinte.fim)}
+                          <CalendarClock size={15} className="shrink-0" /> {quando(g.seguinte.inicio, g.seguinte.fim)}
                         </p>
-                        {g.seguinte.detalhes && (
-                          <p className="text-[12px] whitespace-pre-line text-gray-600 dark:text-gray-300">
-                            {g.seguinte.detalhes}
-                          </p>
-                        )}
+                        {g.seguinte.detalhes && <p className="text-[12px] whitespace-pre-line text-gray-600 dark:text-gray-300">{g.seguinte.detalhes}</p>}
                         {g.link && (
-                          <a
-                            href={g.link}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-na-green-dark"
-                          >
+                          <a href={g.link} target="_blank" rel="noreferrer" className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-na-green-dark">
                             <Video size={15} /> Entrar no encontro online
                           </a>
                         )}
                       </>
                     ) : (
-                      <p className="text-[13px] text-gray-500 dark:text-gray-400">
-                        Ainda sem data marcada.
-                      </p>
+                      <p className="text-[13px] text-gray-500 dark:text-gray-400">Ainda sem data marcada.</p>
                     )}
                   </div>
                 )}
-                {g.proximo.detalhes && !g.proximo.cancelado && (
-                  <p className="text-[12px] whitespace-pre-line text-gray-600 dark:text-gray-300">
-                    {g.proximo.detalhes}
-                  </p>
-                )}
+                {g.proximo.detalhes && !g.proximo.cancelado && <p className="text-[12px] whitespace-pre-line text-gray-600 dark:text-gray-300">{g.proximo.detalhes}</p>}
                 {g.link && !g.proximo.cancelado && (
-                  <a
-                    href={g.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-na-green-dark"
-                  >
+                  <a href={g.link} target="_blank" rel="noreferrer" className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-na-green-dark">
                     <Video size={15} /> Entrar no encontro online
                   </a>
                 )}
               </>
             ) : (
-              <p className="text-[13px] text-gray-500 dark:text-gray-400">
-                Nenhum encontro marcado ainda.
-              </p>
+              <p className="text-[13px] text-gray-500 dark:text-gray-400">Nenhum encontro marcado ainda.</p>
             )}
           </div>
 
-          {g.proximo &&
-            (!g.proximo.cancelado || g.seguinte) &&
-            g.leitura &&
-            ("semLeitura" in g.leitura ? (
-              <p className="text-[12px] text-gray-500 dark:text-gray-400">
-                Sem leitura para este encontro.
-              </p>
+          {g.proximo && (!g.proximo.cancelado || g.seguinte) && g.leitura && (
+            "semLeitura" in g.leitura ? (
+              <p className="text-[12px] text-gray-500 dark:text-gray-400">Sem leitura para este encontro.</p>
             ) : (
-              <Link
-                href={g.leitura.url}
-                className="flex items-center gap-3 rounded-2xl border border-gray-200 p-3 transition hover:border-na-green/60 dark:border-gray-700"
-              >
+              <Link href={g.leitura.url} className="flex items-center gap-3 rounded-2xl border border-gray-200 p-3 transition hover:border-na-green/60 dark:border-gray-700">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-na-gold/20 text-na-gold-dark dark:text-amber-300">
                   <BookOpenText size={17} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                    Texto de trabalho · nº {g.leitura.numero}
-                  </span>
-                  <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">
-                    {g.leitura.titulo}
-                  </span>
+                  <span className="block text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Texto de trabalho · nº {g.leitura.numero}</span>
+                  <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{g.leitura.titulo}</span>
                 </span>
                 <ChevronRight size={16} className="shrink-0 text-gray-400" />
               </Link>
-            ))}
+            )
+          )}
 
           <div className="flex flex-col gap-2">
             <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-              <Users size={12} /> Participantes (
-              {g.responsaveis.length + g.integrantes.length})
+              <Users size={12} /> Participantes ({g.responsaveis.length + g.integrantes.length})
             </p>
             <ul className="flex flex-wrap gap-1.5">
               {g.responsaveis.map((n) => (
-                <li
-                  key={`r-${n}`}
-                  className="rounded-full bg-na-green px-2.5 py-1 text-[11px] font-semibold text-white"
-                >
-                  {n} · coordenação
-                </li>
+                <li key={`r-${n}`} className="rounded-full bg-na-green px-2.5 py-1 text-[11px] font-semibold text-white">{n} · coordenação</li>
               ))}
               {g.integrantes.map((n) => (
-                <li
-                  key={`i-${n}`}
-                  className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                >
-                  {n}
-                </li>
+                <li key={`i-${n}`} className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">{n}</li>
               ))}
             </ul>
           </div>
 
           {g.podeGerir && (
-            <Link
-              href={`/grupos/${g.id}`}
-              className="flex items-center gap-2 self-start text-[12px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400"
-            >
+            <Link href={`/grupos/${g.id}`} className="flex items-center gap-2 self-start text-[12px] font-semibold text-na-green-dark hover:underline dark:text-emerald-400">
               <Settings size={13} /> Administrar o grupo (Portal do Voluntário)
             </Link>
           )}
@@ -309,29 +182,15 @@ function MeusGafs({ gafs }: { gafs: ResumoGrupo[] }) {
   );
 }
 
-function ConhecerGaf({
-  memberId,
-  disponiveis,
-}: {
-  memberId: string;
-  disponiveis: GafDisponivel[];
-}) {
-  const [solicitadoEm, setSolicitadoEm] = useState<Date | null | undefined>(
-    undefined,
-  );
-  const [pedidos, setPedidos] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      disponiveis.filter((g) => g.pedidoEm).map((g) => [g.id, g.pedidoEm!]),
-    ),
-  );
+function ConhecerGaf({ memberId, disponiveis }: { memberId: string; disponiveis: GafDisponivel[] }) {
+  const [solicitadoEm, setSolicitadoEm] = useState<Date | null | undefined>(undefined);
+  const [pedidos, setPedidos] = useState<Record<string, string>>(() => Object.fromEntries(disponiveis.filter((g) => g.pedidoEm).map((g) => [g.id, g.pedidoEm!])));
   const [escolhido, setEscolhido] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    getMinhasSolicitacoes(memberId).then((r) =>
-      setSolicitadoEm(r.gafSolicitadoEm),
-    );
+    getMinhasSolicitacoes(memberId).then((r) => setSolicitadoEm(r.gafSolicitadoEm));
   }, [memberId]);
 
   function handleSolicitar(classGroupId?: string) {
@@ -340,32 +199,22 @@ function ConhecerGaf({
       const r = await solicitarAdesaoGaf(memberId, classGroupId);
       if (!r.ok) return setErro(r.error);
       setSolicitadoEm(new Date());
-      if (classGroupId)
-        setPedidos((atual) => ({
-          ...atual,
-          [classGroupId]: new Date().toISOString(),
-        }));
+      if (classGroupId) setPedidos((atual) => ({ ...atual, [classGroupId]: new Date().toISOString() }));
       setEscolhido(null);
-      pedirNotificacoes(
-        "Pedido enviado. Quer ser avisado dos encontros do GAF?",
-      );
+      pedirNotificacoes("Pedido enviado. Quer ser avisado dos encontros do GAF?");
     });
   }
 
   return (
     <div className="text-left">
       <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">
-        O <strong>Grupo de Acompanhamento Filosófico (GAF)</strong> é um espaço
-        criado para apoiar o aluno em sua jornada de vivência prática da
-        filosofia, com encontros periódicos e acompanhamento próximo por
-        instrutores.
+        O <strong>Grupo de Acompanhamento Filosófico (GAF)</strong> é um espaço criado para apoiar o aluno em sua
+        jornada de vivência prática da filosofia, com encontros periódicos e acompanhamento próximo por instrutores.
       </p>
 
       {disponiveis.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-bold text-gray-500 uppercase dark:text-gray-400">
-            Escolha o GAF
-          </p>
+          <p className="text-[11px] font-bold text-gray-500 uppercase dark:text-gray-400">Escolha o GAF</p>
           {disponiveis.map((g) => {
             const pedido = pedidos[g.id];
             const marcado = escolhido === g.id;
@@ -373,42 +222,17 @@ function ConhecerGaf({
               <label
                 key={g.id}
                 className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
-                  pedido
-                    ? "cursor-default border-gray-200 opacity-70 dark:border-gray-700"
-                    : marcado
-                      ? "border-na-green bg-na-green-light dark:bg-emerald-950/30"
-                      : "border-gray-200 hover:border-na-green/50 dark:border-gray-700"
+                  pedido ? "cursor-default border-gray-200 opacity-70 dark:border-gray-700" : marcado ? "border-na-green bg-na-green-light dark:bg-emerald-950/30" : "border-gray-200 hover:border-na-green/50 dark:border-gray-700"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="gaf"
-                  disabled={!!pedido}
-                  checked={marcado}
-                  onChange={() => setEscolhido(g.id)}
-                  className="mt-1 h-4 w-4 accent-na-green"
-                />
+                <input type="radio" name="gaf" disabled={!!pedido} checked={marcado} onChange={() => setEscolhido(g.id)} className="mt-1 h-4 w-4 accent-na-green" />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {g.nome}
-                  </span>
+                  <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{g.nome}</span>
                   {(g.modalidade || g.local) && (
-                    <span className="block text-[11px] text-gray-500 dark:text-gray-400">
-                      {[g.modalidade && MODALIDADES[g.modalidade], g.local]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
+                    <span className="block text-[11px] text-gray-500 dark:text-gray-400">{[g.modalidade && MODALIDADES[g.modalidade], g.local].filter(Boolean).join(" · ")}</span>
                   )}
-                  {g.descricao && (
-                    <span className="mt-0.5 line-clamp-2 block text-[12px] text-gray-600 dark:text-gray-400">
-                      {g.descricao}
-                    </span>
-                  )}
-                  {pedido && (
-                    <span className="mt-1 block text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">
-                      Pedido enviado em {formatDateBR(new Date(pedido))}
-                    </span>
-                  )}
+                  {g.descricao && <span className="mt-0.5 line-clamp-2 block text-[12px] text-gray-600 dark:text-gray-400">{g.descricao}</span>}
+                  {pedido && <span className="mt-1 block text-[11px] font-semibold text-na-green-dark dark:text-emerald-400">Pedido enviado em {formatDateBR(new Date(pedido))}</span>}
                 </span>
               </label>
             );
@@ -418,58 +242,35 @@ function ConhecerGaf({
             onClick={() => escolhido && handleSolicitar(escolhido)}
             className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
           >
-            {isPending ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <HandHeart size={16} />
-            )}
+            {isPending ? <Loader2 size={16} className="animate-spin" /> : <HandHeart size={16} />}
             {escolhido ? "Enviar pedido para este GAF" : "Escolha um GAF acima"}
           </button>
         </div>
       ) : (
         <>
-          {solicitadoEm && (
-            <p className="mb-2 text-[11px] text-gray-400 dark:text-gray-500">
-              Última solicitação: {formatDateBR(solicitadoEm)}
-            </p>
-          )}
-          <p className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">
-            Nenhum GAF com vagas abertas para você agora. Envie o pedido e a
-            escola avisa quando houver.
-          </p>
+          {solicitadoEm && <p className="mb-2 text-[11px] text-gray-400 dark:text-gray-500">Última solicitação: {formatDateBR(solicitadoEm)}</p>}
+          <p className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">Nenhum GAF com vagas abertas para você agora. Envie o pedido e a escola avisa quando houver.</p>
           <button
             disabled={isPending || solicitadoEm === undefined}
             onClick={() => handleSolicitar()}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
           >
-            {isPending ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <HandHeart size={16} />
-            )}
+            {isPending ? <Loader2 size={16} className="animate-spin" /> : <HandHeart size={16} />}
             {solicitadoEm ? "Solicitar de novo" : "Quero participar de um GAF"}
           </button>
         </>
       )}
-      {erro && (
-        <p className="mt-2 text-[12px] text-na-danger-dark dark:text-red-300">
-          {erro}
-        </p>
-      )}
+      {erro && <p className="mt-2 text-[12px] text-na-danger-dark dark:text-red-300">{erro}</p>}
     </div>
   );
 }
 
 export function VolunteerPanel({ memberId }: { memberId: string }) {
   const [active, setActive] = useState<string[]>([]);
-  const [oferecidoEm, setOferecidoEm] = useState<Date | null | undefined>(
-    undefined,
-  );
+  const [oferecidoEm, setOferecidoEm] = useState<Date | null | undefined>(undefined);
   const [erro, setErro] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [oportunidades, setOportunidades] = useState<
-    OportunidadeDoMembro[] | null
-  >(null);
+  const [oportunidades, setOportunidades] = useState<OportunidadeDoMembro[] | null>(null);
   const recarregar = () => {
     carregarOportunidades()
       .then(setOportunidades)
@@ -477,16 +278,12 @@ export function VolunteerPanel({ memberId }: { memberId: string }) {
   };
 
   useEffect(() => {
-    getMinhasSolicitacoes(memberId).then((r) =>
-      setOferecidoEm(r.voluntariadoOferecidoEm),
-    );
+    getMinhasSolicitacoes(memberId).then((r) => setOferecidoEm(r.voluntariadoOferecidoEm));
     recarregar();
   }, [memberId]);
 
   function toggle(tag: string) {
-    setActive((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    );
+    setActive((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   }
 
   function handleOferecer() {
@@ -515,22 +312,16 @@ export function VolunteerPanel({ memberId }: { memberId: string }) {
       ) : (
         oportunidades.length > 0 && (
           <>
-            <h3 className="mb-2 text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-              Oportunidades na sua escola
-            </h3>
+            <h3 className="mb-2 text-[11px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">Oportunidades na sua escola</h3>
             <OportunidadesMembro lista={oportunidades} aoMudar={recarregar} />
           </>
         )
       )}
       <p className="mb-3 text-xs text-gray-600 dark:text-gray-400">
-        {oportunidades?.length
-          ? "Ou ofereça-se por área, para quando a escola precisar:"
-          : "Ofereça-se para ajudar no funcionamento da escola:"}
+        {oportunidades?.length ? "Ou ofereça-se por área, para quando a escola precisar:" : "Ofereça-se para ajudar no funcionamento da escola:"}
       </p>
       {oferecidoEm && (
-        <p className="mb-2 text-[11px] text-gray-400 dark:text-gray-500">
-          Última oferta: {formatDateBR(oferecidoEm)}
-        </p>
+        <p className="mb-2 text-[11px] text-gray-400 dark:text-gray-500">Última oferta: {formatDateBR(oferecidoEm)}</p>
       )}
       <div className="mb-4 flex flex-wrap gap-2">
         {SECRETARIAS.map((s) => (
@@ -547,22 +338,13 @@ export function VolunteerPanel({ memberId }: { memberId: string }) {
           </button>
         ))}
       </div>
-      {erro && (
-        <p className="mb-2 text-[11px] text-na-danger-dark dark:text-red-400">
-          {erro}
-        </p>
-      )}
+      {erro && <p className="mb-2 text-[11px] text-na-danger-dark dark:text-red-400">{erro}</p>}
       <button
         disabled={isPending || oferecidoEm === undefined}
         onClick={handleOferecer}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-na-green px-4 py-3 text-sm font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60"
       >
-        {isPending ? (
-          <Loader2 size={16} className="animate-spin" />
-        ) : (
-          <HandHeart size={16} />
-        )}{" "}
-        Me oferecer para apoiar
+        {isPending ? <Loader2 size={16} className="animate-spin" /> : <HandHeart size={16} />} Me oferecer para apoiar
       </button>
     </div>
   );
@@ -576,8 +358,7 @@ const FAQ: { pergunta: string; resposta: string }[] = [
   },
   {
     pergunta: "Como recarrego minha carteira Fortuna?",
-    resposta:
-      'Pelo menu "Adicionar Créditos" no Portal, ou aproveitando o pagamento da contribuição (o Portal sugere recarregar junto).',
+    resposta: 'Pelo menu "Adicionar Créditos" no Portal, ou aproveitando o pagamento da contribuição (o Portal sugere recarregar junto).',
   },
   {
     pergunta: "Esqueci minha senha, e agora?",
@@ -586,28 +367,23 @@ const FAQ: { pergunta: string; resposta: string }[] = [
   },
   {
     pergunta: "Como baixo o comprovante de uma contribuição paga?",
-    resposta:
-      'Em "Situação da Contribuição", clique no mês já pago (verde) e depois em "Baixar PDF".',
+    resposta: 'Em "Situação da Contribuição", clique no mês já pago (verde) e depois em "Baixar PDF".',
   },
   {
     pergunta: "Posso pagar com cartão de crédito?",
-    resposta:
-      "Sim — ao gerar a cobrança, escolha Cartão de Crédito em vez de PIX. Em algumas escolas o valor fica um pouco maior, cobrindo a taxa do cartão; a tela de pagamento avisa quando for o caso.",
+    resposta: "Sim — ao gerar a cobrança, escolha Cartão de Crédito em vez de PIX. Em algumas escolas o valor fica um pouco maior, cobrindo a taxa do cartão; a tela de pagamento avisa quando for o caso.",
   },
   {
     pergunta: "Como me inscrevo em um evento da escola?",
-    resposta:
-      'Na Agenda, encontre o evento e toque em "Inscreva-se". Eventos pagos geram um PIX na hora; gratuitos confirmam na hora.',
+    resposta: 'Na Agenda, encontre o evento e toque em "Inscreva-se". Eventos pagos geram um PIX na hora; gratuitos confirmam na hora.',
   },
   {
     pergunta: "O que é o GAF?",
-    resposta:
-      "O Grupo de Acompanhamento Filosófico é um espaço de apoio na jornada filosófica, com encontros e acompanhamento por instrutores.",
+    resposta: "O Grupo de Acompanhamento Filosófico é um espaço de apoio na jornada filosófica, com encontros e acompanhamento por instrutores.",
   },
   {
     pergunta: "O que é a Transparência Financeira?",
-    resposta:
-      "Mostra, mês a mês, de onde vem e pra onde vai o dinheiro da escola — contribuições, eventos, despesas por categoria e mais.",
+    resposta: "Mostra, mês a mês, de onde vem e pra onde vai o dinheiro da escola — contribuições, eventos, despesas por categoria e mais.",
   },
 ];
 
@@ -626,9 +402,7 @@ export function HelpPanel({ whatsapp }: { whatsapp: string }) {
               <summary className="cursor-pointer list-none p-2.5 text-[12px] font-semibold text-gray-800 marker:content-none dark:text-gray-200">
                 {item.pergunta}
               </summary>
-              <p className="border-t border-gray-100 p-2.5 text-[11px] text-gray-600 dark:border-gray-800 dark:text-gray-400">
-                {item.resposta}
-              </p>
+              <p className="border-t border-gray-100 p-2.5 text-[11px] text-gray-600 dark:border-gray-800 dark:text-gray-400">{item.resposta}</p>
             </details>
           </li>
         ))}
@@ -643,31 +417,23 @@ export function HelpPanel({ whatsapp }: { whatsapp: string }) {
         href="/portal/sugestoes?categoria=portal_problema"
         className="mb-4 block rounded-xl border border-gray-200 p-3 text-[12px] text-gray-700 transition hover:border-na-gold dark:border-gray-700 dark:text-gray-300"
       >
-        <span className="block font-semibold text-gray-900 dark:text-gray-100">
-          Algo não funciona no Portal?
-        </span>
-        Conte pela caixa de sugestões. A equipe que cuida do sistema recebe,
-        junto com o tipo de aparelho e navegador.
+        <span className="block font-semibold text-gray-900 dark:text-gray-100">Algo não funciona no Portal?</span>
+        Conte pela caixa de sugestões. A equipe que cuida do sistema recebe, junto com o tipo de aparelho e navegador.
       </a>
 
       {/* Só com o WhatsApp da filial (10/11/2026): sem ele, o link abria conversa com o próprio aluno. */}
       {whatsapp && (
-        <div className="rounded-xl border border-gray-200 p-3 text-center dark:border-gray-700">
-          <p className="mb-3 text-[12px] text-gray-600 dark:text-gray-400">
-            Não achou o que precisava? Fale com a secretaria:
-          </p>
-          <a
-            href={whatsappHref(
-              whatsapp,
-              "Olá, preciso de ajuda com o Portal do Aluno",
-            )}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-na-green px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-na-green-dark"
-          >
-            Chamar no WhatsApp
-          </a>
-        </div>
+      <div className="rounded-xl border border-gray-200 p-3 text-center dark:border-gray-700">
+        <p className="mb-3 text-[12px] text-gray-600 dark:text-gray-400">Não achou o que precisava? Fale com a secretaria:</p>
+        <a
+          href={whatsappHref(whatsapp, "Olá, preciso de ajuda com o Portal do Aluno")}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-na-green px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-na-green-dark"
+        >
+          Chamar no WhatsApp
+        </a>
+      </div>
       )}
     </div>
   );
