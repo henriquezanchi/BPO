@@ -24,23 +24,29 @@ function conteudoDeFoto(b: Uint8Array, tipo: string) {
 }
 
 /** Foto de perfil — pedido do usuário 2026-09-30: deixa o Portal mais pessoal e ajuda a diretoria a reconhecer quem é quem. */
-export async function uploadAvatar(memberId: string, formData: FormData) {
+// Devolve { erro } em vez de lançar (25/11/2026): em produção o Next esconde a mensagem de um throw e a pessoa só via
+// "Ocorreu um erro inesperado". A foto também é reduzida no aparelho antes de subir (profile-edit-panel.tsx), porque
+// a foto original do celular passa do limite de corpo das ações do servidor.
+export async function uploadAvatar(memberId: string, formData: FormData): Promise<{ avatarUrl: string | null; erro?: string }> {
   await requireAuthenticatedMember(memberId);
 
   const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) throw new Error("Selecione uma imagem.");
+  if (!file || file.size === 0) return { avatarUrl: null, erro: "Selecione uma imagem." };
   // Só fotos (31/10/2026): o bucket é público, e SVG pode carregar script.
   const extensao = TIPOS_DE_FOTO[file.type];
-  if (!extensao) throw new Error("Envie uma foto em JPG, PNG ou WebP.");
-  if (file.size > TAMANHO_MAXIMO) throw new Error("Imagem muito grande — máximo 3MB.");
+  if (!extensao) return { avatarUrl: null, erro: "Envie uma foto em JPG, PNG ou WebP." };
+  if (file.size > TAMANHO_MAXIMO) return { avatarUrl: null, erro: "Imagem muito grande: o máximo é 3 MB." };
   const bytes = new Uint8Array(await file.arrayBuffer());
-  if (!conteudoDeFoto(bytes, file.type)) throw new Error("Envie uma foto em JPG, PNG ou WebP.");
+  if (!conteudoDeFoto(bytes, file.type)) return { avatarUrl: null, erro: "Envie uma foto em JPG, PNG ou WebP." };
 
   await garantirBucket();
 
   const path = `${memberId}/${Date.now()}${extensao}`;
   const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, bytes, { contentType: file.type, upsert: true });
-  if (error) throw new Error(`Falha ao subir a imagem: ${error.message}`);
+  if (error) {
+    console.error("[avatar] falha ao subir", error.message);
+    return { avatarUrl: null, erro: "Não deu para guardar a foto agora. Tente de novo em instantes." };
+  }
 
   const antigo = (await db.member.findUniqueOrThrow({ where: { id: memberId } })).avatarPath;
   await db.member.update({ where: { id: memberId }, data: { avatarPath: path } });

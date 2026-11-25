@@ -42,17 +42,20 @@ const COR_PEDIDO: Record<SituacaoPedido, string> = {
 function MeusPedidos({ memberId }: { memberId: string }) {
   const [pedidos, setPedidos] = useState<Awaited<ReturnType<typeof meusPedidosDeCorrecao>>>([]);
   useEffect(() => {
+    // Só o que ainda interessa (25/11/2026, "informações demais"): pendentes, ou decididos nos últimos 14 dias.
+    const limite = Date.now() - 14 * 24 * 60 * 60 * 1000;
     meusPedidosDeCorrecao(memberId)
-      .then(setPedidos)
+      .then((lista) => setPedidos(lista.filter((p) => p.situacao === "em_analise" || new Date(p.revisadoEm ?? p.criadoEm).getTime() >= limite)))
       .catch(() => {});
   }, [memberId]);
-  if (!pedidos.length) return null;
+  const visiveis = pedidos;
+  if (!visiveis.length) return null;
   const data = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "America/Sao_Paulo" });
   return (
     <section aria-label="Meus pedidos de correção" className="mb-5">
       <p className="mb-1.5 text-[12px] font-bold text-gray-900 dark:text-gray-100">Meus pedidos de correção</p>
       <ul className="flex flex-col gap-1.5">
-        {pedidos.map((p) => (
+        {visiveis.map((p) => (
           <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700">
             <span className="min-w-0">
               <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{p.campos.join(", ")}</span>
@@ -65,11 +68,34 @@ function MeusPedidos({ memberId }: { memberId: string }) {
           </li>
         ))}
       </ul>
-      {pedidos.some((p) => p.situacao === "recusado") && (
+      {visiveis.some((p) => p.situacao === "recusado") && (
         <p className="mt-1.5 text-[12px] text-gray-500 dark:text-gray-400">Se um pedido não foi aprovado, fale com a secretaria para saber o motivo.</p>
       )}
     </section>
   );
+}
+
+/**
+ * Reduz a foto no aparelho antes de enviar (25/11/2026): a foto original do celular tem 3 a 8 MB e estourava o limite de
+ * corpo das ações do servidor, que em produção só mostrava "erro inesperado". Sai um JPEG de no máximo 640 px, uns
+ * 60 KB. Também converte HEIC/outros formatos que o navegador consiga abrir. Se o navegador não conseguir, vai o original.
+ */
+async function reduzirFoto(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const lado = 640;
+    const escala = Math.min(1, lado / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * escala);
+    canvas.height = Math.round(bitmap.height * escala);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.85));
+    if (!blob) return file;
+    return new File([blob], "foto.jpg", { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
 }
 
 /** Foto de perfil — pedido do usuário 2026-09-30: deixa o Portal mais pessoal e ajuda a diretoria a reconhecer quem é quem. */
@@ -85,9 +111,10 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
     startTransition(async () => {
       try {
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", await reduzirFoto(file));
         const res = await uploadAvatar(memberId, formData);
-        setAvatarUrl(res.avatarUrl);
+        if (res.erro) setErro(res.erro);
+        else setAvatarUrl(res.avatarUrl);
       } catch (err) {
         setErro(mensagemErroAmigavel(err));
       }
@@ -179,7 +206,7 @@ function ApelidoCampo({ memberId, nome, inicial }: { memberId: string; nome: str
           {isPending ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Salvar
         </button>
       </div>
-      <p className="mt-1 text-[12px] text-gray-500 dark:text-gray-400">Apelido ou nome pelo qual te conhecem na escola (ex.: Zanchi, Dudu, Bia). Aparece nas saudações e na chamada da lanchonete. Deixe vazio para usar {primeiro}.</p>
+      <p className="mt-1 text-[12px] text-gray-500 dark:text-gray-400">Vale nas saudações e na lanchonete. Vazio = {primeiro}.</p>
       {msg && <p className={`mt-1 text-[12px] font-semibold ${msg.tipo === "ok" ? "text-na-green-dark dark:text-emerald-400" : "text-na-danger dark:text-red-400"}`}>{msg.texto}</p>}
     </div>
   );
@@ -334,19 +361,11 @@ export function ProfileEditPanel(props: ProfileEditPanelProps) {
     <form action={handleSubmit} autoComplete="on" className="flex flex-col text-left">
       <AvatarUploader memberId={memberId} avatarUrl={avatarUrl} />
 
-      {/* Pedido do usuário 2026-10-19: deixar claro que TODO dado do cadastro muda só por solicitação, não só o contato. */}
-      <div className="mb-4 flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-[12px] text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
-        <Clock size={14} className="mt-0.5 shrink-0 text-gray-400" />
-        <span>
-          Estes são os dados do seu cadastro na escola. Para corrigir algo, toque em <strong className="text-gray-800 dark:text-gray-100">Corrigir</strong>: a alteração vale na hora e
-          atualiza o cadastro.
-        </span>
-      </div>
-
+      {/* A caixa explicativa de 19/10 saiu em 25/11 ("informações demais"): os botões "Corrigir" já dizem o que fazer. */}
       <div className="mb-4">
         <p className={SECAO_CLASS}>Nome</p>
         <p className="text-[14px] text-gray-900 dark:text-gray-100">{name}</p>
-        <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">Para corrigir o nome, fale com a secretaria levando um documento.</p>
+        <p className="mt-0.5 text-[12px] text-gray-500 dark:text-gray-400">Nome errado? Fale com a secretaria.</p>
         <ApelidoCampo memberId={memberId} nome={name} inicial={props.apelido ?? null} />
       </div>
 

@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
     "/api/cron/fila-mercurio": ["./node_modules/@sparticuz/chromium/bin/**/*", "./node_modules/playwright-core/**/*.json", "./node_modules/playwright/**/*.json"],
   },
   poweredByHeader: false,
+  // Foto de perfil (25/11/2026): a foto já chega reduzida do aparelho (~60 KB), mas o limite padrão de 1 MB derrubava
+  // o envio de quem mandava a original e a pessoa só via "erro inesperado". Folga para a validação do servidor responder.
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   // Service worker do PWA: sempre a versão mais nova (sem cache), só scripts do próprio site.
   async headers() {
     return [
