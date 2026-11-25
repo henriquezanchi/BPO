@@ -10,8 +10,8 @@ android {
         applicationId "br.org.acropole.portal"
         minSdk 21
         targetSdk 35
-        versionCode 2
-        versionName "1.1"
+        versionCode 3
+        versionName "1.2"
         manifestPlaceholders = [host: HOST, url: "https://" + HOST + "/portal"]
         resValue "string", "asset_statements", '[{\\"relation\\": [\\"delegate_permission/common.handle_all_urls\\"], \\"target\\": {\\"namespace\\": \\"web\\", \\"site\\": \\"https://' + HOST + '\\"}}]'
     }
