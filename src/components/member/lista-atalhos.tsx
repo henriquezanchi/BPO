@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 /**
@@ -38,9 +37,11 @@ export function LinhaAtalho({ icon, title, subtitle, onClick, href, externo, sel
           {corpo}
         </a>
       ) : href ? (
-        <Link href={href} className={classe}>
+        // Navegação completa (<a>), não o roteador do cliente: no app Android (TWA) os toques em Link não abriam
+        // ("Indicar um amigo não faz nada", 25/11/2026), mesmo caso da Área do Voluntário em 24/11.
+        <a href={href} className={classe}>
           {corpo}
-        </Link>
+        </a>
       ) : (
         <button type="button" onClick={onClick} className={classe}>
           {corpo}
