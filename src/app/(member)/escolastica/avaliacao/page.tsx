@@ -83,6 +83,7 @@ export default async function GestaoAvaliacaoPage(props: { searchParams: Promise
           encerradaEm: c.encerradaEm,
           encerraEm: c.encerraEm ? c.encerraEm.toISOString().slice(0, 10) : null,
           turmas: c.turmas.length,
+          turmasIds: c.turmas,
           respostas: respostasPorCampanha.get(c.id) ?? 0,
           participantes: participantesPorCampanha.get(c.id) ?? 0,
         }))}

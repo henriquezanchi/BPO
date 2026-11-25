@@ -2,9 +2,9 @@
 import { IconeWhatsApp } from "@/components/member/compartilhar-evento";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
-import { abrirCampanha, alterarEncerramentoCampanha, alterarStatusCampanha } from "@/lib/actions/avaliacao-actions";
+import { abrirCampanha, alterarEncerramentoCampanha, alterarStatusCampanha, alterarTurmasCampanha } from "@/lib/actions/avaliacao-actions";
 import { linkWhatsappDaAvaliacao } from "@/lib/avaliacao-comum";
-import { BarChart3, CalendarClock, Loader2, Play, Square } from "lucide-react";
+import { BarChart3, CalendarClock, Loader2, Play, Square, Users } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
@@ -24,6 +24,8 @@ interface Campanha {
   /** Último dia para responder (AAAA-MM-DD) ou null. */
   encerraEm: string | null;
   turmas: number;
+  /** Ids das turmas da rodada (vazio = todas). */
+  turmasIds: string[];
   respostas: number;
   participantes: number;
 }
@@ -40,6 +42,7 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
   const [escolhidas, setEscolhidas] = useState<Set<string>>(new Set());
   const [fim, setFim] = useState("");
   const [editandoData, setEditandoData] = useState<{ id: string; valor: string } | null>(null);
+  const [editandoTurmas, setEditandoTurmas] = useState<{ id: string; todas: boolean; ids: Set<string> } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [emAndamento, setEmAndamento] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -78,6 +81,22 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
     });
   }
 
+  function salvarTurmas() {
+    if (!editandoTurmas) return;
+    if (!editandoTurmas.todas && editandoTurmas.ids.size === 0) return setErro("Escolha pelo menos uma turma.");
+    const id = editandoTurmas.id;
+    setEmAndamento(`turmas-${id}`);
+    setErro(null);
+    startTransition(async () => {
+      const r = await alterarTurmasCampanha(id, editandoTurmas.todas ? [] : [...editandoTurmas.ids]);
+      setEmAndamento(null);
+      if (r.ok) setEditandoTurmas(null);
+      else setErro(r.error);
+    });
+  }
+
+  const nomesDasTurmas = (ids: string[]) => ids.map((id) => turmas.find((t) => t.id === id)?.nome).filter(Boolean).join(", ");
+
   const abertas = campanhas.filter((c) => c.status === "aberta");
   const encerradas = campanhas.filter((c) => c.status !== "aberta");
   const linha = (c: (typeof campanhas)[number]) => (
@@ -88,6 +107,7 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
                   <p className="text-[11px] text-gray-500 dark:text-gray-400">
                     {c.status === "aberta" ? `Aberta desde ${data(c.abertaEm)}${c.encerraEm ? ` · encerra no fim de ${dia(c.encerraEm)}` : " · sem data para encerrar"}` : `Encerrada em ${data(c.encerradaEm ?? c.abertaEm)}`} · {c.turmas ? `${c.turmas} turma(s)` : "todas as turmas"}
                   </p>
+                  {c.turmas > 0 && <p className="text-[11px] text-gray-600 dark:text-gray-300">{nomesDasTurmas(c.turmasIds)}</p>}
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -125,6 +145,51 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
                   </button>
                 </div>
               )}
+              {editandoTurmas?.id === c.id && (
+                <div className="flex flex-col gap-2 rounded-lg bg-gray-50 p-2.5 dark:bg-gray-800">
+                  <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Quem responde esta rodada</span>
+                  <label className="flex min-h-9 items-center gap-2 text-[13px] text-gray-800 dark:text-gray-200">
+                    <input type="radio" checked={editandoTurmas.todas} onChange={() => setEditandoTurmas({ ...editandoTurmas, todas: true })} className="accent-na-green" /> Todas as turmas
+                  </label>
+                  <label className="flex min-h-9 items-center gap-2 text-[13px] text-gray-800 dark:text-gray-200">
+                    <input type="radio" checked={!editandoTurmas.todas} onChange={() => setEditandoTurmas({ ...editandoTurmas, todas: false })} className="accent-na-green" /> Só algumas turmas
+                  </label>
+                  {!editandoTurmas.todas && (
+                    <ul className="flex max-h-56 flex-col overflow-y-auto rounded-lg bg-white p-1 dark:bg-gray-900">
+                      {turmas.map((t) => (
+                        <li key={t.id}>
+                          <label className="flex min-h-10 items-center justify-between gap-2 px-1 text-[13px] text-gray-800 dark:text-gray-200">
+                            <span className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={editandoTurmas.ids.has(t.id)}
+                                onChange={(e) => {
+                                  const n = new Set(editandoTurmas.ids);
+                                  if (e.target.checked) n.add(t.id);
+                                  else n.delete(t.id);
+                                  setEditandoTurmas({ ...editandoTurmas, ids: n });
+                                }}
+                                className="h-4 w-4 accent-na-green"
+                              />
+                              {t.nome}
+                            </span>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400">{t.alunos} {t.alunos === 1 ? "aluno" : "alunos"}</span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Quem já respondeu continua contado. Turma que sair da lista só deixa de ver a rodada.</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" disabled={emAndamento === `turmas-${c.id}`} onClick={salvarTurmas} className="flex min-h-9 items-center gap-1 rounded-lg bg-na-green px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60">
+                      {emAndamento === `turmas-${c.id}` && <Loader2 size={11} className="animate-spin" />} Salvar turmas
+                    </button>
+                    <button type="button" onClick={() => setEditandoTurmas(null)} className="min-h-9 px-2 py-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={`/escolastica/avaliacao/${c.id}`}
@@ -150,6 +215,15 @@ export function CampanhasPanel({ schoolId, tituloPadrao, turmas, campanhas }: { 
                     className="flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                   >
                     <CalendarClock size={12} /> {c.encerraEm ? "Mudar data de encerramento" : "Definir data de encerramento"}
+                  </button>
+                )}
+                {c.status === "aberta" && editandoTurmas?.id !== c.id && (
+                  <button
+                    type="button"
+                    onClick={() => setEditandoTurmas({ id: c.id, todas: c.turmasIds.length === 0, ids: new Set(c.turmasIds) })}
+                    className="flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    <Users size={12} /> Mudar turmas
                   </button>
                 )}
                 <button

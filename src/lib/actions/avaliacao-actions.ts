@@ -75,6 +75,28 @@ export async function abrirCampanha(schoolId: string, dados: { titulo: string; t
   }
 }
 
+/**
+ * Troca as turmas de uma rodada aberta (pedido da Escolástica, 25/11/2026: "abri com uma turma, queria colocar mais uma").
+ * Lista vazia = todas as turmas. Respostas já dadas ficam; quem sair da lista só deixa de ver a rodada.
+ */
+export async function alterarTurmasCampanha(campanhaId: string, turmas: string[]): Promise<Resultado> {
+  try {
+    const c = await db.avaliacaoCampanha.findUniqueOrThrow({ where: { id: campanhaId } });
+    await gestor(c.schoolId);
+    if (c.status !== "aberta") return { ok: false, error: "Só dá para mudar as turmas de uma rodada aberta." };
+    const validas = turmas.length
+      ? (await db.classGroup.findMany({ where: { id: { in: turmas }, schoolId: c.schoolId, tipo: "turma" }, select: { id: true } })).map((t) => t.id)
+      : [];
+    if (turmas.length && !validas.length) return { ok: false, error: "Escolha pelo menos uma turma." };
+    await db.avaliacaoCampanha.update({ where: { id: campanhaId }, data: { turmas: validas } });
+    revalidatePath("/escolastica/avaliacao");
+    revalidatePath("/portal");
+    return { ok: true };
+  } catch (e) {
+    return falha(e, "Não foi possível mudar as turmas.");
+  }
+}
+
 export async function alterarStatusCampanha(campanhaId: string, status: "aberta" | "encerrada"): Promise<Resultado> {
   try {
     const c = await db.avaliacaoCampanha.findUniqueOrThrow({ where: { id: campanhaId } });
