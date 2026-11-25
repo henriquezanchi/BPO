@@ -1,6 +1,6 @@
 "use server";
 
-import { getAuthenticatedMember } from "@/lib/auth";
+import { getAuthenticatedMember, requireArea } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { papelNoGrupo } from "@/lib/grupos-portal";
 import { nomeExibicao } from "@/lib/nome-exibicao";
@@ -114,8 +114,12 @@ export async function removerRepertorio(grupoId: string, id: string): Promise<Re
  * última apresentação, para a equipe chamar quem já tem número pronto.
  */
 export async function sugestoesDoRepertorio(schoolId: string) {
-  const m = await getAuthenticatedMember();
-  if (!m || m.schoolId !== schoolId) return [];
+  // 25/11/2026: só quem tem a área de eventos (ou a direção) da filial; antes bastava ser membro dela.
+  try {
+    await requireArea(schoolId, "eventos");
+  } catch {
+    return [];
+  }
   const itens = await db.repertorioArtistico.findMany({
     where: { schoolId },
     orderBy: [{ apresentadoEm: "desc" }],

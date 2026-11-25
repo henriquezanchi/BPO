@@ -125,8 +125,10 @@ export async function decidirVinculo(a: AcessoInfantojuvenil, vinculoId: string,
 export async function vincularMembro(a: AcessoInfantojuvenil, criancaId: string, memberId: string, parentesco: string | null, decididoPorId: string) {
   const c = await criancaDoAcesso(a, criancaId);
   if (memberId === criancaId) throw new Error("A criança não pode ser responsável por ela mesma.");
-  const adulto = await db.member.findUnique({ where: { id: memberId }, select: { nivel: true, mercurioAtivo: true } });
+  const adulto = await db.member.findUnique({ where: { id: memberId }, select: { nivel: true, mercurioAtivo: true, schoolId: true } });
   if (!adulto) throw new Error("Pessoa não encontrada.");
+  // 25/11/2026: responsável só da mesma filial da criança e com matrícula ativa (a busca já filtra assim; a action não).
+  if (adulto.schoolId !== c.schoolId || !adulto.mercurioAtivo) throw new Error("Escolha uma pessoa ativa da mesma filial da criança.");
   if (adulto.nivel && (NIVEIS_INFANTIS as readonly string[]).includes(adulto.nivel)) throw new Error("Escolha um adulto como responsável.");
   const r = await responsavelDoMembro(memberId, decididoPorId);
   await db.vinculoResponsavel.upsert({

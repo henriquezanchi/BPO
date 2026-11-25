@@ -84,6 +84,8 @@ export async function excluirAnotacao(id: string): Promise<Resultado> {
 /** Conferência secreta do professor: o aluno não vê; só "correta" aparece aos colegas. */
 export async function conferirAnotacao(id: string, veredito: "correta" | "incorreta" | "pendente"): Promise<Resultado> {
   return executar(async () => {
+    // 25/11/2026: o tipo não vale em tempo de execução; sem isso qualquer texto iria pro campo `revisao`.
+    if (!["correta", "incorreta", "pendente"].includes(veredito)) throw new Error("Veredito inválido.");
     const m = await eu();
     const a = await db.anotacaoAula.findUnique({ where: { id }, select: { id: true, memberId: true, schoolId: true, materiaSigla: true, compartilhada: true } });
     if (!a?.compartilhada) throw new Error("Anotação não encontrada.");

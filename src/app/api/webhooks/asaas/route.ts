@@ -65,7 +65,8 @@ export async function POST(req: Request) {
       // pausar a fila de avisos da conta inteira (parando a confirmação dos outros pagamentos). A conferência fica
       // com a tela do aluno e com a Economia, avisada quando o valor diverge.
       const confirmado=["RECEIVED","CONFIRMED"].includes(payment.status);
-      const valorConfere=registration.amount===null||Math.round(Number(registration.amount)*100)===Math.round(payment.value*100);
+      // 25/11/2026: inscrição sem valor guardado não tem com o que conferir — vai pra Economia revisar, como a divergente.
+      const valorConfere=registration.amount!==null&&Math.round(Number(registration.amount)*100)===Math.round(payment.value*100);
       if(confirmado&&valorConfere){
         await confirmEventPayment(registration.id);
         await processEventRefund(registration.id);

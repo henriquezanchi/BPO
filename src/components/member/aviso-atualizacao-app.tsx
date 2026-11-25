@@ -1,6 +1,6 @@
 "use client";
 
-import { APK_CAMINHO, APK_VERSAO, APK_VERSION_CODE, CHAVE_APK_AVISO_DISPENSADO, CHAVE_APK_VERSAO, CHAVE_APP_ANDROID } from "@/lib/app-android";
+import { APK_CAMINHO, APK_VERSAO, APK_VERSION_CODE, CHAVE_APK_AVISO_DISPENSADO, CHAVE_APK_VERSAO, abertoPeloApp } from "@/lib/app-android";
 import { RefreshCw, X } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
@@ -16,28 +16,9 @@ function assinar(f: () => void) {
   return () => ouvintes.delete(f);
 }
 
-let registrado = false;
-function registrarSinais() {
-  if (registrado) return;
-  registrado = true;
-  try {
-    const apk = new URLSearchParams(window.location.search).get("apk");
-    if (apk && /^\d+$/.test(apk)) {
-      localStorage.setItem(CHAVE_APP_ANDROID, "1");
-      localStorage.setItem(CHAVE_APK_VERSAO, apk);
-    } else if (document.referrer.startsWith("android-app://")) {
-      localStorage.setItem(CHAVE_APP_ANDROID, "1");
-      if (!localStorage.getItem(CHAVE_APK_VERSAO)) localStorage.setItem(CHAVE_APK_VERSAO, "0");
-    }
-  } catch {
-    /* sem localStorage: sem aviso */
-  }
-}
-
 function lerMostrar(): boolean {
-  registrarSinais();
   try {
-    if (localStorage.getItem(CHAVE_APP_ANDROID) !== "1") return false;
+    if (!abertoPeloApp()) return false;
     const versao = Number(localStorage.getItem(CHAVE_APK_VERSAO) ?? "0");
     if (versao >= APK_VERSION_CODE) return false;
     return Number(localStorage.getItem(CHAVE_APK_AVISO_DISPENSADO) ?? "0") < APK_VERSION_CODE;
@@ -71,7 +52,7 @@ export function AvisoAtualizacaoApp() {
             <X size={18} />
           </button>
         </div>
-        <p className="text-[12px] opacity-90">Tela cheia e telas mais leves. Instale por cima da atual: nada se perde.</p>
+        <p className="text-[12px] opacity-90">Correções e melhorias. Instale por cima da atual: nada se perde.</p>
         <a
           href={APK_CAMINHO}
           download

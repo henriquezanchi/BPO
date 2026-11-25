@@ -5,7 +5,7 @@ import { ehAdministradorNacional, escolasChefiadas } from "@/lib/acesso-voluntar
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ehDirecaoDaFilial, filiaisAdministradas, recursosDaFilial, RECURSOS } from "@/lib/recursos-filial";
+import { ehDirecaoDaFilial, filiaisAdministradas, recursosDaFilial, RECURSOS, RECURSOS_OCULTOS } from "@/lib/recursos-filial";
 import { AbasAdmin } from "@/components/admin/abas-admin";
 import { LiberarPortal } from "@/components/admin/liberar-portal";
 import { consultarMercurio, sqlNumero } from "@/lib/mercurio-db/client";
@@ -86,7 +86,9 @@ export default async function AdminFilialPage(props: { searchParams: Promise<{ f
         <AdminFilialPanel
           key={escola.id}
           schoolId={escola.id}
-          recursos={Object.entries(RECURSOS).map(([chave, r]) => ({ chave, nome: r.nome, descricao: r.descricao, ativo: recursos[chave as keyof typeof RECURSOS] }))}
+          recursos={Object.entries(RECURSOS)
+            .filter(([chave]) => !RECURSOS_OCULTOS.has(chave as keyof typeof RECURSOS))
+            .map(([chave, r]) => ({ chave, nome: r.nome, descricao: r.descricao, ativo: recursos[chave as keyof typeof RECURSOS] }))}
           admins={admins.map((a) => ({ memberId: a.memberId, nome: nomes.get(a.memberId) ?? "(fora da filial)" }))}
           podeEscolherAdmins={direcao}
           pessoas={pessoas.filter((p) => p.id !== member.id)}

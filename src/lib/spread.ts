@@ -12,7 +12,7 @@ import { faixaDoSpread, fixoDoMes } from "@/lib/spread-comum";
 const CHAVE_CONFIG = "cobranca:config";
 
 /** Projeto piloto (12/11/2026): Goiás (sem Valparaíso), Barra do Garças e Sede Nacional (Brasília). */
-export const ESCOPO_PILOTO = ["BSB", "BGA", "GYN", "JAM", "STO", "GAR", "RVD", "APS", "GY2", "ALT", "ELD", "PER", "CAT", "ITU"];
+export const ESCOPO_PILOTO = ["BSB", "BGA", "GYN", "JAM", "STO", "GAR", "RVD", "APS", "GY2", "ALT", "ELD", "PER", "CAT", "ITU", "ACL"]; // ACL (Águas Claras, DF) entrou em 25/11/2026 a pedido do usuário
 
 type Config = { escopo?: string[]; cartaoSemRepasse?: string[]; chavesPix?: Record<string, ChavePix> };
 

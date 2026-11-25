@@ -1,5 +1,6 @@
 "use client";
 
+import { abertoPeloApp } from "@/lib/app-android";
 import { Download, X } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
@@ -20,7 +21,9 @@ function subscribe(callback: () => void) {
 }
 
 function getSnapshotDispensado(): boolean {
-  return window.matchMedia("(display-mode: standalone)").matches || localStorage.getItem(CHAVE_DISPENSADO) === "1";
+  // Dentro do APK (25/11/2026): o modo de tela cheia do app não casa com "display-mode: standalone", e o convite
+  // "Instale o Portal" aparecia para quem já estava no app. O sinal do APK fica guardado no aparelho.
+  return abertoPeloApp() || window.matchMedia("(display-mode: standalone)").matches || localStorage.getItem(CHAVE_DISPENSADO) === "1";
 }
 function getServerSnapshotDispensado(): boolean {
   return true; // esconde até o cliente confirmar — evita flash e mismatch de hidratação

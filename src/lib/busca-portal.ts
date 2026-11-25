@@ -31,7 +31,7 @@ export const FUNCOES_PORTAL: FuncaoPortal[] = [
   { id: "avaliacao", titulo: "Avaliação dos instrutores", descricao: "Avaliação anônima das aulas", palavras: ["avaliar", "opinião", "pesquisa", "questionário", "feedback"] },
   { id: "ajuda", titulo: "Ajuda", descricao: "Perguntas frequentes e como resolver problemas", palavras: ["dúvida", "perguntas", "suporte", "senha", "problema", "não consigo", "como faço", "esqueci"] },
   { id: "jornada", titulo: "Minha jornada", descricao: "Conquistas, sequência de meses e histórico na escola", palavras: ["conquistas", "medalhas", "histórico", "trajetória", "sequência", "eventos que participei"] },
-  { id: "transparencia", titulo: "Transparência financeira", descricao: "Receitas e despesas da filial", palavras: ["contas da escola", "prestação de contas", "despesas", "receitas", "gastos"] },
+  // Transparência financeira: escondida enquanto está em construção (RECURSOS_OCULTOS em lib/recursos-filial.ts, 25/11/2026).
   { id: "cadastro", titulo: "Editar meus dados", descricao: "Telefone, endereço, e-mail e foto do cadastro", palavras: ["cadastro", "telefone", "celular", "endereço", "email", "foto", "atualizar dados", "mudei"] },
   { id: "whatsapp", titulo: "Falar com a secretaria", descricao: "WhatsApp da escola", palavras: ["contato", "whatsapp", "secretaria", "atendimento", "falar com alguém", "telefone da escola"] },
   { id: "agenda_google", titulo: "Eventos no Google Agenda", descricao: "Levar os eventos da escola para a agenda do celular", palavras: ["google agenda", "calendário do celular", "sincronizar", "outlook", "iphone", "lembrete", "agenda do google"] },

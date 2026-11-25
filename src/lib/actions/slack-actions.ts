@@ -3,6 +3,7 @@
 import { comAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { requireTeacherOfClass } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { podeAdministrar } from "@/lib/recursos-filial";
 import {
   convidarParaCanal,
   criarCanalPrivado,
@@ -22,11 +23,11 @@ import { revalidatePath } from "next/cache";
  * nunca sai do servidor.
  */
 async function contexto(classGroupId: string) {
-  await requireTeacherOfClass(classGroupId);
+  const member = await requireTeacherOfClass(classGroupId);
   const grupo = await db.classGroup.findUniqueOrThrow({ where: { id: classGroupId }, include: { school: { select: { mercurioUnidade: true } } } });
   const token = tokenSlackDaFilial(grupo.school.mercurioUnidade);
   if (!token) throw new Error("O Slack ainda não está conectado nesta filial.");
-  return { grupo, token };
+  return { member, grupo, token };
 }
 
 /** Convida pro canal todo integrante/responsável do grupo que tem conta no Slack da filial (achado pelo e-mail do cadastro). */
@@ -65,10 +66,15 @@ export async function criarCanalSlack(classGroupId: string) {
 
 export async function vincularCanalSlack(classGroupId: string, linkOuId: string) {
   try {
-    const { token } = await contexto(classGroupId);
+    const { member, grupo, token } = await contexto(classGroupId);
     const channelId = idDoCanal(linkOuId);
     if (!channelId) return { ok: false as const, error: "Não reconheci esse link. No Slack, clique com o botão direito no canal → Copiar link." };
-    await verificarCanal(token, channelId);
+    // 25/11/2026: um canal serve a um grupo só — senão o professor de uma turma convidaria a sua turma pro canal de outra.
+    if (await db.classGroup.count({ where: { slackChannelId: channelId, id: { not: classGroupId } } })) return { ok: false as const, error: "Esse canal já está vinculado a outro grupo." };
+    const canal = await verificarCanal(token, channelId);
+    // 25/11/2026: o Portal não guarda quais canais privados ele mesmo criou, então canal privado pré-existente
+    // (ex.: o da direção) só com quem administra a filial; o professor vincula canais públicos ou cria um novo.
+    if (canal.is_private && !(await podeAdministrar(member, grupo.schoolId))) return { ok: false as const, error: "Canal privado só pode ser vinculado por quem administra a filial. Use \"Criar canal\" ou vincule um canal público." };
     const teamId = await identificarWorkspace(token);
     await db.classGroup.update({ where: { id: classGroupId }, data: { slackChannelId: channelId, slackTeamId: teamId } });
     const r = await convidarIntegrantes(classGroupId, token, channelId);

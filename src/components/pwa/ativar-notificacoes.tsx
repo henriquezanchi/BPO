@@ -2,7 +2,7 @@
 
 import { chavePublicaPush, enviarNotificacaoTeste, removerInscricaoPush, salvarInscricaoPush } from "@/lib/actions/push-actions";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, BellOff, CalendarDays, MessageSquareText, Wallet } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 /**
@@ -16,15 +16,18 @@ import { useEffect, useState, useTransition } from "react";
  */
 type Estado = "carregando" | "indisponivel" | "sem_suporte" | "instalar_iphone" | "bloqueado" | "desativado" | "ativo";
 
-// Resposta ao convite neste aparelho: "nao" (não perguntar mais) ou "depois:<ms>" (perguntar de novo a partir de <ms>).
+// Resposta ao convite neste aparelho: "nao:<ms>" (voltar a perguntar só depois de 60 dias) ou "depois:<ms>" (7 dias).
+// O "nao" antigo, sem data (antes de 25/11/2026), conta como vencido: o convite novo aparece uma vez.
 const CHAVE_RESPOSTA = "na-notificacoes-resposta";
 const ADIAR_MS = 7 * 24 * 60 * 60 * 1000;
+const NAO_MS = 60 * 24 * 60 * 60 * 1000;
 const EVENTO_PEDIR = "na:pedir-notificacoes";
 
 function lerResposta(): { nao: boolean; adiadoAte: number } {
   try {
     const v = localStorage.getItem(CHAVE_RESPOSTA) ?? "";
-    return { nao: v === "nao", adiadoAte: v.startsWith("depois:") ? Number(v.slice(7)) || 0 : 0 };
+    if (v.startsWith("nao:")) return { nao: (Number(v.slice(4)) || 0) > Date.now(), adiadoAte: 0 };
+    return { nao: false, adiadoAte: v.startsWith("depois:") ? Number(v.slice(7)) || 0 : 0 };
   } catch {
     return { nao: false, adiadoAte: 0 };
   }
@@ -145,7 +148,7 @@ export function AtivarNotificacoes({ variante = "cartao", aguardar = false }: { 
   }
 
   function responder(resposta: "nao" | "depois") {
-    gravarResposta(resposta === "nao" ? "nao" : `depois:${Date.now() + ADIAR_MS}`);
+    gravarResposta(resposta === "nao" ? `nao:${Date.now() + NAO_MS}` : `depois:${Date.now() + ADIAR_MS}`);
     setConvite(null);
   }
 
@@ -159,36 +162,48 @@ export function AtivarNotificacoes({ variante = "cartao", aguardar = false }: { 
       <Dialog.Root open onOpenChange={(aberto) => !aberto && setConvite(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/40" />
+          {/* Convite redesenhado (25/11/2026, "atrativo e convincente"): cabeçalho verde com o sino dourado, três
+              benefícios concretos e um botão principal; "Agora não" adia 7 dias, "Não quero" vale 60 dias. */}
           <Dialog.Content
             aria-describedby={undefined}
-            className="fixed inset-x-4 bottom-4 z-[101] mx-auto w-auto max-w-sm rounded-2xl bg-white p-5 shadow-xl sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 dark:bg-gray-900"
+            className="fixed inset-x-3 bottom-3 z-[101] mx-auto w-auto max-w-sm overflow-hidden rounded-[24px] bg-white shadow-2xl sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 dark:bg-gray-900"
           >
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-na-green text-white">
-            <Bell size={18} />
-          </span>
-          {convite.motivo && <p className="mt-3 text-[12px] font-semibold text-na-green-dark dark:text-emerald-400">{convite.motivo}</p>}
-          <Dialog.Title className="mt-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">
-            Aceita receber notificações sobre eventos, contribuições e muito mais?
-          </Dialog.Title>
-          <p className="mt-1 text-[12px] leading-relaxed text-gray-600 dark:text-gray-300">
-            {iphone
-              ? "No iPhone, primeiro instale o Portal: toque em compartilhar e depois em \u201cAdicionar à Tela de Início\u201d. Abra pelo ícone e responda \u201cSim\u201d aqui."
-              : "Eventos da sua escola, lembretes dos encontros e da contribuição, mesmo com o Portal fechado. Dá para desligar quando quiser em Ajuda."}
-          </p>
-          {mensagem && <p className="mt-2 text-[11px] text-na-danger-dark dark:text-red-300">{mensagem}</p>}
-          <div className="mt-4 flex flex-col gap-2">
-            {!iphone && (
-              <button onClick={ativar} disabled={pendente} className="rounded-xl bg-na-green px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-na-green-dark disabled:opacity-60">
-                {pendente ? "Ativando..." : "Sim"}
-              </button>
-            )}
-            <button onClick={() => responder("depois")} className="rounded-xl border border-gray-300 px-4 py-2.5 text-[13px] font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">
-              Pergunte-me depois
-            </button>
-            <button onClick={() => responder("nao")} className="px-4 py-2 text-[12px] font-semibold text-gray-500 dark:text-gray-400">
-              Não
-            </button>
-          </div>
+            <div className="bg-gradient-to-br from-na-green-dark to-na-green px-5 pt-6 pb-5 text-white">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-na-gold">
+                <Bell size={24} />
+              </span>
+              {convite.motivo && <p className="mt-3 text-[12px] font-semibold text-white/85">{convite.motivo}</p>}
+              <Dialog.Title className="mt-3 text-[20px] leading-tight font-black">Fique por dentro da sua escola</Dialog.Title>
+              <p className="mt-1 text-[13px] text-white/85">Um aviso no celular na hora certa. Nada de spam.</p>
+            </div>
+            <div className="px-5 pt-4 pb-5">
+              {iphone ? (
+                <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-300">
+                  No iPhone, primeiro instale o Portal: toque em compartilhar e depois em \u201cAdicionar à Tela de Início\u201d. Abra pelo ícone e ative aqui.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-3 text-[13px] text-gray-700 dark:text-gray-200">
+                  <li className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-na-green-light text-na-green-dark dark:bg-emerald-950/50 dark:text-emerald-400"><CalendarDays size={18} /></span><span><b>Eventos e encontros</b> da sua turma e da escola, com lembrete antes.</span></li>
+                  <li className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-na-green-light text-na-green-dark dark:bg-emerald-950/50 dark:text-emerald-400"><Wallet size={18} /></span><span><b>Contribuição</b>: aviso quando o Pix do mês estiver pronto.</span></li>
+                  <li className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-na-green-light text-na-green-dark dark:bg-emerald-950/50 dark:text-emerald-400"><MessageSquareText size={18} /></span><span><b>Respostas da secretaria</b> e novidades do app.</span></li>
+                </ul>
+              )}
+              {mensagem && <p className="mt-3 text-[12px] text-na-danger-dark dark:text-red-300">{mensagem}</p>}
+              <div className="mt-5 flex flex-col gap-2">
+                {!iphone && (
+                  <button onClick={ativar} disabled={pendente} className="min-h-12 rounded-2xl bg-na-green px-4 text-[15px] font-bold text-white shadow-sm transition hover:bg-na-green-dark disabled:opacity-60">
+                    {pendente ? "Ativando..." : "Ativar notificações"}
+                  </button>
+                )}
+                <button onClick={() => responder("depois")} className="min-h-11 rounded-2xl px-4 text-[13px] font-semibold text-gray-700 dark:text-gray-200">
+                  Agora não
+                </button>
+                <button onClick={() => responder("nao")} className="px-4 py-1 text-[12px] text-gray-400 dark:text-gray-500">
+                  Não quero receber
+                </button>
+              </div>
+              <p className="mt-3 text-center text-[11px] text-gray-400 dark:text-gray-500">Dá para desligar quando quiser em Ajuda.</p>
+            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

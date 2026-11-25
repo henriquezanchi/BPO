@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { ehAdministradorNacional, escolasQueLibera } from "@/lib/acesso-voluntario";
+import { ehDonoDoSistema } from "@/lib/dono-do-sistema";
 import { escolasDoTerritorio, territorioDoMandato } from "@/lib/secretarias-rede/regras";
 import type { Member } from "@prisma/client";
 import {
@@ -22,11 +23,13 @@ import {
  *    local): aquele programa no território do mandato;
  *  - administração nacional: tudo.
  */
-type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "filiaisChefiadas" | "mercurioId" | "cargos">;
+type Pessoa = Pick<Member, "id" | "schoolId" | "isDiretor" | "isSubChefe" | "filiaisChefiadas" | "mercurioId" | "cargos" | "mercurioAtivo">;
 
 export async function acessoInfantojuvenil(m: Pessoa): Promise<AcessoInfantojuvenil> {
-  if (await ehAdministradorNacional(m)) return { todas: [...PROGRAMAS], porEscola: {} };
   const acesso: AcessoInfantojuvenil = { todas: [], porEscola: {} };
+  // 25/11/2026: quem saiu da escola (mercurioAtivo=false, ver auth.ts) não vê nem edita; o dono do sistema continua.
+  if (!m.mercurioAtivo && !ehDonoDoSistema(m)) return acesso;
+  if (await ehAdministradorNacional(m)) return { todas: [...PROGRAMAS], porEscola: {} };
   const dar = (schoolId: string, ps: Programa[]) => {
     acesso.porEscola[schoolId] = [...new Set([...(acesso.porEscola[schoolId] ?? []), ...ps])];
   };

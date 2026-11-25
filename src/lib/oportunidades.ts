@@ -20,7 +20,7 @@ const TIPOS_RESPONSAVEL = ["SEC", "GDVE", "BF", "BM", "CS"];
 
 export type Gestor = Pick<
   Member,
-  "id" | "schoolId" | "isDiretor" | "isSubChefe" | "filiaisChefiadas" | "mercurioId" | "isSecretarioEscolastica" | "isSecretarioEconomia"
+  "id" | "schoolId" | "isDiretor" | "isSubChefe" | "filiaisChefiadas" | "mercurioId" | "isSecretarioEscolastica" | "isSecretarioEconomia" | "mercurioAtivo"
 >;
 
 /** Filiais em que a pessoa gere todas as oportunidades e se ela, como responsável, pode cadastrar na própria. */

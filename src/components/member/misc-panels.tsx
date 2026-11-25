@@ -350,40 +350,62 @@ export function VolunteerPanel({ memberId }: { memberId: string }) {
   );
 }
 
+// Perguntas só sobre o que está no ar (revisão de 25/11/2026, pedido do usuário). Sem Transparência financeira
+// (em construção, escondida) e sem a senha pelo CPF (descontinuada: o login é o da conta Nova Acrópole).
 const FAQ: { pergunta: string; resposta: string }[] = [
   {
-    pergunta: "Como funciona o débito automático (Pix Automático)?",
+    pergunta: "Como entro no Portal?",
     resposta:
-      'Na tela "Situação da Contribuição", ative o débito automático e autorize uma vez (pagando o primeiro QR code). A partir daí, sua contribuição é cobrada sozinha todo mês, sem precisar abrir o Portal de novo.',
-  },
-  {
-    pergunta: "Como recarrego minha carteira Fortuna?",
-    resposta: 'Pelo menu "Adicionar Créditos" no Portal, ou aproveitando o pagamento da contribuição (o Portal sugere recarregar junto).',
+      'Toque em "Entrar com a conta Nova Acrópole" e use o e-mail cadastrado na secretaria. Se for a primeira vez, toque em "Cadastre-se" na tela da conta e use esse mesmo e-mail. Também dá para entrar com o Google, se ele for o mesmo e-mail.',
   },
   {
     pergunta: "Esqueci minha senha, e agora?",
-    resposta:
-      "A senha inicial são os 6 primeiros números do seu CPF. Se você já trocou e não lembra mais, fale com a secretaria da escola pra redefinir.",
+    resposta: 'Na tela de login da conta Nova Acrópole, toque em "Esqueci a senha": chega um link no seu e-mail. Se o e-mail cadastrado estiver errado, fale com a secretaria.',
   },
   {
-    pergunta: "Como baixo o comprovante de uma contribuição paga?",
-    resposta: 'Em "Situação da Contribuição", clique no mês já pago (verde) e depois em "Baixar PDF".',
+    pergunta: "Como pago a contribuição?",
+    resposta: 'Em "Pagamentos", toque em "Pagar agora": o Pix aparece na hora. Copie o código, cole no app do banco em Pix Copia e Cola e confirme. Dá para pagar no cartão também.',
   },
   {
     pergunta: "Posso pagar com cartão de crédito?",
-    resposta: "Sim — ao gerar a cobrança, escolha Cartão de Crédito em vez de PIX. Em algumas escolas o valor fica um pouco maior, cobrindo a taxa do cartão; a tela de pagamento avisa quando for o caso.",
+    resposta: "Sim: ao gerar a cobrança, escolha Cartão de Crédito em vez de Pix. Em algumas escolas o valor fica um pouco maior, cobrindo a taxa do cartão; a tela avisa quando for o caso.",
+  },
+  {
+    pergunta: "Como funciona o débito automático (Pix Automático)?",
+    resposta:
+      'Em "Pagamentos", ative o débito automático e autorize uma vez, pagando o primeiro QR code. A partir daí a contribuição é cobrada sozinha todo mês. Dá para desligar quando quiser. Disponível nas escolas em que a direção liberou.',
+  },
+  {
+    pergunta: "Como baixo o comprovante de uma contribuição paga?",
+    resposta: 'Em "Pagamentos", toque no mês já pago (verde) e depois em "Baixar PDF". A declaração anual fica em "Comprovante do ano".',
+  },
+  {
+    pergunta: "Como recarrego minha carteira Fortuna?",
+    resposta: 'Em "Pagamentos", toque em "Carteira Fortuna" e depois em "Adicionar créditos". O Pix cai na carteira em instantes e você paga o café da escola pela carteirinha ou pelo nome.',
   },
   {
     pergunta: "Como me inscrevo em um evento da escola?",
-    resposta: 'Na Agenda, encontre o evento e toque em "Inscreva-se". Eventos pagos geram um PIX na hora; gratuitos confirmam na hora.',
+    resposta: 'Em "Agenda & Eventos", abra o evento e toque em "Inscrever-se". Eventos pagos geram um Pix na hora; os gratuitos confirmam na hora. Você pode colocar os eventos na agenda do seu celular em "Eventos na sua agenda".',
+  },
+  {
+    pergunta: "Para que serve a carteirinha digital?",
+    resposta: "Ela identifica você na escola e no café: o voluntário lê o QR code e lança o consumo na sua carteira Fortuna. Fica em Carteirinha, no cartão do topo.",
+  },
+  {
+    pergunta: "Meus dados estão errados. Como corrijo?",
+    resposta: 'Em "Meus dados", toque em "Corrigir" ao lado do contato ou do endereço: a alteração vale na hora e atualiza o cadastro da escola. Nome e data de nascimento mudam só pela secretaria, com documento.',
   },
   {
     pergunta: "O que é o GAF?",
-    resposta: "O Grupo de Acompanhamento Filosófico é um espaço de apoio na jornada filosófica, com encontros e acompanhamento por instrutores.",
+    resposta: "O Grupo de Acompanhamento Filosófico é um espaço de apoio na jornada filosófica, com encontros e acompanhamento por instrutores. Peça para participar no cartão GAF, quando a sua escola liberar.",
   },
   {
-    pergunta: "O que é a Transparência Financeira?",
-    resposta: "Mostra, mês a mês, de onde vem e pra onde vai o dinheiro da escola — contribuições, eventos, despesas por categoria e mais.",
+    pergunta: "Como instalo o app no celular?",
+    resposta: 'No Android, toque em "Baixar o app" no início do Portal e instale o arquivo. No iPhone, abra o Portal no Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início".',
+  },
+  {
+    pergunta: "Como ativo ou desligo as notificações?",
+    resposta: 'Aqui mesmo, em "Notificações neste aparelho", logo abaixo. Elas avisam de eventos, encontros, contribuição e respostas da secretaria.',
   },
 ];
 

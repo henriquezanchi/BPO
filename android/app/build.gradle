@@ -10,9 +10,9 @@ android {
         applicationId "br.org.acropole.portal"
         minSdk 21
         targetSdk 35
-        versionCode 4
-        versionName "1.3"
-        manifestPlaceholders = [host: HOST, url: "https://" + HOST + "/portal?apk=4"] // ?apk=<versionCode>: o site guarda e avisa quando há versão nova (src/lib/app-android.ts)
+        versionCode 5
+        versionName "1.4"
+        manifestPlaceholders = [host: HOST, url: "https://" + HOST + "/portal?apk=5"] // ?apk=<versionCode>: o site guarda e avisa quando há versão nova (src/lib/app-android.ts)
         resValue "string", "asset_statements", '[{\\"relation\\": [\\"delegate_permission/common.handle_all_urls\\"], \\"target\\": {\\"namespace\\": \\"web\\", \\"site\\": \\"https://' + HOST + '\\"}}]'
     }
     buildTypes { release { minifyEnabled false } }

@@ -1,10 +1,11 @@
 "use client";
 
+import { RecorteFoto } from "@/components/member/recorte-foto";
 import { definirApelido } from "@/lib/actions/apelido-actions";
 import { removerAvatar, uploadAvatar } from "@/lib/actions/avatar-actions";
 import { getSolicitacaoContatoPendente, meusPedidosDeCorrecao, solicitarAlteracaoContato, updateMemberAddress } from "@/lib/actions/member-actions";
 import { ROTULO_SITUACAO_PEDIDO, type SituacaoPedido } from "@/lib/pedidos-correcao";
-import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Loader2, Pencil, Trash2, Upload, UserRound } from "lucide-react";
+import { AlertTriangle, Camera, CheckCircle2, ChevronRight, Clock, Loader2, Pencil, Trash2, Upload, UserRound } from "lucide-react";
 import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
@@ -75,43 +76,31 @@ function MeusPedidos({ memberId }: { memberId: string }) {
   );
 }
 
-/**
- * Reduz a foto no aparelho antes de enviar (25/11/2026): a foto original do celular tem 3 a 8 MB e estourava o limite de
- * corpo das ações do servidor, que em produção só mostrava "erro inesperado". Sai um JPEG de no máximo 640 px, uns
- * 60 KB. Também converte HEIC/outros formatos que o navegador consiga abrir. Se o navegador não conseguir, vai o original.
- */
-async function reduzirFoto(file: File): Promise<File> {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const lado = 640;
-    const escala = Math.min(1, lado / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * escala);
-    canvas.height = Math.round(bitmap.height * escala);
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
-    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.85));
-    if (!blob) return file;
-    return new File([blob], "foto.jpg", { type: "image/jpeg" });
-  } catch {
-    return file;
-  }
-}
+const BOTAO_FOTO =
+  "inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 min-h-10 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800";
 
 /** Foto de perfil — pedido do usuário 2026-09-30: deixa o Portal mais pessoal e ajuda a diretoria a reconhecer quem é quem. */
 function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; avatarUrl: string | null }) {
   const [avatarUrl, setAvatarUrl] = useState(inicial);
   const [isPending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
+  // Foto escolhida (câmera ou galeria) esperando o enquadramento (25/11/2026).
+  const [paraRecortar, setParaRecortar] = useState<File | null>(null);
 
-  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleEscolha(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = ""; // permite escolher o mesmo arquivo de novo
     if (!file) return;
     setErro(null);
+    setParaRecortar(file);
+  }
+
+  function enviar(file: File) {
+    setParaRecortar(null);
     startTransition(async () => {
       try {
         const formData = new FormData();
-        formData.append("file", await reduzirFoto(file));
+        formData.append("file", file);
         const res = await uploadAvatar(memberId, formData);
         if (res.erro) setErro(res.erro);
         else setAvatarUrl(res.avatarUrl);
@@ -144,10 +133,18 @@ function AvatarUploader({ memberId, avatarUrl: inicial }: { memberId: string; av
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 min-h-10 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-          {isPending ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} {avatarUrl ? "Trocar foto" : "Adicionar foto"}
-          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={isPending} />
-        </label>
+        {/* Câmera e galeria separadas (25/11/2026): capture="user" abre a câmera da frente no celular. */}
+        <div className="flex flex-wrap gap-1.5">
+          <label className={BOTAO_FOTO}>
+            {isPending ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />} Tirar foto
+            <input type="file" accept="image/*" capture="user" className="hidden" onChange={handleEscolha} disabled={isPending} />
+          </label>
+          <label className={BOTAO_FOTO}>
+            <Upload size={12} /> {avatarUrl ? "Trocar pela galeria" : "Da galeria"}
+            <input type="file" accept="image/*" className="hidden" onChange={handleEscolha} disabled={isPending} />
+          </label>
+        </div>
+        {paraRecortar && <RecorteFoto arquivo={paraRecortar} aoConfirmar={enviar} aoCancelar={() => setParaRecortar(null)} />}
         {avatarUrl && (
           <button type="button" onClick={handleRemover} disabled={isPending} className="inline-flex w-fit items-center gap-1 text-[11px] text-gray-400 hover:text-na-danger">
             <Trash2 size={11} /> Remover foto

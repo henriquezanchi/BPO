@@ -7,6 +7,8 @@ export const dynamic = "force-dynamic";
 const semCache = { "Cache-Control": "no-store" };
 
 function origem(req: Request) {
+  // 25/11/2026: endereço fixo do Portal quando configurado; Host/X-Forwarded-Host vêm do cliente e entrariam no QR.
+  if (process.env.PORTAL_URL) return process.env.PORTAL_URL.replace(/\/+$/, "");
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "portal-na-one.vercel.app";
   return `${req.headers.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`;
 }

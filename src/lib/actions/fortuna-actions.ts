@@ -40,11 +40,32 @@ export async function getFortunaBalancesForDirector(schoolId: string): Promise<F
   return { saldoConsolidado, saldosPorMembro };
 }
 
+/**
+ * Filiais do Fortuna que a escola usa (25/11/2026). School não guarda o id da filial no Fortuna, então ele é
+ * deduzido do que o Portal já sabe: as recargas feitas por gente da escola e a filial "de casa" dos clientes já
+ * vinculados (até 5 consultas). Vazio = escola ainda sem nenhum vínculo: o primeiro vínculo é aceito e passa a
+ * servir de referência pros seguintes.
+ */
+async function filiaisFortunaDaEscola(schoolId: string): Promise<Set<number>> {
+  const filiais = new Set<number>();
+  for (const r of await db.fortunaTopUpCharge.findMany({ where: { member: { schoolId }, status: "pago" }, select: { branchId: true }, distinct: ["branchId"] })) filiais.add(r.branchId);
+  const vinculados = await db.member.findMany({ where: { schoolId, fortunaClientId: { not: null } }, select: { fortunaClientId: true }, take: 5 });
+  for (const c of await Promise.all(vinculados.map((m) => fortunaGetClient(m.fortunaClientId!).catch(() => null)))) if (c) filiais.add(c.branch.id);
+  return filiais;
+}
+
+/** O cliente é da filial se ela é a sua "de casa" ou se ele já tem saldo nela. */
+function clienteDaFilial(c: FortunaClient, filiais: Set<number>) {
+  return !filiais.size || filiais.has(c.branch.id) || c.balance.some((b) => filiais.has(b.branchId));
+}
+
 /** Busca no Fortuna por nome — só pra RESOLVER manualmente qual fortunaClientId vincular (mesma cautela do script scripts/link-fortuna-clients.ts: confirmar por e-mail/telefone antes de vincular, nunca confiar só no nome). */
 export async function buscarClientesFortunaPorNome(schoolId: string, nome: string): Promise<FortunaClient[]> {
   await requireArea(schoolId, "cafe");
   if (nome.trim().length < 3) return [];
-  return fortunaSearchClientsByName(nome.trim());
+  // 25/11/2026: a busca do Fortuna é na rede inteira; aqui só aparecem os clientes da filial da escola.
+  const [clientes, filiais] = await Promise.all([fortunaSearchClientsByName(nome.trim()), filiaisFortunaDaEscola(schoolId)]);
+  return clientes.filter((c) => clienteDaFilial(c, filiais));
 }
 
 export async function vincularMembroFortuna(schoolId: string, memberId: string, fortunaClientId: number) {
@@ -52,6 +73,9 @@ export async function vincularMembroFortuna(schoolId: string, memberId: string, 
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
   if (member.schoolId !== schoolId) throw new Error("Membro não pertence a esta escola.");
   if (!Number.isInteger(fortunaClientId) || fortunaClientId <= 0) throw new Error("Cliente do Fortuna inválido.");
+  // 25/11/2026: nunca vincular alguém daqui ao cliente de outra filial (o saldo seria de outra pessoa, em outra escola).
+  const [cliente, filiais] = await Promise.all([fortunaGetClient(fortunaClientId), filiaisFortunaDaEscola(schoolId)]);
+  if (!clienteDaFilial(cliente, filiais)) throw new Error("Este cliente do Fortuna é de outra filial.");
   // Um cliente do Fortuna é de uma pessoa só: senão a recarga de um cairia no saldo de outro.
   if (await db.member.count({ where: { fortunaClientId, id: { not: memberId } } })) throw new Error("Este cliente do Fortuna já está vinculado a outra pessoa.");
 

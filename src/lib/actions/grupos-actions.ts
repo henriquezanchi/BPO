@@ -442,13 +442,15 @@ export async function decidirPedidoGaf(pedidoId: string, aceitar: boolean, grupo
     const pedido = await db.gafRequest.findUnique({ where: { id: pedidoId }, select: { memberId: true, classGroupId: true, member: { select: { schoolId: true } } } });
     if (!pedido) throw new GrupoErro("Pedido não encontrado (talvez já respondido).");
     const grupoId = pedido.classGroupId ?? grupoEscolhido ?? null;
+    // 25/11/2026: o grupo vem do cliente; antes de valer como autorização (coordena), precisa ser um GAF da escola
+    // do pedido — senão quem coordena qualquer grupo de outra filial recusaria pedidos daqui.
+    const g = grupoId ? await db.classGroup.findUnique({ where: { id: grupoId }, select: { tipo: true, schoolId: true, permiteAlunos: true, arquivadoEm: true } }) : null;
+    if (grupoId && (!g || g.tipo !== "GAF" || g.arquivadoEm || g.schoolId !== pedido.member.schoolId)) throw new GrupoErro("GAF inválido para esta pessoa.");
     const adminFilial = await administra(m, pedido.member.schoolId);
     const coordena = grupoId ? (await papelNoGrupo(m, grupoId)).podeGerir : false;
     if (!adminFilial && !coordena) throw new GrupoErro("Você não pode responder este pedido.");
     if (aceitar) {
-      if (!grupoId) throw new GrupoErro("Escolha o GAF.");
-      const g = await db.classGroup.findUnique({ where: { id: grupoId }, select: { tipo: true, schoolId: true, permiteAlunos: true, arquivadoEm: true } });
-      if (!g || g.tipo !== "GAF" || g.arquivadoEm || g.schoolId !== pedido.member.schoolId) throw new GrupoErro("GAF inválido para esta pessoa.");
+      if (!grupoId || !g) throw new GrupoErro("Escolha o GAF.");
       const motivo = await candidatoElegivel("GAF", g.schoolId, g.permiteAlunos, pedido.memberId);
       if (motivo) throw new GrupoErro(motivo);
       await db.classMembership.createMany({ data: [{ classGroupId: grupoId, memberId: pedido.memberId, role: "aluno" }], skipDuplicates: true });
