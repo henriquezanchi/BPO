@@ -30,6 +30,9 @@ export const metadata: Metadata = {
 
 // Cor da barra do sistema no celular (PWA instalado e navegador).
 export const viewport: Viewport = {
+  // Borda a borda no app e no PWA: o conteúdo passa por trás da barra de gestos do celular, e o espaço é devolvido
+  // com env(safe-area-inset-bottom) (globals.css e as barras fixas).
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#086357" },
     { media: "(prefers-color-scheme: dark)", color: "#030712" },

@@ -1,2 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources><color name="verde">#086357</color><color name="branco">#FFFFFF</color></resources>
+<resources><color name="verde">#086357</color><color name="branco">#FFFFFF</color><color name="fundo_claro">#F4F6F8</color><color name="fundo_escuro">#030712</color></resources>
