@@ -417,7 +417,7 @@ export function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-      <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 p-5 dark:border-gray-800">
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 p-4 sm:gap-3 sm:p-5 dark:border-gray-800">
         <div className="relative min-w-[200px] flex-1">
           <Search size={14} className="absolute top-3 left-3 text-gray-400" />
           <input
@@ -458,8 +458,59 @@ export function MembrosTab({ schoolId, data, filtroInicial }: { schoolId: string
             </option>
           ))}
         </select>
+        {/* Ordem no celular (a tabela com cabeçalhos clicáveis só aparece a partir de md). */}
+        <select
+          value={`${ordenarPor}:${ordemAsc ? "asc" : "desc"}`}
+          onChange={(e) => {
+            const [campo, ordem] = e.target.value.split(":") as [OrdenacaoMembros, string];
+            setOrdenarPor(campo);
+            setOrdemAsc(ordem === "asc");
+          }}
+          aria-label="Ordenar por"
+          className="rounded-lg border border-gray-300 bg-white py-2 px-3 text-sm text-gray-900 md:hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+        >
+          <option value="nome:asc">Nome A–Z</option>
+          <option value="atrasadas:desc">Mais atrasadas primeiro</option>
+          <option value="valor:desc">Maior valor primeiro</option>
+          <option value="status:asc">Por status</option>
+        </select>
       </div>
-      <div className="overflow-x-auto">
+      {/* Celular: um cartão por membro (a tabela de 6 colunas não cabe em 390px). */}
+      <ul className="divide-y divide-gray-100 md:hidden dark:divide-gray-800">
+        {filtrados.map((m) => (
+          <li key={m.id}>
+            <button
+              type="button"
+              onClick={() => setMembroSelecionado({ id: m.id, name: m.name })}
+              className="flex w-full items-start gap-3 px-4 py-3 text-left active:bg-gray-50 dark:active:bg-gray-800/60"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                {m.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- vem do Supabase Storage, não é um asset local
+                  <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-[12px] font-bold text-gray-400 dark:text-gray-500">{m.name.charAt(0)}</span>
+                )}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 text-[14px] leading-tight font-semibold text-gray-900 dark:text-gray-100">{m.name}</span>
+                  <span className="shrink-0 text-[14px] font-bold tabular-nums text-gray-900 dark:text-gray-100">{formatBRL(m.compositionTotal)}</span>
+                </span>
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${STATUS_ESTILO[statusEfetivo(m)] ?? STATUS_ESTILO.em_dia}`}>{STATUS_LABEL[statusEfetivo(m)] ?? statusEfetivo(m)}</span>
+                  {m.overdueCount > 0 && <span className="font-semibold text-na-danger dark:text-red-400">{m.overdueCount} em atraso</span>}
+                  <span>Matrícula {m.registrationNo ?? "—"}</span>
+                </span>
+                {m.compositionLabels.length > 0 && (
+                  <span className="mt-1 line-clamp-2 block text-[11px] leading-snug text-gray-500 dark:text-gray-400">{m.compositionLabels.join(" · ")}</span>
+                )}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">

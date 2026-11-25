@@ -4,8 +4,8 @@ import { QuestionarioEditor } from "@/components/avaliacao/questionario-editor";
 import { getAuthenticatedMember } from "@/lib/auth";
 import { AbasEscolastica } from "@/components/escolastica/abas-escolastica";
 import { escolasQueGereAvaliacao, questionarioDaFilial, encerrarVencidas } from "@/lib/avaliacao";
+import { SeletorFilial } from "@/components/ui/seletor-filial";
 import { db } from "@/lib/db";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -55,19 +55,7 @@ export default async function GestaoAvaliacaoPage(props: { searchParams: Promise
         Os alunos só veem a avaliação enquanto houver uma rodada aberta. Cada aluno avalia os instrutores da própria turma, segundo o Mercúrio. As respostas não guardam quem respondeu.
       </p>
       {escolas.length > 1 && (
-        <nav className="-mt-4 flex flex-wrap gap-1.5">
-          {escolas.map((e) => (
-            <Link
-              key={e.id}
-              href={`/escolastica/avaliacao?filial=${e.id}`}
-              className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
-                e.id === escola.id ? "border-na-green bg-na-green/10 text-na-green-dark dark:text-emerald-400" : "border-gray-300 text-gray-600 dark:border-gray-700 dark:text-gray-400"
-              }`}
-            >
-              {e.name.replace(/^Nova Acrópole\s*-\s*/i, "")}
-            </Link>
-          ))}
-        </nav>
+        <SeletorFilial escolas={escolas} atual={escola.id} base="/escolastica/avaliacao" className="-mt-4" />
       )}
 
       <CampanhasPanel

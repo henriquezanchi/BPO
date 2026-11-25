@@ -1,4 +1,5 @@
 import { CartaoGrupo } from "@/components/admin/grupos-admin";
+import { ICONES_DESTINOS, SECOES_DESTINOS } from "@/components/trabalho/icones-destinos";
 import { ShellTrabalho } from "@/components/trabalho/shell-trabalho";
 import { temAcessoVoluntario } from "@/lib/acesso-voluntario";
 import { destinosDaPessoa } from "@/lib/area-trabalho";
@@ -33,12 +34,16 @@ export default async function VoluntarioPage() {
   const podeCriarGdve = fv && acesso;
   const secoes = SECOES.map((s) => ({ ...s, grupos: grupos.filter((g) => s.tipos.includes(g.tipo)) })).filter((s) => s.grupos.length > 0 || (s.titulo === "GDVE" && podeCriarGdve));
   const atalhos = destinos.filter((d) => d.href !== "/voluntario");
+  // Atalhos na mesma ordem e nos mesmos grupos do menu (celular: mosaico de 2 colunas em vez de uma lista comprida).
+  const grupos_atalhos = SECOES_DESTINOS.map((secao) => ({ secao, itens: atalhos.filter((d) => d.secao === secao) })).filter((g) => g.itens.length > 0);
   const primeiroNome = member.name.split(" ")[0].replace(/^./, (c) => c.toUpperCase()).replace(/(?<=.).+/, (r) => r.toLowerCase());
+  const filial = member.school.name.replace(/^Nova Acrópole\s*-\s*/i, "");
 
   return (
     <ShellTrabalho>
       <header>
         <h1 className="text-xl font-black text-na-green-dark lg:text-2xl dark:text-emerald-400">Olá, {primeiroNome}</h1>
+        <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">{filial}</p>
         {member.cargos.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {member.cargos.map((cargo) => (
@@ -93,26 +98,36 @@ export default async function VoluntarioPage() {
         </section>
       ))}
 
-      {atalhos.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-[12px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">O que você pode acessar</h2>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {atalhos.map((d) => (
-              <Link
-                key={d.href}
-                href={d.href}
-                className="group flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-na-green/50 dark:border-gray-700 dark:bg-gray-900"
-              >
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-semibold text-gray-900 dark:text-gray-100">{d.rotulo}</span>
-                  <span className="block truncate text-[11px] text-gray-500 dark:text-gray-400">{d.descricao}</span>
-                </span>
-                <ChevronRight size={15} className="shrink-0 text-gray-300 group-hover:text-na-green" />
-              </Link>
-            ))}
+      {grupos_atalhos.map((g) => (
+        <section key={g.secao} className="flex flex-col gap-3">
+          <h2 className="text-[12px] font-bold tracking-wide text-gray-500 uppercase dark:text-gray-400">{g.secao}</h2>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+            {g.itens.map((d) => {
+              const Icone = ICONES_DESTINOS[d.icone];
+              return (
+                <Link
+                  key={d.href}
+                  href={d.href}
+                  className="group relative flex min-h-[7.5rem] flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-3.5 transition hover:border-na-green/50 hover:shadow-sm active:bg-na-green-light/40 dark:border-gray-700 dark:bg-gray-900"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-na-green-light text-na-green-dark transition group-hover:bg-na-green group-hover:text-white dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <Icone size={18} />
+                  </span>
+                  {!!d.pendentes && (
+                    <span className="absolute top-3 right-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-na-danger px-1.5 text-[11px] font-black text-white" aria-label={`${d.pendentes} aguardando`}>
+                      {d.pendentes}
+                    </span>
+                  )}
+                  <span className="mt-auto min-w-0">
+                    <span className="block text-[13px] leading-tight font-bold text-gray-900 dark:text-gray-100">{d.rotulo}</span>
+                    <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-gray-500 dark:text-gray-400">{d.descricao}</span>
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </section>
-      )}
+      ))}
     </ShellTrabalho>
   );
 }

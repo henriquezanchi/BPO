@@ -1,35 +1,15 @@
 "use client";
 
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import type { Destino, IconeDestino } from "@/lib/area-trabalho";
-import { ArrowLeft, Award, Banknote, CalendarClock, CalendarDays, ClipboardCheck, Coffee, Crown, FileSignature, Globe2, GraduationCap, HandHeart, Home, KeyRound, Menu, MessageSquareText, Settings, Ticket, Users, X, DoorOpen } from "lucide-react";
+import type { Destino } from "@/lib/area-trabalho";
+import { ArrowLeft, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ICONES_DESTINOS as ICONES, SECOES_DESTINOS as SECOES } from "./icones-destinos";
 
-const ICONES: Record<IconeDestino, typeof Home> = {
-  inicio: Home,
-  instrutor: GraduationCap,
-  grupos: Users,
-  escolastica: CalendarClock,
-  avaliacao: ClipboardCheck,
-  economia: Banknote,
-  eventos: Ticket,
-  cafe: Coffee,
-  direcao: Crown,
-  admin: Settings,
-  acessos: KeyRound,
-  nacional: Globe2,
-  termo: FileSignature,
-  calendario: CalendarDays,
-  salas: DoorOpen,
-  aberturas: GraduationCap,
-  secretarias: Users,
-  oportunidades: HandHeart,
-  trajetoria: Award,
-  sugestoes: MessageSquareText,
-};
-const SECOES: Destino["secao"][] = ["Meu trabalho", "Secretarias", "Gestão da filial", "Nacional"];
+/** "LUIZ HENRIQUE ZANCHI" → "Luiz Henrique Zanchi" (o Mercúrio guarda em caixa alta). */
+const nomeProprio = (n: string) => n.toLowerCase().replace(/(^|\s)(\S)/g, (_, e, c) => e + c.toUpperCase()).replace(/\b(D[aeo]s?)\b/g, (m) => m.toLowerCase());
 
 /** Destino ativo: o mais específico cujo endereço começa a página atual (/escolastica/avaliacao vence /escolastica). */
 function ativo(destinos: Destino[], caminho: string, forcado?: string) {
@@ -56,7 +36,7 @@ function Lista({ destinos, atual, aoEscolher }: { destinos: Destino[]; atual: st
                   href={d.href}
                   onClick={aoEscolher}
                   aria-current={marcado ? "page" : undefined}
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold transition ${
+                  className={`flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold transition lg:min-h-9 ${
                     marcado ? "bg-na-green text-white" : "text-gray-700 hover:bg-white dark:text-gray-300 dark:hover:bg-gray-900"
                   }`}
                 >
@@ -104,7 +84,7 @@ export function NavTrabalho({ destinos, nome, filial, forcado }: { destinos: Des
   const cabecalho = (
     <div>
       <p className="text-[11px] font-bold tracking-wide text-na-gold-dark uppercase dark:text-na-gold">Área do Voluntário</p>
-      <p className="mt-0.5 truncate text-[13px] font-bold text-gray-900 dark:text-gray-100">{nome}</p>
+      <p className="mt-0.5 truncate text-[13px] font-bold text-gray-900 dark:text-gray-100">{nomeProprio(nome)}</p>
       <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{filial}</p>
     </div>
   );
@@ -120,7 +100,7 @@ export function NavTrabalho({ destinos, nome, filial, forcado }: { destinos: Des
 
       {/* Celular */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-gray-200 bg-na-bg/95 px-4 py-3 backdrop-blur lg:hidden dark:border-gray-800 dark:bg-gray-950/95">
-        <button onClick={() => setAberto(true)} aria-label="Abrir menu" aria-expanded={aberto} className="flex items-center gap-2 rounded-lg py-1 pr-2 text-[14px] font-bold text-gray-900 dark:text-gray-100">
+        <button onClick={() => setAberto(true)} aria-label="Abrir menu" aria-expanded={aberto} className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg py-1 pr-2 text-[14px] font-bold text-gray-900 dark:text-gray-100">
           <Menu size={20} /> {rotuloAtual}
           {destinos.some((d) => d.pendentes) && <span className="h-2 w-2 rounded-full bg-na-danger" aria-label="Há pedidos aguardando" />}
         </button>
@@ -129,10 +109,10 @@ export function NavTrabalho({ destinos, nome, filial, forcado }: { destinos: Des
       {aberto && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu da Área do Voluntário">
           <button className="absolute inset-0 bg-black/40" aria-label="Fechar menu" onClick={() => setAberto(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col gap-6 overflow-y-auto bg-na-bg p-5 shadow-xl dark:bg-gray-950">
+          <div className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col gap-6 overflow-y-auto bg-na-bg p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl dark:bg-gray-950">
             <div className="flex items-start justify-between gap-2">
               {cabecalho}
-              <button onClick={() => setAberto(false)} aria-label="Fechar menu" className="rounded-lg p-1 text-gray-500">
+              <button onClick={() => setAberto(false)} aria-label="Fechar menu" className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500">
                 <X size={20} />
               </button>
             </div>

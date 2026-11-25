@@ -2,9 +2,9 @@
 
 import { encerrarOportunidade, responderInteresse, salvarOportunidade, type DadosOportunidade } from "@/lib/actions/oportunidades-actions";
 import { formatDateBR, whatsappHref } from "@/lib/format";
+import { SeletorFilial } from "@/components/ui/seletor-filial";
 import { AREAS_OPORTUNIDADE, quandoDaOportunidade } from "@/lib/oportunidades-comum";
 import { CalendarClock, Check, Clock, HandHeart, Loader2, MessageCircle, Pencil, Plus, Users, X } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -44,17 +44,7 @@ export function OportunidadesGestao(props: {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       {props.escolas.length > 1 && (
-        <nav className="flex flex-wrap gap-1.5" aria-label="Filial">
-          {props.escolas.map((e) => (
-            <Link
-              key={e.id}
-              href={`/voluntario/oportunidades?filial=${e.id}`}
-              className={`rounded-full border px-3 py-1 text-[12px] font-medium ${e.id === props.schoolId ? "border-na-green bg-na-green-light text-na-green-dark dark:bg-emerald-950/40 dark:text-emerald-300" : "border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300"}`}
-            >
-              {e.name.replace(/^Nova Acrópole - /, "")}
-            </Link>
-          ))}
-        </nav>
+        <SeletorFilial escolas={props.escolas} atual={props.schoolId} base="/voluntario/oportunidades" />
       )}
 
       {props.podeCadastrar &&
