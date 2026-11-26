@@ -1495,7 +1495,7 @@ async function irParaCalendario(page: Page, filialLabelRegex: RegExp, nomeCaixa:
 }
 
 /** Abre (ou entra em) o dia/caixa — devolve o frame de lançamento e se está editável (não travado/fechado). */
-async function abrirDia(page: Page, filialLabelRegex: RegExp, nomeCaixa: string, dataDDMMAAAA: string): Promise<{ frame: Frame; editavel: boolean }> {
+export async function abrirDia(page: Page, filialLabelRegex: RegExp, nomeCaixa: string, dataDDMMAAAA: string): Promise<{ frame: Frame; editavel: boolean }> {
   let frame = await irParaCalendario(page, filialLabelRegex, nomeCaixa, dataDDMMAAAA);
 
   const dataComTraco = dataDDMMAAAA.replace(/\//g, "-");

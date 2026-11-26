@@ -16,6 +16,7 @@ import { mensagemErroAmigavel } from "@/lib/friendly-error";
 import type { FortunaBalanceView } from "@/lib/member-data";
 import type { ContributionMonthlyStatus } from "@prisma/client";
 import { gerarPdfRecibo } from "@/lib/recibo-pdf";
+import { pendenciaVencida } from "@/lib/pendencias-comum";
 import { situacaoDoMes } from "@/lib/situacao-contribuicao";
 import { AlertTriangle, Coffee, CreditCard, Download, ExternalLink, HeartHandshake, Loader2, QrCode, RefreshCw, Zap } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
@@ -97,6 +98,10 @@ export function ContributionStatusPanel({
   // Pendências (26/11/2026): as fichas ATRASADAS do Mercúrio, de qualquer ano, ainda em aberto. Paga-se na ordem.
   const pendencias = position.filter((row) => row.open && row.official === "atrasado");
   const totalPendencias = pendencias.length * compositionTotal + pendenciasMercurio.reduce((s, p) => s + p.valor, 0);
+  // As vencidas entram no recibo do mês mais antigo em aberto (Mercúrio inclui sozinho): o Portal cobra junto.
+  const pendenciasVencidas = pendenciasMercurio.filter((p) => pendenciaVencida(p));
+  const somaVencidas = pendenciasVencidas.reduce((s, p) => s + p.valor, 0);
+  const pendenciasDoMes = (y: number, m: number) => (firstOpen && firstOpen.year === y && firstOpen.month === m) || !firstOpen ? pendenciasVencidas : [];
   const received = position.filter(row=>row.received);
   const latestSync = monthlyStatus.reduce<Date | null>((latest,row)=>!latest || new Date(row.syncedAt)>latest ? new Date(row.syncedAt) : latest, null);
   const years = [...new Set([new Date().getFullYear(), ...monthlyStatus.map(item=>item.year), ...payments.map(item=>item.referenceYear)])].sort((a,b)=>a-b);
@@ -159,7 +164,8 @@ export function ContributionStatusPanel({
         memberId={memberId}
         year={porMes.get(mesPagamento)?.year ?? selectedYear}
         mes={mesPagamento}
-        amount={compositionTotal}
+        amount={compositionTotal + pendenciasDoMes(porMes.get(mesPagamento)?.year ?? selectedYear, mesPagamento).reduce((s, p) => s + p.valor, 0)}
+        pendenciasIncluidas={pendenciasDoMes(porMes.get(mesPagamento)?.year ?? selectedYear, mesPagamento)}
         podeRecarregarFortuna={fortunaBalances.length > 0}
         cartaoComTaxa={cartaoComTaxa}
         onConfirmed={() => setConfirmedLocally(items=>[...items,{referenceYear:selectedYear,referenceMonth:mesPagamento,status:"pago"}])}
@@ -206,10 +212,15 @@ export function ContributionStatusPanel({
                     <span className="min-w-0 font-semibold text-gray-900 dark:text-gray-100">{p.rubrica}</span>
                     <span className="shrink-0 text-gray-700 tabular-nums dark:text-gray-300">{formatBRL(p.valor)}</span>
                   </div>
-                  <p className="text-[12px] text-gray-500 dark:text-gray-400">{p.descricao ? `${p.descricao} · ` : ""}vence em {p.vencimento} · cobrada junto com a contribuição, na escola</p>
+                  <p className="text-[12px] text-gray-500 dark:text-gray-400">{p.descricao ? `${p.descricao} · ` : ""}vence em {p.vencimento} · {pendenciaVencida(p) ? "entra no pagamento da próxima contribuição" : "entra no recibo quando vencer"}</p>
                 </li>
               ))}
             </ul>
+          )}
+          {!somenteConsulta && !emBreve && pendencias.length === 0 && pendenciasVencidas.length > 0 && firstOpen && (
+            <button type="button" onClick={() => { setSelectedYear(firstOpen.year); setMesPagamento(firstOpen.month); }} className="mt-3 min-h-11 w-full rounded-xl bg-na-green px-4 text-[13px] font-bold text-white">
+              Pagar junto com a contribuição de {MESES[firstOpen.month - 1]}/{firstOpen.year} · {formatBRL(compositionTotal + somaVencidas)}
+            </button>
           )}
           <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Já acertou na escola? O Portal atualiza na próxima sincronização com o Mercúrio.</p>
         </section>
@@ -320,11 +331,14 @@ function RealPaymentScreen({
   cartaoComTaxa,
   onVoltar,
   onConfirmed,
+  pendenciasIncluidas = [],
 }: {
   memberId: string;
   year: number;
   mes: number;
   amount: number;
+  /** Pendências da Tesouraria que entram nesta cobrança (26/11/2026). */
+  pendenciasIncluidas?: { id: string; rubrica: string; descricao: string; valor: number }[];
   podeRecarregarFortuna: boolean;
   cartaoComTaxa: boolean;
   onVoltar: () => void;
@@ -430,6 +444,15 @@ function RealPaymentScreen({
           <p className="mt-2 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
             Pelo Portal, sua contribuição é atualizada assim que o pagamento é confirmado.
           </p>
+        )}
+        {pendenciasIncluidas.length > 0 && (
+          <ul className="mt-2 flex flex-col gap-1 text-left text-[12px] text-gray-600 dark:text-gray-300">
+            <li className="flex justify-between gap-2"><span>Contribuição de {MESES[mes - 1]}/{year}</span><span className="tabular-nums">{formatBRL(amount - pendenciasIncluidas.reduce((s, p) => s + p.valor, 0))}</span></li>
+            {pendenciasIncluidas.map((p) => (
+              <li key={p.id} className="flex justify-between gap-2"><span className="min-w-0">Pendência: {p.rubrica.toLowerCase()}{p.descricao ? ` (${p.descricao})` : ""}</span><span className="shrink-0 tabular-nums">{formatBRL(p.valor)}</span></li>
+            ))}
+            <li className="text-[11px] text-gray-500 dark:text-gray-400">A escola registra a pendência junto com esta contribuição.</li>
+          </ul>
         )}
         {totalCobrado !== amount && (
           <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">

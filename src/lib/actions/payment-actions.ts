@@ -17,6 +17,7 @@ import { cartaoRepassaTaxa } from "@/lib/spread";
 import { requireContributionOrder } from "@/lib/contribution-payment-policy";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { pendenciasNaCobranca } from "@/lib/mercurio/pendencias-mercurio";
 import { formatBRL } from "@/lib/format";
 import { OVERDUE_STATUSES } from "@/lib/member-data";
 import type { PaymentCharge } from "@prisma/client";
@@ -119,8 +120,12 @@ export async function createContributionCharge(
   const memberWasOverdue = OVERDUE_STATUSES.has(member.status);
 
   const itens = await db.contributionCompositionItem.findMany({ where: { memberId } });
-  const valor = itens.reduce((soma, i) => soma + Number(i.amount), 0);
-  if (valor <= 0) throw new Error("Composição da contribuição está vazia — nada a cobrar.");
+  const valorComposicao = itens.reduce((soma, i) => soma + Number(i.amount), 0);
+  if (valorComposicao <= 0) throw new Error("Composição da contribuição está vazia — nada a cobrar.");
+  // Pendências da Tesouraria do Mercúrio (26/11/2026): entram no recibo do mês mais antigo, então entram na cobrança.
+  const pendencias = await pendenciasNaCobranca(member, year, month);
+  const valorPendencias = Math.round(pendencias.reduce((s, p) => s + p.valor, 0) * 100) / 100;
+  const valor = Math.round((valorComposicao + valorPendencias) * 100) / 100;
   const valorBase = valor + fortunaTopUpAmount;
 
   // Pela subconta da filial (regra do usuário 2026-10-25) ou, no piloto, pela conta provisória de Barra do Garças
@@ -141,9 +146,10 @@ export async function createContributionCharge(
 
   const nomeMes = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("pt-BR", { month: "long", timeZone: "UTC" });
   const descricao =
-    fortunaTopUpAmount > 0
-      ? `Contribuição ${nomeMes}/${year} + Recarga Fortuna ${formatBRL(fortunaTopUpAmount)} — ${member.name}`
-      : `Contribuição ${nomeMes}/${year} — ${member.name}`;
+    `Contribuição ${nomeMes}/${year}` +
+    (valorPendencias > 0 ? ` + pendências ${formatBRL(valorPendencias)}` : "") +
+    (fortunaTopUpAmount > 0 ? ` + Recarga Fortuna ${formatBRL(fortunaTopUpAmount)}` : "") +
+    ` — ${member.name}`;
 
   if (metodo === "CREDIT_CARD") {
     const { percentual, fixo } = await asaasGetCreditCardFeeStatus(conta);
