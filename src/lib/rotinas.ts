@@ -20,6 +20,7 @@ export const ROTINAS = {
   "fila-mercurio": { titulo: "Lançamentos no Mercúrio (fila de escrita)", intervaloMin: 10 },
   saude: { titulo: "Verificação de saúde (ponte, Ulisses, Fortuna, Mercúrio)", intervaloMin: 60 },
   "espelho-mercury": { titulo: "Espelho Mercúrio novo → antigo (comparação noturna)", intervaloMin: 24 * 60 },
+  "pendencias-mercurio": { titulo: "Pendências da Tesouraria do Mercúrio (leitura diária)", intervaloMin: 24 * 60 },
 } as const;
 export type NomeRotina = keyof typeof ROTINAS;
 

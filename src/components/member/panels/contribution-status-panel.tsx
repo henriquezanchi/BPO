@@ -59,7 +59,10 @@ export function ContributionStatusPanel({
   emBreve,
   comprovanteAnual = false,
   abrirEmAberto = false,
+  pendenciasMercurio = [],
 }: {
+  /** Pendências registradas na Tesouraria do Mercúrio (lanchonete, biblioteca, dívida antiga, produtos), 26/11/2026. */
+  pendenciasMercurio?: { id: string; vencimento: string; rubrica: string; descricao: string; valor: number }[];
   memberId: string;
   monthlyStatus: ContributionMonthlyStatus[];
   confirmedCharges?: ChargeLedger[];
@@ -93,7 +96,7 @@ export function ContributionStatusPanel({
   const overdue = position.filter(row=>row.overdue);
   // Pendências (26/11/2026): as fichas ATRASADAS do Mercúrio, de qualquer ano, ainda em aberto. Paga-se na ordem.
   const pendencias = position.filter((row) => row.open && row.official === "atrasado");
-  const totalPendencias = pendencias.length * compositionTotal;
+  const totalPendencias = pendencias.length * compositionTotal + pendenciasMercurio.reduce((s, p) => s + p.valor, 0);
   const received = position.filter(row=>row.received);
   const latestSync = monthlyStatus.reduce<Date | null>((latest,row)=>!latest || new Date(row.syncedAt)>latest ? new Date(row.syncedAt) : latest, null);
   const years = [...new Set([new Date().getFullYear(), ...monthlyStatus.map(item=>item.year), ...payments.map(item=>item.referenceYear)])].sort((a,b)=>a-b);
@@ -169,14 +172,16 @@ export function ContributionStatusPanel({
     <div className="text-left">
       {!somenteConsulta && (pixAutomaticoDisponivel || pixAutomaticStatus) && <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />}
 
-      {pendencias.length > 0 && (
+      {(pendencias.length > 0 || pendenciasMercurio.length > 0) && (
         <section aria-label="Pendências financeiras" className="mt-4 rounded-2xl border border-na-danger/30 bg-na-danger-light/40 p-4 dark:border-red-900 dark:bg-red-950/20">
           <div className="flex items-baseline justify-between gap-3">
             <h3 className="flex items-center gap-1.5 text-[15px] font-black text-na-danger-dark dark:text-red-300"><AlertTriangle size={16} /> Pendências</h3>
             <span className="text-[13px] font-bold text-gray-900 tabular-nums dark:text-gray-100">{formatBRL(totalPendencias)}</span>
           </div>
           <p className="mt-0.5 text-[12px] text-gray-600 dark:text-gray-300">
-            {pendencias.length === 1 ? "1 mês em atraso" : `${pendencias.length} meses em atraso`} na Tesouraria da escola. Regularize na ordem, do mais antigo para o mais novo.
+            {pendencias.length > 0
+              ? `${pendencias.length === 1 ? "1 mês em atraso" : `${pendencias.length} meses em atraso`} na Tesouraria da escola. Regularize na ordem, do mais antigo para o mais novo.`
+              : "Registradas pela Tesouraria da sua escola."}
           </p>
           <ul className="mt-3 flex flex-col gap-1.5">
             {pendencias.map((row, i) => (
@@ -193,6 +198,19 @@ export function ContributionStatusPanel({
               </li>
             ))}
           </ul>
+          {pendenciasMercurio.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {pendenciasMercurio.map((p) => (
+                <li key={p.id} className="rounded-xl bg-white px-3 py-2 text-[13px] dark:bg-gray-900">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="min-w-0 font-semibold text-gray-900 dark:text-gray-100">{p.rubrica}</span>
+                    <span className="shrink-0 text-gray-700 tabular-nums dark:text-gray-300">{formatBRL(p.valor)}</span>
+                  </div>
+                  <p className="text-[12px] text-gray-500 dark:text-gray-400">{p.descricao ? `${p.descricao} · ` : ""}vence em {p.vencimento} · cobrada junto com a contribuição, na escola</p>
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Já acertou na escola? O Portal atualiza na próxima sincronização com o Mercúrio.</p>
         </section>
       )}

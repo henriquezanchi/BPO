@@ -5,6 +5,7 @@ import { fusoDaEscola } from "@/lib/atendimentos";
 import { fraseDoDia, hojeNoFuso } from "@/lib/diario";
 import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { escolasQueRecebem, pagamentoLiberado } from "@/lib/conta-provisoria";
+import { pendenciasDoMembro } from "@/lib/mercurio/pendencias-mercurio";
 import { cartaoRepassaTaxa } from "@/lib/spread";
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";
@@ -516,6 +517,8 @@ export async function getMemberDashboard(memberId: string, opcoes: { eventoDoLin
     // Depois de buscar a agenda (que tenta renovar a sessão): sem sessão válida do Ágora, a Agenda oferece reconectar.
     agoraReconectar: await agoraPrecisaReconectar(member.id),
     cobraOnline: escolasQueCobram.has(member.schoolId),
+    // Pendências da Tesouraria do Mercúrio (26/11/2026): o que a escola registrou que a pessoa deve além da contribuição.
+    pendenciasMercurio: await pendenciasDoMembro(member),
     // Pagamento liberado: escrita no Mercúrio ou filial do piloto (conta provisória, 23/11/2026).
     pagamentoLiberado: await pagamentoLiberado(member.school),
     // Taxa do cartão repassada ao aluno ou absorvida pela escola (escolha da Economia, 12/11/2026; lib/spread.ts).

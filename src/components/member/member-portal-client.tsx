@@ -152,6 +152,8 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   const proximoVencimento = calcularProximoVencimento(member.monthlyStatus, dashboard.hoje);
   // Pendências da Tesouraria do Mercúrio (26/11/2026): meses ATRASADOS de qualquer ano ainda em aberto.
   const pendencias = contributionPosition(member.monthlyStatus, member.paymentCharges).filter((r) => r.open && r.official === "atrasado");
+  const pendenciasTesouraria = dashboard.pendenciasMercurio.itens;
+  const totalPendencias = pendencias.length * compositionTotal + pendenciasTesouraria.reduce((s, p) => s + p.valor, 0);
   const t = getDictionary(member.school.language);
   // Asaas/PIX é só Brasil — decisão do usuário 2026-10-15: 1ª versão do
   // Portal em inglês não processa pagamento, só consulta (ver
@@ -195,9 +197,9 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               ? t.home.mensagemAVencer(chamado)
               : `${t.home.ola(chamado)} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
         </p>
-        {pendencias.length > 0 && member.school.language !== "en" && (
+        {(pendencias.length > 0 || pendenciasTesouraria.length > 0) && member.school.language !== "en" && (
           <p className="mt-1 text-[12px] font-semibold text-na-danger-dark dark:text-red-300">
-            Pendências: {pendencias.map((r) => `${MESES_CURTOS[r.month - 1]}/${r.year}`).join(", ")} · {brl(pendencias.length * compositionTotal)}
+            Pendências: {[...pendencias.map((r) => `${MESES_CURTOS[r.month - 1]}/${r.year}`), ...pendenciasTesouraria.map((p) => p.rubrica.toLowerCase())].join(", ")} · {brl(totalPendencias)}
           </p>
         )}
         <p className="mt-1 text-[12px] text-gray-600 dark:text-gray-400">
@@ -735,6 +737,7 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               emBreve={emBreve}
               comprovanteAnual={member.school.language !== "en" && member.school.sistemaRegistro === "mercurio"}
               abrirEmAberto={pagarAgora}
+              pendenciasMercurio={dashboard.pendenciasMercurio.itens}
             />
           )}
           {modal === "fortuna_recarga" && <FortunaTopUpPanel balances={fortunaBalances} memberId={member.id} />}
