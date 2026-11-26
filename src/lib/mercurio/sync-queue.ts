@@ -11,6 +11,19 @@ import type { Prisma } from "@prisma/client";
 import type { MercurioContactChanges, MercurioPersonalChanges } from "./adapter";
 
 /**
+ * A filial do membro tem o robô de escrita no Mercúrio (26/11/2026)? Escrita liberada E rótulo da filial (Mercúrio
+ * antigo) ou Mercury. Sem isso, mudança de composição não pode ir direto: vira pedido para a Economia da filial
+ * lançar à mão (antes o item entrava no Portal, a tarefa do robô falhava e o Portal cobrava um valor que o Mercúrio
+ * não tinha; caso real: Brasília, sugestão "Criança para o Bem").
+ */
+export async function filialComRobo(memberId: string): Promise<boolean> {
+  const m = await db.member.findUnique({ where: { id: memberId }, select: { mercurioId: true, school: { select: { mercurioEscrita: true, mercurioFilialLabel: true, sistemaRegistro: true } } } });
+  if (!m?.mercurioId) return false;
+  if (m.school.sistemaRegistro === "mercury") return true;
+  return m.school.mercurioEscrita && !!m.school.mercurioFilialLabel;
+}
+
+/**
  * Enfileira uma atualização de contato para ser propagada ao Mercúrio.
  * Chamado sempre pelo server action de atualização de cadastro, independente
  * de já sabermos processar a fila de verdade — assim nenhuma alteração feita

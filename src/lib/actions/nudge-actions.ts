@@ -2,7 +2,7 @@
 
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enqueueMercurioCompositionAdd } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioCompositionAdd, filialComRobo } from "@/lib/mercurio/sync-queue";
 import { NUDGE_CATALOGO, type NudgeSuggestion } from "@/lib/nudge-catalog";
 import { revalidatePath } from "next/cache";
 
@@ -128,6 +128,14 @@ export async function responderNudge(memberId: string, suggestionId: string, res
   } else {
     const catalogo = await catalogoDoMembro(memberId, sugestao);
     if (!catalogo) throw new Error("Item de composição não encontrado no catálogo da escola.");
+    if (!(await filialComRobo(memberId))) {
+      // Filial sem robô (26/11/2026): pedido para a Economia incluir no Mercúrio; o item só entra no Portal quando ela
+      // aprovar (e a sincronização com o Mercúrio confirma).
+      await db.compositionChangeRequest.create({
+        data: { memberId, tipo: "inclusao", mercurioGroupId: catalogo.mercurioGroupId, label: catalogo.label, amount: opcao.valor, status: "pendente" },
+      });
+      return { ok: true as const, pedido: true as const };
+    }
     await db.contributionCompositionItem.create({
       data: { memberId, mercurioGroupId: catalogo.mercurioGroupId, label: catalogo.label, amount: opcao.valor, addedViaPortal: true },
     });

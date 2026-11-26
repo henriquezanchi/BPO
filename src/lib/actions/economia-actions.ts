@@ -3,7 +3,7 @@
 import { requireEconomiaOuDirecao } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { avisarSemEsperar } from "@/lib/push";
-import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove, filialComRobo } from "@/lib/mercurio/sync-queue";
 import { revalidatePath } from "next/cache";
 
 /** Solicitações de inclusão de item de composição (ver solicitarItemComposicao em contribution-actions.ts) pendentes de aprovação. */
@@ -32,6 +32,8 @@ export async function aprovarSolicitacaoComposicao(schoolId: string, requestId: 
   const solicitacao = await db.compositionChangeRequest.findUniqueOrThrow({ where: { id: requestId }, include: { member: true } });
   if (solicitacao.member.schoolId !== schoolId) throw new Error("Solicitação não pertence a esta escola.");
   if (solicitacao.status !== "pendente") throw new Error("Solicitação já foi revisada.");
+  // Filial sem robô de escrita (26/11/2026): aprovar significa "a Economia já lançou no Mercúrio"; nada vai para a fila.
+  const comRobo = await filialComRobo(solicitacao.memberId);
 
   if (solicitacao.tipo === "reducao") {
     // Diminuir valor de item incluído pelo Portal (pedido do usuário 2026-10-19): aplica o valor novo e propaga ao Mercúrio.
@@ -41,13 +43,13 @@ export async function aprovarSolicitacaoComposicao(schoolId: string, requestId: 
       db.contributionCompositionItem.update({ where: { id: solicitacao.compositionItemId }, data: { amount: valor } }),
       db.compositionChangeRequest.update({ where: { id: requestId }, data: { status: "aprovado", reviewedAt: new Date() } }),
     ]);
-    await enqueueMercurioCompositionEdit(solicitacao.memberId, solicitacao.mercurioGroupId, valor);
+    if (comRobo) await enqueueMercurioCompositionEdit(solicitacao.memberId, solicitacao.mercurioGroupId, valor);
   } else if (solicitacao.tipo === "remocao") {
     await db.$transaction([
       ...(solicitacao.compositionItemId ? [db.contributionCompositionItem.delete({ where: { id: solicitacao.compositionItemId } })] : []),
       db.compositionChangeRequest.update({ where: { id: requestId }, data: { status: "aprovado", reviewedAt: new Date() } }),
     ]);
-    await enqueueMercurioCompositionRemove(solicitacao.memberId, solicitacao.mercurioGroupId);
+    if (comRobo) await enqueueMercurioCompositionRemove(solicitacao.memberId, solicitacao.mercurioGroupId);
   } else {
     const valor = Number(solicitacao.amount);
     await db.$transaction([
@@ -58,7 +60,7 @@ export async function aprovarSolicitacaoComposicao(schoolId: string, requestId: 
       }),
       db.compositionChangeRequest.update({ where: { id: requestId }, data: { status: "aprovado", reviewedAt: new Date() } }),
     ]);
-    await enqueueMercurioCompositionAdd(solicitacao.memberId, solicitacao.mercurioGroupId, solicitacao.label, valor);
+    if (comRobo) await enqueueMercurioCompositionAdd(solicitacao.memberId, solicitacao.mercurioGroupId, solicitacao.label, valor);
   }
 
   const oQue = solicitacao.tipo === "remocao" ? "remover" : solicitacao.tipo === "reducao" ? "diminuir" : "incluir";

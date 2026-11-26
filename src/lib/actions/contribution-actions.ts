@@ -3,7 +3,7 @@
 import { exigirEscritaMercurio } from "@/lib/mercurio-escrita";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { enqueueMercurioCompositionAdd, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
+import { enqueueMercurioCompositionAdd, filialComRobo, enqueueMercurioCompositionEdit, enqueueMercurioCompositionRemove } from "@/lib/mercurio/sync-queue";
 import { rubricaIncluivelPeloMembro } from "@/lib/rubrica-visibilidade";
 import { revalidatePath } from "next/cache";
 
@@ -63,6 +63,13 @@ export async function solicitarItemComposicao(memberId: string, mercurioGroupId:
     return { ok: false as const, error: `"${rotulo}" só pode ser incluído pela secretaria da filial.` };
   }
   const label = doCatalogo.label;
+
+  if (!(await filialComRobo(memberId))) {
+    // Filial sem robô (26/11/2026): vira pedido para a Economia, que inclui no Mercúrio e aprova.
+    await db.compositionChangeRequest.create({ data: { memberId, tipo: "inclusao", mercurioGroupId, label, amount: valor, status: "pendente" } });
+    revalidatePath("/portal");
+    return { ok: true as const, aplicadoDireto: false as const };
+  }
 
   const item = await db.contributionCompositionItem.create({
     data: { memberId, mercurioGroupId, label, amount: valor, addedViaPortal: true },

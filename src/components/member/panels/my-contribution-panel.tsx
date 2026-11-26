@@ -67,8 +67,13 @@ export function MyContributionPanel({
       setSelectedGroup("");
       setNewItemValue("");
       // Toda inclusão só aumenta o que o membro paga — aplica direto, sem aprovação (ver solicitarItemComposicao).
-      setItems((prev) => [...prev, res.item]);
-      setNotice(`"${label}" incluído — a confirmação no Mercúrio pode levar até 24h.`);
+      if (res.aplicadoDireto) {
+        setItems((prev) => [...prev, res.item]);
+        setNotice(`"${label}" incluído — a confirmação no Mercúrio pode levar até 24h.`);
+      } else {
+        // Filial sem robô de escrita (26/11/2026): vira pedido para a Economia lançar no Mercúrio.
+        setNotice(`Pedido enviado: a Economia da sua filial inclui "${label}" e o valor passa a valer na próxima contribuição.`);
+      }
     });
   }
 
