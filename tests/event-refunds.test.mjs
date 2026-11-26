@@ -2,13 +2,15 @@ import {mockModule} from './helpers/mock-module.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {refundPosition} from '../src/lib/event-refund-policy.ts';
-let row,payment,posts,deletes,audits,mode;
-function reset(){row={id:'r',eventId:'e',asaasPaymentId:'pay',amount:50,paid:true,paymentState:'pago',refundState:'pendente',refundAttempts:0,refundSubmittedAt:null,refundLeaseUntil:null,refundLockId:null,refundedAt:null,refundedAmount:0,desistenciaEm:null,event:{schoolId:'s',source:'manual',status:'cancelado',refundOnCancellation:true}};payment={id:'pay',value:50,status:'RECEIVED',refunds:[]};posts=0;deletes=0;audits=[];mode='ok';}
+let row,payment,posts,deletes,audits,mode,provisoria;
+function reset(){row={id:'r',eventId:'e',asaasPaymentId:'pay',amount:50,paid:true,paymentState:'pago',refundState:'pendente',refundAttempts:0,refundSubmittedAt:null,refundLeaseUntil:null,refundLockId:null,refundedAt:null,refundedAmount:0,desistenciaEm:null,event:{schoolId:'s',source:'manual',status:'cancelado',refundOnCancellation:true}};payment={id:'pay',value:50,status:'RECEIVED',refunds:[]};posts=0;deletes=0;audits=[];mode='ok';provisoria=null;conta.apiKey='subconta-key';}
 // Reproduz a reserva de processEventRefund (where.AND = [ELEGIVEL, prazo livre]): só evento manual cancelado com
 // devolução autorizada, ou desistência do próprio aluno (2026-10-22), e sem outra execução segurando a inscrição.
 const elegivel=()=>row.event.source==='manual'&&(row.event.status==='cancelado'&&row.event.refundOnCancellation||row.desistenciaEm!==null);
 const conta={apiKey:'subconta-key'};
-const db={school:{findUnique:async args=>{assert.equal(args.where.id,'s');return {asaasSubaccountApiKey:conta.apiKey};}},eventRegistration:{
+const chaves={s:'subconta-key',titular:'titular-key'};
+// Conta provisória (conta-provisoria.ts, 23/11/2026): sem registro em cobrancaProvisoria, a leitura usa a subconta da filial.
+const db={cobrancaProvisoria:{findUnique:async args=>{assert.equal(args.where.asaasId,'pay');return provisoria;}},school:{findUnique:async args=>{assert.ok(args.where.id in chaves);return {asaasSubaccountApiKey:chaves[args.where.id]};}},eventRegistration:{
  updateMany:async({where,data})=>{
   if(where.AND&&(!elegivel()||row.refundLeaseUntil&&row.refundLeaseUntil>new Date()))return {count:0};
   if(where.refundLockId&&where.refundLockId!==row.refundLockId)return {count:0};
@@ -60,4 +62,9 @@ test('webhook de evento não cancelado ou sem autorização de reembolso não mo
 test('recebimento sem webhook é recuperado da consulta e devolução conferida nunca é reduzida',async()=>{
  reset();row.paid=false;row.paidAt=null;await processEventRefund('r');assert.ok(row.paidAt);assert.equal(row.paid,true);
  reset();row.refundedAmount=20;payment.refunds=[];await processEventRefund('r');assert.equal(row.refundedAmount,20);assert.equal(posts,0);assert.match(row.refundError,/histórico/);
+});
+
+test('cobrança emitida pela conta provisória é consultada e estornada pela conta titular, uma única vez',async()=>{
+ reset();provisoria={titularSchoolId:'titular'};conta.apiKey='titular-key';await processEventRefund('r');assert.equal(posts,1);assert.equal(row.refundState,'acompanhando');
+ await processEventRefund('r');assert.equal(posts,1);
 });

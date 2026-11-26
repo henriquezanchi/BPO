@@ -9,6 +9,10 @@ globalThis.fetch=async()=>{throw Error('teste não acessa a rede');};
 let failureMode='off',taxaPix=0.99,lastCharge=null;
 let director=true,reception=true,paid=true,subconta='subconta-key',eventStatus='publicado',payCalls=0;
 const writes=[];
+// Conta provisória (conta-provisoria.ts, 23/11/2026): filial do piloto sem subconta cobra pela conta titular (BGA).
+// Por padrão a filial está fora do piloto e não há titular: sem subconta própria, nada é cobrado.
+let unidade=null,titular=null;const provisorias=[];
+// Faixa do spread do mês já gravada (lib/spread.ts, spreadDoMes): 2%, sem contar membros no Mercúrio.
 const event={id:'event',schoolId:'school',source:'manual',revision:0,status:'publicado',startsAt:new Date('2099-01-01T19:00Z'),endsAt:new Date('2099-01-01T21:00Z'),title:'Curso',price:50};
 let current={id:'registration',eventId:'event',memberId:'member',paid:false,paymentState:'criando',asaasPaymentId:null,pixPayload:null,amount:50,checkedIn:false};
 const tx={$queryRaw:async()=>[{id:'event'}],event:{updateMany:async()=>({count:1}),findFirstOrThrow:async()=>event,findFirst:async()=>event},eventRegistration:{upsert:async()=>current,update:async a=>writes.push(a),findMany:async()=>[],count:async()=>0,findUnique:async()=>null},eventWaitlist:{count:async()=>0},eventAudit:{create:async a=>writes.push(a)},eventNotice:{createMany:async()=>{},updateMany:async()=>{},upsert:async()=>{}}};
@@ -16,8 +20,8 @@ mockModule(new URL('../src/lib/auth.ts',import.meta.url).href,{exports:{requireA
 mockModule(new URL('../src/lib/acesso-voluntario.ts',import.meta.url).href,{exports:{temAcessoVoluntario:async member=>member.id!=='semAcesso',podeLiberar:async(_actor,id)=>id==='semAcesso'}});
 mockModule(new URL('../src/lib/event-data.ts',import.meta.url).href,{exports:{requireEventReception:async()=>{if(!reception)throw Error('Não designado');return {actor,event};}}});
 mockModule(new URL('../src/lib/event-payments.ts',import.meta.url).href,{exports:{confirmEventPayment:async()=>writes.push('paid')}});
-mockModule(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{event:{findFirst:async args=>{assert.equal(args.where.source,'manual');assert.equal(args.where.status,'publicado');assert.deepEqual(args.where.AND[0].publicos,{hasSome:['todos_ativos','membros']});assert.deepEqual(args.where.AND[1].OR[0],{schoolId:'school'});return eventStatus==='publicado'?event:null;}},school:{findUniqueOrThrow:async args=>{assert.equal(args.where.id,'school');return {asaasSubaccountApiKey:subconta};}},eventRegistration:{findUniqueOrThrow:async()=>({...current,paid,event:{...event,status:eventStatus}}),updateMany:async()=>({count:0}),findFirstOrThrow:async()=>({...current,event})},$transaction:async fn=>fn(tx)}}});
-mockModule(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasFindOrCreateCustomer:async()=>{if(failureMode==='customer')throw Error('Asaas API /customers -> HTTP 400: dado privado fictício');return {id:'customer'};},asaasCreatePixCharge:async(...args)=>{payCalls++;lastCharge=args;if(failureMode==='payment')throw Error('fetch failed');return {id:'payment'};},asaasGetPixQrCode:async()=>({payload:'existing-qr',encodedImage:'image'}),asaasGetPaymentStatus:async()=>({status:'PENDING'}),asaasGetPixFeeStatus:async conta=>{assert.deepEqual(conta,{apiKey:subconta});return {isento:false,taxaFixa:taxaPix};}}});
+mockModule(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{event:{findFirst:async args=>{assert.equal(args.where.source,'manual');assert.equal(args.where.status,'publicado');assert.deepEqual(args.where.AND[0].publicos,{hasSome:['todos_ativos','membros']});assert.deepEqual(args.where.AND[1].OR[0],{schoolId:'school'});return eventStatus==='publicado'?event:null;}},school:{findUniqueOrThrow:async args=>{assert.equal(args.where.id,'school');return {id:'school',asaasSubaccountApiKey:subconta,mercurioUnidade:unidade};},findFirst:async args=>{assert.equal(args.where.mercurioUnidade,'BGA');return titular;}},resumoNacional:{findUnique:async args=>args.where.chave.startsWith('spread:')?{dados:{percentual:2}}:null},cobrancaProvisoria:{findUnique:async()=>null,upsert:async args=>{provisorias.push(args);}},eventRegistration:{findUniqueOrThrow:async()=>({...current,paid,event:{...event,status:eventStatus}}),updateMany:async()=>({count:0}),findFirstOrThrow:async()=>({...current,event})},$transaction:async fn=>fn(tx)}}});
+mockModule(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasFindOrCreateCustomer:async()=>{if(failureMode==='customer')throw Error('Asaas API /customers -> HTTP 400: dado privado fictício');return {id:'customer'};},asaasCreatePixCharge:async(...args)=>{payCalls++;lastCharge=args;if(failureMode==='payment')throw Error('fetch failed');return {id:'payment'};},asaasGetPixQrCode:async()=>({payload:'existing-qr',encodedImage:'image'}),asaasGetPaymentStatus:async()=>({status:'PENDING'}),asaasGetPixFeeStatus:async conta=>{assert.deepEqual(conta,{apiKey:subconta??titular?.asaasSubaccountApiKey});return {isento:false,taxaFixa:taxaPix};}}});
 mockModule(new URL('../src/lib/event-refunds.ts',import.meta.url).href,{exports:{processEventRefundQueue:async()=>({consultadas:0})}});
 mockModule('next/cache',{exports:{revalidatePath:()=>{}}});
 const{inscreverEmEvento,marcarPresencaEvento,salvarEvento,excluirEvento}=await import('../src/lib/actions/event-actions.ts');
@@ -136,4 +140,19 @@ test('opção de reembolso é validada e enfileira inscrições na mesma transa�
  await assert.rejects(()=>excluirEvento('school','event','sim'),/inválida/);
  const queued=[];tx.eventRegistration.updateMany=async args=>{queued.push(args);return {count:1};};
  await excluirEvento('school','event',true);assert.equal(queued[0].where.refundState,'nao_solicitado');assert.equal(queued[0].data.refundState,'pendente');assert.equal(writes.at(-1).data.changes.reembolsarInscricoes,true);
+});
+
+test('filial do piloto sem subconta cobra pela conta titular e registra a cobrança provisória; fora do piloto, nada é cobrado',async()=>{
+ event.startsAt=new Date('2099-01-01T19:00Z');eventStatus='publicado';failureMode='off';
+ const {db:store}=await import('../src/lib/db.ts');store.event.findFirst=async()=>event;
+ tx.eventRegistration.findUnique=async()=>null;tx.eventRegistration.updateMany=async()=>({count:1});
+ subconta=null;titular={id:'titular',asaasSubaccountApiKey:'titular-key'};
+ // Fora do piloto: mesmo com a titular disponível, sem subconta própria não há cobrança.
+ unidade='XYZ';current={...current,pixPayload:null,asaasPaymentId:null,paymentState:'novo'};const before=payCalls;
+ assert.match((await inscreverEmEvento('member','event','12345678901')).error,/conta Asaas da filial/);assert.equal(payCalls,before);assert.equal(provisorias.length,0);
+ unidade='GYN';const result=await inscreverEmEvento('member','event','12345678901');assert.equal(result.ok,true);assert.equal(payCalls,before+1);
+ assert.deepEqual(lastCharge[5],{apiKey:'titular-key'});assert.deepEqual(lastCharge[4],[{walletId:'bpo-wallet',fixedValue:1}]);
+ assert.equal(provisorias.length,1);const c=provisorias[0].create;
+ assert.equal(provisorias[0].where.asaasId,'payment');assert.equal(c.schoolId,'school');assert.equal(c.titularSchoolId,'titular');assert.equal(c.origem,'evento');assert.equal(c.valorBruto,50);assert.equal(c.splitBpo,1);
+ subconta='subconta-key';titular=null;unidade=null;
 });

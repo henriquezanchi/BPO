@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
+import * as criancas from '../src/lib/criancas-comum.ts';
 
 function carregar(arquivo, dependencias) {
   const source = fs.readFileSync(new URL(arquivo, import.meta.url), 'utf8');
@@ -33,13 +34,17 @@ test('visitante sem sessão mantém o evento no destino do login', async () => {
 
 function pagina(member) {
   return carregar('../src/app/(member)/portal/page.tsx', {
-    'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
+    'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
     '@/components/member/member-portal-client': { MemberPortalClient: 'Portal' },
     '@/components/inactive-member-notice': { InactiveMemberNotice: 'Inativo' },
     '@/lib/auth': { getAuthenticatedMember: async () => member },
     '@/lib/member-data': { getMemberDashboard: async (id) => ({ member: { id } }) },
     '@/lib/boletim-aurora': { ultimaEdicaoAurora: async () => ({ titulo: 'Edição de teste', data: '2026-10-25', link: 'https://acropole.org.br/boletim-aurora/teste/', resumo: '' }) },
     'next/navigation': { redirect: (url) => { throw new Error(url); } },
+    // Crianças dos programas (18/11/2026) veem o aviso do acesso pelo responsável, com o atalho de entrar como ele.
+    '@/components/member/entrar-como-responsavel': { EntrarComoResponsavel: 'EntrarComoResponsavel' },
+    '@/lib/actions/login-responsavel-actions': { adultoDoMesmoEmail: async () => ({ name: 'Responsável' }) },
+    '@/lib/criancas-comum': criancas,
   }).default;
 }
 test('checagem de sessão na página também preserva o evento', async () => {
@@ -54,4 +59,10 @@ test('membro autenticado recebe o evento solicitado junto da própria agenda', a
   assert.equal(render.props.eventoId, 'integracao-7');
   assert.equal(render.props.dashboard.member.id, 'membro-1');
   assert.equal(render.props.boletim.titulo, 'Edição de teste');
+});
+test('criança dos programas não recebe o Portal nem o evento: vê o acesso pelo responsável', async () => {
+  const render = await pagina({ id: 'crianca-1', mercurioAtivo: true, nivel: 'JN' })({ searchParams: Promise.resolve({ evento: 'integracao-7' }) });
+  assert.equal(render.type, 'main');
+  assert.equal(JSON.stringify(render).includes('"Portal"'), false);
+  assert.ok(JSON.stringify(render).includes('EntrarComoResponsavel'));
 });

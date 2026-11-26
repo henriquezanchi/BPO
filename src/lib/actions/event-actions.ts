@@ -2,7 +2,7 @@
 
 import {asaasCreatePixCharge,asaasFindOrCreateCustomer,asaasGetPaymentStatus,asaasGetPixQrCode} from '@/lib/asaas/client';
 import {splitDoBpo} from '@/lib/asaas/split';
-import {MENSAGEM_CONTA_PENDENTE} from '@/lib/asaas/conta-escola';
+import {ContaEscolaPendente,MENSAGEM_CONTA_PENDENTE} from '@/lib/asaas/conta-escola';
 import {contaDoPagamento,contaParaCobrar,registrarProvisoria,somaSplit} from '@/lib/conta-provisoria';
 import {requireAuthenticatedMember,requireArea} from '@/lib/auth';
 import {podeLiberar,temAcessoVoluntario} from '@/lib/acesso-voluntario';
@@ -131,7 +131,9 @@ async function enrollEvent(memberId:string,eventId:string,cpf?:string){
  const school=await db.school.findUniqueOrThrow({where:{id:event.schoolId!},omit:{asaasSubaccountApiKey:false}});
  // Cobrança sempre pela subconta da filial (regra do usuário 2026-10-25): sem ela, sem inscrição paga.
  // Pela subconta da filial do evento ou, no piloto, pela conta provisória de Barra (23/11/2026).
- const cobranca=price>0?await contaParaCobrar(school.id).catch(()=>null):null;
+ // Só "conta pendente" vira a mensagem da Economia (26/11/2026): outro erro (banco fora, etc.) era engolido e aparecia
+ // como conta não liberada, enganando o aluno e a Economia; agora segue como erro de verdade.
+ const cobranca=price>0?await contaParaCobrar(school.id).catch(e=>{if(e instanceof ContaEscolaPendente)return null;throw e}):null;
  if(price>0&&!cobranca)throw new EventEnrollmentError(MENSAGEM_CONTA_PENDENTE);
  const registration=await db.$transaction(async tx=>{
   // Fila em vez de recusa (01/11/2026): a linha do evento fica travada até o fim desta transação, então inscrições

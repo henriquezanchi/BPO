@@ -1,7 +1,8 @@
 import {mockModule} from './helpers/mock-module.mjs';
 import {test} from 'node:test';import assert from 'node:assert/strict';
 let confirmed=0,value=50;
-mockModule(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{paymentCharge:{findUnique:async()=>null},matriculaOnline:{findUnique:async()=>null},fortunaTopUpCharge:{findUnique:async()=>null},eventRegistration:{findUnique:async()=>({id:'registration',amount:50,event:{schoolId:'school'}})},school:{findUnique:async args=>{assert.equal(args.where.id,'school');return {asaasSubaccountApiKey:'subconta-key'};}}}}});
+// cobrancaProvisoria vazio: cobrança emitida pela subconta da própria filial, sem conta provisória (conta-provisoria.ts).
+mockModule(new URL('../src/lib/db.ts',import.meta.url).href,{exports:{db:{cobrancaProvisoria:{findUnique:async()=>null},paymentCharge:{findUnique:async()=>null},matriculaOnline:{findUnique:async()=>null},fortunaTopUpCharge:{findUnique:async()=>null},eventRegistration:{findUnique:async()=>({id:'registration',amount:50,event:{schoolId:'school'}})},school:{findUnique:async args=>{assert.equal(args.where.id,'school');return {asaasSubaccountApiKey:'subconta-key'};}}}}});
 mockModule(new URL('../src/lib/asaas/client.ts',import.meta.url).href,{exports:{asaasGetPaymentStatus:async(id,conta)=>{assert.equal(id,'payment');assert.deepEqual(conta,{apiKey:'subconta-key'});return {status:'CONFIRMED',value};}}});
 mockModule(new URL('../src/lib/event-payments.ts',import.meta.url).href,{exports:{confirmEventPayment:async()=>{confirmed++;}}});
 mockModule(new URL('../src/lib/asaas/confirm-payment.ts',import.meta.url).href,{exports:{confirmarPagamento:async()=>{throw Error('unexpected contribution payment');}}});
