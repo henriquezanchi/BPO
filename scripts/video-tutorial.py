@@ -7,7 +7,8 @@ guia da marca (verde Nova Acrópole, Amarelo Helios, Noto Sans).
  - Trilha: acordes suaves sintetizados aqui mesmo, sem direitos de terceiros.
  - Legendas: arquivo ASS queimado pelo ffmpeg com as fontes do Dédalo.
 Saída: public/guia-portal.mp4 (1080×1920) e public/guia-portal.srt.
-Uso: python scripts/video-tutorial.py [caminho-do-ffmpeg]
+Uso: python scripts/video-tutorial.py [caminho-do-ffmpeg] [alunos|voluntarios]
+Perfil "voluntarios": telas de docs/guias/telas-voluntarios (scripts/capturar-telas-voluntarios.ts) -> public/guia-voluntarios.mp4.
 """
 import asyncio
 import json
@@ -22,11 +23,12 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 RAIZ = Path(__file__).resolve().parent.parent
-TELAS = RAIZ / "docs/guias/telas-tutorial"
-TRAB = RAIZ / "docs/guias/telas-tutorial/_video"
+PERFIL = sys.argv[2] if len(sys.argv) > 2 else "alunos"
+TELAS = RAIZ / ("docs/guias/telas-voluntarios" if PERFIL == "voluntarios" else "docs/guias/telas-tutorial")
+TRAB = TELAS / "_video"
 FONTES = Path(r"C:/Users/Henrique Zanchi/Apps/editor-reels-na/motor/recursos/fontes")
 FFMPEG = sys.argv[1] if len(sys.argv) > 1 else "ffmpeg"
-SAIDA = RAIZ / "public/guia-portal.mp4"
+SAIDA = RAIZ / ("public/guia-voluntarios.mp4" if PERFIL == "voluntarios" else "public/guia-portal.mp4")
 VOZ = "pt-BR-FranciscaNeural"
 TAXA = 44100
 W, H = 1080, 1920
@@ -49,6 +51,22 @@ ROTEIRO = [
     ("11-ajuda", "Ficou com dúvida? A Central de Ajuda responde as perguntas mais comuns, e a secretaria está a um toque no WhatsApp."),
     (None, "Entre hoje mesmo pelo endereço na tela. Nos vemos no Portal."),
 ]
+ROTEIRO_VOLUNTARIOS = [
+    (None, "Este é o passo a passo da Área do Voluntário do Portal da Nova Acrópole. Em dois minutos você vê onde fica cada coisa do seu trabalho na escola."),
+    ("01-inicio-aluno", "Entre no Portal como sempre. No cartão do topo, toque em Área do Voluntário. O botão aparece para quem tem função, secretaria ou grupo na filial."),
+    ("02-voluntario", "Esta é a sua tela de trabalho. No alto, os seus grupos, secretarias e próximos encontros. Abaixo, os atalhos em três blocos: Meu trabalho, Secretarias e Gestão da filial. Cada pessoa vê só o que faz parte do seu papel."),
+    ("03-grupos", "Em Grupos ficam os GAFs, os grupos de estudo e os de Formação Viva. Marque presenças, registre o que foi feito no encontro e mande a programação para o WhatsApp."),
+    ("04-calendario", "O Calendário reúne aulas, reuniões, eventos e feriados da filial, para todo mundo enxergar a mesma agenda."),
+    ("05-oportunidades", "Em Oportunidades a filial publica o que precisa, e quem se oferece aparece aqui para você responder."),
+    ("06-secretarias", "Em Secretarias da filial estão os responsáveis, as equipes e as atividades de cada secretaria."),
+    ("07-eventos", "Quem é da Secretaria de Eventos cria e acompanha os eventos por aqui: inscrições, cartaz e recepção."),
+    ("08-cafe", "O Café é o caixa Fortuna: lançar o consumo pela carteirinha ou pelo nome, e acompanhar o dia."),
+    ("09-trajetoria", "Minha trajetória traz as suas funções, distinções e marcos registrados no Mercúrio."),
+    ("10-termo", "E o Termo de voluntariado mostra como assinar o termo com a sua filial."),
+    (None, "Explore a sua Área do Voluntário. Se faltar algo para a sua função, fale com a direção da filial."),
+]
+if PERFIL == "voluntarios":
+    ROTEIRO = ROTEIRO_VOLUNTARIOS
 PAUSA_ANTES, PAUSA_DEPOIS, TRANSICAO = 0.5, 0.8, 0.5
 PAUSA_FECHA_GRUPO = 0.5
 FIM_APOS_ULTIMA = 0.45
@@ -272,9 +290,9 @@ def main():
         if img:
             quadro_tela(img, dest)
         elif i == 0:
-            quadro_cartao("Portal do Aluno", "Passo a passo para entrar e usar", dest)
+            quadro_cartao("Área do Voluntário" if PERFIL == "voluntarios" else "Portal do Aluno", "Onde fica cada coisa do seu trabalho" if PERFIL == "voluntarios" else "Passo a passo para entrar e usar", dest)
         else:
-            quadro_cartao("Até o Portal", "Entre pelo endereço da sua escola", dest, "portal-na-one.vercel.app")
+            quadro_cartao("Até o Portal", "Entre pelo endereço da sua escola", dest, "portal-na-one.vercel.app" + ("/voluntario" if PERFIL == "voluntarios" else ""))
 
     # Narração contínua e início de cada tela.
     inicio, inicios, filtro, entradas = 0.0, [], [], []
@@ -293,7 +311,7 @@ def main():
 
     ass, srt = gerar_legendas(inicios)
     (TRAB / "legendas.ass").write_text(ass, encoding="utf-8")
-    (RAIZ / "public/guia-portal.srt").write_text(srt, encoding="utf-8")
+    SAIDA.with_suffix(".srt").write_text(srt, encoding="utf-8")
 
     vids, fv, anterior, desloc = [], "", "[0:v]", 0.0
     for i, s in enumerate(tempos):

@@ -68,8 +68,8 @@ async function main() {
   const pedacos = valor.match(/.{1,3180}/g)!;
   const host = new URL(SITE).hostname;
   const cookies = pedacos.length === 1
-    ? [{ name: `sb-${ref}-auth-token`, value: valor, domain: host, path: "/", secure: true, sameSite: "Lax" as const }]
-    : pedacos.map((v, i) => ({ name: `sb-${ref}-auth-token.${i}`, value: v, domain: host, path: "/", secure: true, sameSite: "Lax" as const }));
+    ? [{ name: `sb-${ref}-auth-token`, value: valor, domain: host, path: "/", secure: SITE.startsWith("https"), sameSite: "Lax" as const }]
+    : pedacos.map((v, i) => ({ name: `sb-${ref}-auth-token.${i}`, value: v, domain: host, path: "/", secure: SITE.startsWith("https"), sameSite: "Lax" as const }));
 
   mkdirSync(PASTA, { recursive: true });
   const browser = await chromium.launch();
