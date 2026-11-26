@@ -86,7 +86,7 @@ export async function createContributionCharge(
   year: number,
   month: number,
   cpf: string,
-  opts?: { metodo?: "PIX" | "CREDIT_CARD"; fortunaTopUpAmount?: number },
+  opts?: { metodo?: "PIX" | "CREDIT_CARD"; fortunaTopUpAmount?: number; incluirPendencias?: boolean },
 ) {
   const member = await requireAuthenticatedMember(memberId);
   await requireContributionOrder(memberId, year, month);
@@ -123,7 +123,8 @@ export async function createContributionCharge(
   const valorComposicao = itens.reduce((soma, i) => soma + Number(i.amount), 0);
   if (valorComposicao <= 0) throw new Error("Composição da contribuição está vazia — nada a cobrar.");
   // Pendências da Tesouraria do Mercúrio (26/11/2026): entram no recibo do mês mais antigo, então entram na cobrança.
-  const pendencias = await pendenciasNaCobranca(member, year, month);
+  // A pessoa escolhe pagar só a contribuição ou junto com as pendências (26/11/2026); sem escolha, junto.
+  const pendencias = opts?.incluirPendencias === false ? [] : await pendenciasNaCobranca(member, year, month);
   const valorPendencias = Math.round(pendencias.reduce((s, p) => s + p.valor, 0) * 100) / 100;
   const valor = Math.round((valorComposicao + valorPendencias) * 100) / 100;
   const valorBase = valor + fortunaTopUpAmount;

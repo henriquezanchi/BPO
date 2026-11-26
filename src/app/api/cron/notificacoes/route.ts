@@ -5,7 +5,7 @@ import { avisosDeVoluntariado } from "@/lib/avisos-voluntariado";
 import { avisosDeContasAPagar } from "@/lib/avisos-contas";
 import { avisosDeChegadaDeInteressados } from "@/lib/aberturas/recepcao-interessados";
 import { processarListaDeEspera } from "@/lib/event-waitlist";
-import { avisosDeAtendimentos, avisosDoDiario, avisosDoDiarioFv, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
+import { avisosDeAtendimentos, avisosDoDiario, avisosDoDiarioFv, avisosDePlanosDeAula, avisosDeEncontros, avisosDeEventosInscritos, avisosDePendencias, avisosDeEventosNovos, avisosDePedidosNovos, avisosDeVencimento, resumoDaSemana } from "@/lib/notificacoes-agendadas";
 import { pushConfigurado } from "@/lib/push";
 import { autorizadoCron, executarRotina } from "@/lib/rotinas";
 
@@ -28,6 +28,8 @@ export async function GET(req: Request) {
         eventos: () => avisosDeEventosNovos(),
         semana: () => resumoDaSemana(),
         vencimento: avisosDeVencimento,
+        // 26/11/2026: pendências (meses em atraso + Tesouraria do Mercúrio), às 10h, a cada 4 dias, textos variados.
+        pendencias: () => avisosDePendencias(),
         inscritos: avisosDeEventosInscritos,
         diario: () => avisosDoDiario(),
         // Diário de FV (2026-10-31): práticas paradas há 3 dias e reunião do GDVE em 7 dias, às 20h da filial.

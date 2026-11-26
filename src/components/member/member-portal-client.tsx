@@ -536,6 +536,21 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
       <AvisoAtualizacaoApp />
 
       <main className="flex flex-1 flex-col gap-4 bg-na-bg p-5 pb-24 dark:bg-gray-950">
+        {/* Pendências em destaque (26/11/2026, "visível e evidente"): meses em atraso e pendências da Tesouraria. */}
+        {(pendencias.length > 0 || pendenciasTesouraria.length > 0) && member.school.language !== "en" && (
+          <section aria-label="Pendências" className="flex items-center gap-3 rounded-2xl border border-na-danger/40 bg-na-danger-light px-4 py-3 text-na-danger-dark dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+            <TriangleAlert size={22} className="shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-black">Você tem pendências: {brl(totalPendencias)}</p>
+              <p className="truncate text-[12px] opacity-90">
+                {[...pendencias.map((r) => `${MESES_CURTOS[r.month - 1]}/${r.year}`), ...pendenciasTesouraria.map((p) => p.rubrica.toLowerCase())].join(", ")}
+              </p>
+            </div>
+            <button type="button" onClick={() => setModal("situacao")} className="min-h-11 shrink-0 rounded-xl bg-na-danger-dark px-3 text-[13px] font-bold text-white dark:bg-red-700">
+              Ver e pagar
+            </button>
+          </section>
+        )}
         {member.school.language !== "en" && <BuscaPortal destinos={Object.fromEntries(Object.entries(destinosBusca).filter(([, d]) => d)) as Record<string, DestinoBusca>} />}
         <NudgeCard memberId={member.id} />
         <AvisosGrupos avisos={dashboard.avisosGrupos} fuso={dashboard.fuso} />

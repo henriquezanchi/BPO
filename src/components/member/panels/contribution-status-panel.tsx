@@ -164,8 +164,8 @@ export function ContributionStatusPanel({
         memberId={memberId}
         year={porMes.get(mesPagamento)?.year ?? selectedYear}
         mes={mesPagamento}
-        amount={compositionTotal + pendenciasDoMes(porMes.get(mesPagamento)?.year ?? selectedYear, mesPagamento).reduce((s, p) => s + p.valor, 0)}
-        pendenciasIncluidas={pendenciasDoMes(porMes.get(mesPagamento)?.year ?? selectedYear, mesPagamento)}
+        amountBase={compositionTotal}
+        pendenciasDisponiveis={pendenciasDoMes(porMes.get(mesPagamento)?.year ?? selectedYear, mesPagamento)}
         podeRecarregarFortuna={fortunaBalances.length > 0}
         cartaoComTaxa={cartaoComTaxa}
         onConfirmed={() => setConfirmedLocally(items=>[...items,{referenceYear:selectedYear,referenceMonth:mesPagamento,status:"pago"}])}
@@ -326,25 +326,30 @@ function RealPaymentScreen({
   memberId,
   year,
   mes,
-  amount,
+  amountBase,
   podeRecarregarFortuna,
   cartaoComTaxa,
   onVoltar,
   onConfirmed,
-  pendenciasIncluidas = [],
+  pendenciasDisponiveis = [],
 }: {
   memberId: string;
   year: number;
   mes: number;
-  amount: number;
-  /** Pendências da Tesouraria que entram nesta cobrança (26/11/2026). */
-  pendenciasIncluidas?: { id: string; rubrica: string; descricao: string; valor: number }[];
+  /** Valor da contribuição do mês (composição), sem pendências. */
+  amountBase: number;
+  /** Pendências vencidas da Tesouraria que o Mercúrio põe neste recibo (26/11/2026): a pessoa escolhe incluir ou não. */
+  pendenciasDisponiveis?: { id: string; rubrica: string; descricao: string; valor: number }[];
   podeRecarregarFortuna: boolean;
   cartaoComTaxa: boolean;
   onVoltar: () => void;
   onConfirmed: () => void;
 }) {
   const [metodo, setMetodo] = useState<"PIX" | "CREDIT_CARD">("PIX");
+  const [incluirPendencias, setIncluirPendencias] = useState(true);
+  const somaPendencias = pendenciasDisponiveis.reduce((s, p) => s + p.valor, 0);
+  const pendenciasIncluidas = incluirPendencias ? pendenciasDisponiveis : [];
+  const amount = amountBase + (incluirPendencias ? somaPendencias : 0);
   const [recargaFortuna, setRecargaFortuna] = useState(0);
   const [cpf, setCpf] = useState("");
   const [charge, setCharge] = useState<ChargeResult | null>(null);
@@ -416,7 +421,7 @@ function RealPaymentScreen({
     setErro(null);
     startTransition(async () => {
       try {
-        const res = await createContributionCharge(memberId, year, mes, cpfLimpo, { metodo, fortunaTopUpAmount: recargaFortuna });
+        const res = await createContributionCharge(memberId, year, mes, cpfLimpo, { metodo, fortunaTopUpAmount: recargaFortuna, incluirPendencias });
         setCharge(res);
       } catch (e) {
         setErro(mensagemErroAmigavel(e));
@@ -445,14 +450,29 @@ function RealPaymentScreen({
             Pelo Portal, sua contribuição é atualizada assim que o pagamento é confirmado.
           </p>
         )}
-        {pendenciasIncluidas.length > 0 && (
-          <ul className="mt-2 flex flex-col gap-1 text-left text-[12px] text-gray-600 dark:text-gray-300">
-            <li className="flex justify-between gap-2"><span>Contribuição de {MESES[mes - 1]}/{year}</span><span className="tabular-nums">{formatBRL(amount - pendenciasIncluidas.reduce((s, p) => s + p.valor, 0))}</span></li>
-            {pendenciasIncluidas.map((p) => (
-              <li key={p.id} className="flex justify-between gap-2"><span className="min-w-0">Pendência: {p.rubrica.toLowerCase()}{p.descricao ? ` (${p.descricao})` : ""}</span><span className="shrink-0 tabular-nums">{formatBRL(p.valor)}</span></li>
-            ))}
-            <li className="text-[11px] text-gray-500 dark:text-gray-400">A escola registra a pendência junto com esta contribuição.</li>
-          </ul>
+        {pendenciasDisponiveis.length > 0 && (
+          <div className="mt-3 rounded-xl border border-na-danger/30 bg-na-danger-light/40 p-3 text-left dark:border-red-900 dark:bg-red-950/20">
+            <p className="flex items-center gap-1.5 text-[13px] font-black text-na-danger-dark dark:text-red-300"><AlertTriangle size={14} /> Você tem {pendenciasDisponiveis.length === 1 ? "uma pendência" : `${pendenciasDisponiveis.length} pendências`} na Tesouraria</p>
+            <ul className="mt-1.5 flex flex-col gap-1 text-[12px] text-gray-700 dark:text-gray-200">
+              {pendenciasDisponiveis.map((p) => (
+                <li key={p.id} className="flex justify-between gap-2"><span className="min-w-0">{p.rubrica}{p.descricao ? ` · ${p.descricao}` : ""}</span><span className="shrink-0 font-semibold tabular-nums">{formatBRL(p.valor)}</span></li>
+              ))}
+            </ul>
+            {!charge && !pago && (
+              <div className="mt-3 grid gap-2">
+                <label className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] ${incluirPendencias ? "border-na-green bg-white font-semibold dark:bg-gray-900" : "border-gray-200 dark:border-gray-700"}`}>
+                  <input type="radio" name="pendencias" checked={incluirPendencias} onChange={() => setIncluirPendencias(true)} className="accent-na-green" />
+                  <span className="flex-1">Contribuição + pendências</span><span className="tabular-nums">{formatBRL(amountBase + somaPendencias)}</span>
+                </label>
+                <label className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] ${!incluirPendencias ? "border-na-green bg-white font-semibold dark:bg-gray-900" : "border-gray-200 dark:border-gray-700"}`}>
+                  <input type="radio" name="pendencias" checked={!incluirPendencias} onChange={() => setIncluirPendencias(false)} className="accent-na-green" />
+                  <span className="flex-1">Só a contribuição de {MESES[mes - 1]}/{year}</span><span className="tabular-nums">{formatBRL(amountBase)}</span>
+                </label>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">Pagando só a contribuição, a pendência continua em aberto na escola e volta a aparecer aqui.</p>
+              </div>
+            )}
+            {pendenciasIncluidas.length > 0 && (charge || pago) && <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Pendências incluídas neste pagamento.</p>}
+          </div>
         )}
         {totalCobrado !== amount && (
           <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">

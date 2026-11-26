@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { notificarErroSuporte } from "@/lib/error-notify";
 import { fusoDaEscola } from "@/lib/fuso-escola";
+import { pendenciasDoMembro } from "@/lib/mercurio/pendencias-mercurio";
+import { pendenciaVencida } from "@/lib/pendencias-comum";
 import type { MercurioContactChanges, MercurioWriteResult } from "./adapter";
 import { abrirSessaoMercurio, lerRubricasDePagamentoHoje, RodadaEmAndamentoError } from "./browser-session";
 import { adapterParaEscola } from "./index";
@@ -147,12 +149,22 @@ export async function processMercurioSyncQueue(limit = 20) {
           // Fuso da própria filial (31/10/2026; antes São Paulo fixo, 1 h fora em MT).
           const fuso = fusoDaEscola(member.school.uf);
           const dataBR = (charge.paidAt ?? new Date()).toLocaleDateString("pt-BR", { timeZone: fuso });
+          // Pendências da Tesouraria (26/11/2026): o Mercúrio as põe sozinho no recibo. A cobrança as incluiu se o valor
+          // pago cobre composição + pendências vencidas; senão o robô as tira do recibo (browser-session.ts).
+          const { itens: pendencias } = await pendenciasDoMembro({ name: member.name, school: { mercurioUnidade: member.school.mercurioUnidade } });
+          const vencidas = pendencias.filter((p) => pendenciaVencida(p));
+          const acertosEsperados = Math.round(vencidas.reduce((s, p) => s + p.valor, 0) * 100) / 100;
+          const composicao = (await db.contributionCompositionItem.findMany({ where: { memberId: member.id } })).reduce((s, i) => s + Number(i.amount), 0);
+          const acertosIncluidos = acertosEsperados === 0 || Number(charge.amount) + 0.01 >= composicao + acertosEsperados;
           result = await adapter.launchContributionPayment(identidade, member.school.mercurioCaixaLancamento ?? "", {
             referenceYear: charge.referenceYear,
             referenceMonth: charge.referenceMonth,
             amount: Number(charge.amount),
             paidAtBR: dataBR,
             diaDoCaixaBR: new Date().toLocaleDateString("pt-BR", { timeZone: fuso }),
+            acertosEsperados,
+            acertosIncluidos,
+            acertosDescricoes: vencidas.map((p) => p.rubrica),
           });
         }
       } else {

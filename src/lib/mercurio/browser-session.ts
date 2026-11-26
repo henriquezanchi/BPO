@@ -1565,6 +1565,41 @@ async function marcarECalcular(page: Page, frame: Frame, fichas: FichaPendenteMe
   return { frame: frameNovo, total: parseValorFlexivel(valorTexto) };
 }
 
+/** Última linha "Total" da tela de contribuições (antes de marcar um mês, é só a soma dos acertos pendentes). */
+async function lerTotalDaTela(frame: Frame): Promise<number> {
+  const linhaTotal = frame.locator("tr", { hasText: "Total" }).last();
+  if (!(await linhaTotal.count())) return 0;
+  const celulas = await linhaTotal.locator("td").allInnerTexts().catch(() => []);
+  const v = parseValorFlexivel(celulas[celulas.length - 1] || "");
+  return Number.isNaN(v) ? 0 : v;
+}
+
+/**
+ * Tira do recibo em edição (tes_universal.php) os itens dos acertos pendentes, quando a pessoa pagou só a
+ * contribuição (26/11/2026). Mapeamento por descrição + link "Excluir" na linha; o Mercúrio pede confirmação
+ * (confirm()), aceita. Sem achar o link, lança erro ANTES de finalizar: o recibo fica em edição e o lançamento vai
+ * para a fila de exceção, para a Economia concluir à mão. Ainda não visto ao vivo: confirmar no primeiro caso real.
+ */
+async function removerAcertosDoRecibo(page: Page, frameRecibo: Frame, descricoes: string[]): Promise<Frame> {
+  const aceitar = (d: import("playwright").Dialog) => d.accept().catch(() => {});
+  page.on("dialog", aceitar);
+  try {
+    let frame = frameRecibo;
+    for (const descricao of descricoes) {
+      const chave = descricao.split(/\s+/).slice(0, 3).join(" ");
+      const linha = frame.locator("tr", { hasText: new RegExp(chave.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") }).first();
+      if (!(await linha.count())) throw new Error(`Pendência "${descricao}" não encontrada no recibo para ser retirada — a pessoa pagou só a contribuição. Conclua o recibo manualmente no Mercúrio.`);
+      const excluir = linha.locator('a:has-text("Excluir"), a[href*="op=X"], a:has(img[alt*="Excluir" i])').first();
+      if (!(await excluir.count())) throw new Error(`Sem link "Excluir" na linha da pendência "${descricao}" — conclua o recibo manualmente no Mercúrio.`);
+      await Promise.all([frame.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {}), excluir.click()]);
+      frame = await esperarFrame(page, "principal", /tes_universal\.php/, 15000);
+    }
+    return frame;
+  } finally {
+    page.off("dialog", aceitar);
+  }
+}
+
 async function ajustarValorItemRecibo(page: Page, frameRecibo: Frame, valorDesejado: number): Promise<Frame> {
   await frameRecibo
     .getByRole("link", { name: "Alterar", exact: true })
@@ -1606,6 +1641,10 @@ export interface LancamentoContribuicao {
   valor: number;
   dataPagamentoBR: string; // "dd/mm/yyyy" — decide a data do lançamento E se ainda vale o desconto de pontualidade
   interessado?: string;
+  /** Pendências ("Contribuição e acertos pendentes") que o Mercúrio inclui sozinho no recibo (26/11/2026). */
+  acertosEsperados?: number;
+  acertosIncluidos?: boolean;
+  acertosDescricoes?: string[];
 }
 
 /**
@@ -1652,13 +1691,19 @@ async function lancarRecebimentoContribuicao(page: Page, frameDia: Frame, lancam
   const mesEscolhido = fichaMaisAntiga(fichas).mes;
   assertMercurioReference(mesEscolhido, { year: lancamento.referenceYear, month: lancamento.referenceMonth });
 
+  // Acertos pendentes (26/11/2026): antes de marcar o mês, a linha "Total" só tem os acertos que o Mercúrio vai pôr no
+  // recibo. Quando a cobrança do Portal NÃO os incluiu, o total esperado é "Total − acertos" e, depois de "Lançar no
+  // Recibo", os itens dos acertos são tirados do recibo antes de finalizar.
+  const acertosNaTela = lancamento.acertosIncluidos === false ? await lerTotalDaTela(frame) : 0;
+
   const resultado = await marcarECalcular(page, frame, fichas, [mesEscolhido]);
   frame = resultado.frame;
+  const totalComparavel = Number.isNaN(resultado.total) ? resultado.total : Math.round((resultado.total - acertosNaTela) * 100) / 100;
 
   let precisaAjustarValor = false;
-  if (Number.isNaN(resultado.total) || Math.abs(resultado.total - lancamento.valor) >= TOLERANCIA_CENTAVOS) {
+  if (Number.isNaN(totalComparavel) || Math.abs(totalComparavel - lancamento.valor) >= TOLERANCIA_CENTAVOS) {
     const dia = parseInt(lancamento.dataPagamentoBR.split("/")[0], 10);
-    const diferenca = Number.isNaN(resultado.total) ? NaN : resultado.total - lancamento.valor;
+    const diferenca = Number.isNaN(totalComparavel) ? NaN : totalComparavel - lancamento.valor;
     const dentroDoDesconto =
       !Number.isNaN(diferenca) &&
       dia <= DIA_LIMITE_DESCONTO_PONTUALIDADE &&
@@ -1666,7 +1711,7 @@ async function lancarRecebimentoContribuicao(page: Page, frameDia: Frame, lancam
       diferenca <= LIMITE_DESCONTO_PONTUALIDADE + TOLERANCIA_CENTAVOS;
 
     if (!dentroDoDesconto) {
-      const totalTexto = Number.isNaN(resultado.total) ? "(não consegui ler)" : `R$ ${resultado.total.toFixed(2).replace(".", ",")}`;
+      const totalTexto = Number.isNaN(totalComparavel) ? "(não consegui ler)" : `R$ ${totalComparavel.toFixed(2).replace(".", ",")}`;
       throw new Error(
         `Matrícula "${lancamento.matricula}": o mês pendente mais antigo (${mesEscolhido}) totaliza ${totalTexto}, mas o pagamento confirmado foi de R$ ${lancamento.valor.toFixed(2).replace(".", ",")} — não batem, e a diferença não é compatível com o desconto de pontualidade (até R$${LIMITE_DESCONTO_PONTUALIDADE}, pago até o dia ${DIA_LIMITE_DESCONTO_PONTUALIDADE}). Lançamento abortado por segurança — confira e lance manualmente.`,
       );
@@ -1679,6 +1724,10 @@ async function lancarRecebimentoContribuicao(page: Page, frameDia: Frame, lancam
     frame.locator('input[name="cmdLancar"]').click(),
   ]);
   let frameReciboDepois = await esperarFrame(page, "principal", /tes_universal\.php/, 15000);
+
+  if (lancamento.acertosIncluidos === false && acertosNaTela > 0) {
+    frameReciboDepois = await removerAcertosDoRecibo(page, frameReciboDepois, lancamento.acertosDescricoes ?? []);
+  }
 
   if (precisaAjustarValor) {
     frameReciboDepois = await ajustarValorItemRecibo(page, frameReciboDepois, lancamento.valor);

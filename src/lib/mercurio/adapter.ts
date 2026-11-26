@@ -116,6 +116,10 @@ export interface MercurioContributionPayment {
   /** Dia de hoje no fuso da filial, "dd/mm/yyyy" — o caixa em que se lança (31/10/2026; a fila roda em UTC na Vercel). */
   diaDoCaixaBR?: string;
   interessado?: string;
+  /** Pendências ("acertos") que o Mercúrio põe sozinho no recibo (26/11/2026): valor esperado na tela e se a cobrança as incluiu. */
+  acertosEsperados?: number;
+  acertosIncluidos?: boolean;
+  acertosDescricoes?: string[];
 }
 
 export interface MercurioWriteResult {

@@ -8,6 +8,7 @@ import { TIPOS_DO_PORTAL, TIPOS_FV, dispensaAcessoVoluntario } from "@/lib/grupo
 import { prazoDoPlano } from "@/lib/escala-pedagogos";
 import { ensureGroupMeetingWindow } from "@/lib/meeting-series";
 import { enviarPush } from "@/lib/push";
+import { pendenciaVencida } from "@/lib/pendencias-comum";
 import { Prisma } from "@prisma/client";
 
 /**
@@ -499,6 +500,59 @@ export async function avisosDoDiarioFv(agora = new Date()) {
       const enviados = (await enviarPush([p.id], { titulo: "Reunião do GDVE", corpo: "Falta 1 semana para a reunião do GDVE. Confira se a leitura do ciclo está em dia.", url, etiqueta: `fv-gdve-${daquiAUmaSemana}` })).pessoas;
       total += enviados;
     }
+  });
+  return total;
+}
+
+// ───────────────────────── Pendências financeiras (26/11/2026) ─────────────────────────
+// Meses em atraso e pendências da Tesouraria do Mercúrio: aviso às 10h de Brasília a cada 4 dias, com textos que
+// mudam a cada envio, para o aviso não virar paisagem. Para quando a pessoa regulariza (sai da lista).
+const TEXTOS_PENDENCIA: { titulo: (n: number, total: string) => string; corpo: string }[] = [
+  { titulo: (n, total) => (n === 1 ? `Uma pendência em aberto: ${total}` : `${n} pendências em aberto: ${total}`), corpo: "Resolva em um minuto pelo Pix, direto no Portal. Toque para ver." },
+  { titulo: () => "Sua escola conta com você", corpo: "A contribuição mantém as aulas e a casa aberta. Veja o que está em aberto e regularize quando puder." },
+  { titulo: (_, total) => `Pendência de ${total} na Tesouraria`, corpo: "Dá para pagar só o mês ou tudo de uma vez. Toque e escolha." },
+  { titulo: () => "Precisa de ajuda com a contribuição?", corpo: "Fale com a Secretaria de Economia da sua filial pelo Portal. Dá para combinar um jeito." },
+];
+
+export async function avisosDePendencias(agora = new Date()) {
+  const partes = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", hourCycle: "h23" }).formatToParts(agora).map((p) => [p.type, Number(p.value)]));
+  const { year: ano, month: mes, day: dia, hour: hora } = partes;
+  if (hora !== 10) return 0;
+  const diaDoAno = Math.floor((Date.UTC(ano, mes - 1, dia) - Date.UTC(ano, 0, 1)) / 86_400_000);
+  if (diaDoAno % 4 !== 0) return 0; // a cada 4 dias
+  const variante = TEXTOS_PENDENCIA[Math.floor(diaDoAno / 4) % TEXTOS_PENDENCIA.length];
+
+  const blobs = await db.resumoNacional.findMany({ where: { chave: { startsWith: "pendencias-mercurio:" } } });
+  const porUni = new Map<string, { nome: string; valor: number; vencimento: string }[]>();
+  for (const b of blobs) porUni.set(b.chave.split(":")[1], ((b.dados as { itens?: { nome: string; valor: number; vencimento: string }[] }).itens ?? []).filter((p) => pendenciaVencida(p)));
+  const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z ]/g, " ").replace(/\s+/g, " ").trim();
+
+  const membros = await db.member.findMany({
+    where: { ...comPush, status: { notIn: ["negociando", "isento"] }, school: { language: { not: "en" } } },
+    select: {
+      id: true, name: true, school: { select: { mercurioUnidade: true } },
+      monthlyStatus: { where: { status: "atrasado" }, select: { year: true, month: true } },
+      paymentCharges: { where: { status: "pago" }, select: { referenceYear: true, referenceMonth: true } },
+      compositionItems: { select: { amount: true } },
+    },
+  });
+  let total = 0;
+  await emLotes(membros, async (m) => {
+    const pagos = new Set(m.paymentCharges.map((c) => `${c.referenceYear}-${c.referenceMonth}`));
+    const atrasados = m.monthlyStatus.filter((x) => !pagos.has(`${x.year}-${x.month}`));
+    const pend = (porUni.get(m.school.mercurioUnidade ?? "") ?? []).filter((p) => norm(p.nome) === norm(m.name));
+    const n = atrasados.length + pend.length;
+    if (!n) return;
+    const composicao = m.compositionItems.reduce((s, i) => s + Number(i.amount), 0);
+    const valor = atrasados.length * composicao + pend.reduce((s, p) => s + p.valor, 0);
+    if (!(await reservar(`pendencias:${m.id}:${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`))) return;
+    const r = await enviarPush([m.id], {
+      titulo: variante.titulo(n, valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })),
+      corpo: variante.corpo,
+      url: "/portal?abrir=pagar",
+      etiqueta: `pendencias-${ano}-${mes}-${dia}`,
+    });
+    total += r.pessoas;
   });
   return total;
 }

@@ -303,6 +303,9 @@ export class PlaywrightMercurioAdapter implements MercurioAdapter {
           valor: payment.amount,
           dataPagamentoBR: payment.paidAtBR,
           interessado: payment.interessado,
+          acertosEsperados: payment.acertosEsperados,
+          acertosIncluidos: payment.acertosIncluidos,
+          acertosDescricoes: payment.acertosDescricoes,
         }, payment.diaDoCaixaBR);
         return { ok: true };
       } finally {
