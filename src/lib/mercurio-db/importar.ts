@@ -150,7 +150,16 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   // Consultas por matrícula: no fechamento (sem alvo) não há o que buscar, e "IN ()" seria SQL inválido.
   const daLista = (sql: string) => (alvo.length ? consultarTudo(sql) : Promise.resolve([] as Linha[]));
   const [unidade] = await consultarMercurio(`SELECT uni_diretor, uni_subchefe FROM unidades WHERE uni_id=${sqlTexto(uniId)}`);
-  const fichasCopia = await daLista(`SELECT fic_matr, fic_mes, fic_status, fic_recibo, fic_datapg FROM fichas WHERE fic_ano=${sqlNumero(ano)} AND fic_matr IN (${lista}) ORDER BY fic_matr, fic_mes`);
+  // Pendências (26/11/2026, pedido do usuário): além do ano corrente, vêm as fichas ATRASADAS de qualquer ano (as
+  // "pendências" da Tesouraria do Mercúrio) e os anos em que o Portal ainda tem atraso registrado, para o atraso
+  // antigo que foi pago na escola voltar a "paga".
+  const anosExtras = alvo.length
+    ? (await db.contributionMonthlyStatus.findMany({ where: { member: { schoolId: school.id }, status: "atrasado", year: { not: ano } }, select: { year: true }, distinct: ["year"] })).map((r) => r.year)
+    : [];
+  const anosFichas = [ano, ...anosExtras].map(sqlNumero).join(",");
+  const fichasCopia = await daLista(
+    `SELECT fic_matr, fic_ano, fic_mes, fic_status, fic_recibo, fic_datapg FROM fichas WHERE fic_matr IN (${lista}) AND (fic_ano IN (${anosFichas}) OR fic_status='ATR') ORDER BY fic_matr, fic_ano, fic_mes`,
+  );
   const composicao = await daLista(
     `SELECT c.cal_matr, c.cal_grupo, c.cal_valor, p.pro_descricao FROM compaluno c LEFT JOIN produtos p ON p.pro_cod=c.cal_grupo WHERE c.cal_unidade=${sqlTexto(uniId)} AND c.cal_matr IN (${lista}) ORDER BY c.cal_matr`,
   );
@@ -158,7 +167,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   // em 24/10/2026: mês com recibo válido de item da composição conta como pago, mesmo que a cópia
   // ainda diga "em branco" (sem isso, a sincronização de 25/10 desfez pagamentos de outubro).
   const recibosOnline = await daLista(
-    `SELECT i.rei_matr, i.rei_mes, i.rei_produto, r.rec_id, r.rec_data, p.pro_descricao FROM reciboi i JOIN reciboc r ON r.rec_id=i.rei_id LEFT JOIN produtos p ON p.pro_cod=i.rei_produto WHERE i.rei_ano=${sqlNumero(ano)} AND i.rei_matr IN (${lista}) AND r.rec_status<>'CAN' AND (r.rec_data_cancel IS NULL OR r.rec_data_cancel < '1900-01-01') ORDER BY r.rec_data, r.rec_id`,
+    `SELECT i.rei_matr, i.rei_ano, i.rei_mes, i.rei_produto, r.rec_id, r.rec_data, p.pro_descricao FROM reciboi i JOIN reciboc r ON r.rec_id=i.rei_id LEFT JOIN produtos p ON p.pro_cod=i.rei_produto WHERE i.rei_ano IN (${anosFichas}) AND i.rei_matr IN (${lista}) AND r.rec_status<>'CAN' AND (r.rec_data_cancel IS NULL OR r.rec_data_cancel < '1900-01-01') ORDER BY r.rec_data, r.rec_id`,
   );
   const composicaoDe = new Map<string, Set<string>>();
   for (const c of composicao) composicaoDe.set(c.cal_matr!, (composicaoDe.get(c.cal_matr!) ?? new Set<string>()).add(c.cal_grupo ?? ""));
@@ -168,10 +177,10 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     // Rubrica da composição OU qualquer "CONTRIBUI…" (12/11/2026): a composição vem de cópia (compaluno) que pode estar
     // velha — quem trocou de CURSO DE FILOSOFIA para MEMBRO AP depois da carga tinha o recibo ignorado. Mesma regra do
     // resumo da filial (resumo-filial.ts).
-    if (itens?.has(r.rei_produto ?? "") || /^CONTRIBUI/i.test(r.pro_descricao ?? "")) pagoOnline.set(`${r.rei_matr}-${Number(r.rei_mes)}`, r);
+    if (itens?.has(r.rei_produto ?? "") || /^CONTRIBUI/i.test(r.pro_descricao ?? "")) pagoOnline.set(`${r.rei_matr}-${Number(r.rei_ano)}-${Number(r.rei_mes)}`, r);
   }
   const fichas: Linha[] = fichasCopia.map((f) => {
-    const r = pagoOnline.get(`${f.fic_matr}-${Number(f.fic_mes)}`);
+    const r = pagoOnline.get(`${f.fic_matr}-${Number(f.fic_ano ?? ano)}-${Number(f.fic_mes)}`);
     return r && f.fic_status !== "PAG" ? { ...f, fic_status: "PAG", fic_recibo: r.rec_id, fic_datapg: r.rec_data } : f;
   });
   const naCopia = new Set(fichas.map((f) => `${f.fic_matr}-${Number(f.fic_mes)}`));
@@ -359,11 +368,12 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
     const meses = fichasPor.get(matr) ?? [];
     // Pago pelo Portal (Asaas) e ainda não lançado no Mercúrio: não volta a "em aberto".
     const pagoNoPortal = new Set(
-      (await db.contributionMonthlyStatus.findMany({ where: { memberId: member.id, year: ano, status: "paga", mercurioRecId: null }, select: { month: true } })).map((s) => s.month),
+      (await db.contributionMonthlyStatus.findMany({ where: { memberId: member.id, status: "paga", mercurioRecId: null }, select: { year: true, month: true } })).map((s) => `${s.year}-${s.month}`),
     );
     for (const f of meses) {
       const status = STATUS_FICHA[f.fic_status ?? ""] ?? "em_branco";
-      if (status !== "paga" && pagoNoPortal.has(Number(f.fic_mes))) continue;
+      const anoFicha = Number(f.fic_ano ?? ano);
+      if (status !== "paga" && pagoNoPortal.has(`${anoFicha}-${Number(f.fic_mes)}`)) continue;
       const paga = dataOuNull(f.fic_datapg);
       const d = {
         status,
@@ -372,9 +382,9 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
         syncedAt: new Date(),
       };
       await db.contributionMonthlyStatus.upsert({
-        where: { memberId_year_month: { memberId: member.id, year: ano, month: Number(f.fic_mes) } },
+        where: { memberId_year_month: { memberId: member.id, year: anoFicha, month: Number(f.fic_mes) } },
         update: d,
-        create: { ...d, memberId: member.id, year: ano, month: Number(f.fic_mes) },
+        create: { ...d, memberId: member.id, year: anoFicha, month: Number(f.fic_mes) },
       });
     }
     for (const recId of new Set(meses.map((f) => f.fic_recibo).filter((r): r is string => !!r && r !== "0"))) {

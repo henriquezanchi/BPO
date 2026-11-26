@@ -9,6 +9,7 @@ import { TamanhoTexto } from "@/components/ui/tamanho-texto";
 import { logout } from "@/lib/actions/auth-actions";
 import { getFortunaBalancesForMember } from "@/lib/actions/fortuna-member-actions";
 import { whatsappHref } from "@/lib/format";
+import { contributionPosition } from "@/lib/contribution-position";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { AgendaItem, MemberDashboard } from "@/lib/member-data";
 import { PAGINA_BOLETIM_AURORA, type EdicaoAurora } from "@/lib/boletim-aurora";
@@ -110,6 +111,8 @@ function calcularProximoVencimento(monthlyStatus: { year: number; month: number;
   return { vencimento: { dia: DIA_VENCIMENTO, mes }, diasRestantes, jaResolvidoEsseMes };
 }
 
+const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
 export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { dashboard: MemberDashboard; eventoId?: string; abrir?: "voluntariado" | "pagar"; boletim?: EdicaoAurora | null }) {
   const { member, availableToAdd } = dashboard;
   // "Como gosta de ser chamado" (24/11/2026): apelido ou primeiro nome, nas saudações.
@@ -147,6 +150,8 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
   const schoolWhatsapp = member.school.whatsapp ?? "";
   const compositionTotal = member.compositionItems.reduce((soma, i) => soma + i.amount, 0);
   const proximoVencimento = calcularProximoVencimento(member.monthlyStatus, dashboard.hoje);
+  // Pendências da Tesouraria do Mercúrio (26/11/2026): meses ATRASADOS de qualquer ano ainda em aberto.
+  const pendencias = contributionPosition(member.monthlyStatus, member.paymentCharges).filter((r) => r.open && r.official === "atrasado");
   const t = getDictionary(member.school.language);
   // Asaas/PIX é só Brasil — decisão do usuário 2026-10-15: 1ª versão do
   // Portal em inglês não processa pagamento, só consulta (ver
@@ -190,6 +195,11 @@ export function MemberPortalClient({ dashboard, eventoId, abrir, boletim }: { da
               ? t.home.mensagemAVencer(chamado)
               : `${t.home.ola(chamado)} ${isDelayed ? t.home.statusAtrasada : t.home.statusEmDia}.`}
         </p>
+        {pendencias.length > 0 && member.school.language !== "en" && (
+          <p className="mt-1 text-[12px] font-semibold text-na-danger-dark dark:text-red-300">
+            Pendências: {pendencias.map((r) => `${MESES_CURTOS[r.month - 1]}/${r.year}`).join(", ")} · {brl(pendencias.length * compositionTotal)}
+          </p>
+        )}
         <p className="mt-1 text-[12px] text-gray-600 dark:text-gray-400">
           {proximoVencimento.diasRestantes < 0
             ? t.home.venceuHa(Math.abs(proximoVencimento.diasRestantes), proximoVencimento.vencimento.dia, proximoVencimento.vencimento.mes)

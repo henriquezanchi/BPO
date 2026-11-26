@@ -91,6 +91,9 @@ export function ContributionStatusPanel({
   const firstOpen = oldestOpenContribution(monthlyStatus, payments);
   const position = contributionPosition(monthlyStatus, payments);
   const overdue = position.filter(row=>row.overdue);
+  // Pendências (26/11/2026): as fichas ATRASADAS do Mercúrio, de qualquer ano, ainda em aberto. Paga-se na ordem.
+  const pendencias = position.filter((row) => row.open && row.official === "atrasado");
+  const totalPendencias = pendencias.length * compositionTotal;
   const received = position.filter(row=>row.received);
   const latestSync = monthlyStatus.reduce<Date | null>((latest,row)=>!latest || new Date(row.syncedAt)>latest ? new Date(row.syncedAt) : latest, null);
   const years = [...new Set([new Date().getFullYear(), ...monthlyStatus.map(item=>item.year), ...payments.map(item=>item.referenceYear)])].sort((a,b)=>a-b);
@@ -165,6 +168,34 @@ export function ContributionStatusPanel({
   return (
     <div className="text-left">
       {!somenteConsulta && (pixAutomaticoDisponivel || pixAutomaticStatus) && <PixAutomaticoBanner memberId={memberId} status={pixAutomaticStatus} />}
+
+      {pendencias.length > 0 && (
+        <section aria-label="Pendências financeiras" className="mt-4 rounded-2xl border border-na-danger/30 bg-na-danger-light/40 p-4 dark:border-red-900 dark:bg-red-950/20">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="flex items-center gap-1.5 text-[15px] font-black text-na-danger-dark dark:text-red-300"><AlertTriangle size={16} /> Pendências</h3>
+            <span className="text-[13px] font-bold text-gray-900 tabular-nums dark:text-gray-100">{formatBRL(totalPendencias)}</span>
+          </div>
+          <p className="mt-0.5 text-[12px] text-gray-600 dark:text-gray-300">
+            {pendencias.length === 1 ? "1 mês em atraso" : `${pendencias.length} meses em atraso`} na Tesouraria da escola. Regularize na ordem, do mais antigo para o mais novo.
+          </p>
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {pendencias.map((row, i) => (
+              <li key={`${row.year}-${row.month}`} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-[13px] dark:bg-gray-900">
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{MESES[row.month - 1]}/{row.year}</span>
+                <span className="ml-auto text-gray-700 tabular-nums dark:text-gray-300">{formatBRL(compositionTotal)}</span>
+                {!somenteConsulta && !emBreve && (i === 0 ? (
+                  <button type="button" onClick={() => { setSelectedYear(row.year); setMesPagamento(row.month); }} className="min-h-9 rounded-lg bg-na-green px-3 text-[12px] font-bold text-white">
+                    Pagar
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-gray-400">após o anterior</span>
+                ))}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Já acertou na escola? O Portal atualiza na próxima sincronização com o Mercúrio.</p>
+        </section>
+      )}
 
       <section aria-label="Resumo das contribuições" className="my-4 space-y-2 border-y border-gray-200 py-4 text-sm dark:border-gray-700">
         {/* Mais enxuto (pedido do usuário 2026-10-25): sem repetir "nenhum atraso" nem "sem juros"; a data fica à direita do título. */}
