@@ -1,5 +1,6 @@
+import { db } from "@/lib/db";
 import "server-only";
-import { consultarMercurio, sqlNumero, sqlTexto } from "@/lib/mercurio-db/client";
+import { consultarMercurio, sqlNumero, sqlTexto, colunasDe } from "@/lib/mercurio-db/client";
 import type { DadosDeclaracao } from "./texto";
 
 /**
@@ -22,14 +23,17 @@ export async function dadosDaDeclaracao(matricula: string, unidade: string): Pro
   if (c.cad_situacao !== "ATI") throw new DeclaracaoErro("A matrícula não está ativa no Mercúrio: não é possível declarar vínculo atual.");
 
   const [u, niveis, turmas, aulas, funcoes, cursos] = await Promise.all([
-    consultarMercurio(`SELECT uni_nome, uni_cnpj, uni_logradouro, uni_bairro, uni_cep, uni_cidade, uni_uf, uni_diretor FROM unidades WHERE uni_id=${uni} LIMIT 1`).then((r) => r[0]),
+    // 26/11/2026: a view perdeu uni_cnpj/uni_diretor; sem elas, CNPJ e Chefe de Filial vêm do Portal (abaixo).
+    colunasDe("unidades").then((cols) =>
+      consultarMercurio(`SELECT uni_nome, uni_logradouro, uni_bairro, uni_cep, uni_cidade, uni_uf${["uni_cnpj", "uni_diretor"].filter((c) => cols.has(c)).map((c) => `, ${c}`).join("")} FROM unidades WHERE uni_id=${uni} LIMIT 1`).then((r) => r[0]),
+    ),
     consultarMercurio(`SELECT snv_sigla, snv_descricao FROM sig_niveis`),
     c.cad_turma ? consultarMercurio(`SELECT tur_turma, tur_dia, tur_horario, tur_inicio FROM turmas WHERE tur_unidade=${uni} AND tur_turma=${sqlTexto(c.cad_turma)} LIMIT 1`) : Promise.resolve([]),
     consultarMercurio(
       `SELECT tm.tma_inicio, t.tur_dia, t.tur_horario FROM turmas_materias tm LEFT JOIN turmas t ON t.tur_unidade=tm.tma_unidade AND t.tur_turma=tm.tma_turma WHERE tm.tma_instrutor=${matr} AND tm.tma_unidade=${uni} ORDER BY tm.tma_inicio`,
     ),
     consultarMercurio(
-      `SELECT f.dfn_funcao, f.dfn_descricao, f.dfn_inicio, f.dfn_termino, f.dfn_atual, s.sdf_descricao FROM dirigente_funcoes f LEFT JOIN sig_dirigente_funcoes s ON s.sdf_sigla=f.dfn_funcao WHERE f.dfn_matr=${matr} ORDER BY f.dfn_inicio`,
+      `SELECT f.dfn_funcao, f.dfn_descricao, f.dfn_inicio, f.dfn_termino, f.dfn_atual, s.sdf_descricao FROM dirigentes_funcoes f LEFT JOIN sig_dirigente_funcoes s ON s.sdf_sigla=f.dfn_funcao WHERE f.dfn_matr=${matr} ORDER BY f.dfn_inicio`,
     ),
     consultarMercurio(
       `SELECT s.sdu_descricao, p.dcr_data FROM cursos_integra_participa p LEFT JOIN sig_cursos_integra s ON s.sdu_id=p.dcr_curso_id WHERE p.dcr_matr=${matr} ORDER BY p.dcr_data`,
@@ -40,7 +44,13 @@ export async function dadosDaDeclaracao(matricula: string, unidade: string): Pro
     const d = sigla ? nomeNivel.get(sigla) : null;
     return d && sigla !== "??" ? d.replace(/^NÍVEL (\d)$/, "Nível $1") : null;
   };
-  const diretor = vazia(u?.uni_diretor) ? (await consultarMercurio(`SELECT cad_nome, cad_sexo FROM cadastro WHERE cad_matr=${sqlNumero(u!.uni_diretor!)} LIMIT 1`))[0] : null;
+  const escolaPortal = await db.school.findFirst({ where: { mercurioUnidade: unidade }, select: { id: true, cnpj: true } });
+  const matrDiretor =
+    vazia(u?.uni_diretor) ??
+    (escolaPortal
+      ? (await db.member.findFirst({ where: { OR: [{ filiaisChefiadas: { has: unidade } }, { schoolId: escolaPortal.id, isDiretor: true }], mercurioAtivo: true }, select: { mercurioId: true } }))?.mercurioId ?? null
+      : null);
+  const diretor = matrDiretor ? (await consultarMercurio(`SELECT cad_nome, cad_sexo FROM cadastro WHERE cad_matr=${sqlNumero(matrDiretor)} LIMIT 1`))[0] : null;
   const t = turmas[0];
   const fv = vazia(c.cad_situacao_fv);
 
@@ -50,7 +60,7 @@ export async function dadosDaDeclaracao(matricula: string, unidade: string): Pro
     feminino: c.cad_sexo === "F",
     unidade: {
       nome: u?.uni_nome ?? unidade,
-      cnpj: u?.uni_cnpj ?? null,
+      cnpj: u?.uni_cnpj ?? escolaPortal?.cnpj ?? null,
       endereco: vazia(u?.uni_logradouro) ? { logradouro: u!.uni_logradouro!, bairro: vazia(u?.uni_bairro), cep: vazia(u?.uni_cep) } : null,
       cidade: u?.uni_cidade ?? "",
       uf: u?.uni_uf ?? "",

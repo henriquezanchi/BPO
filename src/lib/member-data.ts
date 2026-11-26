@@ -5,7 +5,7 @@ import { fusoDaEscola } from "@/lib/atendimentos";
 import { fraseDoDia, hojeNoFuso } from "@/lib/diario";
 import { pixAutomaticoLiberado } from "@/lib/asaas/conta-escola";
 import { escolasQueRecebem, pagamentoLiberado } from "@/lib/conta-provisoria";
-import { pendenciasDoMembro } from "@/lib/mercurio/pendencias-mercurio";
+import { pendenciasDoMembro } from "@/lib/pendencias-dados";
 import { cartaoRepassaTaxa } from "@/lib/spread";
 import { RESERVA_MS } from "@/lib/event-waitlist";
 import {eventPosterUrl} from "@/lib/event-posters";

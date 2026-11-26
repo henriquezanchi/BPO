@@ -17,7 +17,7 @@ import { cartaoRepassaTaxa } from "@/lib/spread";
 import { requireContributionOrder } from "@/lib/contribution-payment-policy";
 import { requireAuthenticatedMember } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { pendenciasNaCobranca } from "@/lib/mercurio/pendencias-mercurio";
+import { pendenciasNaCobranca } from "@/lib/pendencias-dados";
 import { formatBRL } from "@/lib/format";
 import { OVERDUE_STATUSES } from "@/lib/member-data";
 import type { PaymentCharge } from "@prisma/client";

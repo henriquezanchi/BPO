@@ -123,6 +123,21 @@ export async function colunasDoCadastro(): Promise<Set<string>> {
   return new Set(linhas.map((l) => l.Field ?? Object.values(l)[0] ?? ""));
 }
 
+const colunasGuardadas = new Map<string, { ate: number; colunas: Set<string> }>();
+/**
+ * Colunas de uma view do Mercúrio (guardadas 10 min). Em 26/11/2026 as cópias viraram views ao vivo e `unidades`
+ * perdeu colunas (uni_diretor, uni_subchefe, uni_cnpj, uni_fundacao, uni_ativa, uni_status): quem usa colunas
+ * opcionais confere aqui antes e cai no que o Portal já sabe.
+ */
+export async function colunasDe(tabela: string): Promise<Set<string>> {
+  const g = colunasGuardadas.get(tabela);
+  if (g && g.ate > Date.now()) return g.colunas;
+  const linhas = await consultarMercurio(`SHOW COLUMNS FROM ${tabela.replace(/[^a-z_]/gi, "")}`);
+  const colunas = new Set(linhas.map((l) => l.Field ?? Object.values(l)[0] ?? ""));
+  colunasGuardadas.set(tabela, { ate: Date.now() + 10 * 60_000, colunas });
+  return colunas;
+}
+
 /** Roda um SELECT e devolve as linhas (todos os valores como texto, NULL como null). Máx. 5000 linhas por chamada. */
 export async function consultarMercurio(sql: string, tentativa = 0): Promise<Linha[]> {
   const s = sessao && Date.now() - sessao.criadaEm < VALIDADE_SESSAO_MS ? sessao : await abrirSessao();

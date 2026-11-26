@@ -22,7 +22,7 @@ export async function lerLadoAntigo(unidade: string, desde: string, matriculasDo
       `SELECT r.rec_id, r.rec_data, r.rec_status, r.rec_data_cancel, i.rei_matr, i.rei_valtotal FROM reciboc r JOIN reciboi i ON i.rei_id=r.rec_id WHERE r.rec_unidade=${u} AND r.rec_data >= ${sqlTexto(desde)} ORDER BY r.rec_id`,
     ),
     consultarMercurio(`SELECT tur_turma, tur_nivel FROM turmas WHERE tur_unidade=${u}`),
-    consultarMercurio(`SELECT DISTINCT dfn_matr FROM dirigente_funcoes WHERE dfn_unidade=${u} AND dfn_atual='S'`),
+    consultarMercurio(`SELECT DISTINCT dfn_matr FROM dirigentes_funcoes WHERE dfn_unidade=${u} AND dfn_atual='S'`),
     consultarTudo(`SELECT pro_cod, pro_descricao FROM produtos ORDER BY pro_cod`),
   ]);
 

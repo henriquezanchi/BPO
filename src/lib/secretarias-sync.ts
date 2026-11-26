@@ -12,7 +12,7 @@ import { NOMES_DO_CATALOGO, sugerirSecretarias, type FuncaoMercurio } from "@/li
 export async function funcoesDaUnidade(uni: string): Promise<FuncaoMercurio[]> {
   const u = uni.replace(/[^A-Z0-9]/gi, "");
   return (await consultarMercurio(
-    `SELECT d.dfn_matr matricula, d.dfn_funcao funcao, d.dfn_descricao descricao FROM dirigente_funcoes d JOIN cadastro c ON c.cad_matr=d.dfn_matr AND c.cad_situacao='ATI' WHERE d.dfn_atual='S' AND d.dfn_unidade='${u}'`,
+    `SELECT d.dfn_matr matricula, d.dfn_funcao funcao, d.dfn_descricao descricao FROM dirigentes_funcoes d JOIN cadastro c ON c.cad_matr=d.dfn_matr AND c.cad_situacao='ATI' WHERE d.dfn_atual='S' AND d.dfn_unidade='${u}'`,
   )) as unknown as FuncaoMercurio[];
 }
 

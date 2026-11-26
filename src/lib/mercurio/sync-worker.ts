@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { notificarErroSuporte } from "@/lib/error-notify";
 import { fusoDaEscola } from "@/lib/fuso-escola";
-import { pendenciasDoMembro } from "@/lib/mercurio/pendencias-mercurio";
+import { pendenciasDoMembro } from "@/lib/pendencias-dados";
 import { pendenciaVencida } from "@/lib/pendencias-comum";
 import type { MercurioContactChanges, MercurioWriteResult } from "./adapter";
 import { abrirSessaoMercurio, lerRubricasDePagamentoHoje, RodadaEmAndamentoError } from "./browser-session";

@@ -29,9 +29,9 @@ export async function lerTrajetoria(matricula: string): Promise<Trajetoria | nul
   if (!c) return null;
   const [funcoes, distDirigente, distMembro, aulas] = await Promise.all([
     consultarMercurio(
-      `SELECT f.dfn_descricao, s.sdf_descricao, f.dfn_abrangencia, f.dfn_conselho, f.dfn_inicio, f.dfn_termino, f.dfn_atual, u.uni_nome FROM dirigente_funcoes f LEFT JOIN sig_dirigente_funcoes s ON s.sdf_sigla=f.dfn_funcao LEFT JOIN unidades u ON u.uni_id=f.dfn_unidade WHERE f.dfn_matr=${m} ORDER BY f.dfn_inicio DESC`,
+      `SELECT f.dfn_descricao, s.sdf_descricao, f.dfn_abrangencia, f.dfn_conselho, f.dfn_inicio, f.dfn_termino, f.dfn_atual, u.uni_nome FROM dirigentes_funcoes f LEFT JOIN sig_dirigente_funcoes s ON s.sdf_sigla=f.dfn_funcao LEFT JOIN unidades u ON u.uni_id=f.dfn_unidade WHERE f.dfn_matr=${m} ORDER BY f.dfn_inicio DESC`,
     ),
-    consultarMercurio(`SELECT s.sdc_descricao d, c.dco_data dt FROM dirigente_condecoracoes c LEFT JOIN sig_dirigente_condecoracoes s ON s.sdc_sigla=c.dco_condecoracao WHERE c.dco_matr=${m} ORDER BY c.dco_data`),
+    consultarMercurio(`SELECT s.sdc_descricao d, c.dco_data dt FROM dirigentes_condecoracoes c LEFT JOIN sig_dirigente_condecoracoes s ON s.sdc_sigla=c.dco_condecoracao WHERE c.dco_matr=${m} ORDER BY c.dco_data`),
     consultarMercurio(`SELECT s.sco_descricao d, c.con_data dt FROM condecoracoes c LEFT JOIN sig_condecoracoes s ON s.sco_sigla=c.con_condecoracao WHERE c.con_matr=${m} ORDER BY c.con_data`),
     consultarMercurio(
       `SELECT s.sma_materia, tm.tma_materia, tm.tma_turma, u.uni_nome, tm.tma_inicio FROM turmas_materias tm LEFT JOIN sig_materias s ON s.sma_sigla=tm.tma_materia LEFT JOIN unidades u ON u.uni_id=tm.tma_unidade WHERE tm.tma_instrutor=${m} ORDER BY tm.tma_inicio`,

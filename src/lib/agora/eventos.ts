@@ -1,7 +1,7 @@
 import type { AgendaItem } from "@/lib/member-data";
 import { AGORA, chamarAgora, SemSessaoAgora } from "@/lib/agora/sessao";
 import { db } from "@/lib/db";
-import { consultarMercurio } from "@/lib/mercurio-db/client";
+import { colunasDe, consultarMercurio } from "@/lib/mercurio-db/client";
 
 /**
  * Eventos do Ágora na Agenda do aluno (túnel, 2026-10-27): `GET /api/eventos/acoes` como o próprio aluno — a mesma
@@ -224,7 +224,10 @@ async function unidadesDaRede(): Promise<UnidadeRede[]> {
   if (unidadesGuardadas && unidadesGuardadas.ate > Date.now()) return unidadesGuardadas.lista;
   try {
     const linhas = await Promise.race([
-      consultarMercurio("SELECT uni_id, uni_nome, uni_status FROM unidades WHERE uni_ativa='S'"),
+      // 26/11/2026: a view perdeu uni_ativa/uni_status; sem elas, todas as unidades da view.
+      colunasDe("unidades").then((cols) =>
+        consultarMercurio(cols.has("uni_ativa") ? "SELECT uni_id, uni_nome, uni_status FROM unidades WHERE uni_ativa='S'" : "SELECT uni_id, uni_nome FROM unidades"),
+      ),
       new Promise<never>((_, nao) => setTimeout(() => nao(new Error("Mercúrio sem resposta em 3 s")), 3000)),
     ]);
     const lista = linhas.map((l) => ({ id: (l.uni_id ?? "").trim(), nome: l.uni_nome ?? "", status: (l.uni_status ?? "").trim() })).filter((u) => u.id);

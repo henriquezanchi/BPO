@@ -3,7 +3,7 @@ import { temDirecaoLiberada } from "@/lib/dono-do-sistema";
 import { TIPOS_GRUPO, ehTipoGrupo } from "@/lib/grupos-comum";
 import { parseLogradouro } from "@/lib/mercurio/parse-logradouro";
 import type { ContributionMonthStatus } from "@prisma/client";
-import { consultarMercurio, sqlNumero, sqlTexto } from "./client";
+import { colunasDe, consultarMercurio, sqlNumero, sqlTexto } from "./client";
 import { copiaDesatualizada } from "./frescor";
 import { apelidosDeTurma } from "./turmas";
 import { avisarFinanceiroSemEsperar, whatsappFinanceiroAtivo } from "@/lib/whatsapp/financeiro";
@@ -87,7 +87,9 @@ export async function garantirEscola(uniId: string, opcoes: { portalAberto?: boo
   const existente = await db.school.findUnique({ where: { mercurioUnidade: uniId } });
   if (existente) return existente;
 
-  const [u] = await consultarMercurio(`SELECT uni_nome, uni_cidade, uni_uf, uni_cnpj, uni_ddd, uni_fone, uni_fundacao FROM unidades WHERE uni_id=${sqlTexto(uniId)}`);
+  const colsU = await colunasDe("unidades");
+  const extras = ["uni_cnpj", "uni_fundacao"].filter((c) => colsU.has(c));
+  const [u] = await consultarMercurio(`SELECT uni_nome, uni_cidade, uni_uf, uni_ddd, uni_fone${extras.map((c) => `, ${c}`).join("")} FROM unidades WHERE uni_id=${sqlTexto(uniId)}`);
   if (!u) throw new Error(`Unidade ${uniId} não existe no banco do Mercúrio.`);
   const nome = nomeProprio(u.uni_nome ?? uniId);
   return db.school.create({
@@ -149,7 +151,20 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const lista = alvo.map((c) => sqlNumero(c.cad_matr!)).join(",");
   // Consultas por matrícula: no fechamento (sem alvo) não há o que buscar, e "IN ()" seria SQL inválido.
   const daLista = (sql: string) => (alvo.length ? consultarTudo(sql) : Promise.resolve([] as Linha[]));
-  const [unidade] = await consultarMercurio(`SELECT uni_diretor, uni_subchefe FROM unidades WHERE uni_id=${sqlTexto(uniId)}`);
+  // Chefe e Sub-Chefe da unidade (26/11/2026): a view `unidades` perdeu uni_diretor/uni_subchefe. Sem as colunas,
+  // vale o que o Portal já sabe (quem já está marcado como direção desta filial), para ninguém perder o acesso de
+  // direção numa sincronização; função atual "CF"/sub-chefe em dirigentes_funcoes continua valendo.
+  const colsUnidade = await colunasDe("unidades");
+  const temDirecaoNaView = colsUnidade.has("uni_diretor") && colsUnidade.has("uni_subchefe");
+  const direcaoAtual = temDirecaoNaView
+    ? []
+    : await db.member.findMany({ where: { OR: [{ schoolId: school.id, OR: [{ isDiretor: true }, { isSubChefe: true }] }, { filiaisChefiadas: { has: uniId } }] }, select: { mercurioId: true, isDiretor: true, isSubChefe: true, schoolId: true, filiaisChefiadas: true } });
+  const [unidade] = temDirecaoNaView
+    ? await consultarMercurio(`SELECT uni_diretor, uni_subchefe FROM unidades WHERE uni_id=${sqlTexto(uniId)}`)
+    : [{
+        uni_diretor: direcaoAtual.find((m) => m.filiaisChefiadas.includes(uniId) || (m.schoolId === school.id && m.isDiretor))?.mercurioId ?? null,
+        uni_subchefe: direcaoAtual.find((m) => m.schoolId === school.id && m.isSubChefe)?.mercurioId ?? null,
+      }];
   // Pendências (26/11/2026, pedido do usuário): além do ano corrente, vêm as fichas ATRASADAS de qualquer ano (as
   // "pendências" da Tesouraria do Mercúrio) e os anos em que o Portal ainda tem atraso registrado, para o atraso
   // antigo que foi pago na escola voltar a "paga".
@@ -186,11 +201,19 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   const naCopia = new Set(fichas.map((f) => `${f.fic_matr}-${Number(f.fic_mes)}`));
   for (const [chave, r] of pagoOnline)
     if (!naCopia.has(chave)) fichas.push({ fic_matr: r.rei_matr, fic_mes: String(Number(r.rei_mes)), fic_status: "PAG", fic_recibo: r.rec_id, fic_datapg: r.rec_data });
-  const funcoes = await daLista(`SELECT dfn_matr, dfn_funcao, dfn_descricao FROM dirigente_funcoes WHERE dfn_atual='S' AND dfn_matr IN (${lista}) ORDER BY dfn_matr`);
+  const funcoes = await daLista(`SELECT dfn_matr, dfn_funcao, dfn_descricao FROM dirigentes_funcoes WHERE dfn_atual='S' AND dfn_matr IN (${lista}) ORDER BY dfn_matr`);
   // Filiais que cada pessoa chefia (pode ser mais de uma, e de outra unidade).
   const chefiadasPor = new Map<string, string[]>();
-  for (const u of alvo.length ? await consultarMercurio(`SELECT uni_id, uni_diretor FROM unidades WHERE uni_ativa='S' AND uni_diretor IN (${lista})`) : []) {
-    chefiadasPor.set(u.uni_diretor!, [...(chefiadasPor.get(u.uni_diretor!) ?? []), u.uni_id!]);
+  if (temDirecaoNaView) {
+    const filtroAtiva = colsUnidade.has("uni_ativa") ? "uni_ativa='S' AND " : "";
+    for (const u of alvo.length ? await consultarMercurio(`SELECT uni_id, uni_diretor FROM unidades WHERE ${filtroAtiva}uni_diretor IN (${lista})`) : []) {
+      chefiadasPor.set(u.uni_diretor!, [...(chefiadasPor.get(u.uni_diretor!) ?? []), u.uni_id!]);
+    }
+  } else if (alvo.length) {
+    // Sem uni_diretor na view: mantém as filiais chefiadas que o Portal já registrou para essas pessoas.
+    for (const m of await db.member.findMany({ where: { mercurioId: { in: alvo.map((c) => c.cad_matr!) }, NOT: { filiaisChefiadas: { isEmpty: true } } }, select: { mercurioId: true, filiaisChefiadas: true } })) {
+      chefiadasPor.set(m.mercurioId!, m.filiaisChefiadas);
+    }
   }
   // Turmas em que a pessoa dá aula (qualquer matéria) — só turmas que
   // ainda têm aluno ativo, pra não listar turma já formada.
@@ -198,7 +221,7 @@ export async function sincronizarUnidade(uniId: string, opcoes: { matriculas?: s
   // filial ("CHEFE DO GRUPO FEMININO", "JEFE BF", "CHEFE DA BBFF", "CHEFE
   // DO GS"...) e muitas não marcam dfn_atual — vale também término vazio.
   const chefias = await consultarTudo(
-    `SELECT d.dfn_matr, d.dfn_descricao, c.cad_raio_fv FROM dirigente_funcoes d JOIN cadastro c ON c.cad_matr=d.dfn_matr WHERE c.cad_situacao='ATI' AND c.cad_unidade=${sqlTexto(uniId)} AND d.dfn_funcao='CBF' AND (d.dfn_atual='S' OR d.dfn_termino IS NULL OR d.dfn_termino < '1900-01-01' OR d.dfn_termino >= CURDATE()) ORDER BY d.dfn_matr`,
+    `SELECT d.dfn_matr, d.dfn_descricao, c.cad_raio_fv FROM dirigentes_funcoes d JOIN cadastro c ON c.cad_matr=d.dfn_matr WHERE c.cad_situacao='ATI' AND c.cad_unidade=${sqlTexto(uniId)} AND d.dfn_funcao='CBF' AND (d.dfn_atual='S' OR d.dfn_termino IS NULL OR d.dfn_termino < '1900-01-01' OR d.dfn_termino >= CURDATE()) ORDER BY d.dfn_matr`,
   );
   // Grupo só existe na filial se tem alguém nele como BRG ou PRO.
   const raiosAtivos = new Set(
